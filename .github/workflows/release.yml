@@ -1,0 +1,63 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - '*'
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      id-token: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '26'
+          registry-url: https://registry.npmjs.org
+      - run: npm ci
+      - run: npm test
+      - run: npm run build
+      - name: Check release versions
+        id: release_files
+        env:
+          RELEASE_TAG: ${{ github.ref_name }}
+        run: |
+          node --input-type=module <<'NODE'
+          import { appendFileSync, readFileSync } from 'node:fs'
+
+          const manifest = JSON.parse(readFileSync('src/plugin/manifest.json', 'utf8'))
+          const pkg = JSON.parse(readFileSync('package.json', 'utf8'))
+          const versions = JSON.parse(readFileSync('versions.json', 'utf8'))
+          const tag = process.env.RELEASE_TAG
+
+          if (tag !== manifest.version || tag !== pkg.version) {
+            throw new Error(`Tag ${tag} must equal manifest and package versions (${manifest.version}, ${pkg.version})`)
+          }
+          if (versions[tag] !== manifest.minAppVersion) {
+            throw new Error(`versions.json must map ${tag} to ${manifest.minAppVersion}`)
+          }
+          if (pkg.name !== 'recursive-board') {
+            throw new Error('The npm package must be named recursive-board')
+          }
+
+          appendFileSync(process.env.GITHUB_OUTPUT, `plugin_dir=dist/${manifest.id}\n`)
+          NODE
+      - name: Create GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PLUGIN_DIR: ${{ steps.release_files.outputs.plugin_dir }}
+        run: |
+          gh release create "$GITHUB_REF_NAME" \
+            "$PLUGIN_DIR/main.js" \
+            "$PLUGIN_DIR/manifest.json" \
+            "$PLUGIN_DIR/styles.css" \
+            --title "$GITHUB_REF_NAME" --generate-notes --verify-tag
+      - name: Publish wi to npm
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: |
+          npm pkg set "repository=https://github.com/${GITHUB_REPOSITORY}.git"
+          npm publish --provenance --access public
