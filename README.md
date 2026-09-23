@@ -87,13 +87,13 @@ Run `wi` inside a vault, pass `--vault <path>`, or set `WI_VAULT`. Commands acce
 
 ## Install the Git validation hook
 
-If your vault is a Git repository, run this from a Recursive Board source checkout:
+If your vault is a Git repository, use the installed `wi` command:
 
 ```sh
-node scripts/vault-git.mjs install-hook --vault <vault-path>
+wi hook install --vault <vault-path>
 ```
 
-The pre-commit hook runs `wi validate` and stops a commit when the vault has errors. The checkout must remain available because the hook calls its CLI source. Use `status` or `uninstall` in place of `install-hook` to inspect or remove the hook.
+The pre-commit hook runs `wi validate` and stops a commit when the vault has errors. It calls the Node binary and `wi` entry point used to install it, so keep that `wi` installation available. Use `wi hook status --vault <vault-path>` to inspect the hook and `wi hook uninstall --vault <vault-path>` to remove it. Installation refuses to replace another pre-commit hook unless you pass `--force`.
 
 ## Commands
 
@@ -106,6 +106,7 @@ The pre-commit hook runs `wi validate` and stops a commit when the vault has err
 | `wi rm <ref> [--recursive] [--dry-run]` | Moves an item to the vault's `.trash` folder. Use `--dry-run` to preview. Items with children require `--recursive`. |
 | `wi children <ref> [--status <status>] [--tree] [--archived]` | Lists an item's children. `--status` filters by status, `--tree` shows descendants, and `--archived` includes archived items. |
 | `wi validate` | Checks work-item structure and reports errors and warnings. Exits with code 1 when it finds errors. |
+| `wi hook install\|uninstall\|status [--vault <path>]` | Installs, removes, or inspects the Git pre-commit validation hook. `install --force` replaces an unrelated hook. |
 | `wi template [list\|write]` | Lists available templates, or writes the code's templates into `Templates/` with `wi template write`. Defaults to `list`. |
 | `wi --help` or `wi help` | Prints usage, options, and notes. |
 | `wi --version` | Prints the installed CLI version. |

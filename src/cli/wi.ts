@@ -11,6 +11,7 @@
  */
 import { parseArgs } from 'node:util'
 import { resolve } from 'node:path'
+import { fileURLToPath } from 'node:url'
 
 import { loadVault, findVaultRoot, type Vault, type WorkItem } from './vault.ts'
 import { createItem } from './commands/new.ts'
@@ -21,6 +22,7 @@ import { listTemplates, writeTemplates } from './commands/template.ts'
 import { removeItem } from './commands/remove.ts'
 import { moveItem } from './commands/move.ts'
 import { archiveItem } from './commands/archive.ts'
+import { hookStatus, installHook, uninstallHook } from './commands/hook.ts'
 import { STATUSES } from '../shared/schema.ts'
 import { templateNames } from '../shared/templates.ts'
 
@@ -36,6 +38,7 @@ Usage
   wi children <ref> [--status <s>] [--tree] [--archived]
   wi validate
   wi template [list|write]
+  wi hook <install|uninstall|status> [--force]
 
 A <ref> is a work item id, a filename or a title. An id always wins.
 A <status> is one of: ${STATUSES.join(', ')}.
@@ -44,6 +47,7 @@ A <template> is one of: ${templateNames().join(', ')}.
 Options
   --vault <path>   The vault root. Defaults to $WI_VAULT, then the nearest configured vault or Boards/.
   --json           Machine-readable output.
+  --force          Replace another pre-commit hook with wi hook install.
   -h, --help       This text.
   -V, --version    Print the version.
 
@@ -85,6 +89,7 @@ async function main(argv: string[]): Promise<number> {
       recursive: { type: 'boolean', short: 'r', default: false },
       'dry-run': { type: 'boolean', default: false },
       json: { type: 'boolean', default: false },
+      force: { type: 'boolean', default: false },
       help: { type: 'boolean', short: 'h', default: false },
       version: { type: 'boolean', short: 'V', default: false },
     },
@@ -98,6 +103,9 @@ async function main(argv: string[]): Promise<number> {
   if (values.help || command === undefined || command === 'help') {
     process.stdout.write(HELP)
     return command === undefined && !values.help ? 2 : 0
+  }
+  if (values.force && (command !== 'hook' || rest[0] !== 'install')) {
+    throw new UsageError('--force applies only to wi hook install.')
   }
 
   const vault = await openVault(values.vault)
@@ -120,6 +128,8 @@ async function main(argv: string[]): Promise<number> {
       return runValidate(vault, json)
     case 'template':
       return runTemplate(vault, rest, json)
+    case 'hook':
+      return runHook(vault, rest, values, json)
     default:
       throw new UsageError(`unknown command "${command}". Run wi --help.`)
   }
@@ -369,6 +379,48 @@ async function runTemplate(vault: Vault, rest: string[], json: boolean): Promise
   }
 
   throw new UsageError(`wi template takes "list" or "write", not "${action}".`)
+}
+
+async function runHook(vault: Vault, rest: string[], values: Values, json: boolean): Promise<number> {
+  const [action, ...extra] = rest
+  if (extra.length > 0 || (action !== 'install' && action !== 'uninstall' && action !== 'status')) {
+    throw new UsageError('wi hook needs install, uninstall, or status. Run wi --help.')
+  }
+  if (values['force'] === true && action !== 'install') {
+    throw new UsageError('--force applies only to wi hook install.')
+  }
+
+  if (action === 'status') {
+    const status = await hookStatus(vault.root)
+    if (json) print(status)
+    else {
+      process.stdout.write(`vault        ${status.vault}\n`)
+      process.stdout.write(`git repo     ${status.gitRepo ?? 'none — run git init in the vault'}\n`)
+      if (status.gitRepo) process.stdout.write(`pre-commit   ${status.preCommit}\n`)
+    }
+    return 0
+  }
+
+  if (action === 'uninstall') {
+    const removed = await uninstallHook(vault.root)
+    if (json) print({ removed })
+    else process.stdout.write(removed ? `removed ${removed}\n` : 'done\n')
+    return 0
+  }
+
+  const path = await installHook(vault.root, fileURLToPath(import.meta.url), values['force'] === true)
+  if (json) print({ installed: path })
+  else {
+    process.stdout.write(`installed ${path}\n`)
+    process.stdout.write('a commit that would record an invalid vault is now refused\n')
+    process.stdout.write('bypass with: git commit --no-verify\n')
+  }
+  const report = await validate(vault)
+  if (!report.ok && !json) {
+    process.stdout.write('\nheads up: the vault does not validate right now, so the next commit will be refused:\n')
+    for (const problem of report.problems) process.stdout.write(`${line(problem)}\n`)
+  }
+  return 0
 }
 
 function line(problem: Problem): string {
