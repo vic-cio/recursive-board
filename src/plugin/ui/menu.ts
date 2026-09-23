@@ -15,6 +15,7 @@ import { STATUSES } from '../../shared/schema.ts'
 import type { WorkItemMeta } from '../index.ts'
 import type { RenderContext } from './context.ts'
 import { MoveModal } from './move-modal.ts'
+import { statusLabel } from './status-label.ts'
 
 /** Opens the menu for a work item on a right click. */
 export function attachMenu(el: HTMLElement, ctx: RenderContext, meta: WorkItemMeta): void {
@@ -30,7 +31,7 @@ export function renderMenuButton(host: HTMLElement, ctx: RenderContext, meta: Wo
   if (!Platform.isMobile) return
   const button = host.createEl('button', { cls: 'wi-more' })
   setIcon(button, 'more-horizontal')
-  button.setAttr('aria-label', `actions for ${meta.title}`)
+  button.setAttr('aria-label', `Actions for ${meta.title}`)
   button.addEventListener('click', (event) => {
     event.preventDefault()
     event.stopPropagation() // Never expand the card on the way to its menu.
@@ -65,7 +66,7 @@ function buildMenu(ctx: RenderContext, meta: WorkItemMeta): Menu {
     menu.addSeparator()
     for (const status of STATUSES) {
       menu.addItem((item) => item
-        .setTitle(status)
+        .setTitle(statusLabel(status))
         .setChecked(meta.status === status)
         .onClick(() => void ctx.actions.setStatus(meta, status)))
     }
@@ -79,12 +80,12 @@ function buildMenu(ctx: RenderContext, meta: WorkItemMeta): Menu {
   if (meta.id !== undefined) {
     const id = meta.id
     menu.addItem((item) => item
-      .setTitle(`Copy id (${id})`)
+      .setTitle(`Copy ID (${id})`)
       .setIcon('copy')
       .onClick(() => void navigator.clipboard
         .writeText(id)
         .then(() => new Notice(`${id} copied`))
-        .catch(() => new Notice(`could not copy ${id}`))))
+        .catch(() => new Notice(`Could not copy ${id}`))))
   }
 
   if (meta.parentLink !== null) {

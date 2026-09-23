@@ -9,12 +9,14 @@
  * `path`, `child_process` or `electron`. Two guards enforce that: `tsconfig.plugin.json` has no
  * Node types, and `build/forbidden-imports.mjs` fails the build.
  */
-import { MarkdownView, Notice, Platform, Plugin, TFile } from 'obsidian'
+import { MarkdownView, Notice, normalizePath, Platform, Plugin, TFile } from 'obsidian'
 import { parseVaultConfig, WI_CONFIG_FILE } from '../shared/vault-config.ts'
+import type { Status } from '../shared/schema.ts'
 
 import { Actions } from './actions.ts'
 import { WorkItemIndex } from './index.ts'
 import { mountAll, unmountAll } from './mount.ts'
+import { ChecklistComponents } from './ui/checklist.ts'
 import type { RenderContext } from './ui/context.ts'
 import { MoveModal } from './ui/move-modal.ts'
 
@@ -24,7 +26,11 @@ export default class RecursiveBoardPlugin extends Plugin {
   private expandedPath: string | null = null
   /** Paths whose text is being read instead of their board. Session state, never written. */
   private readonly peeking = new Set<string>()
+  private readonly shownTabs = new Map<string, Status>()
+  private readonly shownArchived = new Set<string>()
+  private readonly checklistComponents = new ChecklistComponents()
   private pending: number | null = null
+  private unloaded = false
 
   override async onload(): Promise<void> {
     this.index = new WorkItemIndex(this.app, await this.readVaultConfig())
@@ -109,13 +115,19 @@ export default class RecursiveBoardPlugin extends Plugin {
       this.actions.undoStack.rename(oldPath, file.path)
     }))
 
-    this.app.workspace.onLayoutReady(() => this.schedule())
+    this.app.workspace.onLayoutReady(() => {
+      if (!this.unloaded) this.schedule()
+    })
   }
 
   override onunload(): void {
+    this.unloaded = true
     if (this.pending !== null) window.clearTimeout(this.pending)
     this.peeking.clear()
+    this.shownTabs.clear()
+    this.shownArchived.clear()
     unmountAll(this.app)
+    this.checklistComponents.releaseAll()
   }
 
   private stale(): void {
@@ -124,9 +136,13 @@ export default class RecursiveBoardPlugin extends Plugin {
   }
 
   private async readVaultConfig() {
+    const file = this.app.vault.getFileByPath(WI_CONFIG_FILE)
     const adapter = this.app.vault.adapter
-    const text = await adapter.exists(WI_CONFIG_FILE) ? await adapter.read(WI_CONFIG_FILE) : null
-    return parseVaultConfig(text)
+    const text = file
+      ? await this.app.vault.read(file)
+      : await adapter.exists(WI_CONFIG_FILE) ? await adapter.read(WI_CONFIG_FILE) : null
+    const config = parseVaultConfig(text)
+    return { ...config, workItemFolder: normalizePath(config.workItemFolder) }
   }
 
   private async reloadConfig(): Promise<void> {
@@ -146,6 +162,7 @@ export default class RecursiveBoardPlugin extends Plugin {
 
   /** Coalesces a burst of events into one redraw. A card move fires several. */
   private schedule(): void {
+    if (this.unloaded) return
     if (this.pending !== null) window.clearTimeout(this.pending)
     this.pending = window.setTimeout(() => {
       this.pending = null
@@ -159,6 +176,7 @@ export default class RecursiveBoardPlugin extends Plugin {
       component: this,
       index: this.index,
       actions: this.actions,
+      checklistComponents: this.checklistComponents,
       mobile: Platform.isMobile,
       expandedPath: this.expandedPath,
       expand: (path) => {
@@ -171,7 +189,14 @@ export default class RecursiveBoardPlugin extends Plugin {
         else this.peeking.delete(path)
         mountAll(this.app, this.context())
       },
-      refresh: () => this.schedule(),
+      selectedTab: (path) => this.shownTabs.get(path),
+      selectTab: (path, status) => { this.shownTabs.set(path, status) },
+      isShowingArchived: (path) => this.shownArchived.has(path),
+      toggleArchived: (path) => {
+        if (this.shownArchived.has(path)) this.shownArchived.delete(path)
+        else this.shownArchived.add(path)
+        this.schedule()
+      },
     }
   }
 }

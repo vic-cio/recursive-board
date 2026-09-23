@@ -51,7 +51,7 @@ export function renderCard(
   if (expanded) {
     title.addClass('is-link')
     title.setAttr('role', 'link')
-    title.setAttr('aria-label', `open ${meta.title}`)
+    title.setAttr('aria-label', `Open ${meta.title}`)
     title.addEventListener('click', (event) => {
       event.preventDefault()
       event.stopPropagation()
@@ -99,7 +99,7 @@ export function renderRemove(
 ): void {
   const button = host.createEl('button', { cls: 'wi-remove' })
   setIcon(button, 'x')
-  button.setAttr('aria-label', `remove ${meta.title}`)
+  button.setAttr('aria-label', `Remove ${meta.title}`)
   button.setAttr('title', `Remove ${meta.title}`)
   button.addEventListener('click', (event) => {
     event.preventDefault()
@@ -119,7 +119,7 @@ export function renderLabels(host: HTMLElement, labels: string[]): void {
     host.createSpan({
       cls: 'wi-label',
       text: labelText(label),
-      attr: { 'data-colour': labelColour(label), 'aria-label': `label ${label}` },
+      attr: { 'data-colour': labelColour(label), 'aria-label': `Label ${label}` },
     })
   }
 }
@@ -133,14 +133,14 @@ function renderBadges(host: HTMLElement, ctx: RenderContext, meta: WorkItemMeta)
     badge.createSpan({ text: String(children) })
   }
   if (meta.board) {
-    const badge = host.createSpan({ cls: 'wi-badge wi-badge-board', attr: { 'aria-label': 'board' } })
+    const badge = host.createSpan({ cls: 'wi-badge wi-badge-board', attr: { 'aria-label': 'Board' } })
     setIcon(badge, 'columns-3')
   }
   if (meta.priority !== undefined) {
     host.createSpan({ cls: 'wi-badge wi-badge-priority', text: `P${meta.priority}` })
   }
   if (meta.blocked) {
-    const badge = host.createSpan({ cls: 'wi-badge wi-badge-blocked', attr: { 'aria-label': 'blocked' } })
+    const badge = host.createSpan({ cls: 'wi-badge wi-badge-blocked', attr: { 'aria-label': 'Blocked' } })
     setIcon(badge, 'octagon-alert')
   }
   const who = meta.agent ?? meta.owner
@@ -148,7 +148,7 @@ function renderBadges(host: HTMLElement, ctx: RenderContext, meta: WorkItemMeta)
     host.createSpan({
       cls: `wi-badge wi-badge-who${meta.agent ? ' is-agent' : ''}`,
       text: who.slice(0, 1).toUpperCase(),
-      attr: { 'aria-label': meta.agent ? `agent ${who}` : `owner ${who}` },
+      attr: { 'aria-label': meta.agent ? `Agent ${who}` : `Owner ${who}` },
     })
   }
 }
@@ -172,7 +172,7 @@ function renderCode(host: HTMLElement, id: string): void {
     void navigator.clipboard
       .writeText(id)
       .then(() => new Notice(`${id} copied`))
-      .catch(() => new Notice(`could not copy ${id}`))
+      .catch(() => new Notice(`Could not copy ${id}`))
   })
 }
 
@@ -182,6 +182,7 @@ async function renderExpansion(
   meta: WorkItemMeta,
 ): Promise<void> {
   const body = bodyOf(await ctx.app.vault.cachedRead(meta.file))
+  if (!host.isConnected) return
 
   const objective = section(body, 'Objective')
   if (objective) host.createDiv({ cls: 'wi-objective', text: objective })

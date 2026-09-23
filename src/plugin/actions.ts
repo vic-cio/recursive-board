@@ -8,7 +8,7 @@
  * toggle rewrites one line and copies every other byte. That keeps the Git noise decision U3
  * warned about down to what actually changed.
  */
-import { Notice, TFile, type App } from 'obsidian'
+import { normalizePath, Notice, TFile, type App } from 'obsidian'
 
 import { applyEdits, withStamp, type Edit } from '../shared/edits.ts'
 import { archiveEdits, activeDescendant } from '../shared/archive.ts'
@@ -55,15 +55,20 @@ export class Actions {
       new Notice(`Cannot undo ${entry.label}: ${entry.path} is gone.`)
       return
     }
-    const current = await this.app.vault.read(file)
-    const restored = UndoStack.restore(entry, current)
-    if (restored === null) {
-      new Notice(`Cannot undo ${entry.label}: the file has changed since.`)
-      return
-    }
     const done = await this.run(`undo ${entry.label}`, async () => {
-      if (entry.kind === 'create') await this.app.fileManager.trashFile(file)
-      else await this.app.vault.modify(file, restored)
+      if (entry.kind === 'create') {
+        const current = await this.app.vault.read(file)
+        if (UndoStack.restore(entry, current) === null) {
+          throw new Error('the file has changed since.')
+        }
+        await this.app.fileManager.trashFile(file)
+      } else {
+        await this.app.vault.process(file, (current) => {
+          const restored = UndoStack.restore(entry, current)
+          if (restored === null) throw new Error('the file has changed since.')
+          return restored
+        })
+      }
       return true
     })
     if (done) new Notice(`Undid ${entry.label}`)
@@ -157,7 +162,7 @@ export class Actions {
 
     const id = newId(this.index.takenIds())
     const stem = fileNameFor(title, id, this.index.takenStems())
-    const path = `${this.index.config.workItemFolder}/${stem}.md`
+    const path = normalizePath(`${this.index.config.workItemFolder}/${stem}.md`)
 
     if (this.app.vault.getAbstractFileByPath(path)) {
       new Notice(`${path} already exists. Nothing was written.`)

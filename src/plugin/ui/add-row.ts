@@ -26,7 +26,7 @@ export function renderAddRow(
   const input = row.createEl('input', {
     type: 'text',
     cls: 'wi-add-input',
-    attr: { placeholder: `Add to ${status}`, 'aria-label': `add a work item to ${status}` },
+    attr: { placeholder: `Add to ${status}`, 'aria-label': `Add a work item to ${status}` },
   })
 
   input.addEventListener('keydown', (event) => {

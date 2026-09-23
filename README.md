@@ -63,11 +63,13 @@ Place an optional `.wi.json` file at the vault root to choose the work-item fold
 
 ## Install the Obsidian plugin
 
-The plugin is not yet in the Obsidian Community plugins directory. Install it manually:
+Once the plugin is listed in the Community plugins directory, open **Settings → Community plugins → Browse**, find **Recursive Board**, select **Install**, then enable it.
+
+Before listing, you can install a release manually:
 
 1. Download a release or build the project with `npm run build`.
-2. Create `.obsidian/plugins/recursive-board/` in your vault.
-3. Copy `main.js`, `manifest.json`, and `styles.css` from `dist/recursive-board/` into that folder.
+2. Create a folder under the vault's plugin directory using the `id` in `manifest.json` as its name.
+3. Copy `main.js`, `manifest.json`, and `styles.css` from that release or the matching `dist/` folder into it.
 4. In Obsidian, open **Settings → Community plugins** and enable **Recursive Board**.
 
 Reload Obsidian after replacing plugin files. If your vault syncs its `.obsidian` folder, the sync client can copy the installed plugin to your other devices. Sync behavior depends on that client's settings.

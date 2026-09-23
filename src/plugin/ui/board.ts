@@ -20,6 +20,7 @@ import { renderAddRow, renderHiddenNote } from './add-row.ts'
 import { renderArchiveNote, showingArchived } from './archive-note.ts'
 import { renderCard } from './card.ts'
 import type { RenderContext } from './context.ts'
+import { statusLabel } from './status-label.ts'
 
 export function renderBoard(
   host: HTMLElement,
@@ -27,7 +28,7 @@ export function renderBoard(
   parent: WorkItemMeta,
   children: WorkItemMeta[],
 ): void {
-  const columns = toColumns(children, new Date(), showingArchived(parent))
+  const columns = toColumns(children, new Date(), showingArchived(ctx, parent))
   const archivedCount = children.filter((c) => c.effectiveArchived).length
   if (Platform.isMobile) {
     renderTabbed(host.createDiv({ cls: 'wi-tabbed' }), ctx, parent, columns, archivedCount)
@@ -39,12 +40,6 @@ export function renderBoard(
   }
   renderArchiveNote(host, ctx, parent, archivedCount)
 }
-
-/**
- * The tab each phone board was last showing, by the board's path. Session state, never written:
- * without it every redraw, including the one an add row causes, would jump to another tab.
- */
-const shownTab = new Map<string, Status>()
 
 /** Doing when anything is in it, because that is what you open a board to see. */
 function defaultTab(columns: Column[]): Status {
@@ -59,7 +54,7 @@ function renderTabbed(
   archivedCount: number,
 ): void {
   host.empty()
-  const shown = shownTab.get(parent.file.path) ?? defaultTab(columns)
+  const shown = ctx.selectedTab(parent.file.path) ?? defaultTab(columns)
 
   const tabs = host.createDiv({ cls: 'wi-tabs', attr: { role: 'tablist' } })
   for (const column of columns) {
@@ -67,11 +62,12 @@ function renderTabbed(
     const tab = tabs.createEl('button', { cls: `wi-tab is-${column.status}`, attr: { role: 'tab' } })
     tab.toggleClass('is-active', active)
     tab.setAttr('aria-selected', String(active))
-    tab.createSpan({ cls: 'wi-tab-name', text: column.status })
+    tab.createSpan({ cls: 'wi-tab-name', text: statusLabel(column.status) })
     tab.createSpan({ cls: 'wi-tab-count', text: String(column.visible.length) })
     tab.addEventListener('click', () => {
-      shownTab.set(parent.file.path, column.status)
+      ctx.selectTab(parent.file.path, column.status)
       renderTabbed(host, ctx, parent, columns, archivedCount)
+      ctx.checklistComponents.releaseDisconnected()
     })
   }
 
@@ -91,7 +87,7 @@ function renderColumn(
 ): void {
   const column = board.createDiv({ cls: `wi-column is-${status}` })
   const header = column.createDiv({ cls: 'wi-column-header' })
-  header.createSpan({ cls: 'wi-column-name', text: status })
+  header.createSpan({ cls: 'wi-column-name', text: statusLabel(status) })
   header.createSpan({ cls: 'wi-column-count', text: String(cards.length) })
 
   const stack = column.createDiv({ cls: 'wi-stack' })

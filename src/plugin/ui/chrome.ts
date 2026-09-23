@@ -18,6 +18,7 @@ import { setIcon } from 'obsidian'
 
 import type { WorkItemMeta } from '../index.ts'
 import type { RenderContext } from './context.ts'
+import { statusLabel } from './status-label.ts'
 
 /** The chain from the root down to this item, always visible at the top. */
 export function renderBreadcrumbs(
@@ -33,7 +34,7 @@ export function renderBreadcrumbs(
     // The orphan case. The item is not lost; it is simply on no board (decision u8).
     const warn = trail.createSpan({ cls: 'wi-crumb is-orphan' })
     setIcon(warn.createSpan({ cls: 'wi-crumb-icon' }), 'unlink')
-    warn.createSpan({ text: `parent [[${meta.parentLink}]] not found` })
+    warn.createSpan({ text: `Parent [[${meta.parentLink}]] not found` })
     trail.createSpan({ cls: 'wi-crumb-sep', text: '/' })
   }
 
@@ -76,7 +77,7 @@ function renderViewSwitch(group: HTMLElement, ctx: RenderContext, meta: WorkItem
   const button = group.createEl('button', { cls: 'wi-control wi-peek' })
   setIcon(button.createSpan({ cls: 'wi-control-icon' }), peeking ? 'columns-3' : 'file-text')
   button.createSpan({ text: peeking ? 'Board' : 'Notes' })
-  button.setAttr('aria-label', peeking ? 'show the board' : 'show the note text')
+  button.setAttr('aria-label', peeking ? 'Show the board' : 'Show the note text')
   button.addEventListener('click', () => ctx.setPeek(meta.file.path, !peeking))
 }
 
@@ -93,7 +94,7 @@ function renderPromoteToggle(group: HTMLElement, ctx: RenderContext, meta: WorkI
   button.createSpan({ text: meta.board ? 'Demote' : 'Promote' })
   button.setAttr(
     'aria-label',
-    meta.board ? 'demote to a checklist' : 'promote to a board',
+    meta.board ? 'Demote to a checklist' : 'Promote to a board',
   )
   button.setAttr(
     'title',
@@ -109,16 +110,16 @@ export function renderMetaStrip(host: HTMLElement, meta: WorkItemMeta): void {
   const strip = host.createDiv({ cls: 'wi-meta' })
 
   if (meta.status !== undefined) {
-    strip.createSpan({ cls: `wi-pill is-${meta.status}`, text: meta.status })
+    strip.createSpan({ cls: `wi-pill is-${meta.status}`, text: statusLabel(meta.status) })
   } else if (meta.parentLink === null) {
-    strip.createSpan({ cls: 'wi-pill is-root', text: 'root' })
+    strip.createSpan({ cls: 'wi-pill is-root', text: 'Root' })
   }
-  if (meta.blocked) strip.createSpan({ cls: 'wi-pill is-blocked', text: 'blocked' })
+  if (meta.blocked) strip.createSpan({ cls: 'wi-pill is-blocked', text: 'Blocked' })
   if (meta.priority !== undefined) strip.createSpan({ cls: 'wi-pill', text: `P${meta.priority}` })
   if (meta.owner !== undefined) strip.createSpan({ cls: 'wi-pill', text: meta.owner })
   if (meta.agent !== undefined) strip.createSpan({ cls: 'wi-pill is-agent', text: meta.agent })
   if (meta.updated !== undefined) {
-    strip.createSpan({ cls: 'wi-pill is-quiet', text: `updated ${meta.updated}` })
+    strip.createSpan({ cls: 'wi-pill is-quiet', text: `Updated ${meta.updated}` })
   }
   if (meta.id !== undefined) strip.createSpan({ cls: 'wi-pill is-quiet', text: meta.id })
 }

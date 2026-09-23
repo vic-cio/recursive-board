@@ -22,6 +22,7 @@ import { renderArchiveNote, showingArchived } from './archive-note.ts'
 import { renderLabels, renderRemove } from './card.ts'
 import type { RenderContext } from './context.ts'
 import { attachMenu, renderMenuButton } from './menu.ts'
+import { statusLabel } from './status-label.ts'
 
 export interface ChecklistOptions {
   /** True to split the list under the four status headings, which is the mobile board. */
@@ -42,7 +43,7 @@ export function renderChecklist(
 ): void {
   const parent = options.parent
   const archiveParent = options.archiveParent ?? parent
-  const showArchived = archiveParent ? showingArchived(archiveParent) : false
+  const showArchived = archiveParent ? showingArchived(ctx, archiveParent) : false
   const archivedCount = children.filter((c) => c.effectiveArchived).length
 
   if (!options.grouped) {
@@ -62,7 +63,7 @@ export function renderChecklist(
     const group = host.createDiv({ cls: 'wi-group' })
     group.createDiv({
       cls: `wi-group-heading is-${column.status}`,
-      text: `${column.status} (${rows.length})`,
+      text: `${statusLabel(column.status)} (${rows.length})`,
     })
     if (rows.length > 0) renderRows(group, ctx, rows)
     if (column.hidden > 0) renderHiddenNote(group, column.hidden)
@@ -73,25 +74,44 @@ export function renderChecklist(
 
 /**
  * Each rendered list owns a component, which is what the renderer registers its children on. A
- * list is dropped whenever its region redraws, so the next render releases every component whose
- * list has left the page, rather than letting a board that redraws on every change leak them.
+ * list is dropped whenever its region redraws, and its component is then released.
  */
-const live = new Map<HTMLElement, Component>()
+export class ChecklistComponents {
+  private readonly live = new Map<HTMLElement, Component>()
 
-function release(): void {
-  for (const [el, component] of live) {
-    if (el.isConnected) continue
+  add(el: HTMLElement, component: Component): void {
+    this.live.set(el, component)
+  }
+
+  has(el: HTMLElement): boolean {
+    return this.live.has(el)
+  }
+
+  release(el: HTMLElement): void {
+    const component = this.live.get(el)
+    if (!component) return
     component.unload()
-    live.delete(el)
+    this.live.delete(el)
+  }
+
+  releaseDisconnected(): void {
+    for (const el of this.live.keys()) {
+      if (el.isConnected) continue
+      this.release(el)
+    }
+  }
+
+  releaseAll(): void {
+    for (const component of this.live.values()) component.unload()
+    this.live.clear()
   }
 }
 
 function renderRows(host: HTMLElement, ctx: RenderContext, children: WorkItemMeta[]): void {
-  release()
   const list = host.createDiv({ cls: 'wi-checklist markdown-rendered' })
   const component = new Component()
   component.load()
-  live.set(list, component)
+  ctx.checklistComponents.add(list, component)
 
   const markdown = checklistMarkdown(children.map((meta) => ({
     title: meta.title,
@@ -100,13 +120,17 @@ function renderRows(host: HTMLElement, ctx: RenderContext, children: WorkItemMet
   })))
   const sourcePath = children[0]?.file.path ?? ''
 
-  void MarkdownRenderer.render(ctx.app, markdown, list, sourcePath, component).then(() => {
-    const rows = [...list.querySelectorAll<HTMLElement>('li.task-list-item')]
-    rows.forEach((row, i) => {
-      const meta = children[i]
-      if (meta) decorateRow(row, ctx, meta)
-    })
-  })
+  void MarkdownRenderer.render(ctx.app, markdown, list, sourcePath, component).then(
+    () => {
+      if (!list.isConnected || !ctx.checklistComponents.has(list)) return
+      const rows = [...list.querySelectorAll<HTMLElement>('li.task-list-item')]
+      rows.forEach((row, i) => {
+        const meta = children[i]
+        if (meta) decorateRow(row, ctx, meta)
+      })
+    },
+    () => ctx.checklistComponents.release(list),
+  )
 }
 
 /** Wires one rendered row to its work item and appends the badges and controls. */
@@ -118,7 +142,7 @@ function decorateRow(row: HTMLElement, ctx: RenderContext, meta: WorkItemMeta): 
   // Capture phase, so this runs before any handler Obsidian attached to the checkbox or the link.
   const box = row.querySelector<HTMLInputElement>('input.task-list-item-checkbox')
   if (box) {
-    box.setAttribute('aria-label', `mark ${meta.title} done`)
+    box.setAttribute('aria-label', `Mark ${meta.title} done`)
     box.addEventListener('click', (event) => {
       event.stopPropagation()
       // The box has already toggled by the time click fires. Decision U2: unticking restores
@@ -148,12 +172,12 @@ function decorateRow(row: HTMLElement, ctx: RenderContext, meta: WorkItemMeta): 
 
   const extras = row.createSpan({ cls: 'wi-row-extras' })
   if (meta.status !== undefined && meta.status !== 'done') {
-    extras.createSpan({ cls: `wi-check-status is-${meta.status}`, text: meta.status })
+    extras.createSpan({ cls: `wi-check-status is-${meta.status}`, text: statusLabel(meta.status) })
   }
   if (meta.labels.length > 0) renderLabels(extras.createSpan({ cls: 'wi-labels' }), meta.labels)
   const children = ctx.index.childCount(meta.file)
   if (children > 0) extras.createSpan({ cls: 'wi-check-count', text: `${children}` })
-  if (meta.blocked) extras.createSpan({ cls: 'wi-check-blocked', text: 'blocked' })
+  if (meta.blocked) extras.createSpan({ cls: 'wi-check-blocked', text: 'Blocked' })
   renderMenuButton(extras, ctx, meta)
   renderRemove(extras, ctx, meta)
   attachMenu(row, ctx, meta)

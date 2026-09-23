@@ -146,6 +146,7 @@ export function mountLeaf(leaf: WorkspaceLeaf, ctx: RenderContext): void {
 
 export function mountAll(app: App, ctx: RenderContext): void {
   for (const leaf of app.workspace.getLeavesOfType('markdown')) mountLeaf(leaf, ctx)
+  ctx.checklistComponents.releaseDisconnected()
 }
 
 export function unmountAll(app: App): void {
