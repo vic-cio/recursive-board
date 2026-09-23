@@ -9,7 +9,7 @@
  * And an unknown frontmatter key is a warning at most, because rule 27.6 says to preserve it.
  */
 import {
-  CORE_FIELDS, OPTIONAL_FIELDS, INTAKE, STATUSES, isStatus, parseWikilink,
+  CORE_FIELDS, OPTIONAL_FIELDS, STATUSES, isStatus, parseWikilink,
 } from '../../shared/schema.ts'
 import type { Vault, WorkItem } from '../vault.ts'
 
@@ -70,19 +70,18 @@ type Reporter = (
   rule: string, severity: Severity, relPath: string, id: string | undefined, message: string,
 ) => void
 
-/** Decision D8: nothing nests inside the five folders, and `Intake/` is exempt from everything. */
+/** Decision D8: nothing nests inside the work-item folder or Templates/. L5 makes those the
+ * only product folders, so a file elsewhere in the vault is not this product's concern. */
 function checkLayout(vault: Vault, report: Reporter): void {
   for (const relPath of vault.misplaced) {
-    if (relPath.startsWith(`${INTAKE}/`)) continue
     report('folder-nested', 'error', relPath, undefined,
-      'sits below one of the five folders. Hierarchy lives in the parent wikilink, never in a folder.')
+      'sits below one of the product folders. Hierarchy lives in the parent wikilink, never in a folder.')
   }
   for (const relPath of vault.nonItems) {
     report('not-a-work-item', 'warning', relPath, undefined,
       `sits in ${vault.config.workItemFolder}/ but has no \`type: work-item\`. The board will never show it.`)
   }
   for (const relPath of vault.evicted) {
-    if (relPath.startsWith(`${INTAKE}/`)) continue
     report('icloud-evicted', 'warning', relPath, undefined,
       'is an iCloud placeholder, so its contents were not read. Open the vault and let iCloud download it, then validate again.')
   }

@@ -1,8 +1,9 @@
 /**
  * The v1 work-item schema, frozen in decision D7 and amended by U2 and U3.
  *
- * This schema applies to `Boards/` only. `Knowledge/` has its own conventions and `Intake/` has
- * none. Nothing here may grow a field without a decision recorded in `docs/`.
+ * This schema applies to the work-item folder (`Boards/`) only. Other folders in a vault follow
+ * their owner's conventions, and decision L5 leaves them outside this product entirely.
+ * Nothing here may grow a field without a decision recorded in `docs/`.
  */
 
 export const STATUSES = ['backlog', 'options', 'doing', 'done'] as const
@@ -37,13 +38,17 @@ export const INHERITED_FIELDS = ['owner', 'agent'] as const
 
 export const WORK_ITEM_TYPE = 'work-item'
 
-/** The five folders of decision D8. Nothing nests inside them. */
-export const FOLDERS = ['Boards', 'Knowledge', 'Intake', 'Templates', 'Attachments'] as const
+/**
+ * The folders this product reads. Decision L5 narrows them to the work-item folder and the
+ * templates folder; everything else in a vault belongs to its owner. Nothing nests inside either.
+ *
+ * `Boards/` is the default work-item folder. Decision L2 makes it configurable, so this constant
+ * is the fallback rather than the final word.
+ */
+export const FOLDERS = ['Boards', 'Templates'] as const
 export type Folder = (typeof FOLDERS)[number]
 
 export const BOARDS = 'Boards'
-/** `wi validate` skips this folder entirely. Nothing in it can be invalid. */
-export const INTAKE = 'Intake'
 
 export function isStatus(value: unknown): value is Status {
   return typeof value === 'string' && (STATUSES as readonly string[]).includes(value)

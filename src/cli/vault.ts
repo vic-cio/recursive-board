@@ -46,7 +46,7 @@ export interface Vault {
   duplicateIds: string[]
   /** Files iCloud has evicted, given as the path of the real file they stand for. */
   evicted: string[]
-  /** Markdown files nested below a scanned flat folder. */
+  /** Markdown files that do not sit directly in a product folder. */
   misplaced: string[]
   /** Markdown files in the work-item folder that are not work items. */
   nonItems: string[]
@@ -107,7 +107,7 @@ async function scan(root: string, workItemFolder: string): Promise<ScanResult> {
       }
       if (!MARKDOWN.test(entry.name)) continue
       if (parent !== folder) {
-        misplaced.push(rel) // D8: nothing nests inside the five folders.
+        misplaced.push(rel) // D8: nothing nests inside the work-item folder or Templates/.
         continue
       }
       markdown.push(rel)
