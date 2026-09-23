@@ -237,12 +237,32 @@ test('wi move refuses while a work-item folder file is unaccounted for', async (
   assert.match(stderr, /not accounted for/i)
 })
 
+test('wi archive and --undo use the same unaccounted-file guard as rm and move', async () => {
+  fixture = seed()
+  fixture.write('Boards/.Child.md.icloud', 'bplist00')
+
+  const archived = await wi(['archive', 'wi-0004'])
+  const undone = await wi(['archive', 'wi-0004', '--undo'])
+  const removed = await wi(['rm', 'wi-0004'])
+  const moved = await wi(['move', 'wi-0004', '--to', 'Main'])
+
+  for (const result of [archived, undone, removed, moved]) {
+    assert.equal(result.code, 2)
+    assert.match(result.stderr, /Boards\/\.Child\.md\.icloud/)
+    assert.match(result.stderr, /cannot (archive|unarchive|remove|move).*not accounted for/i)
+  }
+  assert.match(archived.stderr, /cannot archive Build server:/)
+  assert.match(undone.stderr, /cannot unarchive Build server:/)
+})
+
 test('non-destructive commands still run while a file is unaccounted for', async () => {
   fixture = seed()
   fixture.write('Boards/.Child.md.icloud', 'bplist00')
 
   const created = await wi(['new', 'Streaming', '--parent', 'wi-0004', '--json'])
   assert.equal(created.code, 0, created.stderr)
+  assert.match(created.stderr, /Boards\/\.Child\.md\.icloud/)
+  assert.match(created.stderr, /new id or filename may clash with an unread file/i)
   const { id } = JSON.parse(created.stdout)
 
   const listed = await wi(['children', 'wi-0004', '--json'])
@@ -252,6 +272,29 @@ test('non-destructive commands still run while a file is unaccounted for', async
   const moved = await wi(['status', id, 'doing', '--json'])
   assert.equal(moved.code, 0, moved.stderr)
   assert.equal(JSON.parse(moved.stdout).to, 'doing')
+})
+
+test('wi validate warns when defaultRoot does not name a root work item', async () => {
+  fixture = seed()
+  fixture.write('.wi.json', '{"defaultRoot":"Build server"}')
+
+  const { code, stdout } = await wi(['validate', '--json'])
+  assert.equal(code, 0)
+  const report = JSON.parse(stdout)
+  const warning = report.problems.find((p: { rule: string }) => p.rule === 'default-root-unresolved')
+  assert.ok(warning)
+  assert.equal(warning.severity, 'warning')
+  assert.match(warning.message, /root/i)
+})
+
+test('wi validate warns when defaultRoot names no work item', async () => {
+  fixture = seed()
+  fixture.write('.wi.json', '{"defaultRoot":"Missing"}')
+
+  const { code, stdout } = await wi(['validate', '--json'])
+  assert.equal(code, 0)
+  const report = JSON.parse(stdout)
+  assert.ok(report.problems.some((p: { rule: string }) => p.rule === 'default-root-unresolved'))
 })
 
 test('wi validate warns about an unaccounted file without failing the vault', async () => {

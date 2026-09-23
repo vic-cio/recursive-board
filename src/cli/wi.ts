@@ -54,10 +54,11 @@ Notes
   \`wi rm\` moves a file to the vault's .trash. It refuses an item that has children
   unless you pass --recursive, because removing a parent leaves its children on no board.
   \`wi move\` changes only the item's parent. Its status stays, and its children follow it.
-  \`wi rm\` and \`wi move\` refuse while a hidden non-Markdown file sits in the work-item
+  \`wi rm\`, \`wi move\` and \`wi archive\` refuse while a hidden non-Markdown file sits in the work-item
   folder, because the index cannot read it and may be missing a work item. Let the sync
   client download the file, or delete the stray file, then retry. There is no --force.
   \`wi archive\` changes one flag. Descendants disappear with their parent at read time.
+  \`wi new\` warns when such a file exists because a new id or filename may clash with it.
 `
 
 const VERSION = '0.1.0'
@@ -161,6 +162,13 @@ async function runNew(vault: Vault, rest: string[], values: Values, json: boolea
     ...(typeof values['template'] === 'string' ? { template: values['template'] } : {}),
     ...(priority !== undefined ? { priority } : {}),
   })
+
+  if (vault.unaccounted.length > 0) {
+    process.stderr.write(
+      `wi: warning: a new id or filename may clash with an unread file. ` +
+      `Unread files: ${vault.unaccounted.join(', ')}.\n`,
+    )
+  }
 
   if (json) print({ id: created.id, path: created.relPath, parent: created.parentStem })
   else process.stdout.write(`${created.id}  ${created.relPath}  (child of ${created.parentStem})\n`)

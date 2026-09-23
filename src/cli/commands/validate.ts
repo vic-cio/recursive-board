@@ -51,6 +51,7 @@ export async function validate(vault: Vault): Promise<Report> {
     checkItem(item, vault, report)
   }
 
+  checkDefaultRoot(vault, report)
   checkRoots(vault, report)
   checkCycles(vault, report)
 
@@ -69,6 +70,17 @@ export async function validate(vault: Vault): Promise<Report> {
 type Reporter = (
   rule: string, severity: Severity, relPath: string, id: string | undefined, message: string,
 ) => void
+
+function checkDefaultRoot(vault: Vault, report: Reporter): void {
+  const configured = vault.config.defaultRoot
+  if (configured === null) return
+
+  const target = vault.items.find((item) => item.stem.toLowerCase() === configured.toLowerCase())
+  if (target !== undefined && target.parent === null) return
+
+  report('default-root-unresolved', 'warning', '.wi.json', target?.id,
+    `sets defaultRoot to "${configured}", which does not name a root work item.`)
+}
 
 /** Decision D8: nothing nests inside the work-item folder or Templates/. L5 makes those the
  * only product folders, so a file elsewhere in the vault is not this product's concern. */

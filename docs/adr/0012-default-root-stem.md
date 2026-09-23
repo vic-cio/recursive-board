@@ -1,8 +1,6 @@
 ---
-status: proposed
+status: accepted
 ---
 # Configure the default root by filename stem
 
-`.wi.json` currently accepts `defaultRoot` only when it is a work item filename stem. `wi new` uses it when `--parent` is omitted, and generated templates use it for their parent link. A missing value leaves the parent explicit.
-
-The open decision is whether the filename stem is the right configuration value.
+`.wi.json` accepts `defaultRoot` as the filename stem of a root work item. The value stays a stem because a person reads and types it, and it becomes the parent link in generated templates. `wi new` uses it when `--parent` is omitted. A missing value leaves the parent explicit. `wi validate` warns when the configured stem names no root.
