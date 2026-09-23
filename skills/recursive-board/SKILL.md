@@ -24,7 +24,7 @@ above the working directory that holds `.wi.json` or `Boards/`. Outside the vaul
 
 ## Reading
 
-A `<ref>` is an id (`wi-0102`), a filename, or a title. Use the id once you have it: it is exact
+A `<ref>` is an id (`wi-3k9p`), a filename, or a title. Use the id once you have it: it is exact
 and survives a rename.
 
 ```bash
@@ -54,6 +54,6 @@ wi rm <ref> --recursive --dry-run   # read what it lists, then run it without --
 
 ## Outcomes
 
-`wi` prints the change it made, for example `wi-0113  Fix the live preview gap  doing → done`.
+`wi` prints the change it made, for example `wi-3k9p  Write the release notes  doing → done`.
 Report that line to the user. A refusal (exit 2) names its reason. It is a rule doing its job:
 read it and change the approach. Do not work around it with a file tool.
