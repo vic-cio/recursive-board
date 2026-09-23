@@ -27,7 +27,7 @@ await build({
   outfile: file,
   bundle: true,
   format: 'esm',
-  target: 'node20',
+  target: "node20.12",
   platform: 'node',
   logLevel: 'info',
   treeShaking: true,

@@ -5,7 +5,7 @@
   "type": "module",
   "description": "wi: the CLI that owns every write into the vault vault",
   "engines": {
-    "node": ">=20"
+    "node": ">=20.12"
   },
   "bin": {
     "wi": "./dist/wi/wi.js"
