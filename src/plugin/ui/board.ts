@@ -6,7 +6,7 @@
  * On a phone the four columns become four tabs over one group of cards
  * (`docs/phone-board-design.md`). Every count shows at once, so an empty Doing costs a glance,
  * and any group is one tap away. This reverses decision u6, which made the phone board a grouped
- * checklist: the maintainer, looking at it, said the current state is not desired.
+ * checklist.
  *
  * Decision u7 puts an add row at the foot of every column. Typing into Options and pressing enter
  * is one action where any dialog is at least four, and that difference decides whether half-formed

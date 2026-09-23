@@ -171,8 +171,8 @@ export class Actions {
    * answer that does not quietly lose work.
    *
    * The confirmation is Obsidian's own, so it honours the vault's "Deleted files" setting: a
-   * deletion goes to the system trash, to `.trash`, or is permanent, according to what the maintainer
-   * already chose. The plugin does not get to decide how recoverable this is.
+   * deletion goes to the system trash, to `.trash`, or is permanent. The plugin does not get to
+   * decide how recoverable this is.
    *
    * Returns true when the file was removed.
    */

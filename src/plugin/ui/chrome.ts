@@ -1,21 +1,18 @@
 /**
  * Breadcrumbs, the metadata strip and the promote toggle.
  *
- * Decision D8 made `Boards/` one flat folder, which makes the file explorer useless as
- * navigation. the maintainer, looking at nineteen files in one list: "will have to navigate through links
- * and the graph view". Breadcrumbs are the consequence, and decision u8 puts them at the top of
- * every work item rather than only on boards, because the prototype review found they are the
- * primary way back.
+ * Decision D8 made the work-item folder one flat folder, which makes the file explorer useless as
+ * navigation. Breadcrumbs are the consequence, and decision u8 puts them at the top of every work
+ * item rather than only on boards, because the prototype review found they are the primary way
+ * back.
  *
  * Ordering follows the prototype review: the Objective is what you came to read, so the metadata
  * strip and the board sit below the note body.
  *
  * The promote control does not. The review put it below the Objective with everything else, but
  * that leaves a checklist with its only route back to a board at the foot of the note, past the
- * whole body. the maintainer, on the first real use: "when i switch to checklist instead of board the
- * option to view board at the top disappears". U1 said "a toggle in the note header" all along,
- * and the doc's own open threads record that the toggle was never specified. It lives in the top
- * bar.
+ * whole body. U1 said "a toggle in the note header" all along, and the doc's own open threads
+ * record that the toggle was never specified. It lives in the top bar.
  */
 import { setIcon } from 'obsidian'
 
