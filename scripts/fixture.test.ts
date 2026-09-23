@@ -1,6 +1,7 @@
 import { test, afterEach } from 'node:test'
 import assert from 'node:assert/strict'
-import { readFileSync } from 'node:fs'
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
+import { join } from 'node:path'
 
 import { generate, writeFixture } from './fixture.ts'
 import { loadVault } from '../src/cli/vault.ts'
@@ -62,6 +63,17 @@ test('generation is deterministic for a given day', () => {
   assert.deepEqual([...generate(day)], [...generate(day)])
 })
 
-test('the fixture refuses to write into iCloud', async () => {
-  await assert.rejects(writeFixture('/Users/x/Library/Documents/vault'), /iCloud/)
+test('the fixture refuses a vault that holds a work item it did not generate', async () => {
+  fixture = makeVault()
+  const boards = join(fixture.root, 'Boards')
+  mkdirSync(boards, { recursive: true })
+  writeFileSync(join(boards, 'Real card.md'), '---\ntype: work-item\nid: wi-real\ntitle: Real card\n---\n')
+  await assert.rejects(writeFixture(fixture.root), /wi-real/)
+  assert.ok(existsSync(join(boards, 'Real card.md')))
+})
+
+test('the fixture regenerates over its own earlier output', async () => {
+  fixture = makeVault()
+  await writeFixture(fixture.root)
+  assert.equal(await writeFixture(fixture.root), generate().size)
 })
