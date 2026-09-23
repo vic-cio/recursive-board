@@ -85,6 +85,10 @@ wi --help
 
 Run `wi` inside a vault, pass `--vault <path>`, or set `WI_VAULT`. Commands accept a work-item id, filename, or title as a reference. An id takes precedence when references are ambiguous. Add `--json` for machine-readable output. The `--vault <path>` and `--json` flags apply to all commands.
 
+## Use with coding agents
+
+`skills/recursive-board/SKILL.md` teaches an agent to read and change a vault through `wi`. Copy that folder into your agent's skills folder, for example `~/.claude/skills/` for Claude Code or `~/.agents/skills/`. From a source checkout, `npm run install:skill` links it there and links `wi` into `~/.local/bin`.
+
 ## Install the Git validation hook
 
 Git is optional. Recursive Board works without it, and the hook only adds a check for vaults that are Git repositories.

@@ -1,11 +1,11 @@
 /**
- * Makes the `vault` skill and the `wi` command available to every agent on this Mac.
+ * Makes the `recursive-board` skill and the `wi` command available to every agent on this machine. It is for a source checkout.
  *
  * Each entry is a symlink back into this repo, so the skill and the CLI stay current without a
  * reinstall. These links point to local development files, so they do not affect vault sync.
  *
- *   ~/.agents/skills/vault  -> <repo>/skills/vault     (the .agents standard)
- *   ~/.claude/skills/vault  -> ../../.agents/skills/vault   (Claude Code reads this one)
+ *   ~/.agents/skills/recursive-board  -> <repo>/skills/recursive-board     (the .agents standard)
+ *   ~/.claude/skills/recursive-board  -> ../../.agents/skills/recursive-board   (Claude Code reads this one)
  *   ~/.local/bin/wi             -> <repo>/src/cli/wi.ts
  *
  * Usage: node scripts/install-skill.mjs
@@ -19,8 +19,8 @@ const root = join(dirname(fileURLToPath(import.meta.url)), '..')
 const home = homedir()
 
 const LINKS = [
-  { at: join(home, '.agents', 'skills', 'vault'), to: join(root, 'skills', 'vault') },
-  { at: join(home, '.claude', 'skills', 'vault'), to: join('..', '..', '.agents', 'skills', 'vault') },
+  { at: join(home, '.agents', 'skills', 'recursive-board'), to: join(root, 'skills', 'recursive-board') },
+  { at: join(home, '.claude', 'skills', 'recursive-board'), to: join('..', '..', '.agents', 'skills', 'recursive-board') },
   { at: join(home, '.local', 'bin', 'wi'), to: join(root, 'src', 'cli', 'wi.ts') },
 ]
 
