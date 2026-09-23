@@ -141,15 +141,15 @@ test('removing an orphan works, since it is on no board to begin with', async ()
   assert.ok(gone(fixture, 'Orphan'))
 })
 
-test('removeItem refuses while any file is evicted, because an evicted child is invisible', async () => {
+test('removeItem refuses while a work-item folder file is unaccounted for', async () => {
   const f = makeVault()
   try {
     f.write('Boards/Main.md', item({ type: 'work-item', id: 'wi-0001', title: 'Main', created: '2026-09-21', updated: '2026-09-21' }))
     f.write('Boards/Parent.md', item({ type: 'work-item', id: 'wi-0002', title: 'Parent', status: 'backlog', parent: '"[[Main]]"', created: '2026-09-21', updated: '2026-09-21' }))
-    // iCloud's stub for an evicted child of Parent. Its frontmatter cannot be read.
+    // A sync stub for an evicted child of Parent. Its frontmatter cannot be read.
     f.write('Boards/.Child.md.icloud', 'bplist00')
     const vault = await loadVault(f.root)
-    await assert.rejects(removeItem(vault, 'wi-0002'), /evicted/i)
+    await assert.rejects(removeItem(vault, 'wi-0002'), /not accounted for/i)
     assert.ok(existsSync(`${f.root}/Boards/Parent.md`))
   } finally {
     f.cleanup()

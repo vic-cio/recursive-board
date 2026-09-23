@@ -81,9 +81,9 @@ function checkLayout(vault: Vault, report: Reporter): void {
     report('not-a-work-item', 'warning', relPath, undefined,
       `sits in ${vault.config.workItemFolder}/ but has no \`type: work-item\`. The board will never show it.`)
   }
-  for (const relPath of vault.evicted) {
-    report('icloud-evicted', 'warning', relPath, undefined,
-      'is an iCloud placeholder, so its contents were not read. Open the vault and let iCloud download it, then validate again.')
+  for (const relPath of vault.unaccounted) {
+    report('unaccounted-file', 'warning', relPath, undefined,
+      'is a hidden file that is not Markdown, so its contents were not read. Let the sync client download it if it is a work item, or delete it if it is a stray file, then validate again.')
   }
 }
 

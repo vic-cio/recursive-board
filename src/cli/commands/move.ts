@@ -10,7 +10,7 @@
  */
 import { editItem } from '../write.ts'
 import { moveEdits, moveRefusal } from '../../shared/transitions.ts'
-import { requireWholeTree, type Vault, type WorkItem } from '../vault.ts'
+import { requireAccountedTree, type Vault, type WorkItem } from '../vault.ts'
 
 export interface MoveResult {
   item: WorkItem
@@ -23,7 +23,7 @@ export interface MoveResult {
 export async function moveItem(vault: Vault, ref: string, targetRef: string): Promise<MoveResult> {
   const item = vault.resolve(ref)
   const target = vault.resolve(targetRef)
-  requireWholeTree(vault, `move ${item.title ?? item.stem}`)
+  requireAccountedTree(vault, `move ${item.title ?? item.stem}`)
 
   // Keyed by stem, lowercased: the key a wikilink resolves by.
   const key = (w: WorkItem) => w.stem.toLowerCase()

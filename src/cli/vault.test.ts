@@ -204,12 +204,33 @@ test('loadVault reports a duplicate id rather than dropping one of the items', a
   assert.deepEqual(vault.duplicateIds, ['wi-0004'])
 })
 
-test('loadVault records an iCloud placeholder instead of seeing the file as absent', async () => {
+test('loadVault records a hidden non-Markdown file in the work-item folder as unaccounted', async () => {
   fixture = vaultWithTree()
   fixture.write('Boards/.Evicted card.md.icloud', '')
   const vault = await loadVault(fixture.root)
-  assert.deepEqual(vault.evicted, ['Boards/Evicted card.md'])
-  assert.equal(vault.items.length, 4, 'an evicted file is not a work item, and is not invented')
+  assert.deepEqual(vault.unaccounted, ['Boards/.Evicted card.md.icloud'])
+  assert.equal(vault.items.length, 4, 'an unaccounted file is not a work item, and is not invented')
+})
+
+test('loadVault records a hidden stray file that is not a sync stub', async () => {
+  fixture = vaultWithTree()
+  fixture.write('Boards/.scratch', 'junk')
+  const vault = await loadVault(fixture.root)
+  assert.deepEqual(vault.unaccounted, ['Boards/.scratch'])
+})
+
+test('loadVault ignores the hidden files it knows are harmless', async () => {
+  fixture = vaultWithTree()
+  fixture.write('Boards/.DS_Store', 'junk')
+  const vault = await loadVault(fixture.root)
+  assert.deepEqual(vault.unaccounted, [])
+})
+
+test('only the work-item folder is checked for unaccounted files', async () => {
+  fixture = vaultWithTree()
+  fixture.write('Knowledge/.hidden', 'junk')
+  const vault = await loadVault(fixture.root)
+  assert.deepEqual(vault.unaccounted, [])
 })
 
 test('loadVault records a Markdown file nested below the work-item folder', async () => {

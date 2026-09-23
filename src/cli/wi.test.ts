@@ -219,6 +219,50 @@ test('wi never writes to the parent when a child changes', async () => {
   assert.equal(readFileSync(join(fixture.root, 'Boards/Build server.md'), 'utf8'), serverBefore)
 })
 
+test('wi rm refuses while a work-item folder file is unaccounted for, and names it', async () => {
+  fixture = seed()
+  fixture.write('Boards/.Child.md.icloud', 'bplist00')
+  const { code, stderr } = await wi(['rm', 'wi-0004'])
+  assert.equal(code, 2)
+  assert.match(stderr, /Boards\/\.Child\.md\.icloud/)
+  assert.match(stderr, /not accounted for/i)
+  assert.match(stderr, /download/i)
+})
+
+test('wi move refuses while a work-item folder file is unaccounted for', async () => {
+  fixture = seed()
+  fixture.write('Boards/.Child.md.icloud', 'bplist00')
+  const { code, stderr } = await wi(['move', 'wi-0004', '--to', 'Main'])
+  assert.equal(code, 2)
+  assert.match(stderr, /not accounted for/i)
+})
+
+test('non-destructive commands still run while a file is unaccounted for', async () => {
+  fixture = seed()
+  fixture.write('Boards/.Child.md.icloud', 'bplist00')
+
+  const created = await wi(['new', 'Streaming', '--parent', 'wi-0004', '--json'])
+  assert.equal(created.code, 0, created.stderr)
+  const { id } = JSON.parse(created.stdout)
+
+  const listed = await wi(['children', 'wi-0004', '--json'])
+  assert.equal(listed.code, 0, listed.stderr)
+  assert.ok(JSON.parse(listed.stdout).children.some((c: { id: string }) => c.id === id))
+
+  const moved = await wi(['status', id, 'doing', '--json'])
+  assert.equal(moved.code, 0, moved.stderr)
+  assert.equal(JSON.parse(moved.stdout).to, 'doing')
+})
+
+test('wi validate warns about an unaccounted file without failing the vault', async () => {
+  fixture = seed()
+  fixture.write('Boards/.Child.md.icloud', 'bplist00')
+  const { code, stdout } = await wi(['validate'])
+  assert.equal(code, 0, stdout)
+  assert.match(stdout, /\[unaccounted-file\]/)
+  assert.match(stdout, /^ok: 2 work items, 0 errors, 1 warnings$/m)
+})
+
 test('wi move reparents, and the item then lists under the new parent', async () => {
   fixture = seed()
   const created = await wi(['new', 'Streaming', '--parent', 'wi-0004', '--json'])

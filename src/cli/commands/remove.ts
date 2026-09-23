@@ -19,7 +19,7 @@ import { mkdir, rename } from 'node:fs/promises'
 import { existsSync } from 'node:fs'
 import { join } from 'node:path'
 
-import { requireWholeTree, type Vault, type WorkItem } from '../vault.ts'
+import { requireAccountedTree, type Vault, type WorkItem } from '../vault.ts'
 
 /** Obsidian's own local trash. Outside the five folders, so `wi validate` never sees it. */
 export const TRASH = '.trash'
@@ -76,7 +76,7 @@ export async function removeItem(
 ): Promise<RemoveResult> {
   const { recursive = false, dryRun = false } = options
   const item = vault.resolve(ref)
-  requireWholeTree(vault, `remove ${item.title ?? item.stem}`)
+  requireAccountedTree(vault, `remove ${item.title ?? item.stem}`)
 
   if (item.parent === null) {
     throw new Error(

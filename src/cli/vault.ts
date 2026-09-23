@@ -5,7 +5,7 @@
  * children by parent. Resolution follows decision D3: the wikilink is authoritative, so a parent
  * link resolves to a filename, never to a title and never to an id.
  *
- * The index also carries what it could not make sense of. An evicted iCloud file, a duplicate id,
+ * The index also carries what it could not make sense of. An unaccounted file, a duplicate id,
  * a misplaced file: each is reported, and none causes an item to be dropped or repaired silently.
  */
 import { readdir, readFile } from 'node:fs/promises'
@@ -44,8 +44,12 @@ export interface Vault {
   byId: Map<string, WorkItem>
   /** Work items whose id another work item also claims. */
   duplicateIds: string[]
-  /** Files iCloud has evicted, given as the path of the real file they stand for. */
-  evicted: string[]
+  /**
+   * Hidden files in the work-item folder that are not Markdown. A sync client writes one while it
+   * holds a file back, and anything else hidden there is a stray. Either way the contents were
+   * not read, so the index may be missing a work item.
+   */
+  unaccounted: string[]
   /** Markdown files that do not sit directly in a product folder. */
   misplaced: string[]
   /** Markdown files in the work-item folder that are not work items. */
@@ -60,8 +64,23 @@ export interface Vault {
 }
 
 const MARKDOWN = /\.md$/i
-/** iCloud evicts a file to a hidden sibling: `Notes.md` becomes `.Notes.md.icloud`. */
-const ICLOUD_PLACEHOLDER = /^\.(.+)\.icloud$/
+/**
+ * Hidden files that are known to be harmless, so they are never reported. The OS writes
+ * `.DS_Store`, and `.gitkeep` is a common way to keep an empty folder in Git.
+ */
+const IGNORED_HIDDEN = new Set(['.DS_Store', '.localized', '.gitkeep'])
+
+/**
+ * Decision L1: a hidden file in the work-item folder that is not a Markdown file is unaccounted
+ * for. A sync client that has not downloaded a file may leave a hidden stub beside it, for
+ * example iCloud's `Boards/.Card.md.icloud`, and a stray hidden file is a second way for a work
+ * item to be invisible to the index. Both are reported; neither is guessed at.
+ */
+function isUnaccounted(name: string): boolean {
+  if (!name.startsWith('.')) return false
+  if (MARKDOWN.test(name)) return false
+  return !IGNORED_HIDDEN.has(name)
+}
 
 /** Walks up to the nearest configured vault, or a legacy vault holding `Boards/`. */
 export function findVaultRoot(start: string): string | null {
@@ -76,13 +95,13 @@ export function findVaultRoot(start: string): string | null {
 
 interface ScanResult {
   markdown: string[]
-  evicted: string[]
+  unaccounted: string[]
   misplaced: string[]
 }
 
 async function scan(root: string, workItemFolder: string): Promise<ScanResult> {
   const markdown: string[] = []
-  const evicted: string[] = []
+  const unaccounted: string[] = []
   const misplaced: string[] = []
 
   for (const folder of [workItemFolder, ...FOLDERS.filter((name) =>
@@ -99,10 +118,8 @@ async function scan(root: string, workItemFolder: string): Promise<ScanResult> {
       const rel = `${parent}/${entry.name}`
       if (entry.isDirectory()) continue
 
-      const placeholder = ICLOUD_PLACEHOLDER.exec(entry.name)
-      if (placeholder) {
-        const real = `${parent}/${placeholder[1]}`
-        if (MARKDOWN.test(placeholder[1]!)) evicted.push(real)
+      if (folder === BOARDS && isUnaccounted(entry.name)) {
+        unaccounted.push(rel)
         continue
       }
       if (!MARKDOWN.test(entry.name)) continue
@@ -113,7 +130,7 @@ async function scan(root: string, workItemFolder: string): Promise<ScanResult> {
       markdown.push(rel)
     }
   }
-  return { markdown, evicted, misplaced }
+  return { markdown, unaccounted, misplaced }
 }
 
 function toWorkItem(root: string, relPath: string, text: string): WorkItem | null {
@@ -168,20 +185,24 @@ function linkKey(target: string): string {
 }
 
 /**
- * Refuses a write whose safety depends on seeing the whole tree, while iCloud has evicted any file.
+ * Refuses a write whose safety depends on seeing the whole tree while a work-item folder file is
+ * unaccounted for.
  *
- * An evicted file is a stub whose frontmatter cannot be read, so the index cannot know its parent.
- * A parent can then look childless, and a loop can run through the stub unseen. Tested on
- * 2026-09-22: macOS 27 keeps an evicted file under its own name and downloads it on read, so this
- * fires only where iCloud still leaves `.icloud` stubs.
+ * An unaccounted file cannot be read, so the index cannot know whether a work item sits inside it.
+ * A parent can then look childless, and a loop can run through the file unseen. That is why
+ * `wi rm` and `wi move` refuse. There is no `--force` flag: decision L1 rejects one, because an
+ * agent that meets a refusal reaches for the flag rather than reading the error.
  */
-export function requireWholeTree(vault: Vault, what: string): void {
-  if (vault.evicted.length === 0) return
-  const names = vault.evicted.slice(0, 3).join(', ')
-  const more = vault.evicted.length > 3 ? `, and ${vault.evicted.length - 3} more` : ''
+export function requireAccountedTree(vault: Vault, what: string): void {
+  const files = vault.unaccounted
+  if (files.length === 0) return
+  const names = files.slice(0, 3).join(', ')
+  const more = files.length > 3 ? `, and ${files.length - 3} more` : ''
+  const one = files.length === 1
   throw new Error(
-    `cannot ${what}: iCloud has evicted ${names}${more}, so the tree is not fully visible. ` +
-    'Download them first (open the vault folder in Finder, or brctl download <path>).',
+    `cannot ${what}: ${names}${more} ${one ? 'is' : 'are'} not accounted for, so the tree is ` +
+    'not fully visible. Let the sync client download ' + (one ? 'it' : 'them') +
+    ' if it is a work item, or delete it if it is a stray file, then retry.',
   )
 }
 
@@ -193,7 +214,7 @@ export async function loadVault(root: string): Promise<Vault> {
     if (!isMissingFile(error)) throw error
   }
   const config = parseVaultConfig(configText)
-  const { markdown, evicted, misplaced } = await scan(root, config.workItemFolder)
+  const { markdown, unaccounted, misplaced } = await scan(root, config.workItemFolder)
 
   const items: WorkItem[] = []
   const nonItems: string[] = []
@@ -261,7 +282,7 @@ export async function loadVault(root: string): Promise<Vault> {
     items,
     byId,
     duplicateIds,
-    evicted,
+    unaccounted,
     misplaced,
     nonItems,
     takenIds: new Set(byId.keys()),

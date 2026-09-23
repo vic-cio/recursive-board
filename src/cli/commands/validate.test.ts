@@ -272,13 +272,19 @@ test('a Markdown file nested below Boards is an error (decision D8)', async () =
   assert.equal(problem.severity, 'error')
 })
 
-test('an iCloud placeholder is a warning, and never a reason to rewrite anything', async () => {
+test('an unaccounted file is a warning, and never a reason to rewrite anything', async () => {
   fixture = healthy()
   fixture.write('Boards/.Build server.md.icloud', '')
-  const problem = (await run(fixture)).problems.find((p) => p.rule === 'icloud-evicted')
+  const problem = (await run(fixture)).problems.find((p) => p.rule === 'unaccounted-file')
   assert.ok(problem)
   assert.equal(problem.severity, 'warning')
   assert.match(problem.message, /download/i)
+})
+
+test('a harmless hidden file is not reported', async () => {
+  fixture = healthy()
+  fixture.write('Boards/.DS_Store', 'junk')
+  assert.deepEqual((await run(fixture)).problems, [])
 })
 
 test('validate never looks at Intake, which is no longer a product folder (L5)', async () => {

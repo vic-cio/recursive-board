@@ -52,6 +52,9 @@ Notes
   \`wi rm\` moves a file to the vault's .trash. It refuses an item that has children
   unless you pass --recursive, because removing a parent leaves its children on no board.
   \`wi move\` changes only the item's parent. Its status stays, and its children follow it.
+  \`wi rm\` and \`wi move\` refuse while a hidden non-Markdown file sits in the work-item
+  folder, because the index cannot read it and may be missing a work item. Let the sync
+  client download the file, or delete the stray file, then retry. There is no --force.
 `
 
 const VERSION = '0.1.0'

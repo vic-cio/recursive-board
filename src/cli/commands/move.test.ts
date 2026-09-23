@@ -97,8 +97,8 @@ test('moveItem repairs an orphan by giving it a parent that resolves', async () 
   assert.equal(fm(fixture, 'Lost').get('parent'), '[[Main]]')
 })
 
-test('moveItem refuses while any file is evicted, because a loop could run through it', async () => {
+test('moveItem refuses while a work-item folder file is unaccounted for', async () => {
   fixture = seed()
   fixture.write('Boards/.Hidden.md.icloud', 'bplist00')
-  await assert.rejects(moveItem(await loadVault(fixture.root), 'wi-0003', 'Site'), /evicted/i)
+  await assert.rejects(moveItem(await loadVault(fixture.root), 'wi-0003', 'Site'), /not accounted for/i)
 })
