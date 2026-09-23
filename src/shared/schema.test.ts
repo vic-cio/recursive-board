@@ -3,7 +3,7 @@ import assert from 'node:assert/strict'
 
 import {
   isStatus, parseWikilink, formatWikilink, fileNameStem, fileNameFor, idSuffix, newId, today,
-  STATUSES, CORE_FIELDS,
+  STATUSES, CORE_FIELDS, FOLDERS, BOARDS,
 } from './schema.ts'
 
 test('the four statuses are the only statuses', () => {
@@ -17,6 +17,11 @@ test('the four statuses are the only statuses', () => {
 
 test('the frozen schema is nine core fields', () => {
   assert.equal(CORE_FIELDS.length, 9)
+})
+
+test('only the work-item folder and Templates/ are product folders (L5)', () => {
+  assert.deepEqual([...FOLDERS], ['Boards', 'Templates'])
+  assert.equal(BOARDS, 'Boards')
 })
 
 test('parseWikilink reads a plain link', () => {

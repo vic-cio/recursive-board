@@ -76,13 +76,34 @@ test('loadVault reads the parent as a resolved wikilink target', async () => {
   assert.equal(vault.byId.get('wi-0001')!.parent, null, 'a root has no parent')
 })
 
-test('loadVault ignores Knowledge, Intake, Templates and Attachments', async () => {
+test('loadVault reads work items from the work-item folder alone (L5)', async () => {
   fixture = vaultWithTree()
   fixture.write('Knowledge/App Protocol.md', '---\ntype: knowledge\n---\n\n# App\n')
   fixture.write('Intake/scratch.md', 'raw thoughts, no frontmatter\n')
   fixture.write('Templates/work-item.md', item({ type: 'work-item', id: 'wi-XXXX', title: '' }))
   const vault = await loadVault(fixture.root)
   assert.equal(vault.items.length, 4)
+})
+
+test('a work item filed outside the work-item folder is invisible (L5 cost)', async () => {
+  fixture = vaultWithTree()
+  fixture.write('Knowledge/Misfiled.md', item({
+    type: 'work-item', id: 'wi-0042', title: 'Misfiled', status: 'backlog', parent: '"[[Main]]"',
+  }))
+  fixture.write('Attachments/also-misfiled.md', item({
+    type: 'work-item', id: 'wi-0043', title: 'Also misfiled', status: 'backlog', parent: '"[[Main]]"',
+  }))
+  const vault = await loadVault(fixture.root)
+  assert.equal(vault.items.length, 4)
+  assert.equal(vault.byId.has('wi-0042'), false)
+  assert.equal(vault.byId.has('wi-0043'), false)
+})
+
+test('loadVault does not report a nested file outside the product folders (L5)', async () => {
+  fixture = vaultWithTree()
+  fixture.write('Knowledge/Topic/Nested.md', '# Nested knowledge\n')
+  const vault = await loadVault(fixture.root)
+  assert.deepEqual(vault.misplaced, [])
 })
 
 test('loadVault ignores a file in Boards that is not a work item', async () => {
@@ -191,7 +212,7 @@ test('loadVault records an iCloud placeholder instead of seeing the file as abse
   assert.equal(vault.items.length, 4, 'an evicted file is not a work item, and is not invented')
 })
 
-test('loadVault records a Markdown file nested below one of the five folders', async () => {
+test('loadVault records a Markdown file nested below the work-item folder', async () => {
   fixture = vaultWithTree()
   fixture.write('Boards/Project/Nested.md', item({
     type: 'work-item', id: 'wi-0030', title: 'Nested', status: 'backlog', parent: '"[[Main]]"',

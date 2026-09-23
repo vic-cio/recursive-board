@@ -281,11 +281,27 @@ test('an iCloud placeholder is a warning, and never a reason to rewrite anything
   assert.match(problem.message, /download/i)
 })
 
-test('validate skips Intake entirely, whatever is in it', async () => {
+test('validate never looks at Intake, which is no longer a product folder (L5)', async () => {
   fixture = healthy()
   fixture.write('Intake/scratch.md', 'no frontmatter, no rules, status: active, [[nonsense]]\n')
   fixture.write('Intake/untitled.md', '---\ntype: work-item\nstatus: banana\n---\n')
   assert.deepEqual((await run(fixture)).problems, [])
+})
+
+test('a nested file under Knowledge is no longer checked (L5 cost)', async () => {
+  fixture = healthy()
+  fixture.write('Knowledge/Topic/Nested.md', 'no rules apply here\n')
+  assert.deepEqual((await run(fixture)).problems, [])
+})
+
+test('a nested file under Templates is still an error, since Templates is a product folder', async () => {
+  fixture = healthy()
+  fixture.write('Templates/Project/Nested.md', item({
+    type: 'work-item', id: 'wi-0027', title: 'Nested', status: 'backlog', parent: '"[[Main]]"',
+  }))
+  const problem = (await run(fixture)).problems.find((p) => p.rule === 'folder-nested')
+  assert.ok(problem)
+  assert.equal(problem.severity, 'error')
 })
 
 test('validate does not apply the work-item schema to Knowledge or Templates', async () => {
