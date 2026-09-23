@@ -24,7 +24,7 @@ import { archiveItem } from './commands/archive.ts'
 import { STATUSES } from '../shared/schema.ts'
 import { templateNames } from '../shared/templates.ts'
 
-const HELP = `wi — the vault vault CLI
+const HELP = `wi — the Recursive Board CLI
 
 Usage
   wi new <title> [--parent <ref>] [--status <s>] [--template <t>] [--owner <o>] [--agent <a>]

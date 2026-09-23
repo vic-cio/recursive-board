@@ -1,19 +1,18 @@
 /**
  * Puts a built plugin into a vault.
  *
- * Decision D6, rule 1: do not symlink into the iCloud vault. iCloud does not sync a symlink, so
- * the phone would silently get nothing. This copies.
- *
- * Decision D6, rule 2: the local dev vault outside iCloud is the fast desktop loop, and there a
- * symlink is right, because `npm run dev` then updates the vault on every save.
+ * The default copies, because a sync client does not carry a symlink to other devices: a synced
+ * vault would get nothing on the phone. `--link` is for a local dev vault, where `npm run dev`
+ * then updates the vault on every save. No sync provider can be detected from a path, so `--link`
+ * warns instead of refusing.
  *
  * Usage:
  *   node build/install.mjs --vault <path>          copy the three files
- *   node build/install.mjs --vault <path> --link   symlink instead, refused inside iCloud
+ *   node build/install.mjs --vault <path> --link   symlink instead, for a local dev vault
  */
-import { copyFile, mkdir, readFile, rm, symlink, lstat, realpath } from 'node:fs/promises'
+import { copyFile, mkdir, readFile, rm, symlink, lstat } from 'node:fs/promises'
 import { existsSync } from 'node:fs'
-import { join, dirname, resolve, sep } from 'node:path'
+import { join, dirname, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..')
@@ -21,8 +20,6 @@ const manifest = JSON.parse(await readFile(join(root, 'src', 'plugin', 'manifest
 const built = join(root, 'dist', manifest.id)
 
 const FILES = ['main.js', 'manifest.json', 'styles.css']
-/** How iCloud Drive appears on disk. A symlink placed under here never reaches the phone. */
-const ICLOUD = join('Library', 'Documents')
 
 const args = process.argv.slice(2)
 const flag = (name) => {
@@ -50,17 +47,6 @@ for (const file of FILES) {
 }
 
 const target = join(vault, '.obsidian', 'plugins', manifest.id)
-const insideICloud = (await realpath(vault)).includes(`${sep}${ICLOUD}${sep}`)
-
-if (link && insideICloud) {
-  console.error(
-    `refusing to symlink into ${vault}: it is inside iCloud Drive.\n` +
-    'iCloud does not sync a symlink, so the phone would silently get nothing (decision D6).\n' +
-    'Run without --link to copy.',
-  )
-  process.exit(2)
-}
-
 if (link) {
   const parent = dirname(target)
   await mkdir(parent, { recursive: true })
@@ -70,10 +56,10 @@ if (link) {
   await symlink(built, target, 'dir')
   console.log(`linked ${target} -> dist/${manifest.id}/`)
   console.log('run `npm run dev` and the vault follows every save')
+  console.log('a sync client does not carry a symlink: install without --link into a synced vault')
 } else {
   await mkdir(target, { recursive: true })
   for (const file of FILES) await copyFile(join(built, file), join(target, file))
   console.log(`copied ${FILES.join(', ')} into ${target}`)
-  if (insideICloud) console.log('iCloud will carry these to the phone')
 }
 console.log('enable it in Obsidian: Settings, Community plugins, Recursive Board')
