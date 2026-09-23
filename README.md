@@ -11,7 +11,7 @@ Markdown is canonical. The plugin is a view, never the database.
 ## Layout
 
 ```text
-CLAUDE.md     how to work in this repo, and the traps
+AGENTS.md     how to work in this repo, and the traps
 docs/STATUS.md  where the work stands
 src/shared/   schema, frontmatter and transition rules, used by both writers
 src/cli/      the wi CLI, plain Node
