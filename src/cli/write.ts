@@ -25,8 +25,12 @@ export async function writeAtomic(path: string, text: string): Promise<void> {
 }
 
 /** Applies edits to one work item on disk. Returns the new text. */
-export async function editItem(item: WorkItem, edits: readonly Edit[]): Promise<string> {
-  const text = applyEdits(item.text, withStamp(edits))
+export async function editItem(
+  item: WorkItem,
+  edits: readonly Edit[],
+  editBody: (text: string) => string = (text) => text,
+): Promise<string> {
+  const text = editBody(applyEdits(item.text, withStamp(edits)))
   if (text !== item.text) await writeAtomic(item.path, text)
   return text
 }

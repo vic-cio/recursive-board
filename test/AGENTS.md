@@ -28,6 +28,11 @@ Change only the key you mean to change.
 The valid statuses are `backlog`, `options`, `doing`, and `done`. A root has no status.
 `prev_status` stores the status to restore when an item is unticked from done.
 
+A dispatcher assigns a card with `wi claim <ref> --agent <name>`. The command records the agent
+and doing status in one file write. If that worker stops, its dispatcher runs `wi release` with
+`--reason <text>` and optionally `--where <branch-or-path>`. Release clears the agent, returns
+the card to options, and adds a dated line to Notes so the next worker can continue.
+
 ## Identity
 
 Every work item has a stable `id`. Parent links use wikilinks. The wikilink determines parent

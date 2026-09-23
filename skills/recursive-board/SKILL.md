@@ -41,6 +41,8 @@ its file in the work-item folder (`Boards/` by default). Read the file.
 ```bash
 wi new "<title>" --parent <ref> [--status backlog] [--priority <n>]   # 1 is the highest
 wi status <ref> <backlog|options|doing|done>
+wi claim <ref> --agent <name>        # assign and move to doing in one write
+wi release <ref> --reason <text> [--where <branch-or-path>]
 wi move <ref> --to <new parent ref>
 wi archive <ref>                    # --undo reverses it
 wi rm <ref> --recursive --dry-run   # read what it lists, then run it without --dry-run
@@ -50,6 +52,12 @@ wi rm <ref> --recursive --dry-run   # read what it lists, then run it without --
 - `wi new` writes the frontmatter and the template sections. Fill the body sections with a file
   edit afterwards. Leave the frontmatter to `wi`.
 - To untick a done item, set it back to its `prev_status`.
+- A dispatcher claims cards from options for its workers. `wi claim` refuses a card claimed by a
+  different agent, a done card, or a board with a child in doing. A repeat by the same agent in
+  doing writes nothing.
+- When a worker stops, its dispatcher runs `wi release` with a reason and, when available, the
+  branch or worktree path. Release clears the agent, returns the card to options, and records the
+  continuation location in Notes.
 - Run `wi validate` after a batch of writes. Exit 0 is clean. Exit 1 lists what broke.
 
 ## Outcomes

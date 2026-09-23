@@ -16,6 +16,7 @@ import { fileURLToPath } from 'node:url'
 import { loadVault, findVaultRoot, type Vault, type WorkItem } from './vault.ts'
 import { createItem } from './commands/new.ts'
 import { setStatus } from './commands/status.ts'
+import { claimItem, releaseItem } from './commands/claim-release.ts'
 import { listChildren, type ChildRow } from './commands/children.ts'
 import { validate, type Problem } from './commands/validate.ts'
 import { listTemplates, writeTemplates } from './commands/template.ts'
@@ -32,6 +33,8 @@ Usage
   wi new <title> [--parent <ref>] [--status <s>] [--template <t>] [--owner <o>] [--agent <a>]
                                 [--priority <n>]
   wi status <ref> <status>
+  wi claim <ref> --agent <name>
+  wi release <ref> --reason <text> [--where <branch-or-path>]
   wi move <ref> --to <ref>
   wi archive <ref> [--undo]
   wi rm <ref> [--recursive] [--dry-run]
@@ -80,6 +83,8 @@ async function main(argv: string[]): Promise<number> {
       status: { type: 'string' },
       owner: { type: 'string' },
       agent: { type: 'string' },
+      reason: { type: 'string' },
+      where: { type: 'string' },
       priority: { type: 'string' },
       template: { type: 'string' },
       vault: { type: 'string' },
@@ -116,6 +121,10 @@ async function main(argv: string[]): Promise<number> {
       return runNew(vault, rest, values, json)
     case 'status':
       return runStatus(vault, rest, json)
+    case 'claim':
+      return runClaim(vault, rest, values, json)
+    case 'release':
+      return runRelease(vault, rest, values, json)
     case 'move':
       return runMove(vault, rest, values, json)
     case 'archive':
@@ -206,6 +215,41 @@ async function runStatus(vault: Vault, rest: string[], json: boolean): Promise<n
     const recorded = change.recorded ? `  (prev_status: ${change.recorded})` : ''
     process.stdout.write(`${label(change.item)}  ${change.from ?? '—'} → ${change.to}${recorded}\n`)
   }
+  return 0
+}
+
+function singleLineOption(values: Values, key: string): string {
+  const value = values[key]
+  if (typeof value !== 'string' || value.trim() === '') {
+    throw new UsageError(`--${key} needs non-empty text.`)
+  }
+  if (/[\r\n]/.test(value)) throw new UsageError(`--${key} must be one line.`)
+  return value.trim()
+}
+
+async function runClaim(vault: Vault, rest: string[], values: Values, json: boolean): Promise<number> {
+  const ref = rest.join(' ').trim()
+  if (ref === '') throw new UsageError('wi claim needs a <ref> and --agent <name>.')
+  const agent = singleLineOption(values, 'agent')
+  const change = await claimItem(vault, ref, agent)
+  if (json) print({ id: change.item.id, path: change.item.relPath, agent: change.agent,
+    from: change.from ?? null, to: change.to, changed: change.changed })
+  else process.stdout.write(change.changed
+    ? `${label(change.item)}  ${change.from ?? '—'} → doing  (agent: ${agent})\n`
+    : `${label(change.item)} is already claimed by ${agent} in doing. Nothing written.\n`)
+  return 0
+}
+
+async function runRelease(vault: Vault, rest: string[], values: Values, json: boolean): Promise<number> {
+  const ref = rest.join(' ').trim()
+  if (ref === '') throw new UsageError('wi release needs a <ref> and --reason <text>.')
+  const reason = singleLineOption(values, 'reason')
+  const where = values['where'] === undefined ? undefined : singleLineOption(values, 'where')
+  const change = await releaseItem(vault, ref, reason, where)
+  if (json) print({ id: change.item.id, path: change.item.relPath, agent: change.agent,
+    from: change.from ?? null, to: change.to, reason: change.reason, where: change.where ?? null,
+    changed: change.changed })
+  else process.stdout.write(`${label(change.item)}  ${change.from ?? '—'} → options  (released ${change.agent})\n`)
   return 0
 }
 

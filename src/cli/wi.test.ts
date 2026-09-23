@@ -175,6 +175,51 @@ test('wi status reports a no-op rather than writing', async () => {
   assert.equal(readFileSync(join(fixture.root, 'Boards/Build server.md'), 'utf8'), before)
 })
 
+test('wi claim and release expose JSON results and accept --vault', async () => {
+  fixture = seed()
+  const claimed = await wi(['claim', 'wi-0004', '--agent', 'codex', '--json', '--vault', fixture.root])
+  assert.equal(claimed.code, 0, claimed.stderr)
+  assert.deepEqual(JSON.parse(claimed.stdout), {
+    id: 'wi-0004', path: 'Boards/Build server.md', agent: 'codex',
+    from: 'doing', to: 'doing', changed: true,
+  })
+  const released = await wi(['release', 'wi-0004', '--reason', 'stopped', '--where', 'card/task', '--json'])
+  assert.equal(released.code, 0, released.stderr)
+  assert.deepEqual(JSON.parse(released.stdout), {
+    id: 'wi-0004', path: 'Boards/Build server.md', agent: 'codex',
+    from: 'doing', to: 'options', reason: 'stopped', where: 'card/task', changed: true,
+  })
+})
+
+test('wi claim and release reject missing options with exit 2', async () => {
+  fixture = seed()
+  const missingAgent = await wi(['claim', 'wi-0004'])
+  assert.equal(missingAgent.code, 2)
+  assert.match(missingAgent.stderr, /--agent/)
+  const missingReason = await wi(['release', 'wi-0004'])
+  assert.equal(missingReason.code, 2)
+  assert.match(missingReason.stderr, /--reason/)
+})
+
+test('wi claim refusal exits 2 and names the existing agent', async () => {
+  fixture = seed()
+  fixture.write('Boards/Build server.md', item({
+    type: 'work-item', id: 'wi-0004', title: 'Build server', status: 'doing',
+    parent: '"[[Main]]"', agent: 'claude', created: '2026-09-21', updated: '2026-09-21',
+  }))
+  const { code, stderr } = await wi(['claim', 'wi-0004', '--agent', 'codex'])
+  assert.equal(code, 2)
+  assert.match(stderr, /already claimed by claude/i)
+})
+
+test('wi --help lists claim and release', async () => {
+  fixture = seed()
+  const { code, stdout } = await wi(['--help'])
+  assert.equal(code, 0)
+  assert.match(stdout, /wi claim <ref> --agent <name>/)
+  assert.match(stdout, /wi release <ref> --reason <text>/)
+})
+
 test('an unresolvable ref exits 2 and says what to try', async () => {
   fixture = seed()
   const { code, stderr } = await wi(['status', 'wi-nope', 'doing'])

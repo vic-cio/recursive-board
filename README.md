@@ -107,6 +107,8 @@ The pre-commit hook runs `wi validate` and stops a commit when the vault has err
 | --- | --- |
 | `wi new <title> [--parent <ref>] [--status <status>] [--template <name>] [--owner <name>] [--agent <name>] [--priority <number>]` | Creates a work item under the given parent. If `--parent` is omitted, uses `defaultRoot` from `.wi.json`. |
 | `wi status <ref> <status>` | Changes an item's status. Use `backlog`, `options`, `doing`, or `done`. Leaving `done` clears the recorded previous status. |
+| `wi claim <ref> --agent <name>` | Claims a card for an agent and moves it to doing in one write. Refuses a different agent, a done card, or a board with a child in doing. Repeating an active claim by the same agent writes nothing. |
+| `wi release <ref> --reason <text> [--where <branch-or-path>]` | Clears the agent, moves the card to options, and adds a dated line to Notes with the reason and optional work location. Refuses an unclaimed card. |
 | `wi move <ref> --to <ref>` | Changes the item's parent. Its status stays the same, and its children move with it. |
 | `wi archive <ref> [--undo]` | Archives an item. `--undo` unarchives it. Archived items are hidden from normal reads; descendants are hidden with an archived parent. |
 | `wi rm <ref> [--recursive] [--dry-run]` | Moves an item to the vault's `.trash` folder. Use `--dry-run` to preview. Items with children require `--recursive`. |
@@ -122,6 +124,8 @@ The pre-commit hook runs `wi validate` and stops a commit when the vault has err
 ## For agents
 
 Use `wi` for work-item changes. Do not edit work-item Markdown directly with scripts or bulk text tools. Use `wi validate` to check the vault after changes. `wi rm` moves items into `.trash`; removing a parent requires `--recursive`. Use `wi rm <ref> --dry-run` to review the affected items first.
+
+A dispatcher assigns a card with `wi claim <ref> --agent <name>`. If that worker stops, the dispatcher runs `wi release <ref> --reason <text> [--where <branch-or-path>]` so the next worker can find the unfinished work. Keep a card in doing until its work is accepted.
 
 ## Development
 

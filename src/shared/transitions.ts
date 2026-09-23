@@ -33,6 +33,30 @@ export function statusEdits(
   return edits
 }
 
+/** A claim is one status transition and one agent edit on the same card. */
+export function claimEdits(
+  from: Status | undefined,
+  currentAgent: string | undefined,
+  agent: string,
+  hasPrevStatus: boolean,
+  hasDoingChild: boolean,
+): Edit[] | null {
+  if (from === 'done') throw new Error('a done card cannot be claimed.')
+  if (currentAgent && currentAgent !== agent) {
+    throw new Error(`already claimed by ${currentAgent}. Release that claim first.`)
+  }
+  if (currentAgent === agent && from === 'doing') return null
+  if (hasDoingChild) throw new Error('this board has a child in doing. Release or finish the child first.')
+  const status = statusEdits(from, 'doing', hasPrevStatus)
+  if (currentAgent === agent) return status
+  return [...(status ?? []), { op: 'set', key: 'agent', value: agent }]
+}
+
+/** Release retains normal status history rules while removing the claim. */
+export function releaseEdits(from: Status | undefined, hasPrevStatus: boolean): Edit[] {
+  return [...(statusEdits(from, 'options', hasPrevStatus) ?? []), { op: 'remove', key: 'agent' }]
+}
+
 /**
  * Where unticking a done item sends it.
  * `prev_status` is what it was. Its absence means the item arrived at done some other way, and
