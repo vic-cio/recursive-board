@@ -17,7 +17,7 @@ import { fileURLToPath } from 'node:url'
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..')
 const manifest = JSON.parse(await readFile(join(root, 'manifest.json'), 'utf8'))
-const built = join(root, 'dist', manifest.id)
+const built = join(root, 'dist')
 
 const FILES = ['main.js', 'manifest.json', 'styles.css']
 
@@ -42,7 +42,7 @@ if (!existsSync(join(vault, '.obsidian'))) {
 }
 for (const file of FILES) {
   if (existsSync(join(built, file))) continue
-  console.error(`dist/${manifest.id}/${file} is missing. Run npm run build first.`)
+  console.error(`dist/${file} is missing. Run npm run build first.`)
   process.exit(2)
 }
 
@@ -54,7 +54,7 @@ if (link) {
     await rm(target, { recursive: true, force: true })
   }
   await symlink(built, target, 'dir')
-  console.log(`linked ${target} -> dist/${manifest.id}/`)
+  console.log(`linked ${target} -> dist/`)
   console.log('run `npm run dev` and the vault follows every save')
   console.log('a sync client does not carry a symlink: install without --link into a synced vault')
 } else {

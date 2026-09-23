@@ -1,6 +1,6 @@
 {
   "name": "recursive-board",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "type": "module",
   "description": "wi: the CLI that owns every write into a Recursive Board vault",
   "author": "vic-cio",

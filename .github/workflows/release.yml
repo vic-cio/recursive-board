@@ -11,6 +11,7 @@ jobs:
     permissions:
       contents: write
       id-token: write
+      attestations: write
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -43,8 +44,15 @@ jobs:
             throw new Error('The npm package must be named recursive-board')
           }
 
-          appendFileSync(process.env.GITHUB_OUTPUT, `plugin_dir=dist/${manifest.id}\n`)
+          appendFileSync(process.env.GITHUB_OUTPUT, 'plugin_dir=dist\n')
           NODE
+      - name: Attest plugin release assets
+        uses: actions/attest-build-provenance@v4
+        with:
+          subject-path: |
+            dist/main.js
+            dist/manifest.json
+            dist/styles.css
       - name: Create GitHub release
         env:
           GH_TOKEN: ${{ github.token }}

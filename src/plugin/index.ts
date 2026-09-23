@@ -109,9 +109,9 @@ export class WorkItemIndex {
     if (!frontmatter || frontmatter['type'] !== WORK_ITEM_TYPE) return null
 
     const parentLink = parseWikilink(frontmatter['parent'])
-    const status = frontmatter['status']
-    const prev = frontmatter['prev_status']
-    const priority = frontmatter['priority']
+    const status: unknown = frontmatter['status']
+    const prev: unknown = frontmatter['prev_status']
+    const priority: unknown = frontmatter['priority']
 
     return {
       file,

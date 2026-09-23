@@ -5,7 +5,7 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { execFileSync } from 'node:child_process'
-import { readFileSync } from 'node:fs'
+import { readFileSync, existsSync } from 'node:fs'
 import { join, dirname } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
@@ -27,7 +27,7 @@ const obsidian = {
 
 function loadBundle(): { default?: unknown } {
   execFileSync('node', [join(root, 'build', 'plugin.mjs')], { cwd: root, stdio: 'pipe' })
-  const code = readFileSync(join(root, 'dist', 'recursive-board', 'main.js'), 'utf8')
+  const code = readFileSync(join(root, 'dist', 'main.js'), 'utf8')
   const module = { exports: {} as { default?: unknown } }
   const require = (name: string) => {
     if (name === 'obsidian') return obsidian
@@ -40,6 +40,13 @@ function loadBundle(): { default?: unknown } {
 test('the bundle loads with obsidian as its only dependency', () => {
   const exports = loadBundle()
   assert.equal(typeof exports.default, 'function', 'the plugin class is the default export')
+})
+
+test('the plugin build places all release assets directly in dist', () => {
+  loadBundle()
+  for (const file of ['main.js', 'manifest.json', 'styles.css']) {
+    assert.ok(existsSync(join(root, 'dist', file)), `${file} must be in dist/`)
+  }
 })
 
 test('the plugin class extends obsidian Plugin and implements the lifecycle', () => {

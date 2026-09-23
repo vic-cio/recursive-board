@@ -79,7 +79,7 @@ export interface MoveCheck {
    */
   isRoot: boolean
   /** The parent of a key, or null for a root or an orphan. */
-  parentOf(key: string): string | null
+  parentOf(this: void, key: string): string | null
 }
 
 /**

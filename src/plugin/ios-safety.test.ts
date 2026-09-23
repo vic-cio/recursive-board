@@ -85,7 +85,7 @@ test('the manifest declares the plugin mobile-capable', () => {
 })
 
 test('a built bundle carries no node require', () => {
-  const bundle = join(root, 'dist/recursive-board/main.js')
+  const bundle = join(root, 'dist/main.js')
   if (!existsSync(bundle)) return // Nothing built yet; the build itself enforces this.
   const text = readFileSync(bundle, 'utf8')
   for (const name of FORBIDDEN) {

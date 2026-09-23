@@ -110,14 +110,14 @@
  * bottom padding Obsidian mobile gives `.cm-content` for the keyboard toolbar. It put the
  * checklist below the fold, which looked like no board at all.
  */
-.wi-region-host .markdown-source-view.mod-cm6 .cm-content {
-  padding-bottom: var(--size-4-4, 16px) !important;
-  min-height: 0 !important;
+.wi-region-host.wi-region-host .markdown-source-view.mod-cm6 .cm-content {
+  padding-bottom: var(--size-4-4, 16px);
+  min-height: 0;
 }
 
 /* Reading mode has the same shape under a different name. */
-.wi-region-host .markdown-preview-sizer {
-  min-height: unset !important;
+.wi-region-host.wi-region-host .markdown-preview-sizer {
+  min-height: unset;
 }
 
 /* ---------- breadcrumbs (the flat work-item folder) ---------- */
@@ -445,11 +445,11 @@
 .wi-card-title.is-link {
   color: var(--text-accent);
   cursor: pointer;
-  text-decoration-color: transparent;
+  text-decoration-line: none;
 }
 
 .wi-card-title.is-link:hover {
-  text-decoration: underline;
+  text-decoration-line: underline;
 }
 
 .wi-badges {

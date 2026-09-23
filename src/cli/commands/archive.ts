@@ -17,7 +17,7 @@ export async function archiveItem(vault: Vault, ref: string, undo: boolean): Pro
   if (edits === null) return { item, archived, changed: false }
 
   if (archived) {
-    const active = activeDescendant(item, vault.childrenOf, (child) => child.status)
+    const active = activeDescendant(item, (parent) => vault.childrenOf(parent), (child) => child.status)
     if (active) {
       throw new Error(`cannot archive ${item.title ?? item.stem}: descendant ${active.title ?? active.stem} (${active.id ?? active.relPath}) is doing.`)
     }

@@ -69,7 +69,7 @@ Before listing, you can install a release manually:
 
 1. Download a release or build the project with `npm run build`.
 2. Create a folder under the vault's plugin directory using the `id` in `manifest.json` as its name.
-3. Copy `main.js`, `manifest.json`, and `styles.css` from that release or the matching `dist/` folder into it.
+3. Copy `main.js`, `manifest.json`, and `styles.css` from that release or directly from `dist/` into it.
 4. In Obsidian, open **Settings → Community plugins** and enable **Recursive Board**.
 
 Reload Obsidian after replacing plugin files. If your vault syncs its `.obsidian` folder, the sync client can copy the installed plugin to your other devices. Sync behavior depends on that client's settings.

@@ -48,8 +48,9 @@ function seed(): Fixture {
 test('wi --version prints the version', async () => {
   fixture = seed()
   const { code, stdout } = await wi(['--version'])
+  const pkg = JSON.parse(readFileSync(new URL('../../package.json', import.meta.url), 'utf8'))
   assert.equal(code, 0)
-  assert.match(stdout, /^\d+\.\d+\.\d+$/m)
+  assert.equal(stdout.trim(), pkg.version)
 })
 
 test('wi with no command prints help and exits 2', async () => {
