@@ -12,7 +12,7 @@ id: wi-0004
 
 ## Objective
 
-Expose app sessions securely to Obsidian clients.
+Manage task sessions securely for board clients.
 
 ## Context
 
@@ -35,7 +35,7 @@ test('bodyOf strips the frontmatter', () => {
 test('section reads the text under a heading', () => {
   assert.equal(
     section(bodyOf(ITEM), 'Objective'),
-    'Expose app sessions securely to Obsidian clients.',
+    'Manage task sessions securely for board clients.',
   )
 })
 

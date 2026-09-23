@@ -13,17 +13,17 @@ afterEach(() => {
   fixture = undefined
 })
 
-// Main > App > Server, and Main > Site.
+// Main > Project > Server, and Main > Site.
 function seed(): Fixture {
   const f = makeVault()
   const at = { created: '2026-09-21', updated: '2026-09-21' }
   f.write('Boards/Main.md', item({ type: 'work-item', id: 'wi-0001', title: 'Main', ...at }))
-  f.write('Boards/App.md', item({
-    type: 'work-item', id: 'wi-0002', title: 'App', status: 'doing', parent: '"[[Main]]"', ...at,
+  f.write('Boards/Project.md', item({
+    type: 'work-item', id: 'wi-0002', title: 'Project', status: 'doing', parent: '"[[Main]]"', ...at,
   }))
   f.write('Boards/Server.md', item({
     type: 'work-item', id: 'wi-0003', title: 'Server', status: 'done', prev_status: 'doing',
-    parent: '"[[App]]"', mystery_key: 'keep me', ...at,
+    parent: '"[[Project]]"', mystery_key: 'keep me', ...at,
   }, '# Server\n\nHuman prose.\n'))
   f.write('Boards/Site.md', item({
     type: 'work-item', id: 'wi-0004', title: 'Site', status: 'backlog', parent: '"[[Main]]"', ...at,
@@ -38,7 +38,7 @@ test('moveItem rewrites parent to the target wikilink', async () => {
   fixture = seed()
   const result = await moveItem(await loadVault(fixture.root), 'wi-0003', 'Site')
   assert.equal(result.changed, true)
-  assert.equal(result.from, 'App')
+  assert.equal(result.from, 'Project')
   assert.equal(result.to.stem, 'Site')
   assert.equal(fm(fixture, 'Server').get('parent'), '[[Site]]')
 })
@@ -62,17 +62,17 @@ test('moveItem is a two-line diff: parent and updated, every other byte copied',
 
 test('moveItem writes only the moved file, never the old or new parent', async () => {
   fixture = seed()
-  const app = read(fixture, 'App')
+  const project = read(fixture, 'Project')
   const site = read(fixture, 'Site')
   await moveItem(await loadVault(fixture.root), 'wi-0003', 'Site')
-  assert.equal(read(fixture, 'App'), app)
+  assert.equal(read(fixture, 'Project'), project)
   assert.equal(read(fixture, 'Site'), site)
 })
 
 test('moveItem onto the current parent writes nothing', async () => {
   fixture = seed()
   const before = read(fixture, 'Server')
-  const result = await moveItem(await loadVault(fixture.root), 'wi-0003', 'App')
+  const result = await moveItem(await loadVault(fixture.root), 'wi-0003', 'Project')
   assert.equal(result.changed, false)
   assert.equal(read(fixture, 'Server'), before)
 })
@@ -84,7 +84,7 @@ test('moveItem refuses to move the root', async () => {
 
 test('moveItem refuses a move under the item\'s own descendant', async () => {
   fixture = seed()
-  await assert.rejects(moveItem(await loadVault(fixture.root), 'App', 'Server'), /loop/i)
+  await assert.rejects(moveItem(await loadVault(fixture.root), 'Project', 'Server'), /loop/i)
 })
 
 test('moveItem repairs an orphan by giving it a parent that resolves', async () => {

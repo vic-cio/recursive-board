@@ -89,15 +89,15 @@ test('an unresolved parent is reported, and the item is left alone', async () =>
   fixture = healthy()
   const path = fixture.write('Boards/Orphan.md', item({
     type: 'work-item', id: 'wi-0016', title: 'Orphan', status: 'doing',
-    parent: '"[[Build app prototype]]"', created: '2026-08-02', updated: '2026-08-09',
+    parent: '"[[Build workflow prototype]]"', created: '2026-08-02', updated: '2026-08-09',
   }))
   const report = await run(fixture)
   const problem = report.problems.find((p) => p.rule === 'parent-unresolved')
   assert.ok(problem)
   assert.equal(problem.relPath, 'Boards/Orphan.md')
-  assert.match(problem.message, /Build app prototype/)
+  assert.match(problem.message, /Build workflow prototype/)
   const { readFileSync } = await import('node:fs')
-  assert.match(readFileSync(path, 'utf8'), /Build app prototype/, 'nothing was repaired')
+  assert.match(readFileSync(path, 'utf8'), /Build workflow prototype/, 'nothing was repaired')
 })
 
 test('a parent that is not a wikilink is an error', async () => {
@@ -312,7 +312,7 @@ test('a nested file under Templates is still an error, since Templates is a prod
 
 test('validate does not apply the work-item schema to Knowledge or Templates', async () => {
   fixture = healthy()
-  fixture.write('Knowledge/App Protocol.md', '---\ntags: [protocol]\n---\n\n# App\n')
+  fixture.write('Knowledge/Workflow Protocol.md', '---\ntags: [protocol]\n---\n\n# Workflow\n')
   fixture.write('Templates/work-item.md', item({
     type: 'work-item', id: 'wi-XXXX', title: '', status: 'backlog', parent: '"[[Main]]"',
   }))

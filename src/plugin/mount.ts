@@ -92,8 +92,8 @@ function takeoverLayer(view: MarkdownView): HTMLElement {
 }
 
 /**
- * The phone floats its view header over the content, and Obsidian pads its own scroller to clear
- * it (104px on an iPhone, per a layout report). The overlay sits at the top of the content, so it
+ * A phone floats its view header over the content, and Obsidian pads its own scroller to clear
+ * it, per a layout report. The overlay sits at the top of the content, so it
  * copies that padding rather than guessing a number that changes with the device.
  */
 function clearFloatingHeader(view: MarkdownView, layer: HTMLElement): void {

@@ -76,7 +76,7 @@ const IGNORED_HIDDEN = new Set(['.DS_Store', '.localized', '.gitkeep'])
 /**
  * Decision L1: a hidden file in the work-item folder that is not a Markdown file is unaccounted
  * for. A sync client that has not downloaded a file may leave a hidden stub beside it, for
- * example iCloud's `Boards/.Card.md.icloud`, and a stray hidden file is a second way for a work
+ * example a sync service's `Boards/.Card.md.icloud`, and a stray hidden file is a second way for a work
  * item to be invisible to the index. Both are reported; neither is guessed at.
  */
 function isUnaccounted(name: string): boolean {

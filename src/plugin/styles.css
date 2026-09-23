@@ -105,7 +105,7 @@
 }
 
 /*
- * The phone adds a second gap inside the container. A layout report from an iPhone on 2026-09-22
+ * A phone adds a second gap inside the container. A layout report from a phone
  * showed `.cm-contentContainer` at 544px for a two-line body, with flex growth already off: the
  * bottom padding Obsidian mobile gives `.cm-content` for the keyboard toolbar. It put the
  * checklist below the fold, which looked like no board at all.

@@ -13,7 +13,7 @@ afterEach(() => {
   fixture = undefined
 })
 
-/** Main > App > Server > Streaming, plus a leaf on Main. */
+/** Main > Project > Server > Streaming, plus a leaf on Main. */
 function tree(): Fixture {
   const f = makeVault()
   const w = (id: string, stem: string, parent?: string) =>
@@ -23,8 +23,8 @@ function tree(): Fixture {
       created: '2026-09-21', updated: '2026-09-21',
     }, `Body of ${stem}.\n`))
   w('wi-0001', 'Main')
-  w('wi-0002', 'App', 'Main')
-  w('wi-0003', 'Server', 'App')
+  w('wi-0002', 'Project', 'Main')
+  w('wi-0003', 'Server', 'Project')
   w('wi-0004', 'Streaming', 'Server')
   w('wi-0005', 'Leaf', 'Main')
   return f
@@ -64,7 +64,7 @@ test('--recursive removes the whole subtree', async () => {
     result.removed.map((r) => r.item.id).sort(),
     ['wi-0002', 'wi-0003', 'wi-0004'],
   )
-  for (const stem of ['App', 'Server', 'Streaming']) assert.ok(gone(fixture, stem), stem)
+  for (const stem of ['Project', 'Server', 'Streaming']) assert.ok(gone(fixture, stem), stem)
 })
 
 test('--recursive removes descendants before their parents', async () => {
@@ -97,7 +97,7 @@ test('--dry-run reports what would go and removes nothing', async () => {
   })
   assert.equal(result.dryRun, true)
   assert.equal(result.removed.length, 3)
-  for (const stem of ['App', 'Server', 'Streaming']) assert.ok(!gone(fixture, stem), stem)
+  for (const stem of ['Project', 'Server', 'Streaming']) assert.ok(!gone(fixture, stem), stem)
 })
 
 test('removeItem refuses the root, which is not a card anyone can discard', async () => {

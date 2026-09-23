@@ -3,33 +3,33 @@ import assert from 'node:assert/strict'
 
 import { moveEdits, moveRefusal } from './transitions.ts'
 
-// A small tree, keyed the way either writer keys it: Main > App > Server > Auth, Main > Site.
+// A small tree, keyed the way either writer keys it: Main > Project > Server > Auth, Main > Site.
 const PARENTS: Record<string, string | null> = {
   main: null,
-  app: 'main',
-  server: 'app',
+  project: 'main',
+  server: 'project',
   auth: 'server',
   site: 'main',
 }
 const parentOf = (key: string) => PARENTS[key] ?? null
 
 test('moveEdits writes the parent wikilink and nothing else', () => {
-  assert.deepEqual(moveEdits('App', 'Marketing site'), [
+  assert.deepEqual(moveEdits('Project', 'Marketing site'), [
     { op: 'set', key: 'parent', value: '[[Marketing site]]' },
   ])
 })
 
 test('moveEdits keeps status: a move changes where, not how far along', () => {
-  const edits = moveEdits('App', 'Site') ?? []
+  const edits = moveEdits('Project', 'Site') ?? []
   assert.equal(edits.some((e) => e.key === 'status' || e.key === 'prev_status'), false)
 })
 
 test('moveEdits is a no-op onto the current parent, so nothing syncs for nothing', () => {
-  assert.equal(moveEdits('App', 'App'), null)
+  assert.equal(moveEdits('Project', 'Project'), null)
 })
 
 test('moveEdits compares parents the way Obsidian resolves them, ignoring case', () => {
-  assert.equal(moveEdits('app', 'App'), null)
+  assert.equal(moveEdits('project', 'Project'), null)
 })
 
 test('moveRefusal allows an ordinary move', () => {
@@ -45,7 +45,7 @@ test('moveRefusal refuses to move an item under itself', () => {
 })
 
 test('moveRefusal refuses a move under a descendant, which would cut the subtree off', () => {
-  assert.match(moveRefusal({ item: 'app', isRoot: false, target: 'auth', parentOf }) ?? '', /under its own/i)
+  assert.match(moveRefusal({ item: 'project', isRoot: false, target: 'auth', parentOf }) ?? '', /under its own/i)
 })
 
 test('moveRefusal terminates on a vault whose parent chain already loops', () => {

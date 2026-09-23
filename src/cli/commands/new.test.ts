@@ -85,9 +85,9 @@ test('createItem does not invent owner or agent when the parent has none', async
 test('an explicit owner beats the inherited one', async () => {
   fixture = seed()
   const created = await createItem(await reload(fixture), {
-    title: 'Streaming', parent: 'wi-0004', owner: 'codex',
+    title: 'Streaming', parent: 'wi-0004', owner: 'lee',
   })
-  assert.equal(parseFrontmatter(readFileSync(created.path, 'utf8'))!.get('owner'), 'codex')
+  assert.equal(parseFrontmatter(readFileSync(created.path, 'utf8'))!.get('owner'), 'lee')
 })
 
 test('createItem accepts a status, which is how the board add row works', async () => {

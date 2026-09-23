@@ -19,7 +19,7 @@ updated: 2026-09-21
 
 ## Objective
 
-Expose app sessions securely.
+Manage task sessions securely.
 `
 
 test('parseFrontmatter reads every scalar key', () => {
@@ -134,7 +134,7 @@ status: doing
 
 test('setKey never touches the body', () => {
   const out = setKey(ITEM, 'status', 'done')
-  assert.ok(out.endsWith('# Build server\n\n## Objective\n\nExpose app sessions securely.\n'))
+  assert.ok(out.endsWith('# Build server\n\n## Objective\n\nManage task sessions securely.\n'))
 })
 
 test('setKey throws when the file has no frontmatter', () => {

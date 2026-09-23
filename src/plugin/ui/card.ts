@@ -157,9 +157,9 @@ function renderBadges(host: HTMLElement, ctx: RenderContext, meta: WorkItemMeta)
  * The card's code, which is the `id` it already carries.
  *
  * No tenth field and no counter. A per-board sequential code would need both, and two devices
- * offline would each allocate the same next number, which decision D2 says iCloud resolves by
+ * offline would each allocate the same next number, which a sync service could resolve by
  * silently keeping one. The id is unique by construction and is already what every command takes,
- * so `wi status wi-0104 doing` works on whatever you copy from here.
+ * so `wi status <id> doing` works on whatever you copy from here.
  */
 function renderCode(host: HTMLElement, id: string): void {
   const code = host.createSpan({ cls: 'wi-code', text: id })

@@ -78,7 +78,7 @@ test('loadVault reads the parent as a resolved wikilink target', async () => {
 
 test('loadVault reads work items from the work-item folder alone (L5)', async () => {
   fixture = vaultWithTree()
-  fixture.write('Knowledge/App Protocol.md', '---\ntype: knowledge\n---\n\n# App\n')
+  fixture.write('Knowledge/Workflow Protocol.md', '---\ntype: knowledge\n---\n\n# Workflow\n')
   fixture.write('Intake/scratch.md', 'raw thoughts, no frontmatter\n')
   fixture.write('Templates/work-item.md', item({ type: 'work-item', id: 'wi-XXXX', title: '' }))
   const vault = await loadVault(fixture.root)
@@ -148,11 +148,11 @@ test('an orphan keeps its unresolved parent target and appears as nobody child',
   fixture = vaultWithTree()
   fixture.write('Boards/Orphaned research spike.md', item({
     type: 'work-item', id: 'wi-0016', title: 'Orphaned research spike', status: 'doing',
-    parent: '"[[Build app prototype]]"', created: '2026-08-02', updated: '2026-08-09',
+    parent: '"[[Build workflow prototype]]"', created: '2026-08-02', updated: '2026-08-09',
   }))
   const vault = await loadVault(fixture.root)
   const orphan = vault.byId.get('wi-0016')!
-  assert.equal(orphan.parent, 'Build app prototype')
+  assert.equal(orphan.parent, 'Build workflow prototype')
   assert.equal(vault.resolveLink(orphan.parent), undefined)
   for (const i of vault.items) assert.ok(!vault.childrenOf(i).includes(orphan))
 })

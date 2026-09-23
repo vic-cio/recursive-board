@@ -33,7 +33,7 @@ test('readLabels keeps the order the file gives', () => {
 })
 
 test('labelColour is one of the eight every theme defines', () => {
-  for (const label of ['web', 'urgent', 'app', 'x', '']) {
+  for (const label of ['web', 'urgent', 'project', 'x', '']) {
     assert.ok((LABEL_COLOURS as readonly string[]).includes(labelColour(label)), label)
   }
 })
@@ -49,7 +49,7 @@ test('labelColour ignores case and a leading hash, so one label is one colour', 
 })
 
 test('labelColour spreads a realistic set across several colours', () => {
-  const labels = ['web', 'app', 'urgent', 'research', 'mobile', 'infra', 'design', 'docs']
+  const labels = ['web', 'project', 'urgent', 'research', 'mobile', 'infra', 'design', 'docs']
   const used = new Set(labels.map(labelColour))
   assert.ok(used.size >= 4, `only ${used.size} colours used, which would read as one blur`)
 })
