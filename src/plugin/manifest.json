@@ -4,6 +4,6 @@
   "version": "0.1.0",
   "minAppVersion": "1.5.0",
   "description": "Renders a work item's children as a board or a checklist, from frontmatter alone.",
-  "author": "the maintainer",
+  "author": "vic-cio",
   "isDesktopOnly": false
 }

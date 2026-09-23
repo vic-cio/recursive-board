@@ -4,6 +4,8 @@
   "private": true,
   "type": "module",
   "description": "wi: the CLI that owns every write into a Recursive Board vault",
+  "author": "vic-cio",
+  "license": "MIT",
   "engines": {
     "node": ">=20.12"
   },
