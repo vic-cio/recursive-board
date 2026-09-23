@@ -12,8 +12,9 @@
 import type { App, TFile } from 'obsidian'
 
 import { readLabels } from '../shared/labels.ts'
+import { DEFAULT_VAULT_CONFIG, type VaultConfig } from '../shared/vault-config.ts'
 import {
-  BOARDS, INTAKE, doneCutoff, isStatus, parseWikilink, STATUSES, WORK_ITEM_TYPE, type Status,
+  INTAKE, doneCutoff, isStatus, parseWikilink, STATUSES, WORK_ITEM_TYPE, type Status,
 } from '../shared/schema.ts'
 
 export interface WorkItemMeta {
@@ -47,12 +48,19 @@ function str(value: unknown): string | undefined {
 
 export class WorkItemIndex {
   private readonly app: App
+  config: VaultConfig
   private items = new Map<string, WorkItemMeta>()
   private kids = new Map<string, WorkItemMeta[]>()
   private dirty = true
 
-  constructor(app: App) {
+  constructor(app: App, config: VaultConfig = DEFAULT_VAULT_CONFIG) {
     this.app = app
+    this.config = config
+  }
+
+  setConfig(config: VaultConfig): void {
+    this.config = config
+    this.invalidate()
   }
 
   /** Marks the index stale. The next read rebuilds it. */
@@ -81,7 +89,7 @@ export class WorkItemIndex {
 
   private read(file: TFile): WorkItemMeta | null {
     // Decision D8: work items sit directly in Boards/. Nothing nests, so depth is exactly two.
-    if (file.parent?.path !== BOARDS) return null
+    if (file.parent?.path !== this.config.workItemFolder) return null
     const frontmatter = this.app.metadataCache.getFileCache(file)?.frontmatter
     if (!frontmatter || frontmatter['type'] !== WORK_ITEM_TYPE) return null
 

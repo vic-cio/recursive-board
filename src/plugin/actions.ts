@@ -14,7 +14,7 @@ import { applyEdits, withStamp, type Edit } from '../shared/edits.ts'
 import {
   boardEdits, moveEdits, moveRefusal, statusEdits, untickTarget,
 } from '../shared/transitions.ts'
-import { BOARDS, fileNameFor, newId, today, type Status } from '../shared/schema.ts'
+import { fileNameFor, newId, today, type Status } from '../shared/schema.ts'
 import { renderWorkItem } from '../shared/work-item.ts'
 import type { WorkItemIndex, WorkItemMeta } from './index.ts'
 import { UndoStack } from './undo.ts'
@@ -136,7 +136,7 @@ export class Actions {
 
     const id = newId(this.index.takenIds())
     const stem = fileNameFor(title, id, this.index.takenStems())
-    const path = `${BOARDS}/${stem}.md`
+    const path = `${this.index.config.workItemFolder}/${stem}.md`
 
     if (this.app.vault.getAbstractFileByPath(path)) {
       new Notice(`${path} already exists. Nothing was written.`)

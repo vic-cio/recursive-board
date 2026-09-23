@@ -46,6 +46,14 @@ test('a generated template matches the renderer exactly', async () => {
   assert.equal(text, renderVaultTemplate(requireTemplate('work-item')))
 })
 
+test('generated templates use the vault-configured default root', async () => {
+  fixture = seed()
+  fixture.write('.wi.json', '{"defaultRoot":"House move"}')
+  await writeTemplates(await loadVault(fixture.root))
+  const text = readFileSync(join(fixture.root, 'Templates/work-item.md'), 'utf8')
+  assert.equal(text, renderVaultTemplate(requireTemplate('work-item'), 'House move'))
+})
+
 test('writing twice leaves the file untouched, so it is no sync event', async () => {
   fixture = seed()
   await writeTemplates(await loadVault(fixture.root))

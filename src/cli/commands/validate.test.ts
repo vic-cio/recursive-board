@@ -189,6 +189,13 @@ test('board true is accepted', async () => {
   assert.deepEqual((await run(fixture)).problems, [])
 })
 
+test('validation reports configured folder rather than Boards for an empty vault', async () => {
+  fixture = healthy()
+  fixture.write('.wi.json', '{"workItemFolder":"Projects"}')
+  const report = await run(fixture)
+  assert.ok(report.problems.some((p) => p.rule === 'root-missing' && p.relPath === 'Projects'))
+})
+
 test('an invalid prev_status is an error', async () => {
   fixture = healthy()
   fixture.write('Boards/Ticked.md', item({

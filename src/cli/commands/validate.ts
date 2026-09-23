@@ -9,7 +9,7 @@
  * And an unknown frontmatter key is a warning at most, because rule 27.6 says to preserve it.
  */
 import {
-  BOARDS, CORE_FIELDS, OPTIONAL_FIELDS, INTAKE, STATUSES, isStatus, parseWikilink,
+  CORE_FIELDS, OPTIONAL_FIELDS, INTAKE, STATUSES, isStatus, parseWikilink,
 } from '../../shared/schema.ts'
 import type { Vault, WorkItem } from '../vault.ts'
 
@@ -79,7 +79,7 @@ function checkLayout(vault: Vault, report: Reporter): void {
   }
   for (const relPath of vault.nonItems) {
     report('not-a-work-item', 'warning', relPath, undefined,
-      'sits in Boards/ but has no `type: work-item`. The board will never show it.')
+      `sits in ${vault.config.workItemFolder}/ but has no \`type: work-item\`. The board will never show it.`)
   }
   for (const relPath of vault.evicted) {
     if (relPath.startsWith(`${INTAKE}/`)) continue
@@ -181,12 +181,12 @@ function checkItem(item: WorkItem, vault: Vault, report: Reporter): void {
 function checkRoots(vault: Vault, report: Reporter): void {
   const roots = vault.items.filter((i) => !i.frontmatter.has('parent'))
   if (vault.items.length === 0 && roots.length === 0) {
-    report('root-missing', 'warning', BOARDS, undefined,
+    report('root-missing', 'warning', vault.config.workItemFolder, undefined,
       'holds no work items yet, so the vault has no root.')
     return
   }
   if (roots.length === 0) {
-    report('root-missing', 'warning', BOARDS, undefined,
+    report('root-missing', 'warning', vault.config.workItemFolder, undefined,
       'holds no root. A root is a work item with no parent, and every board hangs off one.')
     return
   }
@@ -194,7 +194,7 @@ function checkRoots(vault: Vault, report: Reporter): void {
     const files = roots.map((r) => r.relPath).join(', ')
     for (const root of roots) {
       report('root-multiple', 'warning', root.relPath, root.id,
-        `is one of ${roots.length} roots: ${files}. Nothing forbids this, but only one of them is Main.`)
+        `is one of ${roots.length} roots: ${files}. Nothing forbids this, but a defaultRoot can name only one.`)
     }
   }
 }

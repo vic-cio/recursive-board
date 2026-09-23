@@ -11,15 +11,13 @@ import { join } from 'node:path'
 import { writeAtomic } from '../write.ts'
 import { renderWorkItem, type NewWorkItem } from '../../shared/work-item.ts'
 import { requireTemplate } from '../../shared/templates.ts'
-import {
-  BOARDS, INHERITED_FIELDS, fileNameFor, isStatus, newId, today, type Status,
-} from '../../shared/schema.ts'
+import { INHERITED_FIELDS, fileNameFor, isStatus, newId, today, type Status } from '../../shared/schema.ts'
 import type { Vault } from '../vault.ts'
 
 export interface NewOptions {
   title: string
   /** An id, a filename or a title. Required: only the root has no parent. */
-  parent: string
+  parent?: string
   status?: Status
   owner?: string
   agent?: string
@@ -39,7 +37,8 @@ export interface Created {
 export async function createItem(vault: Vault, options: NewOptions): Promise<Created> {
   const title = options.title.trim()
   if (title === '') throw new Error('a work item needs a title')
-  if (options.parent.trim() === '') {
+  const parentRef = options.parent ?? vault.config.defaultRoot ?? ''
+  if (parentRef.trim() === '') {
     throw new Error('a work item needs a --parent. Only the root has none.')
   }
 
@@ -51,12 +50,12 @@ export async function createItem(vault: Vault, options: NewOptions): Promise<Cre
     throw new Error(`"${status}" is not a status. Use backlog, options, doing or done.`)
   }
 
-  const parent = vault.resolve(options.parent)
+  const parent = vault.resolve(parentRef)
 
   const id = newId(vault.takenIds)
   const stem = fileNameFor(title, id, vault.takenStems)
-  const relPath = `${BOARDS}/${stem}.md`
-  const path = join(vault.root, BOARDS, `${stem}.md`)
+  const relPath = `${vault.config.workItemFolder}/${stem}.md`
+  const path = join(vault.root, ...vault.config.workItemFolder.split('/'), `${stem}.md`)
   if (existsSync(path)) {
     throw new Error(`${relPath} already exists. Refusing to overwrite it.`)
   }

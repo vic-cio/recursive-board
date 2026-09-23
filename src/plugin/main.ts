@@ -10,6 +10,7 @@
  * Node types, and `build/forbidden-imports.mjs` fails the build.
  */
 import { MarkdownView, Notice, Platform, Plugin, TFile } from 'obsidian'
+import { parseVaultConfig, WI_CONFIG_FILE } from '../shared/vault-config.ts'
 
 import { Actions } from './actions.ts'
 import { WorkItemIndex } from './index.ts'
@@ -26,15 +27,21 @@ export default class RecursiveBoardPlugin extends Plugin {
   private pending: number | null = null
 
   override async onload(): Promise<void> {
-    this.index = new WorkItemIndex(this.app)
+    this.index = new WorkItemIndex(this.app, await this.readVaultConfig())
     this.actions = new Actions(this.app, this.index)
 
     // The cache is the source the board reads (decision D4), so any change to it redraws.
     this.registerEvent(this.app.metadataCache.on('changed', () => this.stale()))
     this.registerEvent(this.app.metadataCache.on('resolved', () => this.stale()))
-    this.registerEvent(this.app.vault.on('create', () => this.stale()))
-    this.registerEvent(this.app.vault.on('delete', () => this.stale()))
-    this.registerEvent(this.app.vault.on('rename', () => this.stale()))
+    this.registerEvent(this.app.vault.on('create', (file) => this.vaultChanged(file.path)))
+    this.registerEvent(this.app.vault.on('modify', (file) => {
+      if (file.path === WI_CONFIG_FILE) void this.reloadConfig()
+    }))
+    this.registerEvent(this.app.vault.on('delete', (file) => this.vaultChanged(file.path)))
+    this.registerEvent(this.app.vault.on('rename', (file, oldPath) => {
+      this.vaultChanged(file.path)
+      if (oldPath === WI_CONFIG_FILE) void this.reloadConfig()
+    }))
 
     this.registerEvent(this.app.workspace.on('layout-change', () => this.schedule()))
     this.registerEvent(this.app.workspace.on('active-leaf-change', () => this.schedule()))
@@ -183,6 +190,27 @@ export default class RecursiveBoardPlugin extends Plugin {
   private stale(): void {
     this.index.invalidate()
     this.schedule()
+  }
+
+  private async readVaultConfig() {
+    const adapter = this.app.vault.adapter
+    const text = await adapter.exists(WI_CONFIG_FILE) ? await adapter.read(WI_CONFIG_FILE) : null
+    return parseVaultConfig(text)
+  }
+
+  private async reloadConfig(): Promise<void> {
+    try {
+      this.index.setConfig(await this.readVaultConfig())
+      this.schedule()
+    } catch (error) {
+      const reason = error instanceof Error ? error.message : String(error)
+      new Notice(`Recursive Board could not read ${WI_CONFIG_FILE}: ${reason}`)
+    }
+  }
+
+  private vaultChanged(path: string): void {
+    if (path === WI_CONFIG_FILE) void this.reloadConfig()
+    else this.stale()
   }
 
   /** Coalesces a burst of events into one redraw. A card move fires several. */

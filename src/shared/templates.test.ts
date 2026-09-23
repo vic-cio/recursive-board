@@ -51,8 +51,13 @@ test('the vault template parses as frontmatter with the core fields', () => {
   assert.ok(fm)
   assert.deepEqual(fm.keys(), ['type', 'id', 'title', 'status', 'parent', 'created', 'updated'])
   assert.equal(fm.get('type'), WORK_ITEM_TYPE)
-  assert.equal(fm.get('parent'), '[[Main]]')
+  assert.equal(fm.get('parent'), undefined)
   assert.ok((STATUSES as readonly string[]).includes(String(fm.get('status'))))
+})
+
+test('the vault template uses the configured root filename as its parent', () => {
+  const fm = parseFrontmatter(renderVaultTemplate(requireTemplate(), 'House move'))!
+  assert.equal(fm.get('parent'), '[[House move]]')
 })
 
 test('the vault template writes neither board nor prev_status', () => {

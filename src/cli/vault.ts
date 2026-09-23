@@ -1,7 +1,7 @@
 /**
  * The vault index.
  *
- * Reads `Boards/` and builds the index the CLI needs: items by id, items by filename stem, and
+ * Reads the configured work-item folder and builds the index the CLI needs: items by id, items by filename stem, and
  * children by parent. Resolution follows decision D3: the wikilink is authoritative, so a parent
  * link resolves to a filename, never to a title and never to an id.
  *
@@ -13,6 +13,7 @@ import { existsSync } from 'node:fs'
 import { join, resolve as resolvePath, dirname, basename, sep } from 'node:path'
 
 import { parseFrontmatter, type Frontmatter } from '../shared/frontmatter.ts'
+import { parseVaultConfig, WI_CONFIG_FILE, type VaultConfig } from '../shared/vault-config.ts'
 import {
   BOARDS, FOLDERS, WORK_ITEM_TYPE, isStatus, parseWikilink, type Status,
 } from '../shared/schema.ts'
@@ -38,15 +39,16 @@ export interface WorkItem {
 
 export interface Vault {
   root: string
+  config: VaultConfig
   items: WorkItem[]
   byId: Map<string, WorkItem>
   /** Work items whose id another work item also claims. */
   duplicateIds: string[]
   /** Files iCloud has evicted, given as the path of the real file they stand for. */
   evicted: string[]
-  /** Markdown files that do not sit directly in one of the five folders. */
+  /** Markdown files nested below a scanned flat folder. */
   misplaced: string[]
-  /** Markdown files sitting in `Boards/` that are not work items. */
+  /** Markdown files in the work-item folder that are not work items. */
   nonItems: string[]
   takenIds: Set<string>
   takenStems: Set<string>
@@ -61,11 +63,11 @@ const MARKDOWN = /\.md$/i
 /** iCloud evicts a file to a hidden sibling: `Notes.md` becomes `.Notes.md.icloud`. */
 const ICLOUD_PLACEHOLDER = /^\.(.+)\.icloud$/
 
-/** Walks up from a directory to the nearest vault, which is a folder holding `Boards/`. */
+/** Walks up to the nearest configured vault, or a legacy vault holding `Boards/`. */
 export function findVaultRoot(start: string): string | null {
   let dir = resolvePath(start)
   for (;;) {
-    if (existsSync(join(dir, BOARDS))) return dir
+    if (existsSync(join(dir, WI_CONFIG_FILE)) || existsSync(join(dir, BOARDS))) return dir
     const parent = dirname(dir)
     if (parent === dir) return null
     dir = parent
@@ -78,12 +80,13 @@ interface ScanResult {
   misplaced: string[]
 }
 
-async function scan(root: string): Promise<ScanResult> {
+async function scan(root: string, workItemFolder: string): Promise<ScanResult> {
   const markdown: string[] = []
   const evicted: string[] = []
   const misplaced: string[] = []
 
-  for (const folder of FOLDERS) {
+  for (const folder of [workItemFolder, ...FOLDERS.filter((name) =>
+    name !== BOARDS && name !== workItemFolder && !workItemFolder.startsWith(`${name}/`))]) {
     const dir = join(root, folder)
     let entries
     try {
@@ -183,12 +186,19 @@ export function requireWholeTree(vault: Vault, what: string): void {
 }
 
 export async function loadVault(root: string): Promise<Vault> {
-  const { markdown, evicted, misplaced } = await scan(root)
+  let configText: string | null = null
+  try {
+    configText = await readFile(join(root, WI_CONFIG_FILE), 'utf8')
+  } catch (error) {
+    if (!isMissingFile(error)) throw error
+  }
+  const config = parseVaultConfig(configText)
+  const { markdown, evicted, misplaced } = await scan(root, config.workItemFolder)
 
   const items: WorkItem[] = []
   const nonItems: string[] = []
   for (const relPath of markdown) {
-    if (!relPath.startsWith(`${BOARDS}/`)) continue
+    if (!relPath.startsWith(`${config.workItemFolder}/`)) continue
     const text = await readFile(join(root, ...relPath.split('/')), 'utf8')
     const item = toWorkItem(root, relPath, text)
     if (item) items.push(item)
@@ -247,6 +257,7 @@ export async function loadVault(root: string): Promise<Vault> {
 
   return {
     root,
+    config,
     items,
     byId,
     duplicateIds,
@@ -259,4 +270,8 @@ export async function loadVault(root: string): Promise<Vault> {
     resolve,
     childrenOf: (item) => children.get(item.stem.toLowerCase()) ?? [],
   }
+}
+
+function isMissingFile(error: unknown): boolean {
+  return typeof error === 'object' && error !== null && 'code' in error && error.code === 'ENOENT'
 }

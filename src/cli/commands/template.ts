@@ -44,7 +44,7 @@ export async function writeTemplates(vault: Vault): Promise<WrittenTemplate[]> {
   for (const template of TEMPLATES) {
     const path = join(folder, `${template.name}.md`)
     const relPath = `${TEMPLATES_FOLDER}/${template.name}.md`
-    const next = renderVaultTemplate(template)
+    const next = renderVaultTemplate(template, vault.config.defaultRoot)
 
     if (!existsSync(path)) {
       await writeAtomic(path, next)

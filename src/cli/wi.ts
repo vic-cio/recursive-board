@@ -26,7 +26,7 @@ import { templateNames } from '../shared/templates.ts'
 const HELP = `wi — the vault vault CLI
 
 Usage
-  wi new <title> --parent <ref> [--status <s>] [--template <t>] [--owner <o>] [--agent <a>]
+  wi new <title> [--parent <ref>] [--status <s>] [--template <t>] [--owner <o>] [--agent <a>]
                                 [--priority <n>]
   wi status <ref> <status>
   wi move <ref> --to <ref>
@@ -40,7 +40,7 @@ A <status> is one of: ${STATUSES.join(', ')}.
 A <template> is one of: ${templateNames().join(', ')}.
 
 Options
-  --vault <path>   The vault root. Defaults to $WI_VAULT, then the nearest folder holding Boards/.
+  --vault <path>   The vault root. Defaults to $WI_VAULT, then the nearest configured vault or Boards/.
   --json           Machine-readable output.
   -h, --help       This text.
   -V, --version    Print the version.
@@ -123,7 +123,7 @@ async function openVault(flag: string | undefined): Promise<Vault> {
     )
   }
   if (findVaultRoot(root) !== root) {
-    throw new UsageError(`${root} is not a vault: it has no Boards/ folder.`)
+    throw new UsageError(`${root} is not a vault: it has no Boards/ folder or .wi.json.`)
   }
   return loadVault(root)
 }
@@ -134,8 +134,8 @@ async function runNew(vault: Vault, rest: string[], values: Values, json: boolea
   const title = rest.join(' ').trim()
   if (title === '') throw new UsageError('wi new needs a title. Try: wi new "Build server" --parent Main')
 
-  const parent = typeof values['parent'] === 'string' ? values['parent'] : ''
-  if (parent === '') throw new UsageError('wi new needs --parent <ref>. Only the root has no parent.')
+  const parent = typeof values['parent'] === 'string' ? values['parent'] : vault.config.defaultRoot
+  if (!parent) throw new UsageError('wi new needs --parent <ref> or defaultRoot in .wi.json.')
 
   const priority = typeof values['priority'] === 'string' ? Number(values['priority']) : undefined
   if (priority !== undefined && !Number.isFinite(priority)) {

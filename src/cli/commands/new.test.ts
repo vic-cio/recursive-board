@@ -47,6 +47,17 @@ test('createItem writes a file into Boards with the nine-field shape', async () 
   assert.equal(fm.get('created'), fm.get('updated'))
 })
 
+test('createItem uses the configured folder and root when no parent is given', async () => {
+  fixture = seed()
+  fixture.write('.wi.json', '{"workItemFolder":"Projects","defaultRoot":"Launch"}')
+  fixture.write('Projects/Launch.md', item({
+    type: 'work-item', id: 'wi-0100', title: 'Launch', created: '2026-09-21', updated: '2026-09-21',
+  }))
+  const created = await createItem(await reload(fixture), { title: 'Plan' })
+  assert.equal(created.relPath, 'Projects/Plan.md')
+  assert.equal(parseFrontmatter(readFileSync(created.path, 'utf8'))!.get('parent'), '[[Launch]]')
+})
+
 test('createItem never writes board or prev_status on a fresh item', async () => {
   fixture = seed()
   const created = await createItem(await reload(fixture), { title: 'Streaming', parent: 'wi-0004' })

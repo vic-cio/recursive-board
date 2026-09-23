@@ -1,6 +1,7 @@
 import { test, afterEach } from 'node:test'
 import assert from 'node:assert/strict'
 import { join } from 'node:path'
+import { rmSync } from 'node:fs'
 
 import { loadVault, findVaultRoot } from './vault.ts'
 import { makeVault, item, type Fixture } from './test-helpers.ts'
@@ -40,6 +41,24 @@ test('loadVault reads every work item in Boards', async () => {
   const vault = await loadVault(fixture.root)
   assert.equal(vault.items.length, 4)
   assert.deepEqual(vault.items.map((i) => i.id).sort(), ['wi-0001', 'wi-0004', 'wi-0005', 'wi-0006'])
+})
+
+test('loadVault reads work items from the configured folder only', async () => {
+  fixture = vaultWithTree()
+  fixture.write('.wi.json', '{"workItemFolder":"Projects","defaultRoot":"Launch"}')
+  fixture.write('Projects/Launch.md', item({
+    type: 'work-item', id: 'wi-0100', title: 'Launch', created: '2026-09-21', updated: '2026-09-21',
+  }))
+  const vault = await loadVault(fixture.root)
+  assert.equal(vault.config.workItemFolder, 'Projects')
+  assert.equal(vault.config.defaultRoot, 'Launch')
+  assert.deepEqual(vault.items.map((i) => i.id), ['wi-0100'])
+})
+
+test('loadVault rejects malformed config rather than indexing Boards', async () => {
+  fixture = vaultWithTree()
+  fixture.write('.wi.json', '{"workItemFolder":"../Elsewhere"}')
+  await assert.rejects(loadVault(fixture.root), /\.wi\.json/)
 })
 
 test('loadVault records the filename stem, which is what a wikilink resolves to', async () => {
@@ -192,6 +211,14 @@ test('findVaultRoot walks up from a nested directory', async () => {
   fixture = vaultWithTree()
   assert.equal(findVaultRoot(join(fixture.root, 'Boards')), fixture.root)
   assert.equal(findVaultRoot(fixture.root), fixture.root)
+})
+
+test('findVaultRoot discovers a configured folder without Boards', () => {
+  fixture = makeVault()
+  fixture.write('.wi.json', '{"workItemFolder":"Projects"}')
+  fixture.write('Projects/Root.md', item({ type: 'work-item', id: 'wi-0100', title: 'Root' }))
+  rmSync(join(fixture.root, 'Boards'), { recursive: true })
+  assert.equal(findVaultRoot(join(fixture.root, 'Projects')), fixture.root)
 })
 
 test('findVaultRoot returns null outside a vault', () => {

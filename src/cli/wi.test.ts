@@ -3,7 +3,7 @@ import assert from 'node:assert/strict'
 import { execFile } from 'node:child_process'
 import { promisify } from 'node:util'
 import { fileURLToPath } from 'node:url'
-import { readFileSync } from 'node:fs'
+import { readFileSync, rmSync } from 'node:fs'
 import { join } from 'node:path'
 
 import { makeVault, item, type Fixture } from './test-helpers.ts'
@@ -123,6 +123,21 @@ test('wi new inherits owner from the parent', async () => {
   const { stdout } = await wi(['new', 'Streaming', '--parent', 'Build server', '--json'])
   const { path } = JSON.parse(stdout)
   assert.match(readFileSync(join(fixture.root, path), 'utf8'), /^owner: sam$/m)
+})
+
+test('wi new uses the configured folder and root when --parent is omitted', async () => {
+  fixture = seed()
+  fixture.write('.wi.json', '{"workItemFolder":"Projects","defaultRoot":"Launch"}')
+  fixture.write('Projects/Launch.md', item({
+    type: 'work-item', id: 'wi-0100', title: 'Launch',
+    created: '2026-09-21', updated: '2026-09-21',
+  }))
+  rmSync(join(fixture.root, 'Boards'), { recursive: true })
+  const result = await wi(['new', 'Plan', '--json'])
+  assert.equal(result.code, 0, result.stderr)
+  assert.equal(JSON.parse(result.stdout).path, 'Projects/Plan.md')
+  assert.match(readFileSync(join(fixture.root, 'Projects/Plan.md'), 'utf8'),
+    /^parent: "\[\[Launch\]\]"$/m)
 })
 
 test('wi new takes a multi-word title without quoting gymnastics', async () => {

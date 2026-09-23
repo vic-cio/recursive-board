@@ -89,13 +89,13 @@ export function renderBody(template: BodyTemplate): string {
  * not. `board` and `prev_status` are left out: absence is what "not a board" and "never ticked"
  * mean, and a template should not teach you to write either.
  */
-export function renderVaultTemplate(template: BodyTemplate): string {
+export function renderVaultTemplate(template: BodyTemplate, defaultRoot: string | null = null): string {
   const placeholders: Record<string, string> = {
     type: formatScalar(WORK_ITEM_TYPE),
     id: 'wi-XXXX',
     title: '',
     status: 'backlog',
-    parent: formatScalar(formatWikilink('Main')),
+    parent: defaultRoot === null ? '' : formatScalar(formatWikilink(defaultRoot)),
     created: '',
     updated: '',
   }
