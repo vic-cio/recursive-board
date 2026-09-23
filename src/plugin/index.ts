@@ -1,9 +1,9 @@
 /**
  * The plugin's work item index.
  *
- * Decision D4: the plugin builds this itself from Obsidian's `metadataCache`, so no note body
+ * The plugin builds the index from Obsidian's `metadataCache`, so no note body
  * carries query text. Resolution goes through `getFirstLinkpathDest`, which is Obsidian's own
- * link resolver, because decision D3 makes the wikilink authoritative and this plugin must not
+ * link resolver, because docs/adr/0002-work-item-identity-and-parent-links.md makes the wikilink authoritative and this plugin must not
  * invent a second answer to "which file does [[X]] mean".
  *
  * Nothing here reads a file from disk. The cache is already in memory, so a rebuild is cheap
@@ -103,7 +103,7 @@ export class WorkItemIndex {
   }
 
   private read(file: TFile): WorkItemMeta | null {
-    // Decision D8: work items sit directly in Boards/. Nothing nests, so depth is exactly two.
+    // docs/adr/0003-flat-configurable-work-item-folder.md: work items sit directly in Boards/. Nothing nests, so depth is exactly two.
     if (file.parent?.path !== this.config.workItemFolder) return null
     const frontmatter = this.app.metadataCache.getFileCache(file)?.frontmatter
     if (!frontmatter || frontmatter['type'] !== WORK_ITEM_TYPE) return null
@@ -147,7 +147,7 @@ export class WorkItemIndex {
     return this.get(file) !== null
   }
 
-  /** Direct children, in the q6 order: priority ascending, then updated descending. */
+  /** Direct children, in priority and update order: priority ascending, then updated descending. */
   childrenOf(file: TFile): WorkItemMeta[] {
     this.ensureFresh()
     return this.kids.get(file.path) ?? []
@@ -159,7 +159,7 @@ export class WorkItemIndex {
 
   /**
    * The chain from the root down to, but not including, this item. Powers the breadcrumbs that
-   * decision u8 requires on every work item, because a flat `Boards/` makes the file explorer
+   * is shown on every work item, because a flat `Boards/` makes the file explorer
    * useless for navigation.
    */
   ancestorsOf(file: TFile): WorkItemMeta[] {
@@ -193,14 +193,14 @@ export class WorkItemIndex {
     return ids
   }
 
-  /** Every filename stem in use, lowercased, for the D3 collision suffix. */
+  /** Every filename stem in use, lowercased, for the id collision suffix. */
   takenStems(): Set<string> {
     this.ensureFresh()
     return new Set([...this.items.values()].map((m) => m.stem.toLowerCase()))
   }
 }
 
-/** Decision q6. There is no `order` field in v1, so this is the whole of card ordering. */
+/** There is no explicit order field, so priority, update time, and filename determine card order. */
 export function compareSiblings(a: WorkItemMeta, b: WorkItemMeta): number {
   return (
     (a.priority ?? Number.POSITIVE_INFINITY) - (b.priority ?? Number.POSITIVE_INFINITY) ||
@@ -212,7 +212,7 @@ export function compareSiblings(a: WorkItemMeta, b: WorkItemMeta): number {
 export interface Column {
   status: Status
   visible: WorkItemMeta[]
-  /** Done items older than the window. Counted, not drawn (decision q10). */
+  /** Done items older than the window. Counted, not drawn. */
   hidden: number
   archived: WorkItemMeta[]
 }

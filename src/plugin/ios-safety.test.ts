@@ -1,5 +1,5 @@
 /**
- * Decision D1's iOS constraint, asserted rather than trusted.
+ * The plugin must load on iOS, asserted rather than trusted.
  *
  * "A single stray import makes the plugin fail to load on iOS silently. Add a build-time check
  * for this; do not rely on discipline." The build fails on a forbidden import. This test says the
@@ -78,7 +78,7 @@ test('the shared modules stay usable by both sides', () => {
 
 test('the manifest declares the plugin mobile-capable', () => {
   const manifest = JSON.parse(readFileSync(join(root, 'manifest.json'), 'utf8'))
-  assert.equal(manifest.isDesktopOnly, false, 'decision D1: the plugin must run on iOS')
+  assert.equal(manifest.isDesktopOnly, false, 'the plugin must run on iOS')
   assert.equal(manifest.id, 'recursive-board')
   assert.match(manifest.version, /^\d+\.\d+\.\d+$/)
   assert.ok(manifest.minAppVersion, 'Vault.process needs a floor on the app version')

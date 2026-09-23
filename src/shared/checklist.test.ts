@@ -29,9 +29,9 @@ test('escapeInline folds line breaks, so a title cannot start a new list item', 
 
 test('a path with parentheses survives inside the angle-bracket destination', () => {
   const md = checklistMarkdown([
-    { title: 'Render lists (R1)', path: 'Boards/Render lists (R1).md', done: false },
+    { title: 'Render lists (review)', path: 'Boards/Render lists (review).md', done: false },
   ])
-  assert.equal(md, '- [ ] [Render lists \\(R1\\)](<Boards/Render lists (R1).md>)')
+  assert.equal(md, '- [ ] [Render lists \\(review\\)](<Boards/Render lists (review).md>)')
 })
 
 test('an empty list is an empty string', () => {

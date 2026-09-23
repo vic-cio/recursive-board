@@ -7,7 +7,7 @@
  *
  * iOS fires no `contextmenu` on a long press, so on the phone every card carries a "⋯" button
  * that opens the same menu. It is also the phone's way to change a card's status, because drag
- * is desktop only (decision q5).
+ * is desktop only.
  */
 import { Menu, Notice, Platform, setIcon } from 'obsidian'
 
@@ -61,7 +61,7 @@ function buildMenu(ctx: RenderContext, meta: WorkItemMeta): Menu {
     .setIcon('folder-input')
     .onClick(() => new MoveModal(ctx.app, ctx.index, ctx.actions, meta).open()))
 
-  // A root takes no status (decision D7), so it gets no status entries.
+  // A root takes no status, so it gets no status entries.
   if (meta.parentLink !== null) {
     menu.addSeparator()
     for (const status of STATUSES) {

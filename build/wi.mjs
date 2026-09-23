@@ -2,7 +2,7 @@
  * Builds `wi` to plain JavaScript, so it runs on Node 20 and later.
  *
  * The source is TypeScript with `.ts` import specifiers, which Node only runs from 23.6 with type
- * stripping. Decision L1's release ships `wi` to users who will not install a toolchain, so the
+ * stripping. docs/adr/0010-plain-javascript-cli.md ships `wi` to users without a TypeScript toolchain, so the
  * CLI is bundled here instead. The output is one ESM file with a shebang, and its only imports are
  * `node:` builtins, which esbuild keeps external for `platform: 'node'`.
  *

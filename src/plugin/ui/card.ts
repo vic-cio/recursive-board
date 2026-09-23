@@ -1,11 +1,11 @@
 /**
  * A card face and its in-place expansion.
  *
- * Decision u3: a card is a title and a few badges, never prose. A badge is honest in a way a
+ * A collapsed card shows its title and badges, without prose (docs/adr/0016-cards-expand-in-place.md). A badge is honest in a way a
  * summary is not, because a child count of three is always current while a summary goes stale the
  * moment the work changes.
  *
- * Decision u5: a card expands in place to show its Objective, its Acceptance Criteria and its own
+ * docs/adr/0016-cards-expand-in-place.md: a card expands in place to show its Objective, its Acceptance Criteria and its own
  * tickable child checklist. That is what makes bare badges safe on a phone, where hover does not
  * exist, and it is the actual Trello motion: open a card, tick something, close it, still on the
  * board.
@@ -69,7 +69,7 @@ export function renderCard(
     ctx.expand(expanded ? null : meta.file.path)
   })
 
-  // Decision q5: HTML5 drag events do not fire on iOS touch at all, so drag is desktop only.
+  // HTML5 drag events do not fire on iOS touch, so drag is desktop only.
   if (options.draggable && !Platform.isMobile) {
     card.draggable = true
     card.addEventListener('dragstart', (event) => {
@@ -124,7 +124,7 @@ export function renderLabels(host: HTMLElement, labels: string[]): void {
   }
 }
 
-/** Child count, board, priority, blocked marker, owner or agent initial. Nothing else (u3). */
+/** Child count, board, priority, blocked marker, owner or agent initial. No other fields appear on the collapsed face. */
 function renderBadges(host: HTMLElement, ctx: RenderContext, meta: WorkItemMeta): void {
   const children = ctx.index.childCount(meta.file)
   if (children > 0) {
@@ -199,7 +199,7 @@ async function renderExpansion(
     renderChecklist(host, ctx, children, { grouped: false, parent: undefined, archiveParent: meta })
   }
 
-  // The id lives here rather than on the face (docs/card-typography-design.md, q2): it is for
+  // The id lives here rather than on the face (docs/adr/0021-card-and-row-typography.md): it is for
   // agents and `wi` commands, not for reading the board. Copy id is also in the menu.
   if (meta.id !== undefined) renderCode(host.createDiv({ cls: 'wi-card-code' }), meta.id)
 

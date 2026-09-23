@@ -86,7 +86,7 @@
   overflow-y: auto;
 }
 
-/* ---------- closing the live preview gap (decision R2) ----------
+/* ---------- closing the live preview gap (docs/adr/0020-generated-markdown-and-note-view.md) ----------
  * Obsidian's own app.css says:
  *
  *   .cm-sizer { display: flex; flex-direction: column; min-height: 100%; }
@@ -120,7 +120,7 @@
   min-height: unset !important;
 }
 
-/* ---------- breadcrumbs (decision u8) ---------- */
+/* ---------- breadcrumbs (the flat work-item folder) ---------- */
 
 .wi-region-top.wi-region {
   margin-bottom: 4px;
@@ -253,7 +253,7 @@
   color: var(--text-normal);
 }
 
-/* ---------- top bar controls (decisions U1, U3) ---------- */
+/* ---------- top bar controls (docs/adr/0015-checklist-and-board-navigation.md) ---------- */
 
 .wi-controls {
   display: flex;
@@ -302,7 +302,7 @@
   color: var(--text-on-accent);
 }
 
-/* ---------- board (decision U1) ---------- */
+/* ---------- board (docs/adr/0015-checklist-and-board-navigation.md) ---------- */
 
 .wi-board {
   display: grid;
@@ -375,7 +375,7 @@
   background: var(--scrollbar-active-thumb-bg);
 }
 
-/* ---------- card (decisions u3, u5) ---------- */
+/* ---------- card (docs/adr/0016-cards-expand-in-place.md) ---------- */
 
 .wi-card {
   background: var(--background-primary);
@@ -432,7 +432,7 @@
 }
 
 /* The note's own text, so a child reads the same as a card and as a checklist row, and follows
-   the theme and the font-size setting (docs/card-typography-design.md, q1). */
+   the theme and the font-size setting (docs/adr/0021-card-and-row-typography.md). */
 .wi-card-title {
   font-family: var(--font-text);
   font-size: var(--font-text-size);
@@ -635,7 +635,7 @@
   flex: none;
 }
 
-/* ---------- add row (decision u7) ---------- */
+/* ---------- add row (docs/adr/0017-inline-status-capture.md) ---------- */
 
 .wi-add-row {
   margin-top: 2px;
@@ -655,7 +655,7 @@
   border-color: var(--interactive-accent);
 }
 
-/* ---------- checklist (decisions U1, R1) ----------
+/* ---------- checklist (docs/adr/0020-generated-markdown-and-note-view.md) ----------
  * The rows are Obsidian's own rendered task list, so the typography, the checkbox and the
  * struck-through done item all come from the theme. This only lays the badges out beside them.
  */
@@ -665,7 +665,7 @@
 }
 
 /* Every row is a link, so link colour says nothing and 23 blue underlines read as a page of
-   links. Text colour until hovered (docs/card-typography-design.md, q3). */
+   links. Text colour until hovered (docs/adr/0021-card-and-row-typography.md). */
 .wi-checklist a.internal-link {
   color: var(--text-normal);
   text-decoration: none;
@@ -743,7 +743,7 @@
   padding: 4px 2px;
 }
 
-/* ---------- mobile (docs/phone-board-design.md) ----------
+/* ---------- mobile (docs/adr/0022-phone-board-navigation.md) ----------
  * A promoted board takes the pane over on the phone too, as four tabs over one group of cards.
  * The phone floats its header and its nav bar over the content, so the overlay pads for both.
  */

@@ -33,7 +33,7 @@ test('the fixture validates to exactly its two deliberate problems', async () =>
   )
 })
 
-test('the duplicate title takes the D3 collision suffix, and its child link resolves', async () => {
+test('the duplicate title takes the id collision suffix, and its child link resolves', async () => {
   const vault = await generated()
   const second = vault.resolve('wi-b2e1')
   assert.equal(second.stem, 'Authentication--b2e1')

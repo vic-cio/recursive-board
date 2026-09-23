@@ -1,9 +1,9 @@
 /**
- * The v1 work-item schema, frozen in decision D7 and amended by U2 and U3.
+ * The work-item fields shared by both writers (docs/adr/0004-wi-is-the-programmatic-write-interface.md).
  *
  * This schema applies to the work-item folder (`Boards/`) only. Other folders in a vault follow
- * their owner's conventions, and decision L5 leaves them outside this product entirely.
- * Nothing here may grow a field without a decision recorded in `docs/`.
+ * their owner's conventions, and the validator leaves them outside the product's work-item scope.
+ * Nothing here may grow a field without a decision recorded in `docs/adr/`.
  */
 
 export const STATUSES = ['backlog', 'options', 'doing', 'done'] as const
@@ -31,19 +31,19 @@ export const OPTIONAL_FIELDS = [
   'blocked',
   'depends_on',
   'tags',
-  'archived', // Release decision L7: optional frontmatter flag, not a status.
+  'archived', // docs/adr/0007-archive-is-a-frontmatter-flag.md: a flag, not a status.
 ] as const
 
-/** Fields a new child inherits from its parent, per UI decision u7. */
+/** Fields a new child inherits from its parent, as both writers do for new children. */
 export const INHERITED_FIELDS = ['owner', 'agent'] as const
 
 export const WORK_ITEM_TYPE = 'work-item'
 
 /**
- * The folders this product reads. Decision L5 narrows them to the work-item folder and the
+ * The folders this product reads. The validator limits them to the work-item folder and the
  * templates folder; everything else in a vault belongs to its owner. Nothing nests inside either.
  *
- * `Boards/` is the default work-item folder. Decision L2 makes it configurable, so this constant
+ * `Boards/` is the default work-item folder. docs/adr/0003-flat-configurable-work-item-folder.md makes it configurable, so this constant
  * is the fallback rather than the final word.
  */
 export const FOLDERS = ['Boards', 'Templates'] as const
@@ -88,7 +88,7 @@ export function idSuffix(id: string): string {
 }
 
 /**
- * The filename stem for a work item, with the D3 collision suffix when the plain title is taken.
+ * The filename stem for a work item, with the id collision suffix when the plain title is taken.
  * The suffix is the id's short half, so the file is recoverable from the id alone.
  */
 export function fileNameFor(title: string, id: string, taken: ReadonlySet<string>): string {
@@ -120,7 +120,7 @@ export function today(now: Date = new Date()): string {
   return `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`
 }
 
-/** How long a done item stays on the board, per decision q10. A render filter, never a write. */
+/** How long a done item stays visible on the board; older items remain in Markdown. */
 export const DONE_WINDOW_DAYS = 14
 
 /** The earliest `updated` a done item may have and still show. */

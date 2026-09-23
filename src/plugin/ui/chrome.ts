@@ -1,8 +1,8 @@
 /**
  * Breadcrumbs, the metadata strip and the promote toggle.
  *
- * Decision D8 made the work-item folder one flat folder, which makes the file explorer useless as
- * navigation. Breadcrumbs are the consequence, and decision u8 puts them at the top of every work
+ * The flat work-item folder (docs/adr/0003-flat-configurable-work-item-folder.md) makes the file explorer useless as
+ * navigation. Breadcrumbs are the consequence, and they sit at the top of every work
  * item rather than only on boards, because the prototype review found they are the primary way
  * back.
  *
@@ -11,7 +11,7 @@
  *
  * The promote control does not. The review put it below the Objective with everything else, but
  * that leaves a checklist with its only route back to a board at the foot of the note, past the
- * whole body. U1 said "a toggle in the note header" all along, and the doc's own open threads
+ * whole body. A toggle in the note header keeps the board accessible, and the layout's open questions
  * record that the toggle was never specified. It lives in the top bar.
  */
 import { setIcon } from 'obsidian'
@@ -31,7 +31,7 @@ export function renderBreadcrumbs(
   const ancestors = ctx.index.ancestorsOf(meta.file)
 
   if (meta.parentLink !== null && meta.parent === null) {
-    // The orphan case. The item is not lost; it is simply on no board (decision u8).
+    // The orphan case. The item is not lost; it is simply on no board.
     const warn = trail.createSpan({ cls: 'wi-crumb is-orphan' })
     setIcon(warn.createSpan({ cls: 'wi-crumb-icon' }), 'unlink')
     warn.createSpan({ text: `Parent [[${meta.parentLink}]] not found` })
@@ -54,7 +54,7 @@ export function renderBreadcrumbs(
 /**
  * The two controls, which do different kinds of thing and so are never merged.
  *
- * Promote and demote change what the item *is*, and that is written to the file (decision U3).
+ * Promote and demote change what the item *is*, and that is written to the file (docs/adr/0001-markdown-is-canonical-and-edits-preserve-unknown-keys.md).
  * Notes and Board change what this pane is showing, and that is session state which is never
  * written: a per-view preference is reconstructable from nothing, which is the hole the first
  * grill found in storing one.
@@ -82,7 +82,7 @@ function renderViewSwitch(group: HTMLElement, ctx: RenderContext, meta: WorkItem
 }
 
 /**
- * The promote toggle (decisions U1 and U3).
+ * The promote toggle (docs/adr/0015-checklist-and-board-navigation.md).
  *
  * It writes `board: true`, so the choice survives a reindex, syncs to the phone and is visible in
  * plain Markdown. Demoting deletes the key: absence means not a board.

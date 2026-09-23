@@ -1,8 +1,8 @@
 /**
- * The iOS guard from decision D1.
+ * The plugin must load on iOS, where Node imports are unavailable.
  *
  * A single `node`, `fs`, `path`, `child_process` or `electron` import makes the plugin fail to
- * load on iOS, and it fails silently. D1 says to check this at build time rather than rely on
+ * load on iOS, and it fails silently. Check this at build time rather than rely on
  * discipline, so this is an esbuild plugin that turns such an import into a build error.
  *
  * It is exported as data too, so a unit test can apply the same list to the source tree without
@@ -27,7 +27,7 @@ export function forbiddenImports() {
         if (!isForbidden(args.path)) return null
         return {
           errors: [{
-            text: `"${args.path}" cannot be imported: the plugin must load on iOS (decision D1).`,
+            text: `"${args.path}" cannot be imported: the plugin must load on iOS.`,
             notes: [{ text: `Imported by ${args.importer}` }],
           }],
         }

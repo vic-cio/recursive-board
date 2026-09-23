@@ -66,7 +66,7 @@ test('createItem never writes board or prev_status on a fresh item', async () =>
   assert.equal(fm.has('prev_status'), false)
 })
 
-test('createItem inherits owner and agent from the parent (decision u7)', async () => {
+test('createItem inherits owner and agent from the parent', async () => {
   fixture = seed()
   const created = await createItem(await reload(fixture), { title: 'Streaming', parent: 'wi-0004' })
   const fm = parseFrontmatter(readFileSync(created.path, 'utf8'))!
@@ -142,7 +142,7 @@ test('createItem links the parent by filename, not by title', async () => {
   assert.equal(fm.get('parent'), '[[Auth--b2e1]]', 'the wikilink is authoritative for resolution')
 })
 
-test('createItem adds the id suffix when the filename is taken (decision D3)', async () => {
+test('createItem adds the id suffix when the filename is taken', async () => {
   fixture = seed()
   const created = await createItem(await reload(fixture), {
     title: 'Build server', parent: 'wi-0001',

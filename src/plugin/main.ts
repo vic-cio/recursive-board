@@ -5,7 +5,7 @@
  * plugin is a view and never the database: everything it shows comes from frontmatter, and
  * everything it writes is one key on one file.
  *
- * Decision D1 requires this to load on iOS, so nothing in this bundle may import `node`, `fs`,
+ * The plugin must load on iOS, so nothing in this bundle may import `node`, `fs`,
  * `path`, `child_process` or `electron`. Two guards enforce that: `tsconfig.plugin.json` has no
  * Node types, and `build/forbidden-imports.mjs` fails the build.
  */
@@ -36,7 +36,7 @@ export default class RecursiveBoardPlugin extends Plugin {
     this.index = new WorkItemIndex(this.app, await this.readVaultConfig())
     this.actions = new Actions(this.app, this.index)
 
-    // The cache is the source the board reads (decision D4), so any change to it redraws.
+    // The cache is the source the board reads (the board index), so any change to it redraws.
     this.registerEvent(this.app.metadataCache.on('changed', () => this.stale()))
     this.registerEvent(this.app.metadataCache.on('resolved', () => this.stale()))
     this.registerEvent(this.app.vault.on('create', (file) => this.vaultChanged(file.path)))

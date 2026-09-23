@@ -35,7 +35,7 @@ function meta(over: Partial<WorkItemMeta> & { stem: string }): WorkItemMeta {
 
 const card = (stem: string, status: Status, updated?: string) => meta({ stem, status, updated })
 
-test('doneCutoff is fourteen days back (decision q10)', () => {
+test('doneCutoff is fourteen days back', () => {
   assert.equal(doneCutoff(NOW), '2026-09-08')
   assert.equal(doneCutoff(new Date(2026, 0, 5)), '2025-12-22', 'it crosses a year boundary')
 })

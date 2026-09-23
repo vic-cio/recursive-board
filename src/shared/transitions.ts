@@ -12,7 +12,7 @@ import type { Edit } from './edits.ts'
 import { formatWikilink, type Status } from './schema.ts'
 
 /**
- * Moving a card between columns, including decision U2's rule for `done`.
+ * Moving a card between columns, including the recorded previous status for `done`.
  * Returns null when the move is a no-op, so a caller can avoid a pointless sync event.
  */
 export function statusEdits(
@@ -34,7 +34,7 @@ export function statusEdits(
 }
 
 /**
- * Where unticking a done item sends it (decision U2).
+ * Where unticking a done item sends it.
  * `prev_status` is what it was. Its absence means the item arrived at done some other way, and
  * `backlog` is the creation default rather than a guess at intent.
  */
@@ -43,7 +43,7 @@ export function untickTarget(prevStatus: Status | undefined): Status {
 }
 
 /**
- * Promotion and demotion (decision U3).
+ * Promotion and demotion.
  * Demotion deletes the key: absence means not a board, and `board: false` would litter the vault
  * with a key that says nothing.
  */

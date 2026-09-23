@@ -1,9 +1,9 @@
 /**
- * The generated Markdown for a list of children (decision R1).
+ * The generated Markdown for a list of children (docs/adr/0020-generated-markdown-and-note-view.md).
  *
  * The plugin hands this to Obsidian's renderer, so a checklist gets the vault's own typography,
  * task checkboxes and internal links. It lives for one render and reaches no file, which is what
- * keeps it clear of D4 and of the obsidian-kanban rejection: this is rendering, not storage.
+ * keeps it separate from canonical storage: this is rendering only.
  *
  * Rendering risk 4 is the reason this module exists apart from the plugin: text nodes could never
  * become syntax, generated Markdown can. A title is escaped completely, and a path goes in an

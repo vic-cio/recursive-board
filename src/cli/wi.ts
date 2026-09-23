@@ -2,7 +2,7 @@
 /**
  * `wi` — the only thing that writes into the vault.
  *
- * Decision D5: agents call this rather than editing Markdown with `sed`, so the integrity rules
+ * docs/adr/0004-wi-is-the-programmatic-write-interface.md: agents call this rather than editing Markdown with `sed`, so the integrity rules
  * live in tested code instead of in prose. That only holds if this is strictly better than `sed`,
  * which is why every command takes an id, a filename or a title, and why every error says what to
  * do next rather than only what went wrong.

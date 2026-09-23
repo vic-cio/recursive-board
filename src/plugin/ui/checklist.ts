@@ -1,14 +1,13 @@
 /**
  * The checklist view.
  *
- * Decision U1: opening a work item shows its children as a checklist, not as a board. The spec
+ * docs/adr/0015-checklist-and-board-navigation.md: opening a work item shows its children as a checklist, not as a board. The spec
  * said a work item with children always renders a board; implemented literally that produces a
  * kanban repeated at every depth, which was built into the test vault and rejected on sight.
  *
- * Decision u6: this is also what a board looks like on a phone. Four status headings in one
- * scrolling list. (Reversed by `docs/phone-board-design.md`: a promoted board is tabs there now.)
+ * A promoted board uses status tabs on phones (docs/adr/0022-phone-board-navigation.md).
  *
- * Decision R1: the rows are generated Markdown, rendered by Obsidian, so the list has the vault's
+ * docs/adr/0020-generated-markdown-and-note-view.md: the rows are generated Markdown, rendered by Obsidian, so the list has the vault's
  * own typography, task checkboxes and internal links. The plugin intercepts the checkbox, because
  * the Markdown has no source file for Obsidian to write back to, and routes it to the same status
  * write the CLI makes. Badges and controls are appended to each rendered row afterwards.
@@ -145,7 +144,7 @@ function decorateRow(row: HTMLElement, ctx: RenderContext, meta: WorkItemMeta): 
     box.setAttribute('aria-label', `Mark ${meta.title} done`)
     box.addEventListener('click', (event) => {
       event.stopPropagation()
-      // The box has already toggled by the time click fires. Decision U2: unticking restores
+      // The box has already toggled by the time click fires. The shared status transition ensures unticking restores
       // exactly what the item was.
       void ctx.actions.setDone(meta, box.checked)
     }, { capture: true })

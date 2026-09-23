@@ -1,4 +1,4 @@
-/** Archive rules shared by the CLI and plugin (release decisions L7 and L8). */
+/** Archive rules shared by the CLI and plugin (docs/adr/0007-archive-is-a-frontmatter-flag.md). */
 import type { Edit } from './edits.ts'
 import type { Status } from './schema.ts'
 

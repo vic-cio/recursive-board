@@ -4,16 +4,16 @@
  * Agents may delete. That is a deliberate reversal of the original `AGENTS.md` caution, made on
  * 2026-09-22: agents are to own whole grandchild boards autonomously, the vault is version
  * tracked, and a CLI without the verb does not stop an agent deleting. It sends the agent to
- * `rm`, which is exactly what decision D5 exists to prevent.
+ * `rm`, which is exactly what docs/adr/0004-wi-is-the-programmatic-write-interface.md exists to prevent.
  *
  * Two rules keep autonomy from becoming data loss.
  *
  * Removing a parent without `--recursive` is refused, because deleting a parent does not delete
  * its children: it leaves them pointing at a file that no longer exists. Integrity rule 4 forbids
- * repairing that silently, and decision u8 shows such an item renders on no board at all.
+ * repairing that silently, and an unresolved parent leaves such an item off every board.
  *
  * Nothing is unlinked. A removed file moves to the vault's `.trash`, which is Obsidian's own
- * convention and is outside the five folders of decision D8, so it is never indexed again.
+ * convention and is outside the work-item folder, so it is never indexed again.
  */
 import { mkdir, rename } from 'node:fs/promises'
 import { existsSync } from 'node:fs'

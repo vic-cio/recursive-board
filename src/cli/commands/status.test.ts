@@ -45,7 +45,7 @@ test('setStatus stamps updated, because the Done window keys off it', async () =
   assert.match(String(fmOf(fixture).get('updated')), /^\d{4}-\d{2}-\d{2}$/)
 })
 
-test('moving to done records the previous status (decision U2)', async () => {
+test('moving to done records the previous status', async () => {
   fixture = seed()
   await setStatus(await loadVault(fixture.root), 'wi-0005', 'done')
   assert.equal(fmOf(fixture).get('status'), 'done')

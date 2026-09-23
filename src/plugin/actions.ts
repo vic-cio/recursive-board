@@ -5,8 +5,7 @@
  * exactly the same thing. This module is only the Obsidian plumbing around them.
  *
  * `vault.process` is an atomic read-modify-write, and the edits inside it are line-wise, so a
- * toggle rewrites one line and copies every other byte. That keeps the Git noise decision U3
- * warned about down to what actually changed.
+ * toggle rewrites one line and copies every other byte. That keeps the diff to the requested field (docs/adr/0005-line-wise-frontmatter.md).
  */
 import { normalizePath, Notice, TFile, type App } from 'obsidian'
 
@@ -81,7 +80,7 @@ export class Actions {
     await this.run(`move ${meta.title}`, () => this.edit(meta.file, edits, `mark ${meta.title} ${to}`))
   }
 
-  /** Ticking a checklist box. Unticking restores exactly what the item was (decision U2). */
+  /** Ticking a checklist box. Unticking restores exactly what the item was. */
   async setDone(meta: WorkItemMeta, done: boolean): Promise<void> {
     await this.setStatus(meta, done ? 'done' : untickTarget(meta.prevStatus))
   }
@@ -152,7 +151,7 @@ export class Actions {
   }
 
   /**
-   * The add row at the foot of a column (decision u7).
+   * The add row at the foot of a column (docs/adr/0017-inline-status-capture.md).
    * Typing a title and pressing enter is one action, which is what makes a board a capture
    * surface rather than a report.
    */
@@ -193,7 +192,7 @@ export class Actions {
    *
    * It refuses when the item has children. Deleting a parent does not delete its children: it
    * leaves them pointing at a file that no longer exists, which integrity rule 4 forbids
-   * repairing silently and decision u8 shows is invisible on every board. Refusing is the only
+   * repairing silently, and an unresolved parent leaves the child invisible on every board. Refusing is the only
    * answer that does not quietly lose work.
    *
    * The confirmation is Obsidian's own, so it honours the vault's "Deleted files" setting: a

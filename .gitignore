@@ -21,6 +21,6 @@ dist/
 # macOS
 .DS_Store
 
-# Personal pointers to the dev board and the vault (docs/open-source-release-design.md, L3)
+# Maintainers put personal notes in these files, so keep them untracked.
 CLAUDE.local.md
 .claude/settings.local.json

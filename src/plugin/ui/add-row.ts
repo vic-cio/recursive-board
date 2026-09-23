@@ -1,14 +1,12 @@
 /**
- * The add row (decision u7).
+ * The add row (docs/adr/0017-inline-status-capture.md).
  *
  * Typing a title and pressing enter is one action, where any dialog is at least four, and that
  * difference decides whether half-formed items get written down at all. The file opens only if
  * you ask.
  *
- * **Where it appears resolves a contradiction between u6 and u7.** u7 puts the row "at the foot
- * of every column"; u6 says a phone never renders columns. Read together they leave the phone
- * unable to create a work item at all, which cannot be right for the device that exists to
- * capture. So the row belongs to a status *group*, whatever shape that group takes: a column on
+ * On desktop, each column has an add row. On phones, status tabs replace columns. The row
+ * belongs to a status *group*, whatever shape that group takes: a column on
  * the desktop board, a heading on the mobile board, and a single backlog row on a plain
  * checklist.
  */
@@ -45,7 +43,7 @@ export function renderAddRow(
   })
 }
 
-/** Decision q10: a rolling window, so the count is shown rather than the items. */
+/** Older done items remain stored, but the board shows their count outside its rolling window. */
 export function renderHiddenNote(host: HTMLElement, hidden: number): void {
   host.createDiv({ cls: 'wi-hidden-count', text: `+${hidden} done more than 14 days ago` })
 }

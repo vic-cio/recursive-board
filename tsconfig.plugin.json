@@ -1,5 +1,5 @@
 {
-  "//": "The iOS guard from decision D1, enforced by the type system: this project has no @types/node, so a `node:` import or a reference to `process` cannot typecheck. See also build/forbidden-imports.mjs.",
+  "//": "The plugin must load on iOS, so this project has no @types/node: a `node:` import or a reference to `process` cannot typecheck. See also build/forbidden-imports.mjs.",
   "extends": "./tsconfig.base.json",
   "compilerOptions": {
     "lib": [

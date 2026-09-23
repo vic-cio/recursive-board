@@ -1,7 +1,7 @@
 /**
  * Putting the board into a note.
  *
- * Decision D4: the plugin detects `type: work-item` and renders into regions it owns, so no note
+ * docs/adr/0020-generated-markdown-and-note-view.md: the plugin detects `type: work-item` and renders into regions it owns, so no note
  * body carries query text and nothing goes dead the day Obsidian is replaced.
  *
  * There are two shapes.
@@ -114,7 +114,7 @@ export function mountLeaf(leaf: WorkspaceLeaf, ctx: RenderContext): void {
     return
   }
 
-  // A promoted item is a board first on both devices (phone board design, q1, reversing u6).
+  // A promoted item is a board first on both devices (docs/adr/0022-phone-board-navigation.md).
   const takesOver = meta.board && !ctx.isPeeking(file.path)
 
   if (takesOver) {

@@ -4,7 +4,7 @@
  * The code is authoritative and `Templates/` is generated from it. That keeps one template
  * rather than two that silently drift, and it keeps the trustworthy path trustworthy: a template
  * read out of the vault could be malformed by a hand edit or a sync conflict, and the CLI would
- * then produce malformed work items from the one component D5 exists to make reliable.
+ * then produce malformed work items from the shared renderer that keeps both writers consistent.
  *
  * The generated files are still real Obsidian templates, so the "Insert template" command works.
  */
@@ -17,7 +17,7 @@ import { writeAtomic } from '../write.ts'
 import { TEMPLATES, renderVaultTemplate, type BodyTemplate } from '../../shared/templates.ts'
 import type { Vault } from '../vault.ts'
 
-/** Where a generated template lands. One of the five folders from decision D8. */
+/** Where a generated template lands. Generated templates live in Templates/, away from work-item Markdown. */
 export const TEMPLATES_FOLDER = 'Templates'
 
 export interface WrittenTemplate {

@@ -19,12 +19,12 @@ test('the frozen schema is nine core fields', () => {
   assert.equal(CORE_FIELDS.length, 9)
 })
 
-test('only the work-item folder and Templates/ are product folders (L5)', () => {
+test('only the work-item folder and Templates/ are product folders', () => {
   assert.deepEqual([...FOLDERS], ['Boards', 'Templates'])
   assert.equal(BOARDS, 'Boards')
 })
 
-test('L7 adds archived as a documented optional field', () => {
+test('archived is as a documented optional field', () => {
   assert.ok(OPTIONAL_FIELDS.includes('archived'))
 })
 

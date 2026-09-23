@@ -2,7 +2,7 @@
  * `wi new` — create a work item.
  *
  * This is the decomposition path: an agent that finds a work item too large creates children
- * rather than writing a plan into a chat transcript. It is also the board's add row (decision u7),
+ * rather than writing a plan into a chat transcript. It is also the board's add row (docs/adr/0017-inline-status-capture.md),
  * which is why a status can be given and why `owner` and `agent` are inherited.
  */
 import { existsSync } from 'node:fs'

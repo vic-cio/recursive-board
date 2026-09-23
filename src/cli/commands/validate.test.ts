@@ -262,7 +262,7 @@ test('an optional field is not an unknown key', async () => {
   assert.deepEqual((await run(fixture)).problems, [])
 })
 
-test('a Markdown file nested below Boards is an error (decision D8)', async () => {
+test('a Markdown file nested below Boards is an error', async () => {
   fixture = healthy()
   fixture.write('Boards/Project/Nested.md', item({
     type: 'work-item', id: 'wi-0025', title: 'Nested', status: 'backlog', parent: '"[[Main]]"',
@@ -287,14 +287,14 @@ test('a harmless hidden file is not reported', async () => {
   assert.deepEqual((await run(fixture)).problems, [])
 })
 
-test('validate never looks at Intake, which is no longer a product folder (L5)', async () => {
+test('validate never looks at Intake, which is no longer a product folder', async () => {
   fixture = healthy()
   fixture.write('Intake/scratch.md', 'no frontmatter, no rules, status: active, [[nonsense]]\n')
   fixture.write('Intake/untitled.md', '---\ntype: work-item\nstatus: banana\n---\n')
   assert.deepEqual((await run(fixture)).problems, [])
 })
 
-test('a nested file under Notes is no longer checked (L5 cost)', async () => {
+test('a nested file under Notes is no longer checked', async () => {
   fixture = healthy()
   fixture.write('Notes/Topic/Nested.md', 'no rules apply here\n')
   assert.deepEqual((await run(fixture)).problems, [])

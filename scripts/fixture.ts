@@ -2,9 +2,7 @@
 /**
  * Generates the dev fixture's `Boards/`.
  *
- * Decision D6's known risk: "The dev vault fixture will drift from the real vault. Generate it
- * from a script, never by hand, and make it include the awkward cases deliberately." It drifted
- * for a day of hand edits before this existed.
+ * Generate the dev vault fixture from a script so its dates and awkward cases stay reproducible.
  *
  * Every file goes through `renderWorkItem`, the renderer both writers use, so the fixture cannot
  * disagree with what `wi new` and the add row produce. Dates are relative to today, so the
@@ -15,7 +13,7 @@
  * The awkward cases, each deliberate:
  * - an orphan, whose parent resolves to nothing: the one validation error;
  * - an unknown frontmatter key: the one warning;
- * - two items titled "Authentication", so the second takes the D3 collision suffix;
+ * - two items titled "Authentication", so the second takes the id collision suffix;
  * - a title long enough to wrap;
  * - a done item outside the window, and one inside it;
  * - a blocked item, an agent-owned item, labels, priorities and two promoted boards.
@@ -93,7 +91,7 @@ export const SPECS: Spec[] = [
   { id: 'wi-0013', title: 'Marketing site', parent: 'Main', status: 'backlog', created: 10,
     updated: 2, owner: 'sam', priority: 2, tags: ['web', 'design'], board: true,
     body: OBJECTIVE('A second, unrelated branch of work, so the board is not one tall tree.') },
-  // The same title as wi-0005 under another parent. `fileNameFor` gives it the D3 suffix.
+  // The same title as wi-0005 under another parent. `fileNameFor` gives it the id suffix.
   { id: 'wi-b2e1', title: 'Authentication', parent: 'Marketing site', status: 'backlog',
     created: 10, updated: 2 },
   { id: 'wi-0015', title: 'Product pages', parent: 'Marketing site', status: 'doing',

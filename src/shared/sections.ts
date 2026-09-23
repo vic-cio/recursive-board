@@ -1,7 +1,7 @@
 /**
  * Reading one `## Heading` section out of a work item body.
  *
- * An expanded card shows its Objective and its Acceptance Criteria (decision u5). That is a read,
+ * An expanded card shows its Objective and its Acceptance Criteria (docs/adr/0016-cards-expand-in-place.md). That is a read,
  * never a write: integrity rule 6 says never to rewrite human-authored body content, so nothing
  * here returns anything the caller could write back.
  */

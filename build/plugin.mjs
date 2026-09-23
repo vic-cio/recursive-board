@@ -1,5 +1,5 @@
 /**
- * Builds the three files decision D6 names: main.js, manifest.json, styles.css.
+ * Builds the three files Obsidian loads: main.js, manifest.json, styles.css.
  * They land in dist/<plugin id>/, which a copy step puts into a vault.
  */
 import { build, context } from 'esbuild'

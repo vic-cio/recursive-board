@@ -1,14 +1,14 @@
 /**
  * The four-column board.
  *
- * Decision U1: this renders only when an item carries `board: true`.
+ * docs/adr/0015-checklist-and-board-navigation.md: this renders only when an item carries `board: true`.
  *
  * On a phone the four columns become four tabs over one group of cards
- * (`docs/phone-board-design.md`). Every count shows at once, so an empty Doing costs a glance,
- * and any group is one tap away. This reverses decision u6, which made the phone board a grouped
+ * (`docs/adr/0022-phone-board-navigation.md`). Every count shows at once, so an empty Doing costs a glance,
+ * and any group is one tap away. Status tabs replace the earlier grouped
  * checklist.
  *
- * Decision u7 puts an add row at the foot of every column. Typing into Options and pressing enter
+ * Each column has an add row (docs/adr/0017-inline-status-capture.md). Typing into Options and pressing enter
  * is one action where any dialog is at least four, and that difference decides whether half-formed
  * items get written down at all.
  */
@@ -99,7 +99,7 @@ function renderColumn(
 }
 
 /**
- * Decision q5: plain HTML5 drag events, desktop only.
+ * HTML5 drag events work on desktop; phone actions use the item menu.
  * Keeping drag off mobile means this stays about fifty lines instead of being a pointer-event
  * state machine handling touch, scroll and cancel.
  */

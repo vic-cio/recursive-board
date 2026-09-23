@@ -13,9 +13,9 @@ export interface RenderContext {
   index: WorkItemIndex
   actions: Actions
   checklistComponents: ChecklistComponents
-  /** True on a phone or tablet. A board never renders columns there (decision u6). */
+  /** True on a phone or tablet. A board uses status tabs there (docs/adr/0022-phone-board-navigation.md). */
   mobile: boolean
-  /** The path of the one expanded card, or null. Only one expands at a time (decision u5). */
+  /** The path of the one expanded card, or null. Only one expands at a time (docs/adr/0016-cards-expand-in-place.md). */
   expandedPath: string | null
   /** Expands a card, collapsing whichever was open. */
   expand(path: string | null): void

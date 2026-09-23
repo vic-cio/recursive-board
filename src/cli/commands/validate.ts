@@ -1,5 +1,5 @@
 /**
- * `wi validate` — the enforcer decision D7 exists for.
+ * `wi validate` — the schema and layout checker described in docs/adr/0004-wi-is-the-programmatic-write-interface.md.
  *
  * It runs from a Git pre-commit hook on the vault repo, which is the moment damage becomes
  * permanent and the diff is still visible. It catches what the plugin cannot: a hand edit on the
@@ -82,8 +82,8 @@ function checkDefaultRoot(vault: Vault, report: Reporter): void {
     `sets defaultRoot to "${configured}", which does not name a root work item.`)
 }
 
-/** Decision D8: nothing nests inside the work-item folder or Templates/. L5 makes those the
- * only product folders, so a file elsewhere in the vault is not this product's concern. */
+/** docs/adr/0003-flat-configurable-work-item-folder.md keeps work items flat. Templates/
+ * is also checked for nesting; other vault folders are outside the validator's scope. */
 function checkLayout(vault: Vault, report: Reporter): void {
   for (const relPath of vault.misplaced) {
     report('folder-nested', 'error', relPath, undefined,
@@ -193,7 +193,7 @@ function checkItem(item: WorkItem, vault: Vault, report: Reporter): void {
   for (const key of item.frontmatter.keys()) {
     if (KNOWN_FIELDS.has(key)) continue
     say('unknown-key', 'warning',
-      `carries "${key}", which is outside the schema. It is preserved, not stripped. Record a decision in docs/ or remove it.`)
+      `carries "${key}", which is outside the schema. It is preserved, not stripped. Use a supported field or remove it.`)
   }
 }
 

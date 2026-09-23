@@ -3,7 +3,7 @@
  *
  * The code is authoritative and the vault's `Templates/` folder is generated from it, by
  * `wi template write`. That direction was chosen over reading the vault's file because the CLI is
- * the component decision D5 built so the integrity rules live in tested code: a template read
+ * the shared component used by both writers so the integrity rules live in tested code: a template read
  * from the vault could be malformed by a hand edit or a sync conflict, and would then produce
  * malformed work items from the one path that is supposed to be trustworthy.
  *

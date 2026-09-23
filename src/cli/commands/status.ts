@@ -5,7 +5,7 @@
  * is what makes a card move safe on a synced vault (spec section 37), so nothing here may write
  * to the parent.
  *
- * Decision U2 gives `done` its extra rule: going to `done` records what the item was, and leaving
+ * The shared status transition records the prior status: going to `done` records what the item was, and leaving
  * `done` clears the record. Unticking is therefore `wi status <ref> <prev_status>`, which needs no
  * command of its own.
  */

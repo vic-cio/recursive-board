@@ -1,11 +1,11 @@
 /**
  * The text of a new work item.
  *
- * Both writers use this: `wi new` and the board's add row (decision u7). They must produce the
+ * Both writers use this: `wi new` and the board's add row (docs/adr/0017-inline-status-capture.md). They must produce the
  * same file, because a card created on the phone and a card created by an agent are the same
  * thing. Keeping one renderer is what stops the two drifting.
  *
- * This module imports nothing from Node, so the plugin bundle can carry it to iOS (decision D1).
+ * This module imports nothing from Node, so the plugin bundle can carry it to iOS.
  */
 import { formatScalar, type Scalar } from './frontmatter.ts'
 import { WORK_ITEM_TYPE, formatWikilink, type Status } from './schema.ts'
@@ -15,7 +15,7 @@ export interface NewWorkItem {
   id: string
   title: string
   status: Status
-  /** The parent's filename stem. The wikilink is authoritative for resolution (decision D3). */
+  /** The parent's filename stem. The wikilink is authoritative for resolution (docs/adr/0002-work-item-identity-and-parent-links.md). */
   parentStem: string
   owner?: string | undefined
   agent?: string | undefined

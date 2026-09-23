@@ -2,7 +2,7 @@
  * The vault index.
  *
  * Reads the configured work-item folder and builds the index the CLI needs: items by id, items by filename stem, and
- * children by parent. Resolution follows decision D3: the wikilink is authoritative, so a parent
+ * children by parent. Resolution follows docs/adr/0002-work-item-identity-and-parent-links.md: the wikilink is authoritative, so a parent
  * link resolves to a filename, never to a title and never to an id.
  *
  * The index also carries what it could not make sense of. An unaccounted file, a duplicate id,
@@ -74,7 +74,7 @@ const MARKDOWN = /\.md$/i
 const IGNORED_HIDDEN = new Set(['.DS_Store', '.localized', '.gitkeep'])
 
 /**
- * Decision L1: a hidden file in the work-item folder that is not a Markdown file is unaccounted
+ * docs/adr/0008-unaccounted-file-guard.md: a hidden file in the work-item folder that is not a Markdown file is unaccounted
  * for. A sync client that has not downloaded a file may leave a hidden stub beside it, for
  * example a sync service's `Boards/.Card.md.icloud`, and a stray hidden file is a second way for a work
  * item to be invisible to the index. Both are reported; neither is guessed at.
@@ -127,7 +127,7 @@ async function scan(root: string, workItemFolder: string): Promise<ScanResult> {
       }
       if (!MARKDOWN.test(entry.name)) continue
       if (parent !== folder) {
-        misplaced.push(rel) // D8: nothing nests inside the work-item folder or Templates/.
+        misplaced.push(rel) // docs/adr/0003-flat-configurable-work-item-folder.md: work items stay flat.
         continue
       }
       markdown.push(rel)
@@ -163,7 +163,7 @@ function toWorkItem(root: string, relPath: string, text: string): WorkItem | nul
 }
 
 /**
- * Sibling order, per decision q6: `priority` ascending, then `updated` descending, then filename.
+ * Sibling order without an explicit order field: `priority` ascending, then `updated` descending, then filename.
  * There is no `order` field in v1, so this is the whole of card ordering.
  */
 function compareSiblings(a: WorkItem, b: WorkItem): number {
@@ -194,7 +194,7 @@ function linkKey(target: string): string {
  *
  * An unaccounted file cannot be read, so the index cannot know whether a work item sits inside it.
  * A parent can then look childless, and a loop can run through the file unseen. That is why
- * `wi rm` and `wi move` refuse. There is no `--force` flag: decision L1 rejects one, because an
+ * `wi rm` and `wi move` refuse. There is no `--force` flag: docs/adr/0008-unaccounted-file-guard.md rejects one, because an
  * agent that meets a refusal reaches for the flag rather than reading the error.
  */
 export function requireAccountedTree(vault: Vault, what: string): void {

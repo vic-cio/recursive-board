@@ -2,7 +2,7 @@
  * Makes the `vault` skill and the `wi` command available to every agent on this Mac.
  *
  * Each entry is a symlink back into this repo, so the skill and the CLI stay current without a
- * reinstall. None of them is inside iCloud, so the symlink rule of decision D6 does not apply.
+ * reinstall. These links point to local development files, so they do not affect vault sync.
  *
  *   ~/.agents/skills/vault  -> <repo>/skills/vault     (the .agents standard)
  *   ~/.claude/skills/vault  -> ../../.agents/skills/vault   (Claude Code reads this one)

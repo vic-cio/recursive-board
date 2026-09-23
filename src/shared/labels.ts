@@ -1,7 +1,7 @@
 /**
  * Labels on a card.
  *
- * A label is an entry in `tags`, which decision D7 already allows as an optional field. That is
+ * A label is an entry in `tags`, which the work-item schema already allows as an optional field. That is
  * why labels need no schema change and no tenth field: the freeze broke twice in one grill
  * already, and the bar for the next addition is high. It also means a label is a real Obsidian
  * tag, so search, the tag pane and the graph all see it without the plugin doing anything.

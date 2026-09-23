@@ -2,7 +2,7 @@
  * `wi children` — read one work item's board.
  *
  * This is the read an agent makes before it decides anything, so it returns both the flat list and
- * the four status groups. The order is decision q6: there is no `order` field in v1, so sibling
+ * the four status groups. With no explicit order field, sibling
  * order is `priority` then `updated`, computed by the vault index.
  */
 import { STATUSES, isStatus, type Status } from '../../shared/schema.ts'
@@ -10,7 +10,7 @@ import type { Vault, WorkItem } from '../vault.ts'
 
 export interface ChildRow {
   item: WorkItem
-  /** How many children this child has. The card badge from decision u3. */
+  /** How many children this child has. Shown in the card's child-count badge. */
   childCount: number
   /** 0 for a direct child. Above 0 only when the listing recursed. */
   depth: number

@@ -82,7 +82,7 @@ test('loadVault reads the parent as a resolved wikilink target', async () => {
   assert.equal(vault.byId.get('wi-0001')!.parent, null, 'a root has no parent')
 })
 
-test('loadVault reads work items from the work-item folder alone (L5)', async () => {
+test('loadVault reads work items from the work-item folder alone', async () => {
   fixture = vaultWithTree()
   fixture.write('Notes/Workflow Protocol.md', '---\ntype: note\n---\n\n# Workflow\n')
   fixture.write('Intake/scratch.md', 'raw thoughts, no frontmatter\n')
@@ -91,7 +91,7 @@ test('loadVault reads work items from the work-item folder alone (L5)', async ()
   assert.equal(vault.items.length, 4)
 })
 
-test('a work item filed outside the work-item folder is invisible (L5 cost)', async () => {
+test('a work item filed outside the work-item folder is invisible', async () => {
   fixture = vaultWithTree()
   fixture.write('Notes/Misfiled.md', item({
     type: 'work-item', id: 'wi-0042', title: 'Misfiled', status: 'backlog', parent: '"[[Main]]"',
@@ -105,7 +105,7 @@ test('a work item filed outside the work-item folder is invisible (L5 cost)', as
   assert.equal(vault.byId.has('wi-0043'), false)
 })
 
-test('loadVault does not report a nested file outside the product folders (L5)', async () => {
+test('loadVault does not report a nested file outside the product folders', async () => {
   fixture = vaultWithTree()
   fixture.write('Notes/Topic/Nested.md', '# Nested note\n')
   const vault = await loadVault(fixture.root)
@@ -273,7 +273,7 @@ test('findVaultRoot returns null outside a vault', () => {
   assert.equal(findVaultRoot('/'), null)
 })
 
-test('childrenOf sorts by priority ascending, then updated descending (decision q6)', async () => {
+test('childrenOf sorts by priority ascending, then updated descending', async () => {
   fixture = makeVault()
   fixture.write('Boards/Main.md', item({
     type: 'work-item', id: 'wi-0001', title: 'Main', created: '2026-09-01', updated: '2026-09-01',
