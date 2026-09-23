@@ -105,6 +105,11 @@ test('setKey leaves a date bare', () => {
   assert.match(out, /^updated: 2026-09-22$/m)
 })
 
+test('setKey preserves the existing line when the value is unchanged', () => {
+  const text = ITEM.replace('status: backlog', 'status: "backlog"')
+  assert.equal(setKey(text, 'status', 'backlog'), text)
+})
+
 test('setKey appends a missing key just before the closing fence', () => {
   const out = setKey(ITEM, 'board', true)
   assert.match(out, /^updated: 2026-09-21\nboard: true\n---$/m)

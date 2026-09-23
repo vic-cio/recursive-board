@@ -24,13 +24,17 @@ export async function writeAtomic(path: string, text: string): Promise<void> {
   await rename(temp, path)
 }
 
-/** Applies edits to one work item on disk. Returns the new text. */
+/**
+ * Applies edits to one work item on disk. Returns the new text.
+ * Stamps `updated` only when the frontmatter edits or the body edit change the file.
+ */
 export async function editItem(
   item: WorkItem,
   edits: readonly Edit[],
   editBody: (text: string) => string = (text) => text,
 ): Promise<string> {
+  if (editBody(applyEdits(item.text, edits)) === item.text) return item.text
   const text = editBody(applyEdits(item.text, withStamp(edits)))
-  if (text !== item.text) await writeAtomic(item.path, text)
+  await writeAtomic(item.path, text)
   return text
 }

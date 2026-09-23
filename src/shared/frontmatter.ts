@@ -172,6 +172,7 @@ export function setKey(text: string, key: string, value: Scalar): string {
   if (!block) throw new Error(`cannot set "${key}": the file has no frontmatter`)
 
   const entry = readEntries(block.lines).find((e) => e.key === key)
+  if (entry?.value === value) return text
   const line = `${key}: ${formatScalar(value)}`
   const lines = [...block.lines]
   const ends = [...block.ends]

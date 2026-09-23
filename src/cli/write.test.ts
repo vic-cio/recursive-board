@@ -76,3 +76,28 @@ test('editItem writes the change to disk and stamps updated', async () => {
   assert.match(after, /^mystery_key: keep me$/m)
   assert.equal(after.match(/^updated:/gm)!.length, 1, 'updated is set, never duplicated')
 })
+
+test('editItem leaves updated and the file untouched when an edit changes nothing', async () => {
+  fixture = makeVault()
+  fixture.write('Boards/Main.md', item({ type: 'work-item', id: 'wi-0001', title: 'Main' }))
+  const path = fixture.write('Boards/Build server.md', TEXT)
+  const vault = await loadVault(fixture.root)
+  const workItem = vault.byId.get('wi-0004')!
+
+  assert.equal(await editItem(workItem, []), TEXT)
+  assert.equal(await editItem(workItem, [{ op: 'set', key: 'status', value: 'backlog' }]), TEXT)
+  assert.equal(readFileSync(path, 'utf8'), TEXT)
+})
+
+test('editItem stamps updated when only the body edit changes the file', async () => {
+  fixture = makeVault()
+  fixture.write('Boards/Main.md', item({ type: 'work-item', id: 'wi-0001', title: 'Main' }))
+  const path = fixture.write('Boards/Build server.md', TEXT)
+  const vault = await loadVault(fixture.root)
+  const workItem = vault.byId.get('wi-0004')!
+
+  const after = await editItem(workItem, [{ op: 'set', key: 'status', value: 'backlog' }], (text) => `${text}\nA note.\n`)
+  assert.doesNotMatch(after, /^updated: 2026-09-21$/m)
+  assert.match(after, /^updated: \d{4}-\d{2}-\d{2}$/m)
+  assert.equal(readFileSync(path, 'utf8'), after)
+})

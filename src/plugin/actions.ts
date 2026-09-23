@@ -9,7 +9,7 @@
  */
 import { normalizePath, Notice, TFile, type App } from 'obsidian'
 
-import { applyEdits, withStamp, type Edit } from '../shared/edits.ts'
+import { applyStampedEdits, type Edit } from '../shared/edits.ts'
 import { archiveEdits, activeDescendant } from '../shared/archive.ts'
 import {
   boardEdits, moveEdits, moveRefusal, statusEdits, untickTarget,
@@ -34,7 +34,7 @@ export class Actions {
     let before = ''
     const after = await this.app.vault.process(file, (data) => {
       before = data
-      return applyEdits(data, withStamp(edits))
+      return applyStampedEdits(data, edits)
     })
     this.undoStack.record({ kind: 'edit', path: file.path, before, after, label })
   }

@@ -25,3 +25,9 @@ export function withStamp(edits: readonly Edit[], stamp: string = today()): Edit
   if (edits.some((e) => e.key === 'updated')) return [...edits]
   return [...edits, { op: 'set', key: 'updated', value: stamp }]
 }
+
+/** Stamp only when the requested edits change the file. */
+export function applyStampedEdits(text: string, edits: readonly Edit[], stamp: string = today()): string {
+  if (applyEdits(text, edits) === text) return text
+  return applyEdits(text, withStamp(edits, stamp))
+}
