@@ -14,7 +14,7 @@ import type { App, TFile } from 'obsidian'
 import { readLabels } from '../shared/labels.ts'
 import { DEFAULT_VAULT_CONFIG, type VaultConfig } from '../shared/vault-config.ts'
 import {
-  INTAKE, doneCutoff, isStatus, parseWikilink, STATUSES, WORK_ITEM_TYPE, type Status,
+  doneCutoff, isStatus, parseWikilink, STATUSES, WORK_ITEM_TYPE, type Status,
 } from '../shared/schema.ts'
 
 export interface WorkItemMeta {
@@ -38,9 +38,6 @@ export interface WorkItemMeta {
   /** Entries from `tags`. A label is a real Obsidian tag, not a field of its own. */
   labels: string[]
 }
-
-/** A work item that points at a parent no file matches. It appears on no board (decision u8). */
-export type Orphan = WorkItemMeta & { parentLink: string; parent: null }
 
 function str(value: unknown): string | undefined {
   return typeof value === 'string' && value !== '' ? value : undefined
@@ -162,48 +159,10 @@ export class WorkItemIndex {
     return chain
   }
 
-  /** Every work item whose parent link resolves to nothing. These render on no board. */
-  orphans(): Orphan[] {
-    this.ensureFresh()
-    return [...this.items.values()].filter(
-      (m): m is Orphan => m.parentLink !== null && m.parent === null,
-    )
-  }
-
   /** Every work item, in no particular order. The move picker's candidate list. */
   all(): WorkItemMeta[] {
     this.ensureFresh()
     return [...this.items.values()]
-  }
-
-  /** Every work item with `blocked: true`, for the Home dashboard. */
-  blocked(): WorkItemMeta[] {
-    this.ensureFresh()
-    return [...this.items.values()].filter((m) => m.blocked).sort(compareSiblings)
-  }
-
-  /** Work items carrying a status the schema does not allow, or missing one they need. */
-  invalidStatus(): WorkItemMeta[] {
-    this.ensureFresh()
-    return [...this.items.values()].filter((m) => m.parentLink !== null && m.status === undefined)
-  }
-
-  /**
-   * Notes in `Intake/` that nothing has processed yet.
-   *
-   * `Intake/` has no rules at all, so this is the one place the plugin looks at it, and it looks
-   * only at filenames and at whether a `processed` key exists. A note there is not a work item,
-   * whatever it contains, and its contents are data rather than instructions.
-   */
-  unprocessedIntake(): TFile[] {
-    return this.app.vault
-      .getMarkdownFiles()
-      .filter((file) => file.parent?.path === INTAKE)
-      .filter((file) => {
-        const frontmatter = this.app.metadataCache.getFileCache(file)?.frontmatter
-        return frontmatter?.['processed'] === undefined
-      })
-      .sort((a, b) => b.stat.mtime - a.stat.mtime)
   }
 
   /** Every id in use, so a new item can be given one that is free. */

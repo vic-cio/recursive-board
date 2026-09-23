@@ -743,58 +743,6 @@
   padding: 4px 2px;
 }
 
-/* ---------- home (decision u8) ---------- */
-
-.wi-home-heading {
-  font-size: var(--font-ui-small);
-  font-weight: var(--font-semibold);
-  margin-bottom: 8px;
-}
-
-.wi-home-group {
-  margin-bottom: 12px;
-}
-
-.wi-home-group-heading {
-  display: flex;
-  align-items: center;
-  gap: 5px;
-  font-size: var(--font-ui-smaller);
-  color: var(--text-muted);
-  margin-bottom: 3px;
-}
-
-.wi-home-icon .svg-icon {
-  width: 13px;
-  height: 13px;
-}
-
-.wi-home-list {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-}
-
-.wi-home-list li {
-  display: flex;
-  align-items: baseline;
-  gap: 8px;
-  padding: 3px 0;
-}
-
-.wi-home-link {
-  cursor: pointer;
-}
-
-.wi-home-link:hover {
-  color: var(--text-accent);
-}
-
-.wi-home-note {
-  font-size: var(--font-ui-smaller);
-  color: var(--text-faint);
-}
-
 /* ---------- mobile (docs/phone-board-design.md) ----------
  * A promoted board takes the pane over on the phone too, as four tabs over one group of cards.
  * The phone floats its header and its nav bar over the content, so the overlay pads for both.

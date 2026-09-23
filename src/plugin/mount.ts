@@ -25,7 +25,6 @@ import { MarkdownView, Platform, type App, type WorkspaceLeaf } from 'obsidian'
 import { renderBoard } from './ui/board.ts'
 import { renderChecklist } from './ui/checklist.ts'
 import { renderBreadcrumbs, renderMetaStrip } from './ui/chrome.ts'
-import { renderHome } from './ui/home.ts'
 import type { RenderContext } from './ui/context.ts'
 import type { WorkItemMeta } from './index.ts'
 
@@ -110,23 +109,10 @@ export function mountLeaf(leaf: WorkspaceLeaf, ctx: RenderContext): void {
 
   const file = view.file
   const meta = ctx.index.get(file)
-  const isDashboard =
-    ctx.app.metadataCache.getFileCache(file)?.frontmatter?.['type'] === 'dashboard'
-
-  if (!meta && !isDashboard) {
+  if (!meta) {
     clear(view)
     return
   }
-
-  if (isDashboard) {
-    clearTakeover(view)
-    for (const sizer of sizersOf(view)) {
-      region(sizer, TOP, true).remove()
-      renderHome(region(sizer, BOTTOM, false), ctx)
-    }
-    return
-  }
-  if (!meta) return
 
   // A promoted item is a board first on both devices (phone board design, q1, reversing u6).
   const takesOver = meta.board && !ctx.isPeeking(file.path)
