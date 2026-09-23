@@ -22,11 +22,12 @@
  *
  * Usage: node scripts/fixture.ts [--vault test]
  */
-import { mkdir, readdir, rm, writeFile } from 'node:fs/promises'
+import { mkdir, readFile, readdir, rm, writeFile } from 'node:fs/promises'
 import { join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 import { renderWorkItem } from '../src/shared/work-item.ts'
+import { parseFrontmatter } from '../src/shared/frontmatter.ts'
 import { fileNameFor, today, type Status } from '../src/shared/schema.ts'
 
 export interface Spec {
@@ -58,22 +59,17 @@ export const SPECS: Spec[] = [
 
   { id: 'wi-0002', title: 'Ship the mobile app', parent: 'Main', status: 'doing', created: 30,
     updated: 1, owner: 'sam', priority: 1, tags: ['app', 'infra'],
-    body: `${OBJECTIVE('Create a mobile-compatible app interface so work items can trigger agent runs and show live output on the phone.')}
+    body: `${OBJECTIVE('Create a mobile app interface so work items can trigger agent runs and show live output.')}
 ## Acceptance Criteria
 
-- iPhone can connect over a VPN
+- The app can connect over a secure network
 - terminal output streams live
 - commands can be submitted remotely
 - reconnection does not duplicate sessions
-
-## Knowledge
-
-- [[WebSocket Architecture]]
-- [[App Protocol]]
 ` },
   { id: 'wi-0003', title: 'Research mobile constraints', parent: 'Ship the mobile app',
     status: 'done', prevStatus: 'doing', created: 20, updated: 3 },
-  { id: 'wi-0009', title: 'Pick a sync substrate', parent: 'Ship the mobile app',
+  { id: 'wi-0009', title: 'Pick a sync library', parent: 'Ship the mobile app',
     status: 'done', prevStatus: 'options', created: 12, updated: 9 },
   // Outside the fourteen-day window: counted on the board, never drawn.
   { id: 'wi-0010', title: 'Sketch the board layout', parent: 'Ship the mobile app',
@@ -84,7 +80,7 @@ export const SPECS: Spec[] = [
     created: 30, updated: 2, tags: ['mobile'] },
   { id: 'wi-0004', title: 'Build server', parent: 'Ship the mobile app', status: 'backlog',
     created: 30, updated: 1, owner: 'sam', board: true,
-    body: OBJECTIVE('A WebSocket server the phone can reach over a VPN.') },
+    body: OBJECTIVE('A server the mobile app can reach over a secure network.') },
   { id: 'wi-0005', title: 'Authentication', parent: 'Build server', status: 'backlog',
     created: 30, updated: 5 },
   { id: 'wi-0006', title: 'Session management', parent: 'Build server', status: 'backlog',
@@ -92,7 +88,7 @@ export const SPECS: Spec[] = [
     body: OBJECTIVE('Track app sessions so a reconnect attaches rather than spawning a duplicate.') },
   { id: 'wi-0007', title: 'Streaming', parent: 'Build server', status: 'options', created: 30,
     updated: 1, agent: 'codex', priority: 1,
-    body: OBJECTIVE('Stream terminal and agent output to the client over WebSocket.') },
+    body: OBJECTIVE('Stream command and agent output to the app.') },
 
   { id: 'wi-0013', title: 'Marketing site', parent: 'Main', status: 'backlog', created: 10,
     updated: 2, owner: 'sam', priority: 2, tags: ['web', 'design'], board: true,
@@ -106,23 +102,23 @@ export const SPECS: Spec[] = [
   { id: 'wi-0012', title: 'Improve knowledge system', parent: 'Main', status: 'backlog',
     created: 30, updated: 6, owner: 'sam', priority: 3, tags: ['knowledge'],
     unknown: ['trello_card: sample-card'],
-    body: `${OBJECTIVE('Tighten the conventions in `Knowledge/` so notes stay consistent as the vault grows.')}
+    body: `${OBJECTIVE('Improve how reference information is organized and maintained.')}
 ## Notes
 
-This item carries \`trello_card\`, a key nothing in the schema knows about. It tests integrity
-rule 6: an unknown frontmatter key must survive every read and write untouched.
+This item carries an unknown frontmatter key. It tests that unknown keys survive every read and
+write untouched.
 ` },
-  { id: 'wi-0016', title: 'Orphaned research spike', parent: 'Build app prototype',
+  { id: 'wi-0016', title: 'Orphaned research spike', parent: 'Build a prototype',
     status: 'doing', created: 50, updated: 40,
     body: OBJECTIVE('Points at a parent that no file matches. It appears on no board and must never be deleted for it.') },
-  { id: 'wi-gxup', title: 'Handle a work item with a very long title that will certainly wrap onto more than one line',
+  { id: 'wi-0017', title: 'Handle a work item with a very long title that will certainly wrap onto more than one line',
     parent: 'Main', status: 'backlog', created: 2, updated: 2 },
-  { id: 'wi-0113', title: 'Fix the live preview gap', parent: 'Main', status: 'doing', created: 1,
+  { id: 'wi-0018', title: 'Improve the live preview', parent: 'Main', status: 'doing', created: 1,
     updated: 0, priority: 1, tags: ['plugin', 'urgent'] },
-  { id: 'wi-0104', title: 'Card typography pass', parent: 'Main', status: 'backlog', created: 1,
+  { id: 'wi-0019', title: 'Review card text styles', parent: 'Main', status: 'backlog', created: 1,
     updated: 1, tags: ['design', 'plugin'] },
-  { id: 'wi-0107', title: 'Spike the MCP wrapper', parent: 'Main', status: 'options', created: 1,
-    updated: 1, agent: 'claude' },
+  { id: 'wi-0020', title: 'Explore a command wrapper', parent: 'Main', status: 'options', created: 1,
+    updated: 1, agent: 'codex' },
 ]
 
 function daysAgo(days: number, now: Date): string {
@@ -188,14 +184,21 @@ export function generate(now: Date = new Date()): Map<string, string> {
   return files
 }
 
-/** Replaces the vault's `Boards/` with the generated set. Refuses anything inside iCloud. */
+/** Replaces the vault's `Boards/` with the generated set when every Markdown item is fixture-owned. */
 export async function writeFixture(vault: string, now: Date = new Date()): Promise<number> {
-  if (resolve(vault).includes('Documents')) {
-    throw new Error(`refusing to write the fixture into ${vault}: it is inside iCloud Drive`)
-  }
   const boards = join(vault, 'Boards')
   await mkdir(boards, { recursive: true })
-  for (const name of await readdir(boards)) {
+  const fixtureIds = new Set(SPECS.map(({ id }) => id))
+  const names = await readdir(boards)
+  for (const name of names) {
+    if (!name.endsWith('.md')) continue
+    const text = await readFile(join(boards, name), 'utf8')
+    const id = parseFrontmatter(text)?.get('id')
+    if (typeof id !== 'string' || !fixtureIds.has(id)) {
+      throw new Error(`refusing to replace work item with id ${String(id ?? '<missing>')}`)
+    }
+  }
+  for (const name of names) {
     if (name.endsWith('.md')) await rm(join(boards, name))
   }
   const files = generate(now)
