@@ -375,3 +375,23 @@ test('every problem names a file and carries a rule and a severity', async () =>
     assert.ok(p.message.length > 0)
   }
 })
+
+test('archived true is valid, but false is rejected; children of archived parents stay valid', async () => {
+  fixture = healthy()
+  fixture.write('Boards/Archived.md', item({
+    type: 'work-item', id: 'wi-0030', title: 'Archived', status: 'done',
+    parent: '"[[Main]]"', archived: true,
+    created: '2026-09-21', updated: '2026-09-21',
+  }))
+  fixture.write('Boards/Child.md', item({
+    type: 'work-item', id: 'wi-0031', title: 'Child', status: 'backlog',
+    parent: '"[[Archived]]"', created: '2026-09-21', updated: '2026-09-21',
+  }))
+  assert.deepEqual((await run(fixture)).problems, [])
+  fixture.write('Boards/Archived.md', item({
+    type: 'work-item', id: 'wi-0030', title: 'Archived', status: 'done',
+    parent: '"[[Main]]"', archived: false,
+    created: '2026-09-21', updated: '2026-09-21',
+  }))
+  assert.ok((await run(fixture)).problems.some((p) => p.rule === 'archived-false'))
+})

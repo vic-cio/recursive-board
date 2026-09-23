@@ -114,3 +114,29 @@ test('listChildren refuses a status that is not one of the four', async () => {
   const vault = await loadVault(fixture.root)
   assert.throws(() => listChildren(vault, 'wi-0004', { status: 'active' }), /not a status/i)
 })
+
+test('archived descendants are omitted by default and included with --archived', async () => {
+  fixture = seed()
+  fixture.write('Boards/Streaming.md', item({
+    type: 'work-item', id: 'wi-0005', title: 'Streaming', status: 'backlog',
+    parent: '"[[Build server]]"', archived: true,
+    created: '2026-09-01', updated: '2026-09-01',
+  }))
+  const vault = await loadVault(fixture.root)
+  assert.deepEqual(listChildren(vault, 'wi-0004').children.map((r) => r.item.id), ['wi-0006'])
+  assert.deepEqual(listChildren(vault, 'wi-0004', { archived: true }).children.map((r) => r.item.id), ['wi-0006', 'wi-0005'])
+  assert.deepEqual(listChildren(vault, 'wi-0004', { recursive: true }).children.map((r) => r.item.id), ['wi-0006'])
+})
+
+test('archive on a parent hides its whole subtree until it is included', async () => {
+  fixture = seed()
+  fixture.write('Boards/Build server.md', item({
+    type: 'work-item', id: 'wi-0004', title: 'Build server', status: 'done',
+    parent: '"[[Main]]"', archived: true,
+    created: '2026-09-01', updated: '2026-09-01',
+  }))
+  const vault = await loadVault(fixture.root)
+  assert.deepEqual(listChildren(vault, 'Main').children.map((r) => r.item.id), ['wi-0008'])
+  assert.deepEqual(listChildren(vault, 'wi-0004').children, [])
+  assert.deepEqual(listChildren(vault, 'Main', { recursive: true, archived: true }).children.map((r) => r.item.id), ['wi-0008', 'wi-0004', 'wi-0006', 'wi-0005', 'wi-0007'])
+})

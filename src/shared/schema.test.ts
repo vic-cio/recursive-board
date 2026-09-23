@@ -3,7 +3,7 @@ import assert from 'node:assert/strict'
 
 import {
   isStatus, parseWikilink, formatWikilink, fileNameStem, fileNameFor, idSuffix, newId, today,
-  STATUSES, CORE_FIELDS, FOLDERS, BOARDS,
+  STATUSES, CORE_FIELDS, OPTIONAL_FIELDS, FOLDERS, BOARDS,
 } from './schema.ts'
 
 test('the four statuses are the only statuses', () => {
@@ -22,6 +22,10 @@ test('the frozen schema is nine core fields', () => {
 test('only the work-item folder and Templates/ are product folders (L5)', () => {
   assert.deepEqual([...FOLDERS], ['Boards', 'Templates'])
   assert.equal(BOARDS, 'Boards')
+})
+
+test('L7 adds archived as a documented optional field', () => {
+  assert.ok(OPTIONAL_FIELDS.includes('archived'))
 })
 
 test('parseWikilink reads a plain link', () => {

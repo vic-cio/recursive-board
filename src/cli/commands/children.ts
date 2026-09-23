@@ -14,6 +14,7 @@ export interface ChildRow {
   childCount: number
   /** 0 for a direct child. Above 0 only when the listing recursed. */
   depth: number
+  archived: boolean
 }
 
 export interface ChildListing {
@@ -27,6 +28,7 @@ export interface ChildListing {
 export interface ChildrenOptions {
   status?: string
   recursive?: boolean
+  archived?: boolean
 }
 
 export function listChildren(
@@ -34,7 +36,7 @@ export function listChildren(
   ref: string,
   options: ChildrenOptions = {},
 ): ChildListing {
-  const { status, recursive = false } = options
+  const { status, recursive = false, archived = false } = options
   if (status !== undefined && !isStatus(status)) {
     throw new Error(`"${status}" is not a status. Use one of: ${STATUSES.join(', ')}.`)
   }
@@ -51,7 +53,10 @@ export function listChildren(
         continue
       }
       seen.add(child.relPath)
-      rows.push({ item: child, childCount: vault.childrenOf(child).length, depth })
+      const effectiveArchived = vault.isArchived(child)
+      if (!effectiveArchived || archived) {
+        rows.push({ item: child, childCount: vault.childrenOf(child).filter((kid) => !vault.isArchived(kid) || archived).length, depth, archived: effectiveArchived })
+      }
       if (recursive) walk(child, depth + 1)
     }
   }

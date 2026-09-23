@@ -14,6 +14,7 @@ import { join, resolve as resolvePath, dirname, basename, sep } from 'node:path'
 
 import { parseFrontmatter, type Frontmatter } from '../shared/frontmatter.ts'
 import { parseVaultConfig, WI_CONFIG_FILE, type VaultConfig } from '../shared/vault-config.ts'
+import { archiveOwner } from '../shared/archive.ts'
 import {
   BOARDS, FOLDERS, WORK_ITEM_TYPE, isStatus, parseWikilink, type Status,
 } from '../shared/schema.ts'
@@ -33,6 +34,7 @@ export interface WorkItem {
   /** The raw `parent` value, so a malformed one can be reported rather than guessed at. */
   parentRaw: string | undefined
   board: boolean
+  archived: boolean
   frontmatter: Frontmatter
   text: string
 }
@@ -61,6 +63,7 @@ export interface Vault {
   /** Finds an item by id, then by filename stem, then by title. Throws when nothing matches. */
   resolve(ref: string): WorkItem
   childrenOf(item: WorkItem): WorkItem[]
+  isArchived(item: WorkItem): boolean
 }
 
 const MARKDOWN = /\.md$/i
@@ -153,6 +156,7 @@ function toWorkItem(root: string, relPath: string, text: string): WorkItem | nul
     parent: parseWikilink(parentRaw),
     parentRaw: typeof parentRaw === 'string' ? parentRaw : undefined,
     board: frontmatter.get('board') === true,
+    archived: frontmatter.get('archived') === true,
     frontmatter,
     text,
   }
@@ -290,6 +294,7 @@ export async function loadVault(root: string): Promise<Vault> {
     resolveLink,
     resolve,
     childrenOf: (item) => children.get(item.stem.toLowerCase()) ?? [],
+    isArchived: (item) => archiveOwner(item, (current) => resolveLink(current.parent) ?? null, (current) => current.archived) !== null,
   }
 }
 

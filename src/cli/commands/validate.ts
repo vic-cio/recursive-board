@@ -149,6 +149,14 @@ function checkItem(item: WorkItem, vault: Vault, report: Reporter): void {
     say('board-invalid', 'error', `carries board: ${board}. The only value is true.`)
   }
 
+  const archived = item.frontmatter.get('archived')
+  if (archived === false) {
+    say('archived-false', 'error',
+      'carries archived: false. Unarchiving deletes the key; absence means visible.')
+  } else if (archived !== undefined && archived !== true) {
+    say('archived-invalid', 'error', `carries archived: ${archived}. The only value is true.`)
+  }
+
   const prev = item.frontmatter.get('prev_status')
   if (prev !== undefined) {
     if (!isStatus(prev)) {

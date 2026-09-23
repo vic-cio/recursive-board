@@ -31,6 +31,7 @@ export const OPTIONAL_FIELDS = [
   'blocked',
   'depends_on',
   'tags',
+  'archived', // Release decision L7: optional frontmatter flag, not a status.
 ] as const
 
 /** Fields a new child inherits from its parent, per UI decision u7. */

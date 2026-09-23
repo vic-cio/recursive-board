@@ -20,6 +20,7 @@ import { validate, type Problem } from './commands/validate.ts'
 import { listTemplates, writeTemplates } from './commands/template.ts'
 import { removeItem } from './commands/remove.ts'
 import { moveItem } from './commands/move.ts'
+import { archiveItem } from './commands/archive.ts'
 import { STATUSES } from '../shared/schema.ts'
 import { templateNames } from '../shared/templates.ts'
 
@@ -30,8 +31,9 @@ Usage
                                 [--priority <n>]
   wi status <ref> <status>
   wi move <ref> --to <ref>
+  wi archive <ref> [--undo]
   wi rm <ref> [--recursive] [--dry-run]
-  wi children <ref> [--status <s>] [--tree]
+  wi children <ref> [--status <s>] [--tree] [--archived]
   wi validate
   wi template [list|write]
 
@@ -55,6 +57,7 @@ Notes
   \`wi rm\` and \`wi move\` refuse while a hidden non-Markdown file sits in the work-item
   folder, because the index cannot read it and may be missing a work item. Let the sync
   client download the file, or delete the stray file, then retry. There is no --force.
+  \`wi archive\` changes one flag. Descendants disappear with their parent at read time.
 `
 
 const VERSION = '0.1.0'
@@ -76,6 +79,8 @@ async function main(argv: string[]): Promise<number> {
       template: { type: 'string' },
       vault: { type: 'string' },
       tree: { type: 'boolean', default: false },
+      archived: { type: 'boolean', default: false },
+      undo: { type: 'boolean', default: false },
       recursive: { type: 'boolean', short: 'r', default: false },
       'dry-run': { type: 'boolean', default: false },
       json: { type: 'boolean', default: false },
@@ -104,6 +109,8 @@ async function main(argv: string[]): Promise<number> {
       return runStatus(vault, rest, json)
     case 'move':
       return runMove(vault, rest, values, json)
+    case 'archive':
+      return runArchive(vault, rest, values, json)
     case 'rm':
       return runRemove(vault, rest, values, json)
     case 'children':
@@ -207,6 +214,19 @@ async function runMove(vault: Vault, rest: string[], values: Values, json: boole
   return 0
 }
 
+async function runArchive(vault: Vault, rest: string[], values: Values, json: boolean): Promise<number> {
+  const ref = rest.join(' ').trim()
+  if (ref === '') throw new UsageError('wi archive needs a <ref>.')
+  const change = await archiveItem(vault, ref, values['undo'] === true)
+  if (json) {
+    print({ id: change.item.id, path: change.item.relPath, archived: change.archived, changed: change.changed })
+  } else {
+    const verb = change.archived ? 'archived' : 'unarchived'
+    process.stdout.write(`${label(change.item)}  ${verb}${change.changed ? '' : ' (already so; nothing written)'}\n`)
+  }
+  return 0
+}
+
 async function runRemove(
   vault: Vault,
   rest: string[],
@@ -251,6 +271,7 @@ function runChildren(vault: Vault, rest: string[], values: Values, json: boolean
   const listing = listChildren(vault, ref, {
     ...(typeof values['status'] === 'string' ? { status: values['status'] } : {}),
     recursive: values['tree'] === true,
+    archived: values['archived'] === true,
   })
 
   if (json) {
@@ -264,6 +285,7 @@ function runChildren(vault: Vault, rest: string[], values: Values, json: boolean
         status: row.item.status ?? null,
         children: row.childCount,
         depth: row.depth,
+        archived: row.archived,
       })),
     })
     return 0
@@ -354,7 +376,8 @@ function row3(row: ChildRow): string {
   const status = row.item.status ?? '—'
   const kids = row.childCount > 0 ? `  (${row.childCount})` : ''
   const board = row.item.board ? '  [board]' : ''
-  return `${row.item.id ?? '(no id)'}  ${status.padEnd(7)}  ${row.item.title ?? row.item.stem}${kids}${board}`
+  const archived = row.archived ? '  [archived]' : ''
+  return `${row.item.id ?? '(no id)'}  ${status.padEnd(7)}  ${row.item.title ?? row.item.stem}${kids}${board}${archived}`
 }
 
 function print(value: unknown): void {

@@ -289,3 +289,22 @@ test('wi move of the root exits 2', async () => {
   assert.equal(code, 2)
   assert.match(stderr, /root/i)
 })
+
+test('wi archive hides a card, --archived lists it, and --undo restores it', async () => {
+  fixture = seed()
+  const archived = await wi(['archive', 'Build server', '--json'])
+  assert.equal(archived.code, 0, archived.stderr)
+  assert.equal(JSON.parse(archived.stdout).archived, true)
+  assert.match(readFileSync(join(fixture.root, 'Boards/Build server.md'), 'utf8'), /^archived: true$/m)
+
+  const hidden = JSON.parse((await wi(['children', 'Main', '--json'])).stdout)
+  assert.deepEqual(hidden.children, [])
+  const shown = JSON.parse((await wi(['children', 'Main', '--archived', '--json'])).stdout)
+  assert.equal(shown.children[0].id, 'wi-0004')
+  assert.equal(shown.children[0].archived, true)
+
+  const undone = await wi(['archive', 'wi-0004', '--undo'])
+  assert.equal(undone.code, 0, undone.stderr)
+  assert.doesNotMatch(readFileSync(join(fixture.root, 'Boards/Build server.md'), 'utf8'), /^archived:/m)
+  assert.equal(JSON.parse((await wi(['children', 'Main', '--json'])).stdout).children.length, 1)
+})
