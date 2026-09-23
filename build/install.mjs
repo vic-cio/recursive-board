@@ -16,7 +16,7 @@ import { join, dirname, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..')
-const manifest = JSON.parse(await readFile(join(root, 'src', 'plugin', 'manifest.json'), 'utf8'))
+const manifest = JSON.parse(await readFile(join(root, 'manifest.json'), 'utf8'))
 const built = join(root, 'dist', manifest.id)
 
 const FILES = ['main.js', 'manifest.json', 'styles.css']

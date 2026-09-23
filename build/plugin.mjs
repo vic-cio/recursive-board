@@ -11,7 +11,7 @@ import { forbiddenImports } from './forbidden-imports.mjs'
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..')
 const source = join(root, 'src', 'plugin')
-const manifest = JSON.parse(await readFile(join(source, 'manifest.json'), 'utf8'))
+const manifest = JSON.parse(await readFile(join(root, 'manifest.json'), 'utf8'))
 const out = join(root, 'dist', manifest.id)
 
 const watch = process.argv.includes('--watch')
@@ -35,7 +35,7 @@ const options = {
 }
 
 const copyAssets = async () => {
-  await copyFile(join(source, 'manifest.json'), join(out, 'manifest.json'))
+  await copyFile(join(root, 'manifest.json'), join(out, 'manifest.json'))
   await copyFile(join(source, 'styles.css'), join(out, 'styles.css'))
 }
 

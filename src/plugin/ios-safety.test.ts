@@ -77,7 +77,7 @@ test('the shared modules stay usable by both sides', () => {
 })
 
 test('the manifest declares the plugin mobile-capable', () => {
-  const manifest = JSON.parse(readFileSync(join(root, 'src/plugin/manifest.json'), 'utf8'))
+  const manifest = JSON.parse(readFileSync(join(root, 'manifest.json'), 'utf8'))
   assert.equal(manifest.isDesktopOnly, false, 'decision D1: the plugin must run on iOS')
   assert.equal(manifest.id, 'recursive-board')
   assert.match(manifest.version, /^\d+\.\d+\.\d+$/)

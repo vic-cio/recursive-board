@@ -50,7 +50,7 @@ Audited against Obsidian's [Plugin guidelines](https://raw.githubusercontent.com
 | Remove sample code | Pass | No sample plugin commands, settings, or placeholder classes remain. |
 | Manifest required fields and semantic version | Pass | ID, name, version, minAppVersion, description, author, and isDesktopOnly are present; version is `x.y.z`. |
 | Optional `authorUrl` and `fundingUrl` | Pass | Both are optional and omitted; no destination was invented. |
-| Plugin ID allowed by manifest rules | Not fixed | The current ID contains the reserved word “obsidian.” The task explicitly reserves the rename for another agent, so this audit does not change it. |
+| Plugin ID allowed by manifest rules | Fixed | The ID is `recursive-board`. |
 | Name allowed by manifest rules | Pass | The short name contains neither “Obsidian” nor “Plugin.” Directory-wide uniqueness is checked at submission. |
 | LICENSE and user-facing README | Fixed | LICENSE was present. README already explained purpose and use; installation instructions now cover directory installation and a manual pre-listing release without assuming a folder name that differs from the manifest. |
 
@@ -62,8 +62,8 @@ Audited against Obsidian's [Plugin guidelines](https://raw.githubusercontent.com
 | Disclose payments, account use, network use, external file access, ads, server telemetry, or closed source when applicable | Pass | None applies to the plugin. The README describes local vault use and optional sync clients. |
 | License, attribution, and trademark | Pass | MIT LICENSE is present; no third-party plugin code is bundled; the name does not imply a first-party plugin. |
 | Fork policy | Pass | The repository is not presented as a fork. |
-| Bot: ID syntax, reserved terms, name, and license | Not fixed | Name and license pass locally; the ID's reserved term remains for the separate rename. |
-| Bot: root manifest and matching GitHub release assets/tag | Not fixed | `manifest.json` currently lives in `src/plugin/` and the build emits all three installable files under `dist/`. Before submission, release preparation must put the final manifest at the repository root and publish `main.js`, `manifest.json`, and `styles.css` under a tag matching its version. Doing this after the reserved ID rename avoids two conflicting manifests. |
+| Bot: ID syntax, reserved terms, name, and license | Pass | The ID has no reserved term. The name and the license pass. |
+| Bot: root manifest and matching GitHub release assets/tag | Fixed | `manifest.json` is at the repository root. The tag workflow attaches `main.js`, `manifest.json` and `styles.css` to a release whose tag equals the version, and `versions.json` maps it to `minAppVersion`. |
 | Bot: repository owner, issues setting, entry metadata, and release availability | Not fixed | These are GitHub submission checks. This worktree has no remote and no submission or release; they cannot be verified locally. |
 
 ## Verification
@@ -73,4 +73,4 @@ Audited against Obsidian's [Plugin guidelines](https://raw.githubusercontent.com
 - Source scans found no dynamic HTML insertion, default hotkeys, global app use, Node/Electron runtime import, or leaf detachment.
 - The fixture was generated and the built plugin linked into it. The installed Obsidian app is 1.6.7, below the required 1.13.4. An isolated instance opened its welcome screen, but desktop automation could not open the fixture (`window_not_found` on clicks). No vault was opened, so visual rendering remains unverified on a compatible app.
 
-The remaining release tasks are the reserved ID rename, a final root manifest, and a matching public release. The current automated scanner's private checks may request additional changes after submission.
+The remaining release task is a matching public release. The current automated scanner's private checks may request additional changes after submission.
