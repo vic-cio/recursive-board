@@ -22,6 +22,7 @@
     "test": "npm run typecheck && node --test 'src/**/*.test.ts' 'scripts/**/*.test.ts'",
     "test:unit": "node --test 'src/**/*.test.ts' 'scripts/**/*.test.ts'",
     "fixture": "node scripts/fixture.ts",
+    "bench": "node scripts/bench.ts",
     "typecheck": "tsc -p tsconfig.json && tsc -p tsconfig.plugin.json",
     "wi": "node ./src/cli/wi.ts",
     "build": "node build/plugin.mjs && node build/wi.mjs",
