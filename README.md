@@ -41,6 +41,25 @@ Place an optional `.wi.json` file at the vault root to choose the work-item fold
 
 `wi` finds the vault from `--vault <path>`, then `$WI_VAULT`, then the nearest folder with `.wi.json` or `Boards/`.
 
+## Start a board
+
+1. Create the file `Boards/Project.md` with this content. A root item has no `parent` and no `status`:
+
+   ```markdown
+   ---
+   type: work-item
+   id: wi-0001
+   title: Project
+   created: 2026-01-01
+   updated: 2026-01-01
+   board: true
+   ---
+   ```
+
+2. Create `.wi.json` at the vault root with `{"defaultRoot": "Project"}`.
+3. Add a card with `wi new "Write the first card"`.
+4. Open `Project` in Obsidian. The plugin shows its children as a board.
+
 ## Install the Obsidian plugin
 
 The plugin is not yet in the Obsidian Community plugins directory. Install it manually:
@@ -86,7 +105,7 @@ Use `wi` for work-item changes. Do not edit work-item Markdown directly with scr
 
 ## Development
 
-Requirements: Node.js 20.12 or later and npm.
+Requirements: Node.js 23.6 or later and npm. The tests run the TypeScript source directly, which needs type stripping. The built `wi` runs on Node.js 20.12 or later.
 
 ```sh
 npm install
