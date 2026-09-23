@@ -17,7 +17,6 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '26'
-          registry-url: https://registry.npmjs.org
       - run: npm ci
       - run: npm test
       - run: npm run build
@@ -63,9 +62,7 @@ jobs:
             "$PLUGIN_DIR/manifest.json" \
             "$PLUGIN_DIR/styles.css" \
             --title "$GITHUB_REF_NAME" --generate-notes --verify-tag
+      # npm trusted publishing: npm authenticates this job through its GitHub OIDC token (id-token: write).
       - name: Publish wi to npm
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
         run: |
-          npm pkg set "repository=https://github.com/${GITHUB_REPOSITORY}.git"
           npm publish --provenance --access public

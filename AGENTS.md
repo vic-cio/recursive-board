@@ -55,8 +55,8 @@ to it by reloading Obsidian on a test vault and looking.
 
 ## Release
 
-Bump `version` in `manifest.json` and `package.json`, update the matching
+Bump `version` in `manifest.json`, `package.json` and `VERSION` in `src/cli/wi.ts`, update the matching
 `versions.json` entry to the manifest's `minAppVersion`, and update `package-lock.json`.
 Commit those files, then create and push a tag that equals the version exactly (no `v` prefix).
 The tag workflow tests, builds, creates the GitHub release, and publishes `wi` to npm.
-Set the repository's `NPM_TOKEN` secret before pushing the first release tag.
+npm accepts the publish through trusted publishing: npmjs.com lists this repo and `release.yml` as the trusted publisher, so no npm token exists.

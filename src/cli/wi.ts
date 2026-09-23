@@ -65,7 +65,7 @@ Notes
   \`wi new\` warns when such a file exists because a new id or filename may clash with it.
 `
 
-const VERSION = '0.1.1'
+const VERSION = '0.1.2'
 
 class UsageError extends Error {}
 
