@@ -79,13 +79,13 @@ test('the shared modules stay usable by both sides', () => {
 test('the manifest declares the plugin mobile-capable', () => {
   const manifest = JSON.parse(readFileSync(join(root, 'src/plugin/manifest.json'), 'utf8'))
   assert.equal(manifest.isDesktopOnly, false, 'decision D1: the plugin must run on iOS')
-  assert.equal(manifest.id, 'obsidian-recursive-board')
+  assert.equal(manifest.id, 'recursive-board')
   assert.match(manifest.version, /^\d+\.\d+\.\d+$/)
   assert.ok(manifest.minAppVersion, 'Vault.process needs a floor on the app version')
 })
 
 test('a built bundle carries no node require', () => {
-  const bundle = join(root, 'dist/obsidian-recursive-board/main.js')
+  const bundle = join(root, 'dist/recursive-board/main.js')
   if (!existsSync(bundle)) return // Nothing built yet; the build itself enforces this.
   const text = readFileSync(bundle, 'utf8')
   for (const name of FORBIDDEN) {

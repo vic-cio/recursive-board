@@ -27,7 +27,7 @@ const obsidian = {
 
 function loadBundle(): { default?: unknown } {
   execFileSync('node', [join(root, 'build', 'plugin.mjs')], { cwd: root, stdio: 'pipe' })
-  const code = readFileSync(join(root, 'dist', 'obsidian-recursive-board', 'main.js'), 'utf8')
+  const code = readFileSync(join(root, 'dist', 'recursive-board', 'main.js'), 'utf8')
   const module = { exports: {} as { default?: unknown } }
   const require = (name: string) => {
     if (name === 'obsidian') return obsidian
