@@ -5,10 +5,10 @@
   "type": "module",
   "description": "wi: the CLI that owns every write into the vault vault",
   "engines": {
-    "node": ">=23.6"
+    "node": ">=20"
   },
   "bin": {
-    "wi": "./src/cli/wi.ts"
+    "wi": "./dist/wi/wi.js"
   },
   "scripts": {
     "test": "npm run typecheck && node --test 'src/**/*.test.ts' 'scripts/**/*.test.ts'",
@@ -16,7 +16,8 @@
     "fixture": "node scripts/fixture.ts",
     "typecheck": "tsc -p tsconfig.json && tsc -p tsconfig.plugin.json",
     "wi": "node ./src/cli/wi.ts",
-    "build": "node build/plugin.mjs",
+    "build": "node build/plugin.mjs && node build/wi.mjs",
+    "build:wi": "node build/wi.mjs",
     "dev": "node build/plugin.mjs --watch",
     "install:vault": "node build/install.mjs",
     "link:dev": "node build/install.mjs --vault test --link",

@@ -15,6 +15,9 @@ test/.obsidian/plugins/
 node_modules/
 dist/
 
+# Throwaway vaults for manual runs
+/tmp/
+
 # macOS
 .DS_Store
 
