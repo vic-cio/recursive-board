@@ -1,0 +1,31 @@
+{
+  "name": "recursive-board",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "wi: the CLI that owns every write into the vault vault",
+  "engines": {
+    "node": ">=23.6"
+  },
+  "bin": {
+    "wi": "./src/cli/wi.ts"
+  },
+  "scripts": {
+    "test": "npm run typecheck && node --test 'src/**/*.test.ts' 'scripts/**/*.test.ts'",
+    "test:unit": "node --test 'src/**/*.test.ts' 'scripts/**/*.test.ts'",
+    "fixture": "node scripts/fixture.ts",
+    "typecheck": "tsc -p tsconfig.json && tsc -p tsconfig.plugin.json",
+    "wi": "node ./src/cli/wi.ts",
+    "build": "node build/plugin.mjs",
+    "dev": "node build/plugin.mjs --watch",
+    "install:vault": "node build/install.mjs",
+    "link:dev": "node build/install.mjs --vault test --link",
+    "install:skill": "node scripts/install-skill.mjs"
+  },
+  "devDependencies": {
+    "@types/node": "^26.6.2",
+    "esbuild": "^0.28.2",
+    "obsidian": "^1.13.1",
+    "typescript": "^5.9.3"
+  }
+}

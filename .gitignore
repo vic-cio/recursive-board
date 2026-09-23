@@ -1,0 +1,23 @@
+# Obsidian per-device state
+test/.obsidian/workspace.json
+test/.obsidian/workspace-mobile.json
+test/.obsidian/graph.json
+test/.obsidian/cache
+test/.trash/
+
+# The dev fixture's work items are generated with relative dates: npm run fixture
+test/Boards/
+
+# Third-party plugin build output (reinstall, never track)
+test/.obsidian/plugins/
+
+# Node
+node_modules/
+dist/
+
+# macOS
+.DS_Store
+
+# Personal pointers to the dev board and the vault (docs/open-source-release-design.md, L3)
+CLAUDE.local.md
+.claude/settings.local.json

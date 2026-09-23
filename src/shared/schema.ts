@@ -1,0 +1,124 @@
+/**
+ * The v1 work-item schema, frozen in decision D7 and amended by U2 and U3.
+ *
+ * This schema applies to `Boards/` only. `Knowledge/` has its own conventions and `Intake/` has
+ * none. Nothing here may grow a field without a decision recorded in `docs/`.
+ */
+
+export const STATUSES = ['backlog', 'options', 'doing', 'done'] as const
+export type Status = (typeof STATUSES)[number]
+
+/** The nine core fields, in the order `wi new` writes them. */
+export const CORE_FIELDS = [
+  'type',
+  'id',
+  'title',
+  'status',
+  'parent',
+  'created',
+  'updated',
+  'board',
+  'prev_status',
+] as const
+
+/** Fields a work item may carry. Anything outside both lists is an unknown key, and is preserved. */
+export const OPTIONAL_FIELDS = [
+  'owner',
+  'agent',
+  'priority',
+  'due',
+  'blocked',
+  'depends_on',
+  'tags',
+] as const
+
+/** Fields a new child inherits from its parent, per UI decision u7. */
+export const INHERITED_FIELDS = ['owner', 'agent'] as const
+
+export const WORK_ITEM_TYPE = 'work-item'
+
+/** The five folders of decision D8. Nothing nests inside them. */
+export const FOLDERS = ['Boards', 'Knowledge', 'Intake', 'Templates', 'Attachments'] as const
+export type Folder = (typeof FOLDERS)[number]
+
+export const BOARDS = 'Boards'
+/** `wi validate` skips this folder entirely. Nothing in it can be invalid. */
+export const INTAKE = 'Intake'
+
+export function isStatus(value: unknown): value is Status {
+  return typeof value === 'string' && (STATUSES as readonly string[]).includes(value)
+}
+
+/**
+ * Reads the target of a wikilink. Returns null when the value is not a wikilink.
+ * A display alias and a heading anchor are both dropped: the target is what resolves to a file.
+ */
+export function parseWikilink(value: unknown): string | null {
+  if (typeof value !== 'string') return null
+  const match = /^\s*\[\[([^\]]+)\]\]\s*$/.exec(value)
+  if (!match) return null
+  const target = match[1]!.split('|')[0]!.split('#')[0]!.trim()
+  return target === '' ? null : target
+}
+
+export function formatWikilink(target: string): string {
+  return `[[${target}]]`
+}
+
+const UNSAFE_IN_FILENAME = /[\\/:*?"<>|[\]#^]/g
+
+/** Turns a title into a filename stem Obsidian and macOS both accept. */
+export function fileNameStem(title: string): string {
+  const stem = title
+    .replace(UNSAFE_IN_FILENAME, '-')
+    .replace(/\s+/g, ' ')
+    .replace(/^[\s.]+|[\s.]+$/g, '')
+  return stem === '' ? 'Untitled' : stem
+}
+
+/** The short half of an id: `wi-a7f3` gives `a7f3`. */
+export function idSuffix(id: string): string {
+  return id.startsWith('wi-') ? id.slice(3) : id
+}
+
+/**
+ * The filename stem for a work item, with the D3 collision suffix when the plain title is taken.
+ * The suffix is the id's short half, so the file is recoverable from the id alone.
+ */
+export function fileNameFor(title: string, id: string, taken: ReadonlySet<string>): string {
+  const stem = fileNameStem(title)
+  if (!taken.has(stem.toLowerCase())) return stem
+  return `${stem}--${idSuffix(id)}`
+}
+
+const ID_ALPHABET = 'abcdefghijklmnopqrstuvwxyz0123456789'
+
+/** Mints a `wi-<short>` id that no existing item holds. Random, so it needs no global counter. */
+export function newId(taken: ReadonlySet<string>, random: () => number = Math.random): string {
+  for (let length = 4; length <= 12; length++) {
+    for (let attempt = 0; attempt < 200; attempt++) {
+      let short = ''
+      for (let i = 0; i < length; i++) {
+        short += ID_ALPHABET[Math.floor(random() * ID_ALPHABET.length)]
+      }
+      const id = `wi-${short}`
+      if (!taken.has(id)) return id
+    }
+  }
+  throw new Error('could not mint an unused work item id')
+}
+
+/** Today in the `YYYY-MM-DD` form every date field uses. Local time, because the vault is personal. */
+export function today(now: Date = new Date()): string {
+  const pad = (n: number) => String(n).padStart(2, '0')
+  return `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`
+}
+
+/** How long a done item stays on the board, per decision q10. A render filter, never a write. */
+export const DONE_WINDOW_DAYS = 14
+
+/** The earliest `updated` a done item may have and still show. */
+export function doneCutoff(now: Date = new Date(), days = DONE_WINDOW_DAYS): string {
+  const then = new Date(now.getFullYear(), now.getMonth(), now.getDate() - days)
+  return today(then)
+}

@@ -1,0 +1,929 @@
+/*
+ * Recursive Board.
+ *
+ * Every colour comes from an Obsidian theme variable, so the board follows whatever theme is
+ * active on each platform rather than carrying its own palette.
+ */
+
+.wi-region,
+.wi-takeover {
+  --wi-gap: 8px;
+  --wi-radius: 6px;
+
+  /*
+   * Status colour.
+   *
+   * Obsidian's `--color-*-rgb` variables are what a theme redefines, so taking the channels and
+   * mixing our own tint means the board follows any theme rather than carrying a palette.
+   *
+   * A tint plus the saturated colour as text keeps contrast in both light and dark. The obvious
+   * alternative, a solid `--color-yellow` background with `--text-on-accent`, does not:
+   * `--text-on-accent` is defined to contrast with `--interactive-accent`, so on a pale yellow in
+   * a light theme it is white on near-white.
+   */
+  --wi-rgb-backlog: var(--mono-rgb-100, 128, 128, 128);
+  --wi-rgb-options: var(--color-yellow-rgb, 224, 172, 0);
+  --wi-rgb-doing: var(--color-blue-rgb, 8, 109, 221);
+  --wi-rgb-done: var(--color-green-rgb, 8, 185, 78);
+  --wi-rgb-blocked: var(--color-red-rgb, 233, 49, 71);
+  --wi-rgb-agent: var(--color-purple-rgb, 168, 130, 255);
+
+  /* How strongly a status shows: on a pill, on a whole card, and on a card's edge. */
+  --wi-tint-pill: 0.16;
+  --wi-tint-card: 0.05;
+  --wi-edge: 0.75;
+}
+
+/* ---------- board takeover ----------
+ * A promoted item is a board, so the board fills the pane. This is an overlay rather than the
+ * note body being hidden, so CodeMirror keeps measuring a real document behind it.
+ */
+
+.wi-takeover-host {
+  position: relative;
+}
+
+.wi-takeover {
+  position: absolute;
+  inset: 0;
+  z-index: 5;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: var(--background-primary);
+}
+
+.wi-takeover > .wi-breadcrumbs {
+  flex: none;
+  padding: 10px 24px;
+  margin: 0;
+}
+
+.wi-takeover-body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  overflow: hidden;
+  padding: 14px 24px 24px;
+}
+
+/* The columns own the height, so a long backlog scrolls its own column rather than the page,
+   and the add row stays reachable at the foot of each one. */
+.wi-takeover .wi-board {
+  flex: 1;
+  min-height: 0;
+  align-items: stretch;
+}
+
+.wi-takeover .wi-column {
+  min-height: 0;
+}
+
+.wi-takeover .wi-stack {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+}
+
+/* ---------- closing the live preview gap (decision R2) ----------
+ * Obsidian's own app.css says:
+ *
+ *   .cm-sizer { display: flex; flex-direction: column; min-height: 100%; }
+ *   .markdown-source-view.mod-cm6 .cm-contentContainer { flex: 1 1 auto; }
+ *
+ * The editor container grows to fill the sizer, so on a short note it fills the pane and pushes
+ * anything appended after it to the bottom. That was the viewport-sized gap between a note and
+ * its checklist.
+ *
+ * Stopping the growth only on notes where the plugin has mounted costs one thing: clicking the
+ * empty space below the text no longer focuses the editor, because the region is there instead.
+ */
+
+.wi-region-host .markdown-source-view.mod-cm6 .cm-contentContainer {
+  flex-grow: 0;
+}
+
+/*
+ * The phone adds a second gap inside the container. A layout report from an iPhone on 2026-09-22
+ * showed `.cm-contentContainer` at 544px for a two-line body, with flex growth already off: the
+ * bottom padding Obsidian mobile gives `.cm-content` for the keyboard toolbar. It put the
+ * checklist below the fold, which looked like no board at all.
+ */
+.wi-region-host .markdown-source-view.mod-cm6 .cm-content {
+  padding-bottom: var(--size-4-4, 16px) !important;
+  min-height: 0 !important;
+}
+
+/* Reading mode has the same shape under a different name. */
+.wi-region-host .markdown-preview-sizer {
+  min-height: unset !important;
+}
+
+/* ---------- breadcrumbs (decision u8) ---------- */
+
+.wi-region-top.wi-region {
+  margin-bottom: 4px;
+}
+
+.wi-breadcrumbs {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: var(--font-ui-smaller);
+  color: var(--text-muted);
+  padding-bottom: 6px;
+  border-bottom: 1px solid var(--background-modifier-border);
+}
+
+.wi-crumb-trail {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+}
+
+.wi-crumb {
+  cursor: pointer;
+  border-radius: 4px;
+  padding: 1px 4px;
+}
+
+.wi-crumb:hover {
+  background: var(--background-modifier-hover);
+  color: var(--text-normal);
+}
+
+.wi-crumb.is-current {
+  color: var(--text-normal);
+  font-weight: var(--font-semibold);
+  cursor: default;
+}
+
+.wi-crumb.is-current:hover {
+  background: none;
+}
+
+.wi-crumb.is-orphan {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--text-error);
+  cursor: default;
+}
+
+.wi-crumb-icon {
+  display: inline-flex;
+}
+
+.wi-crumb-icon .svg-icon {
+  width: 13px;
+  height: 13px;
+}
+
+.wi-crumb-sep {
+  color: var(--text-faint);
+}
+
+/* ---------- metadata strip ---------- */
+
+.wi-region-bottom.wi-region {
+  margin-top: 24px;
+  padding-top: 12px;
+  border-top: 1px solid var(--background-modifier-border);
+}
+
+.wi-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 10px;
+}
+
+.wi-pill {
+  font-size: var(--font-ui-smaller);
+  line-height: 1.6;
+  padding: 0 7px;
+  border-radius: 10px;
+  background: var(--background-modifier-hover);
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+.wi-pill.is-quiet {
+  background: none;
+  color: var(--text-faint);
+  padding-left: 0;
+}
+
+.wi-pill.is-backlog {
+  background: rgba(var(--wi-rgb-backlog), 0.08);
+  color: var(--text-muted);
+}
+
+.wi-pill.is-options {
+  background: rgba(var(--wi-rgb-options), var(--wi-tint-pill));
+  color: var(--color-yellow);
+}
+
+.wi-pill.is-doing {
+  background: rgba(var(--wi-rgb-doing), var(--wi-tint-pill));
+  color: var(--color-blue);
+}
+
+.wi-pill.is-done {
+  background: rgba(var(--wi-rgb-done), var(--wi-tint-pill));
+  color: var(--color-green);
+}
+
+.wi-pill.is-blocked {
+  background: rgba(var(--wi-rgb-blocked), var(--wi-tint-pill));
+  color: var(--color-red);
+}
+
+.wi-pill.is-agent {
+  background: rgba(var(--wi-rgb-agent), var(--wi-tint-pill));
+  color: var(--color-purple);
+}
+
+.wi-pill.is-root {
+  background: var(--background-modifier-border);
+  color: var(--text-normal);
+}
+
+/* ---------- top bar controls (decisions U1, U3) ---------- */
+
+.wi-controls {
+  display: flex;
+  flex: none;
+  align-items: center;
+  /* A view preference and a file write sit side by side here, so they need visible distance.
+     Adjacent buttons invite a mis-click, and only one of these two edits the vault. */
+  gap: 18px;
+}
+
+.wi-control {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: var(--font-ui-smaller);
+  line-height: 1.6;
+  padding: 3px 9px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.wi-control-icon {
+  display: inline-flex;
+}
+
+.wi-control-icon .svg-icon {
+  width: 14px;
+  height: 14px;
+}
+
+/* The peek only changes what this pane shows, so it reads as quiet text rather than a button. */
+.wi-peek {
+  background: none;
+  box-shadow: none;
+  color: var(--text-muted);
+}
+
+.wi-peek:hover {
+  background: var(--background-modifier-hover);
+  color: var(--text-normal);
+}
+
+/* Only the durable control is accented. */
+.wi-toggle.is-on {
+  background: var(--interactive-accent);
+  color: var(--text-on-accent);
+}
+
+/* ---------- board (decision U1) ---------- */
+
+.wi-board {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: var(--wi-gap);
+  align-items: start;
+}
+
+.wi-column {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  background: var(--background-secondary);
+  border-radius: var(--wi-radius);
+  padding: 8px;
+  min-height: 80px;
+}
+
+.wi-column.is-drop-target {
+  outline: 2px solid var(--interactive-accent);
+  outline-offset: -2px;
+}
+
+.wi-column-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  font-size: var(--font-ui-smaller);
+  text-transform: capitalize;
+  color: var(--text-muted);
+}
+
+.wi-column-count {
+  color: var(--text-faint);
+}
+
+.wi-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+/* A column's scrollbar sits inside a narrow card stack, so the default width eats real estate
+   the cards need. Firefox gets `thin`; Obsidian is Chromium, which needs the pseudo-elements. */
+.wi-stack,
+.wi-takeover-body {
+  scrollbar-width: thin;
+  scrollbar-color: var(--scrollbar-thumb-bg) transparent;
+}
+
+.wi-stack::-webkit-scrollbar,
+.wi-takeover-body::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+.wi-stack::-webkit-scrollbar-track,
+.wi-takeover-body::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.wi-stack::-webkit-scrollbar-thumb,
+.wi-takeover-body::-webkit-scrollbar-thumb {
+  background: var(--scrollbar-thumb-bg);
+  border-radius: 3px;
+}
+
+.wi-stack::-webkit-scrollbar-thumb:hover,
+.wi-takeover-body::-webkit-scrollbar-thumb:hover {
+  background: var(--scrollbar-active-thumb-bg);
+}
+
+/* ---------- card (decisions u3, u5) ---------- */
+
+.wi-card {
+  background: var(--background-primary);
+  border: 1px solid var(--background-modifier-border);
+  border-left: 3px solid var(--background-modifier-border);
+  border-radius: var(--wi-radius);
+  padding: 7px 9px;
+  cursor: pointer;
+}
+
+/* Colour by status. In a column this repeats what the column says, which is the point: it keeps
+   reading the same in a checklist, in an expanded card and on the phone, where there are no
+   columns to say it. */
+.wi-card.is-backlog { border-left-color: var(--background-modifier-border); }
+
+.wi-card.is-options {
+  border-left-color: rgba(var(--wi-rgb-options), var(--wi-edge));
+  background: rgba(var(--wi-rgb-options), var(--wi-tint-card));
+}
+
+.wi-card.is-doing {
+  border-left-color: rgba(var(--wi-rgb-doing), var(--wi-edge));
+  background: rgba(var(--wi-rgb-doing), var(--wi-tint-card));
+}
+
+.wi-card.is-done {
+  border-left-color: rgba(var(--wi-rgb-done), var(--wi-edge));
+  background: rgba(var(--wi-rgb-done), var(--wi-tint-card));
+}
+
+.wi-card:hover {
+  border-color: var(--background-modifier-border-hover);
+}
+
+.wi-card.is-dragging {
+  opacity: 0.4;
+}
+
+/* Blocked outranks status: it is the thing you need to see first. */
+.wi-card.is-blocked {
+  border-left-color: rgba(var(--wi-rgb-blocked), 1);
+  background: rgba(var(--wi-rgb-blocked), var(--wi-tint-card));
+}
+
+.wi-card.is-expanded {
+  border-color: var(--interactive-accent);
+  cursor: default;
+}
+
+.wi-card-face {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+/* The note's own text, so a child reads the same as a card and as a checklist row, and follows
+   the theme and the font-size setting (docs/card-typography-design.md, q1). */
+.wi-card-title {
+  font-family: var(--font-text);
+  font-size: var(--font-text-size);
+  line-height: var(--line-height-tight, 1.3);
+  color: var(--text-normal);
+}
+
+/* Expanded, the title is how you go into the item. Collapsed, the whole face expands instead,
+   so the title must not compete with that. */
+.wi-card-title.is-link {
+  color: var(--text-accent);
+  cursor: pointer;
+  text-decoration-color: transparent;
+}
+
+.wi-card-title.is-link:hover {
+  text-decoration: underline;
+}
+
+.wi-badges {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+}
+
+.wi-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 11px;
+  line-height: 1.5;
+  padding: 0 5px;
+  border-radius: 8px;
+  background: var(--background-modifier-hover);
+  color: var(--text-muted);
+}
+
+.wi-badge .svg-icon,
+.wi-badge-icon .svg-icon {
+  width: 11px;
+  height: 11px;
+}
+
+.wi-badge-blocked {
+  background: rgba(var(--wi-rgb-blocked), var(--wi-tint-pill));
+  color: var(--color-red);
+}
+
+.wi-badge-who {
+  background: var(--background-modifier-border);
+}
+
+/* The code is the id. It sits to the right of the badges, quiet enough not to compete with the
+   title, and selectable so it can be dragged out as well as clicked. */
+.wi-code {
+  margin-left: auto;
+  font-family: var(--font-monospace);
+  font-size: 10px;
+  line-height: 1.6;
+  color: var(--text-faint);
+  cursor: pointer;
+  user-select: text;
+  -webkit-user-select: text;
+}
+
+.wi-code:hover {
+  color: var(--text-muted);
+}
+
+.wi-badge-who.is-agent {
+  background: rgba(var(--wi-rgb-agent), var(--wi-tint-pill));
+  color: var(--color-purple);
+}
+
+.wi-card-body {
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid var(--background-modifier-border);
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+
+.wi-objective {
+  font-size: var(--font-ui-smaller);
+  color: var(--text-muted);
+  line-height: 1.45;
+  white-space: pre-wrap;
+}
+
+.wi-criteria {
+  margin: 0;
+  padding-left: 18px;
+  font-size: var(--font-ui-smaller);
+  color: var(--text-muted);
+}
+
+.wi-card-section {
+  font-size: var(--font-ui-smaller);
+  color: var(--text-faint);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+/* ---------- remove ----------
+ * The inverse of the add row. Quiet until hover on the desktop, always drawn on a phone where
+ * there is no hover. Obsidian's own dialog does the confirming.
+ */
+
+.wi-card-head {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+}
+
+.wi-card-head .wi-card-title {
+  flex: 1;
+  min-width: 0;
+}
+
+.wi-remove {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  padding: 0;
+  border-radius: 4px;
+  background: none;
+  box-shadow: none;
+  color: var(--text-faint);
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 80ms ease-out;
+}
+
+.wi-remove .svg-icon {
+  width: 13px;
+  height: 13px;
+}
+
+.wi-card:hover .wi-remove,
+.wi-check-row:hover .wi-remove,
+.wi-remove:focus-visible {
+  opacity: 1;
+}
+
+.wi-remove:hover {
+  background: rgba(var(--wi-rgb-blocked), var(--wi-tint-pill));
+  color: var(--color-red);
+}
+
+/* No hover on a phone, so the control is simply there. */
+.is-mobile .wi-remove {
+  opacity: 1;
+}
+
+.wi-check-row .wi-remove {
+  width: 24px;
+  height: 24px;
+}
+
+/* ---------- labels ----------
+ * A label is an entry in `tags`, and its colour is derived from its text, so nothing is stored
+ * and the Mac and the phone cannot disagree. Every colour is one a theme defines.
+ */
+
+.wi-labels {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  align-items: center;
+}
+
+.wi-card-face > .wi-labels {
+  margin-bottom: 1px;
+}
+
+.wi-label {
+  font-size: 11px;
+  line-height: 1.55;
+  padding: 0 6px;
+  border-radius: 3px;
+  white-space: nowrap;
+  font-weight: var(--font-medium, 500);
+}
+
+.wi-label[data-colour="red"] { background: rgba(var(--color-red-rgb), 0.18); color: var(--color-red); }
+.wi-label[data-colour="orange"] { background: rgba(var(--color-orange-rgb), 0.18); color: var(--color-orange); }
+.wi-label[data-colour="yellow"] { background: rgba(var(--color-yellow-rgb), 0.18); color: var(--color-yellow); }
+.wi-label[data-colour="green"] { background: rgba(var(--color-green-rgb), 0.18); color: var(--color-green); }
+.wi-label[data-colour="cyan"] { background: rgba(var(--color-cyan-rgb), 0.18); color: var(--color-cyan); }
+.wi-label[data-colour="blue"] { background: rgba(var(--color-blue-rgb), 0.18); color: var(--color-blue); }
+.wi-label[data-colour="purple"] { background: rgba(var(--color-purple-rgb), 0.18); color: var(--color-purple); }
+.wi-label[data-colour="pink"] { background: rgba(var(--color-pink-rgb), 0.18); color: var(--color-pink); }
+
+.wi-check-row .wi-labels {
+  flex: none;
+}
+
+/* ---------- add row (decision u7) ---------- */
+
+.wi-add-row {
+  margin-top: 2px;
+}
+
+.wi-add-input {
+  width: 100%;
+  font-size: var(--font-ui-smaller);
+  padding: 4px 7px;
+  background: var(--background-primary);
+  border: 1px dashed var(--background-modifier-border);
+  border-radius: var(--wi-radius);
+}
+
+.wi-add-input:focus {
+  border-style: solid;
+  border-color: var(--interactive-accent);
+}
+
+/* ---------- checklist (decisions U1, R1) ----------
+ * The rows are Obsidian's own rendered task list, so the typography, the checkbox and the
+ * struck-through done item all come from the theme. This only lays the badges out beside them.
+ */
+
+.wi-checklist > ul.contains-task-list {
+  margin-block: 0;
+}
+
+/* Every row is a link, so link colour says nothing and 23 blue underlines read as a page of
+   links. Text colour until hovered (docs/card-typography-design.md, q3). */
+.wi-checklist a.internal-link {
+  color: var(--text-normal);
+  text-decoration: none;
+}
+
+.wi-checklist a.internal-link:hover {
+  color: var(--text-accent);
+  text-decoration: underline;
+}
+
+.wi-checklist .is-checked a.internal-link {
+  color: var(--text-faint);
+}
+
+.wi-card-code {
+  margin-top: 8px;
+  text-align: right;
+}
+
+.wi-check-row.is-blocked {
+  box-shadow: inset 3px 0 0 rgba(var(--wi-rgb-blocked), 1);
+}
+
+.wi-row-extras {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: 8px;
+  vertical-align: middle;
+}
+
+.wi-check-status,
+.wi-check-count,
+.wi-check-blocked {
+  flex: none;
+  font-size: var(--font-ui-smaller);
+  color: var(--text-faint);
+  padding: 0 6px;
+  border-radius: 8px;
+  background: var(--background-modifier-hover);
+}
+
+.wi-check-status.is-doing {
+  background: rgba(var(--wi-rgb-doing), var(--wi-tint-pill));
+  color: var(--color-blue);
+}
+
+.wi-check-status.is-options {
+  background: rgba(var(--wi-rgb-options), var(--wi-tint-pill));
+  color: var(--color-yellow);
+}
+
+.wi-check-blocked {
+  background: rgba(var(--wi-rgb-blocked), var(--wi-tint-pill));
+  color: var(--color-red);
+}
+
+.wi-group {
+  margin-bottom: 14px;
+}
+
+.wi-group-heading {
+  font-size: var(--font-ui-smaller);
+  text-transform: capitalize;
+  color: var(--text-muted);
+  padding-bottom: 3px;
+  margin-bottom: 2px;
+  border-bottom: 1px solid var(--background-modifier-border);
+}
+
+.wi-hidden-count,
+.wi-empty {
+  font-size: var(--font-ui-smaller);
+  color: var(--text-faint);
+  padding: 4px 2px;
+}
+
+/* ---------- home (decision u8) ---------- */
+
+.wi-home-heading {
+  font-size: var(--font-ui-small);
+  font-weight: var(--font-semibold);
+  margin-bottom: 8px;
+}
+
+.wi-home-group {
+  margin-bottom: 12px;
+}
+
+.wi-home-group-heading {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: var(--font-ui-smaller);
+  color: var(--text-muted);
+  margin-bottom: 3px;
+}
+
+.wi-home-icon .svg-icon {
+  width: 13px;
+  height: 13px;
+}
+
+.wi-home-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.wi-home-list li {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  padding: 3px 0;
+}
+
+.wi-home-link {
+  cursor: pointer;
+}
+
+.wi-home-link:hover {
+  color: var(--text-accent);
+}
+
+.wi-home-note {
+  font-size: var(--font-ui-smaller);
+  color: var(--text-faint);
+}
+
+/* ---------- mobile (docs/phone-board-design.md) ----------
+ * A promoted board takes the pane over on the phone too, as four tabs over one group of cards.
+ * The phone floats its header and its nav bar over the content, so the overlay pads for both.
+ */
+
+.is-mobile .wi-takeover {
+  padding-top: var(--wi-float-top, 0px);
+}
+
+.is-mobile .wi-takeover > .wi-breadcrumbs {
+  padding: 6px 16px;
+}
+
+.is-mobile .wi-takeover-body {
+  padding: 10px 16px 0;
+}
+
+.is-mobile.is-floating-nav .wi-takeover-body {
+  padding-bottom: calc(var(--safe-area-inset-bottom, 0px) + 72px);
+}
+
+.wi-tabbed {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  gap: 10px;
+}
+
+.wi-tabs {
+  flex: none;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 2px;
+  padding: 2px;
+  border-radius: var(--wi-radius);
+  background: var(--background-secondary);
+}
+
+.wi-tab {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1px;
+  height: auto;
+  padding: 5px 2px;
+  border: none;
+  border-radius: calc(var(--wi-radius) - 2px);
+  box-shadow: none;
+  background: none;
+  color: var(--text-muted);
+  font-size: var(--font-ui-smaller);
+  text-transform: capitalize;
+}
+
+.wi-tab.is-active {
+  background: var(--background-primary);
+  color: var(--text-normal);
+  font-weight: var(--font-semibold);
+  box-shadow: inset 0 -2px 0 rgba(var(--wi-rgb, var(--wi-rgb-backlog)), var(--wi-edge));
+}
+
+.wi-tab.is-options { --wi-rgb: var(--wi-rgb-options); }
+.wi-tab.is-doing { --wi-rgb: var(--wi-rgb-doing); }
+.wi-tab.is-done { --wi-rgb: var(--wi-rgb-done); }
+
+.wi-tab-count {
+  color: var(--text-faint);
+  font-variant-numeric: tabular-nums;
+}
+
+/*
+ * A column, not a row. The keyboard fix below sets the column to `flex: none`; in a row that
+ * sizes it to its content, so one short card drew a narrow column and one long title pushed
+ * every card past the right edge. In a column, `flex: none` governs height only and the width
+ * stretches to the screen.
+ */
+.is-mobile .wi-tabbed .wi-board {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+}
+
+.is-mobile .wi-tabbed .wi-column {
+  flex: 1;
+  min-width: 0;
+  background: none;
+  padding: 0;
+}
+
+/*
+ * On the phone the whole board scrolls, not the card stack. With the stack as the only scroller,
+ * the keyboard took half the screen and the tabs and add row kept theirs, so the cards were
+ * squeezed to nothing while a title was typed. Now the cards stay above the add row and iOS
+ * scrolls the focused input into view.
+ */
+.is-mobile .wi-takeover-body {
+  overflow-y: auto;
+}
+
+.is-mobile .wi-tabbed,
+.is-mobile .wi-tabbed .wi-board,
+.is-mobile .wi-tabbed .wi-column,
+.is-mobile .wi-tabbed .wi-stack {
+  flex: none;
+  min-height: auto;
+  overflow: visible;
+}
+
+/* The tab already names the group and counts it. */
+.is-mobile .wi-tabbed .wi-column-header {
+  display: none;
+}
+
+/* The phone's menu button. Always drawn: there is no hover and no right click. */
+.wi-more {
+  flex: none;
+  height: auto;
+  padding: 2px 4px;
+  border: none;
+  box-shadow: none;
+  background: none;
+  color: var(--text-muted);
+}
+
+/* The move picker: a target's place in the tree, under its title. */
+.wi-move-path {
+  display: block;
+  color: var(--text-muted);
+  font-size: var(--font-ui-smaller);
+}

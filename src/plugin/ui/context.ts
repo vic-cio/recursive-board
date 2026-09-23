@@ -1,0 +1,28 @@
+/** What every render function needs. Passed down rather than reached for, so rendering stays pure. */
+import type { App, Component } from 'obsidian'
+
+import type { Actions } from '../actions.ts'
+import type { WorkItemIndex } from '../index.ts'
+
+export interface RenderContext {
+  app: App
+  /** The plugin. Owns what the Markdown renderer registers, so it is released on unload. */
+  component: Component
+  index: WorkItemIndex
+  actions: Actions
+  /** True on a phone or tablet. A board never renders columns there (decision u6). */
+  mobile: boolean
+  /** The path of the one expanded card, or null. Only one expands at a time (decision u5). */
+  expandedPath: string | null
+  /** Expands a card, collapsing whichever was open. */
+  expand(path: string | null): void
+  /**
+   * True when this item's text is being read instead of its board.
+   * Session state, never written: a view preference is reconstructable from nothing, so it has no
+   * business in the canonical layer.
+   */
+  isPeeking(path: string): boolean
+  setPeek(path: string, peeking: boolean): void
+  /** Redraws the mounted region. */
+  refresh(): void
+}
