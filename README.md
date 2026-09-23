@@ -87,6 +87,8 @@ Run `wi` inside a vault, pass `--vault <path>`, or set `WI_VAULT`. Commands acce
 
 ## Install the Git validation hook
 
+Git is optional. Recursive Board works without it, and the hook only adds a check for vaults that are Git repositories.
+
 If your vault is a Git repository, use the installed `wi` command:
 
 ```sh
