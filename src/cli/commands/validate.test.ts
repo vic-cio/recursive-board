@@ -294,9 +294,9 @@ test('validate never looks at Intake, which is no longer a product folder (L5)',
   assert.deepEqual((await run(fixture)).problems, [])
 })
 
-test('a nested file under Knowledge is no longer checked (L5 cost)', async () => {
+test('a nested file under Notes is no longer checked (L5 cost)', async () => {
   fixture = healthy()
-  fixture.write('Knowledge/Topic/Nested.md', 'no rules apply here\n')
+  fixture.write('Notes/Topic/Nested.md', 'no rules apply here\n')
   assert.deepEqual((await run(fixture)).problems, [])
 })
 
@@ -310,9 +310,9 @@ test('a nested file under Templates is still an error, since Templates is a prod
   assert.equal(problem.severity, 'error')
 })
 
-test('validate does not apply the work-item schema to Knowledge or Templates', async () => {
+test('validate does not apply the work-item schema to Notes or Templates', async () => {
   fixture = healthy()
-  fixture.write('Knowledge/Workflow Protocol.md', '---\ntags: [protocol]\n---\n\n# Workflow\n')
+  fixture.write('Notes/Workflow Protocol.md', '---\ntags: [protocol]\n---\n\n# Workflow\n')
   fixture.write('Templates/work-item.md', item({
     type: 'work-item', id: 'wi-XXXX', title: '', status: 'backlog', parent: '"[[Main]]"',
   }))

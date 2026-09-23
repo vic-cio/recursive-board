@@ -40,7 +40,6 @@ export const TEMPLATES: readonly BodyTemplate[] = [
       { heading: 'Objective' },
       { heading: 'Context' },
       { heading: 'Acceptance Criteria', starter: '- ' },
-      { heading: 'Knowledge', starter: '- ' },
       { heading: 'Notes' },
     ],
   },
@@ -72,9 +71,13 @@ export function requireTemplate(name: string = DEFAULT_TEMPLATE): BodyTemplate {
  * There is no `# Title` heading. Obsidian draws the filename as an inline title above the body,
  * so an H1 repeating it puts the same words on screen twice. The filename is the title.
  */
-export function renderBody(template: BodyTemplate): string {
+export function renderBody(template: BodyTemplate, extraSections: readonly string[] = []): string {
   const parts: string[] = []
-  for (const section of template.sections) {
+  const sections: Section[] = [
+    ...template.sections,
+    ...extraSections.map((heading) => ({ heading, starter: '- ' })),
+  ]
+  for (const section of sections) {
     parts.push(`## ${section.heading}`, '')
     if (section.starter !== undefined) parts.push(section.starter, '')
   }
@@ -89,7 +92,11 @@ export function renderBody(template: BodyTemplate): string {
  * not. `board` and `prev_status` are left out: absence is what "not a board" and "never ticked"
  * mean, and a template should not teach you to write either.
  */
-export function renderVaultTemplate(template: BodyTemplate, defaultRoot: string | null = null): string {
+export function renderVaultTemplate(
+  template: BodyTemplate,
+  defaultRoot: string | null = null,
+  extraSections: readonly string[] = [],
+): string {
   const placeholders: Record<string, string> = {
     type: formatScalar(WORK_ITEM_TYPE),
     id: 'wi-XXXX',
@@ -102,5 +109,5 @@ export function renderVaultTemplate(template: BodyTemplate, defaultRoot: string 
   const lines = CORE_FIELDS.filter((field) => field in placeholders).map(
     (field) => `${field}: ${placeholders[field]}`.trimEnd(),
   )
-  return `---\n${lines.join('\n')}\n---\n\n${renderBody(template)}`
+  return `---\n${lines.join('\n')}\n---\n\n${renderBody(template, extraSections)}`
 }

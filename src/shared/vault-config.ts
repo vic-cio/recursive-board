@@ -8,16 +8,19 @@ export interface VaultConfig {
   workItemFolder: string
   /** Filename stem of the root item, or null when new items require an explicit parent. */
   defaultRoot: string | null
+  /** Headings appended to every new work-item body. */
+  extraSections: string[]
 }
 
 export const DEFAULT_VAULT_CONFIG: Readonly<VaultConfig> = {
   workItemFolder: 'Boards',
   defaultRoot: null,
+  extraSections: [],
 }
 
 /** Parse at the vault boundary; malformed config must never silently select another folder. */
 export function parseVaultConfig(text: string | null): VaultConfig {
-  if (text === null) return { ...DEFAULT_VAULT_CONFIG }
+  if (text === null) return { ...DEFAULT_VAULT_CONFIG, extraSections: [] }
   let value: unknown
   try {
     value = JSON.parse(text)
@@ -30,6 +33,7 @@ export function parseVaultConfig(text: string | null): VaultConfig {
 
   const folderValue = 'workItemFolder' in value ? value.workItemFolder : undefined
   const rootValue = 'defaultRoot' in value ? value.defaultRoot : undefined
+  const sectionsValue = 'extraSections' in value ? value.extraSections : undefined
   let workItemFolder = DEFAULT_VAULT_CONFIG.workItemFolder
   if (folderValue !== undefined) {
     if (typeof folderValue !== 'string') {
@@ -52,5 +56,18 @@ export function parseVaultConfig(text: string | null): VaultConfig {
     }
     defaultRoot = rootValue
   }
-  return { workItemFolder, defaultRoot }
+  const extraSections: string[] = []
+  if (sectionsValue !== undefined) {
+    if (!Array.isArray(sectionsValue)) {
+      throw new Error(`${WI_CONFIG_FILE}: extraSections must be an array of non-empty, single-line headings.`)
+    }
+    const headings: unknown[] = sectionsValue
+    for (const heading of headings) {
+      if (typeof heading !== 'string' || heading.trim() === '' || /[\r\n]/.test(heading)) {
+        throw new Error(`${WI_CONFIG_FILE}: extraSections must be an array of non-empty, single-line headings.`)
+      }
+      extraSections.push(heading)
+    }
+  }
+  return { workItemFolder, defaultRoot, extraSections }
 }

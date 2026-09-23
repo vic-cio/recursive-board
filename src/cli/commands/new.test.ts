@@ -106,6 +106,14 @@ test('createItem writes the template body with Objective first', async () => {
   assert.ok(text.indexOf('## Context') < text.indexOf('## Acceptance Criteria'))
 })
 
+test('createItem appends vault-configured sections', async () => {
+  fixture = seed()
+  fixture.write('.wi.json', '{"extraSections":["References","Risks"]}')
+  const created = await createItem(await reload(fixture), { title: 'Streaming', parent: 'wi-0004' })
+  assert.match(readFileSync(created.path, 'utf8'),
+    /## Notes\n\n## References\n\n- \n\n## Risks\n\n- \n?$/)
+})
+
 test('the body carries no H1, because Obsidian already draws the filename as the title', async () => {
   fixture = seed()
   const created = await createItem(await reload(fixture), { title: 'Streaming', parent: 'wi-0004' })

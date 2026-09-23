@@ -176,7 +176,7 @@ export class Actions {
       agent: parent.agent,
       created: stamp,
       updated: stamp,
-    })
+    }, this.index.config.extraSections)
 
     const created = await this.run(`create ${title}`, () => this.app.vault.create(path, text))
     if (created) this.undoStack.record({ kind: 'create', path, before: '', after: text, label: `add ${title}` })

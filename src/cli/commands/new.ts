@@ -78,7 +78,7 @@ export async function createItem(vault: Vault, options: NewOptions): Promise<Cre
   }
   if (options.priority !== undefined) fields.priority = options.priority
 
-  await writeAtomic(path, renderWorkItem(fields))
+  await writeAtomic(path, renderWorkItem(fields, vault.config.extraSections))
 
   return { id, stem, relPath, path, parentStem: parent.stem }
 }

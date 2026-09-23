@@ -38,6 +38,12 @@ test('renderBody writes the sections in order, with no H1', () => {
   assert.doesNotMatch(body, /^# /m, 'Obsidian already draws the filename as the title')
   assert.ok(body.startsWith('## Objective'))
   assert.ok(body.indexOf('## Objective') < body.indexOf('## Context'))
+  assert.doesNotMatch(body, /^## Knowledge$/m)
+})
+
+test('renderBody appends configured headings after the built-in sections with bullet starters', () => {
+  const body = renderBody(requireTemplate(), ['References', 'Risks'])
+  assert.match(body, /## Notes\n\n## References\n\n- \n\n## Risks\n\n- \n?$/)
 })
 
 test('renderBody includes a section starter where one is defined', () => {

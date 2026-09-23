@@ -31,7 +31,7 @@ export interface NewWorkItem {
  * `board` and `prev_status` are never written here: absence is what "not a board" and "never
  * ticked" mean, and writing either would litter the vault with a key that says nothing.
  */
-export function renderWorkItem(item: NewWorkItem): string {
+export function renderWorkItem(item: NewWorkItem, extraSections: readonly string[] = []): string {
   const fields: [string, Scalar][] = [
     ['type', WORK_ITEM_TYPE],
     ['id', item.id],
@@ -45,5 +45,5 @@ export function renderWorkItem(item: NewWorkItem): string {
   fields.push(['created', item.created], ['updated', item.updated])
 
   const frontmatter = fields.map(([key, value]) => `${key}: ${formatScalar(value)}`).join('\n')
-  return `---\n${frontmatter}\n---\n\n${renderBody(requireTemplate(item.template))}`
+  return `---\n${frontmatter}\n---\n\n${renderBody(requireTemplate(item.template), extraSections)}`
 }

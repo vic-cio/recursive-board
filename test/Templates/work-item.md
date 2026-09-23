@@ -16,8 +16,4 @@ updated:
 
 - 
 
-## Knowledge
-
-- 
-
 ## Notes

@@ -28,16 +28,17 @@ An item with `board: true` renders its children in status columns. Any other ite
 
 ## Vault configuration
 
-Place an optional `.wi.json` file at the vault root to choose the work-item folder and the default parent for new items:
+Place an optional `.wi.json` file at the vault root to choose the work-item folder, default parent, and extra sections for new items:
 
 ```json
 {
   "workItemFolder": "Boards",
-  "defaultRoot": "Project"
+  "defaultRoot": "Project",
+  "extraSections": ["References", "Risks"]
 }
 ```
 
-`workItemFolder` is a vault-relative folder path. It defaults to `Boards`. `defaultRoot` is the filename stem of a root work item. It defaults to `null`, which means `wi new` needs an explicit `--parent`.
+`workItemFolder` is a vault-relative folder path. It defaults to `Boards`. `defaultRoot` is the filename stem of a root work item. It defaults to `null`, which means `wi new` needs an explicit `--parent`. `extraSections` is an array of non-empty, single-line headings. It defaults to `[]`. Each heading is added after the built-in template sections with an empty `- ` starter. The setting applies to `wi new`, `wi template write`, and items created in the plugin. Invalid values make `.wi.json` fail to load.
 
 `wi` finds the vault from `--vault <path>`, then `$WI_VAULT`, then the nearest folder with `.wi.json` or `Boards/`.
 

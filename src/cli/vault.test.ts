@@ -61,6 +61,12 @@ test('loadVault rejects malformed config rather than indexing Boards', async () 
   await assert.rejects(loadVault(fixture.root), /\.wi\.json/)
 })
 
+test('loadVault reports invalid extra sections as a config error', async () => {
+  fixture = vaultWithTree()
+  fixture.write('.wi.json', '{"extraSections":["Valid",12]}')
+  await assert.rejects(loadVault(fixture.root), /\.wi\.json: extraSections/)
+})
+
 test('loadVault records the filename stem, which is what a wikilink resolves to', async () => {
   fixture = vaultWithTree()
   const vault = await loadVault(fixture.root)
@@ -78,7 +84,7 @@ test('loadVault reads the parent as a resolved wikilink target', async () => {
 
 test('loadVault reads work items from the work-item folder alone (L5)', async () => {
   fixture = vaultWithTree()
-  fixture.write('Knowledge/Workflow Protocol.md', '---\ntype: knowledge\n---\n\n# Workflow\n')
+  fixture.write('Notes/Workflow Protocol.md', '---\ntype: note\n---\n\n# Workflow\n')
   fixture.write('Intake/scratch.md', 'raw thoughts, no frontmatter\n')
   fixture.write('Templates/work-item.md', item({ type: 'work-item', id: 'wi-XXXX', title: '' }))
   const vault = await loadVault(fixture.root)
@@ -87,7 +93,7 @@ test('loadVault reads work items from the work-item folder alone (L5)', async ()
 
 test('a work item filed outside the work-item folder is invisible (L5 cost)', async () => {
   fixture = vaultWithTree()
-  fixture.write('Knowledge/Misfiled.md', item({
+  fixture.write('Notes/Misfiled.md', item({
     type: 'work-item', id: 'wi-0042', title: 'Misfiled', status: 'backlog', parent: '"[[Main]]"',
   }))
   fixture.write('Attachments/also-misfiled.md', item({
@@ -101,7 +107,7 @@ test('a work item filed outside the work-item folder is invisible (L5 cost)', as
 
 test('loadVault does not report a nested file outside the product folders (L5)', async () => {
   fixture = vaultWithTree()
-  fixture.write('Knowledge/Topic/Nested.md', '# Nested knowledge\n')
+  fixture.write('Notes/Topic/Nested.md', '# Nested note\n')
   const vault = await loadVault(fixture.root)
   assert.deepEqual(vault.misplaced, [])
 })
@@ -228,7 +234,7 @@ test('loadVault ignores the hidden files it knows are harmless', async () => {
 
 test('only the work-item folder is checked for unaccounted files', async () => {
   fixture = vaultWithTree()
-  fixture.write('Knowledge/.hidden', 'junk')
+  fixture.write('Notes/.hidden', 'junk')
   const vault = await loadVault(fixture.root)
   assert.deepEqual(vault.unaccounted, [])
 })

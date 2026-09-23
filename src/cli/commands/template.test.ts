@@ -54,6 +54,14 @@ test('generated templates use the vault-configured default root', async () => {
   assert.equal(text, renderVaultTemplate(requireTemplate('work-item'), 'House move'))
 })
 
+test('generated templates append vault-configured sections', async () => {
+  fixture = seed()
+  fixture.write('.wi.json', '{"extraSections":["References","Risks"]}')
+  await writeTemplates(await loadVault(fixture.root))
+  const text = readFileSync(join(fixture.root, 'Templates/work-item.md'), 'utf8')
+  assert.match(text, /## Notes\n\n## References\n\n- \n\n## Risks\n\n- \n?$/)
+})
+
 test('writing twice leaves the file untouched, so it is no sync event', async () => {
   fixture = seed()
   await writeTemplates(await loadVault(fixture.root))
@@ -82,6 +90,7 @@ test('writeTemplates creates the folder when a vault has none', async () => {
 
 test('a generated template and a created work item share one body', async () => {
   fixture = seed()
+  fixture.write('.wi.json', '{"extraSections":["References"]}')
   await writeTemplates(await loadVault(fixture.root))
   const created = await createItem(await loadVault(fixture.root), {
     title: 'Streaming', parent: 'wi-0001',
