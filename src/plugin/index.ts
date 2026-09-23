@@ -13,6 +13,7 @@ import type { App, TFile } from 'obsidian'
 
 import { readLabels } from '../shared/labels.ts'
 import { DEFAULT_VAULT_CONFIG, type VaultConfig } from '../shared/vault-config.ts'
+import { archiveOwner } from '../shared/archive.ts'
 import {
   doneCutoff, isStatus, parseWikilink, STATUSES, WORK_ITEM_TYPE, type Status,
 } from '../shared/schema.ts'
@@ -29,6 +30,9 @@ export interface WorkItemMeta {
   /** The file the parent link resolves to, or null when the item is a root or an orphan. */
   parent: TFile | null
   board: boolean
+  archived: boolean
+  /** Own flag or an ancestor's flag, computed by the index on each rebuild. */
+  effectiveArchived: boolean
   priority: number | undefined
   updated: string | undefined
   owner: string | undefined
@@ -81,7 +85,21 @@ export class WorkItemIndex {
       siblings.push(meta)
       this.kids.set(meta.parent.path, siblings)
     }
+    for (const meta of this.items.values()) {
+      meta.effectiveArchived = this.archiveOwner(meta) !== null
+    }
     for (const siblings of this.kids.values()) siblings.sort(compareSiblings)
+  }
+
+  /** The nearest file whose flag hides this item. Used by the dimmed card's Unarchive action. */
+  archiveOwner(meta: WorkItemMeta): WorkItemMeta | null {
+    this.ensureFresh()
+    const path = archiveOwner(
+      meta.file.path,
+      (key) => this.items.get(key)?.parent?.path ?? null,
+      (key) => this.items.get(key)?.archived ?? false,
+    )
+    return path === null ? null : this.items.get(path) ?? null
   }
 
   private read(file: TFile): WorkItemMeta | null {
@@ -106,6 +124,8 @@ export class WorkItemIndex {
         ? this.app.metadataCache.getFirstLinkpathDest(parentLink, file.path)
         : null,
       board: frontmatter['board'] === true,
+      archived: frontmatter['archived'] === true,
+      effectiveArchived: false,
       priority: typeof priority === 'number' ? priority : undefined,
       updated: str(frontmatter['updated']),
       owner: str(frontmatter['owner']),
@@ -194,18 +214,21 @@ export interface Column {
   visible: WorkItemMeta[]
   /** Done items older than the window. Counted, not drawn (decision q10). */
   hidden: number
+  archived: WorkItemMeta[]
 }
 
 /**
  * Groups children into the four columns, applying the rolling Done window.
  * The window is a render filter, so it adds nothing to the canonical layer and cannot corrupt it.
  */
-export function toColumns(children: WorkItemMeta[], now: Date = new Date()): Column[] {
+export function toColumns(children: WorkItemMeta[], now: Date = new Date(), showArchived = false): Column[] {
   const cutoff = doneCutoff(now)
   return STATUSES.map((status) => {
     const all = children.filter((c) => c.status === status)
-    if (status !== 'done') return { status, visible: all, hidden: 0 }
-    const visible = all.filter((c) => (c.updated ?? '') >= cutoff)
-    return { status, visible, hidden: all.length - visible.length }
+    const archived = all.filter((c) => c.effectiveArchived)
+    const live = all.filter((c) => !c.effectiveArchived)
+    if (status !== 'done') return { status, visible: showArchived ? all : live, hidden: 0, archived }
+    const visible = live.filter((c) => (c.updated ?? '') >= cutoff)
+    return { status, visible: showArchived ? all.filter((c) => c.effectiveArchived || (c.updated ?? '') >= cutoff) : visible, hidden: live.length - visible.length, archived }
   })
 }

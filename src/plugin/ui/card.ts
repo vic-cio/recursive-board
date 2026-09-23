@@ -33,6 +33,7 @@ export function renderCard(
   if (meta.status !== undefined) card.addClass(`is-${meta.status}`)
   card.toggleClass('is-expanded', expanded)
   card.toggleClass('is-blocked', meta.blocked)
+  card.toggleClass('is-archived', meta.effectiveArchived)
   card.dataset['path'] = meta.file.path
 
   const face = card.createDiv({ cls: 'wi-card-face' })
@@ -194,7 +195,7 @@ async function renderExpansion(
   const children = ctx.index.childrenOf(meta.file)
   if (children.length > 0) {
     host.createDiv({ cls: 'wi-card-section', text: 'Children' })
-    renderChecklist(host, ctx, children, { grouped: false, parent: undefined })
+    renderChecklist(host, ctx, children, { grouped: false, parent: undefined, archiveParent: meta })
   }
 
   // The id lives here rather than on the face (docs/card-typography-design.md, q2): it is for

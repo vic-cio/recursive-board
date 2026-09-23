@@ -17,6 +17,7 @@ import { Platform } from 'obsidian'
 import type { Status } from '../../shared/schema.ts'
 import { toColumns, type Column, type WorkItemMeta } from '../index.ts'
 import { renderAddRow, renderHiddenNote } from './add-row.ts'
+import { renderArchiveNote, showingArchived } from './archive-note.ts'
 import { renderCard } from './card.ts'
 import type { RenderContext } from './context.ts'
 
@@ -26,15 +27,17 @@ export function renderBoard(
   parent: WorkItemMeta,
   children: WorkItemMeta[],
 ): void {
-  const columns = toColumns(children)
+  const columns = toColumns(children, new Date(), showingArchived(parent))
+  const archivedCount = children.filter((c) => c.effectiveArchived).length
   if (Platform.isMobile) {
-    renderTabbed(host.createDiv({ cls: 'wi-tabbed' }), ctx, parent, columns)
+    renderTabbed(host.createDiv({ cls: 'wi-tabbed' }), ctx, parent, columns, archivedCount)
     return
   }
   const board = host.createDiv({ cls: 'wi-board' })
   for (const column of columns) {
     renderColumn(board, ctx, parent, column.status, column.visible, column.hidden)
   }
+  renderArchiveNote(host, ctx, parent, archivedCount)
 }
 
 /**
@@ -53,6 +56,7 @@ function renderTabbed(
   ctx: RenderContext,
   parent: WorkItemMeta,
   columns: Column[],
+  archivedCount: number,
 ): void {
   host.empty()
   const shown = shownTab.get(parent.file.path) ?? defaultTab(columns)
@@ -67,13 +71,14 @@ function renderTabbed(
     tab.createSpan({ cls: 'wi-tab-count', text: String(column.visible.length) })
     tab.addEventListener('click', () => {
       shownTab.set(parent.file.path, column.status)
-      renderTabbed(host, ctx, parent, columns)
+      renderTabbed(host, ctx, parent, columns, archivedCount)
     })
   }
 
   const column = columns.find((c) => c.status === shown) ?? columns[0]!
   const board = host.createDiv({ cls: 'wi-board' })
   renderColumn(board, ctx, parent, column.status, column.visible, column.hidden)
+  renderArchiveNote(host, ctx, parent, archivedCount)
 }
 
 function renderColumn(

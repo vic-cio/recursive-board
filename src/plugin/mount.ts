@@ -139,6 +139,7 @@ export function mountLeaf(leaf: WorkspaceLeaf, ctx: RenderContext): void {
     renderChecklist(bottom, ctx, ctx.index.childrenOf(meta.file), {
       grouped: meta.board,
       parent: meta,
+      archiveParent: meta,
     })
   }
 }

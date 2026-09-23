@@ -18,6 +18,7 @@ import { Component, MarkdownRenderer } from 'obsidian'
 import { checklistMarkdown } from '../../shared/checklist.ts'
 import { toColumns, type WorkItemMeta } from '../index.ts'
 import { renderAddRow, renderHiddenNote } from './add-row.ts'
+import { renderArchiveNote, showingArchived } from './archive-note.ts'
 import { renderLabels, renderRemove } from './card.ts'
 import type { RenderContext } from './context.ts'
 import { attachMenu, renderMenuButton } from './menu.ts'
@@ -30,6 +31,7 @@ export interface ChecklistOptions {
    * Omitted inside an expanded card, where an add row would nest a capture surface in a card.
    */
   parent?: WorkItemMeta | undefined
+  archiveParent?: WorkItemMeta | undefined
 }
 
 export function renderChecklist(
@@ -39,16 +41,21 @@ export function renderChecklist(
   options: ChecklistOptions,
 ): void {
   const parent = options.parent
+  const archiveParent = options.archiveParent ?? parent
+  const showArchived = archiveParent ? showingArchived(archiveParent) : false
+  const archivedCount = children.filter((c) => c.effectiveArchived).length
 
   if (!options.grouped) {
-    if (children.length === 0) host.createDiv({ cls: 'wi-empty', text: 'No children yet.' })
-    else renderRows(host, ctx, children)
+    const visible = showArchived ? children : children.filter((c) => !c.effectiveArchived)
+    if (visible.length === 0) host.createDiv({ cls: 'wi-empty', text: 'No children yet.' })
+    else renderRows(host, ctx, visible)
     // A checklist has no columns, so a new item lands in backlog, the creation default.
     if (parent) renderAddRow(host, ctx, parent, 'backlog')
+    if (archiveParent) renderArchiveNote(host, ctx, archiveParent, archivedCount)
     return
   }
 
-  for (const column of toColumns(children)) {
+  for (const column of toColumns(children, new Date(), showArchived)) {
     const rows = column.visible
     // Every status gets a group when the view can create into it, so the phone can capture.
     if (rows.length === 0 && column.hidden === 0 && !parent) continue
@@ -61,6 +68,7 @@ export function renderChecklist(
     if (column.hidden > 0) renderHiddenNote(group, column.hidden)
     if (parent) renderAddRow(group, ctx, parent, column.status)
   }
+  if (archiveParent) renderArchiveNote(host, ctx, archiveParent, archivedCount)
 }
 
 /**
@@ -105,6 +113,7 @@ function renderRows(host: HTMLElement, ctx: RenderContext, children: WorkItemMet
 function decorateRow(row: HTMLElement, ctx: RenderContext, meta: WorkItemMeta): void {
   row.addClass('wi-check-row')
   row.toggleClass('is-blocked', meta.blocked)
+  row.toggleClass('is-archived', meta.effectiveArchived)
 
   // Capture phase, so this runs before any handler Obsidian attached to the checkbox or the link.
   const box = row.querySelector<HTMLInputElement>('input.task-list-item-checkbox')

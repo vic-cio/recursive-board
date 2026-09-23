@@ -11,6 +11,7 @@
 import { Notice, TFile, type App } from 'obsidian'
 
 import { applyEdits, withStamp, type Edit } from '../shared/edits.ts'
+import { archiveEdits, activeDescendant } from '../shared/archive.ts'
 import {
   boardEdits, moveEdits, moveRefusal, statusEdits, untickTarget,
 } from '../shared/transitions.ts'
@@ -87,6 +88,26 @@ export class Actions {
       promoted ? `promote ${meta.title}` : `demote ${meta.title}`,
       () => this.edit(meta.file, boardEdits(promoted), `${promoted ? 'promote' : 'demote'} ${meta.title}`),
     )
+  }
+
+  /** Archive one file. The index applies its flag to descendants when it reads them. */
+  async setArchived(meta: WorkItemMeta, archived: boolean): Promise<void> {
+    const target = archived ? meta : this.index.archiveOwner(meta) ?? meta
+    const edits = archiveEdits(target.archived, archived)
+    if (edits === null) return
+    if (archived) {
+      const active = activeDescendant(
+        target,
+        (item) => this.index.childrenOf(item.file),
+        (item) => item.status,
+      )
+      if (active) {
+        new Notice(`Cannot archive ${target.title}: descendant ${active.title} (${active.id ?? active.file.path}) is doing.`)
+        return
+      }
+    }
+    const verb = archived ? 'archive' : 'unarchive'
+    await this.run(`${verb} ${target.title}`, () => this.edit(target.file, edits, `${verb} ${target.title}`))
   }
 
   /**

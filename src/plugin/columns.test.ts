@@ -26,6 +26,8 @@ function meta(over: Partial<WorkItemMeta> & { stem: string }): WorkItemMeta {
     owner: over.owner,
     agent: over.agent,
     blocked: over.blocked ?? false,
+    archived: over.archived ?? false,
+    effectiveArchived: over.effectiveArchived ?? false,
     prevStatus: over.prevStatus,
     labels: over.labels ?? [],
   }
@@ -86,6 +88,20 @@ test('the window never hides anything outside done', () => {
   assert.equal(columns[0]!.visible.length, 1)
   assert.equal(columns[2]!.visible.length, 1)
   assert.equal(columns[0]!.hidden + columns[2]!.hidden, 0)
+})
+
+test('archived items are counted separately from the Done window and can be shown dimmed', () => {
+  const rows = [
+    meta({ stem: 'Archive', status: 'backlog', effectiveArchived: true }),
+    meta({ stem: 'Old archived', status: 'done', updated: '2020-01-01', effectiveArchived: true }),
+    meta({ stem: 'Old done', status: 'done', updated: '2020-01-01' }),
+  ]
+  const hidden = toColumns(rows, NOW)
+  assert.equal(hidden[0]!.archived.length, 1)
+  assert.deepEqual(hidden[0]!.visible, [])
+  assert.equal(hidden[3]!.hidden, 1)
+  assert.equal(hidden[3]!.archived.length, 1)
+  assert.deepEqual(toColumns(rows, NOW, true)[3]!.visible.map((c) => c.stem), ['Old archived'])
 })
 
 test('compareSiblings puts priority first, ascending', () => {

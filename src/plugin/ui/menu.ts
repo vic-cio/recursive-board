@@ -52,6 +52,10 @@ function buildMenu(ctx: RenderContext, meta: WorkItemMeta): Menu {
 
   menu.addSeparator()
   menu.addItem((item) => item
+    .setTitle(meta.effectiveArchived ? 'Unarchive' : 'Archive')
+    .setIcon('archive')
+    .onClick(() => void ctx.actions.setArchived(meta, !meta.effectiveArchived)))
+  menu.addItem((item) => item
     .setTitle('Move to…')
     .setIcon('folder-input')
     .onClick(() => new MoveModal(ctx.app, ctx.index, ctx.actions, meta).open()))

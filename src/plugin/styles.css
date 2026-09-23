@@ -875,3 +875,21 @@
   color: var(--text-muted);
   font-size: var(--font-ui-smaller);
 }
+
+/* Archived items are revealed only by the session toggle. */
+.wi-card.is-archived,
+.wi-check-row.is-archived {
+  opacity: 0.48;
+}
+
+.wi-archive-toggle {
+  display: block;
+  margin: 8px 0;
+  padding: 2px 4px;
+  border: 0;
+  box-shadow: none;
+  background: none;
+  color: var(--text-muted);
+  font-size: var(--font-ui-smaller);
+  cursor: pointer;
+}
