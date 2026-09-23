@@ -109,14 +109,6 @@ export default class RecursiveBoardPlugin extends Plugin {
       this.actions.undoStack.rename(oldPath, file.path)
     }))
 
-    // A phone has no devtools console (risk 3). This writes what the layout actually is into the
-    // plugin's own folder, which iCloud carries back to the Mac to be read there.
-    this.addCommand({
-      id: 'write-layout-report',
-      name: 'Write a layout report for debugging',
-      callback: () => void this.writeLayoutReport(),
-    })
-
     this.app.workspace.onLayoutReady(() => this.schedule())
   }
 
@@ -124,67 +116,6 @@ export default class RecursiveBoardPlugin extends Plugin {
     if (this.pending !== null) window.clearTimeout(this.pending)
     this.peeking.clear()
     unmountAll(this.app)
-  }
-
-  private async writeLayoutReport(): Promise<void> {
-    const view = this.app.workspace.getActiveViewOfType(MarkdownView)
-    if (!view) {
-      new Notice('Open a work item first.')
-      return
-    }
-    const describe = (el: Element) => {
-      const style = getComputedStyle(el)
-      const box = el.getBoundingClientRect()
-      return {
-        tag: el.tagName.toLowerCase(),
-        cls: el.className,
-        top: Math.round(box.top),
-        left: Math.round(box.left),
-        width: Math.round(box.width),
-        height: Math.round(box.height),
-        display: style.display,
-        flexDirection: style.flexDirection,
-        alignItems: style.alignItems,
-        position: style.position,
-        flex: style.flex,
-        minHeight: style.minHeight,
-        padding: style.padding,
-        margin: style.margin,
-      }
-    }
-    const sizers = [...view.contentEl.querySelectorAll('.markdown-preview-sizer, .cm-sizer')]
-    const report = {
-      at: new Date().toISOString(),
-      mobile: Platform.isMobile,
-      mode: view.getMode(),
-      file: view.file?.path,
-      viewport: { width: window.innerWidth, height: window.innerHeight },
-      bodyClasses: document.body.className,
-      contentEl: describe(view.contentEl),
-      sizers: sizers.map((sizer) => ({
-        self: describe(sizer),
-        parent: sizer.parentElement ? describe(sizer.parentElement) : null,
-        children: [...sizer.children].map(describe),
-      })),
-      content: [...view.contentEl.querySelectorAll('.cm-contentContainer, .cm-contentContainer > *')]
-        .map((el) => ({ ...describe(el), paddingBottom: getComputedStyle(el).paddingBottom })),
-      regions: [...view.contentEl.querySelectorAll('.wi-region')].map((el) => ({
-        ...describe(el),
-        childCount: el.children.length,
-      })),
-      // The phone board, from the pane down to its first card: a width wrong anywhere shows here.
-      board: [...document.querySelectorAll(
-        '.wi-takeover, .wi-takeover-body, .wi-tabbed, .wi-tabbed > .wi-board, .wi-tabbed .wi-column, .wi-tabbed .wi-stack, .wi-tabbed .wi-card',
-      )].slice(0, 8).map(describe),
-    }
-    const path = `${this.manifest.dir}/layout-report.json`
-    await this.app.vault.adapter.write(path, JSON.stringify(report, null, 2))
-    // iCloud can hold the file back for minutes, so the board's widths also go on screen, where a
-    // screenshot carries them at once.
-    const widths = report.board
-      .map((b) => `${String(b.cls).split(' ').find((c) => c.startsWith('wi-')) ?? b.tag} ${b.width} ${b.display} ${b.flexDirection}`)
-      .join('\n')
-    new Notice(`Wrote ${path}\nviewport ${report.viewport.width}\n${widths}`, 60_000)
   }
 
   private stale(): void {
