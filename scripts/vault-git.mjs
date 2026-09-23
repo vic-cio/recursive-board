@@ -1,24 +1,13 @@
 #!/usr/bin/env node
 /**
- * Install the two things that make a vault's history real.
+ * Install a validation hook in a vault Git repository.
  *
- * `install-hook` puts `wi validate` in the vault repo's pre-commit hook. Decision D7 asked for
- * exactly this: the paths that corrupt a vault are outside the plugin, and a hook catches all of
- * them at the moment the damage would become permanent and while the diff is still visible.
- *
- * `install-timer` runs `scripts/autocommit.mjs` on a launchd interval. Decision D2 made vault
- * commits manual and Mac-only, which was a fine discipline while the maintainer was the only writer. With
- * agents deleting unreviewed, a manual commit is a safety net nobody pulls.
- *
- * The two are deliberately different about failure. The hook blocks a commit that would record an
- * invalid vault, because a person is there to read why. The timer commits regardless and records
- * the validation result in the message, because a broken vault is the state most worth having
- * history for.
+ * Edits outside the plugin can leave a vault invalid. Running `wi validate` before each commit
+ * catches those errors while the changes are still available to fix.
  *
  * Usage:
  *   node scripts/vault-git.mjs status        --vault <path>
  *   node scripts/vault-git.mjs install-hook  --vault <path> [--force]
- *   node scripts/vault-git.mjs install-timer --vault <path> [--interval 900] [--push]
  *   node scripts/vault-git.mjs uninstall     --vault <path>
  */
 import { execFile } from 'node:child_process'
@@ -26,7 +15,6 @@ import { promisify } from 'node:util'
 import { readFile, writeFile, chmod, mkdir, rm } from 'node:fs/promises'
 import { existsSync } from 'node:fs'
 import { join, dirname, resolve } from 'node:path'
-import { homedir } from 'node:os'
 import { fileURLToPath } from 'node:url'
 
 const run = promisify(execFile)
@@ -47,7 +35,7 @@ const die = (line, code = 2) => {
 
 const vaultArg = flag('--vault')
 if (typeof vaultArg !== 'string') {
-  die('usage: node scripts/vault-git.mjs <status|install-hook|install-timer|uninstall> --vault <path>')
+  die('usage: node scripts/vault-git.mjs <status|install-hook|uninstall> --vault <path>')
 }
 const vault = resolve(vaultArg)
 // The same definition `wi` uses: a vault is a folder holding Boards/.
@@ -61,51 +49,20 @@ async function topLevel() {
   }
 }
 
-/** One label per vault, so two vaults can each have a timer. */
-function label() {
-  const slug = vault.replace(/[^A-Za-z0-9]+/g, '-').replace(/^-|-$/g, '').toLowerCase()
-  return `com.vault.autocommit.${slug}`.slice(0, 200)
-}
-
-const plistPath = () => join(homedir(), 'Library', 'LaunchAgents', `${label()}.plist`)
-
-const HOOK_MARK = '# installed by vault scripts/vault-git.mjs'
+const HOOK_MARK = '# installed by scripts/vault-git.mjs'
+const isOurHook = (body) => body.split('\n').some((line) =>
+  line.startsWith('# installed by ') && line.endsWith('scripts/vault-git.mjs'))
 
 function hookBody() {
   return `#!/bin/sh
 ${HOOK_MARK}
 #
-# Decision D7. The paths that actually corrupt this vault are outside the plugin: a hand edit on
-# the phone, an agent rewriting YAML, a sync layer resurrecting a stale copy. This catches all
-# three at the moment the damage would become permanent, while the diff is still visible.
+# Edits outside the plugin can leave a vault invalid. Validate before committing so errors can
+# be fixed while the changes are still available.
 #
-# To commit anyway, which is sometimes the right call:  git commit --no-verify
+# To bypass validation: git commit --no-verify
 
 exec ${JSON.stringify(NODE)} ${JSON.stringify(join(repo, 'src', 'cli', 'wi.ts'))} validate --vault ${JSON.stringify(vault)}
-`
-}
-
-function plistBody(interval, push) {
-  const argv = [NODE, join(repo, 'scripts', 'autocommit.mjs'), '--vault', vault]
-  if (push) argv.push('--push')
-  // Outside the vault: a log is not vault content, and it would otherwise sync to the phone.
-  const log = join(homedir(), 'Library', 'Logs', `${label()}.log`)
-  const xml = argv.map((a) => `      <string>${a.replace(/&/g, '&amp;').replace(/</g, '&lt;')}</string>`).join('\n')
-  return `<?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-<plist version="1.0">
-  <dict>
-    <key>Label</key><string>${label()}</string>
-    <key>ProgramArguments</key>
-    <array>
-${xml}
-    </array>
-    <key>StartInterval</key><integer>${interval}</integer>
-    <key>RunAtLoad</key><false/>
-    <key>StandardOutPath</key><string>${log}</string>
-    <key>StandardErrorPath</key><string>${log}</string>
-  </dict>
-</plist>
 `
 }
 
@@ -116,18 +73,8 @@ switch (command) {
     console.log(`git repo     ${top ?? 'none — run git init in the vault'}`)
     if (top) {
       const hook = join(top, '.git', 'hooks', 'pre-commit')
-      const installed = existsSync(hook) && (await readFile(hook, 'utf8')).includes(HOOK_MARK)
+      const installed = existsSync(hook) && isOurHook(await readFile(hook, 'utf8'))
       console.log(`pre-commit   ${installed ? 'installed' : existsSync(hook) ? 'present, not ours' : 'not installed'}`)
-    }
-    const plist = plistPath()
-    console.log(`timer plist  ${existsSync(plist) ? plist : 'not installed'}`)
-    if (existsSync(plist)) {
-      try {
-        await run('launchctl', ['print', `gui/${process.getuid()}/${label()}`])
-        console.log('timer        loaded')
-      } catch {
-        console.log('timer        not loaded')
-      }
     }
     break
   }
@@ -139,7 +86,7 @@ switch (command) {
     const hook = join(dir, 'pre-commit')
     if (existsSync(hook)) {
       const current = await readFile(hook, 'utf8')
-      if (!current.includes(HOOK_MARK) && !args.includes('--force')) {
+      if (!isOurHook(current) && !args.includes('--force')) {
         die(`${hook} already exists and is not ours. Read it, then pass --force to replace it.`)
       }
     }
@@ -163,43 +110,19 @@ switch (command) {
     break
   }
 
-  case 'install-timer': {
-    const interval = Number(flag('--interval') ?? 900)
-    if (!Number.isFinite(interval) || interval < 60) die('--interval must be at least 60 seconds')
-    if (!(await topLevel())) die(`${vault} is not inside a Git repository. Run git init there first.`)
-
-    const plist = plistPath()
-    await mkdir(dirname(plist), { recursive: true })
-    await writeFile(plist, plistBody(interval, args.includes('--push')), 'utf8')
-
-    const target = `gui/${process.getuid()}`
-    await run('launchctl', ['bootout', `${target}/${label()}`]).catch(() => {})
-    await run('launchctl', ['bootstrap', target, plist])
-    console.log(`installed ${plist}`)
-    console.log(`committing every ${interval}s`)
-    console.log(`log at ${join(homedir(), 'Library', 'Logs', `${label()}.log`)}`)
-    break
-  }
-
   case 'uninstall': {
     const top = await topLevel()
     if (top) {
       const hook = join(top, '.git', 'hooks', 'pre-commit')
-      if (existsSync(hook) && (await readFile(hook, 'utf8')).includes(HOOK_MARK)) {
+      if (existsSync(hook) && isOurHook(await readFile(hook, 'utf8'))) {
         await rm(hook)
         console.log(`removed ${hook}`)
       }
-    }
-    const plist = plistPath()
-    if (existsSync(plist)) {
-      await run('launchctl', ['bootout', `gui/${process.getuid()}/${label()}`]).catch(() => {})
-      await rm(plist)
-      console.log(`removed ${plist}`)
     }
     console.log('done')
     break
   }
 
   default:
-    die(`unknown command ${command ?? '(none)'}. Try status, install-hook, install-timer, uninstall.`)
+    die(`unknown command ${command ?? '(none)'}. Try status, install-hook, uninstall.`)
 }

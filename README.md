@@ -82,6 +82,16 @@ wi --help
 
 Run `wi` inside a vault, pass `--vault <path>`, or set `WI_VAULT`. Commands accept a work-item id, filename, or title as a reference. An id takes precedence when references are ambiguous. Add `--json` for machine-readable output. The `--vault <path>` and `--json` flags apply to all commands.
 
+## Install the Git validation hook
+
+If your vault is a Git repository, run this from a Recursive Board source checkout:
+
+```sh
+node scripts/vault-git.mjs install-hook --vault <vault-path>
+```
+
+The pre-commit hook runs `wi validate` and stops a commit when the vault has errors. The checkout must remain available because the hook calls its CLI source. Use `status` or `uninstall` in place of `install-hook` to inspect or remove the hook.
+
 ## Commands
 
 | Command | What it does |
