@@ -32,7 +32,7 @@ export const OPTIONAL_FIELDS = [
   'depends_on',
   'tags',
   'archived', // docs/adr/0007-archive-is-a-frontmatter-flag.md: a flag, not a status.
-  'area', // docs/adr/area-work-items.md: an ongoing space with no status.
+  'area', // docs/adr/0028-area-work-items.md: an ongoing space with no status.
 ] as const
 
 /** Fields a new child inherits from its parent, as both writers do for new children. */
