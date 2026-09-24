@@ -77,7 +77,7 @@ Notes
   \`wi here\` reads or sets this repository's vault and board pointer in your user config.
 `
 
-const VERSION = '0.1.2'
+const VERSION = '0.2.0'
 
 class UsageError extends Error {}
 
