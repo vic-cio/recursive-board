@@ -19,6 +19,7 @@ import { toAreas, toColumns, type AreaSummary, type Column, type WorkItemMeta } 
 import { renderAddRow, renderHiddenNote } from './add-row.ts'
 import { renderArchiveNote, showingArchived } from './archive-note.ts'
 import { renderCard } from './card.ts'
+import { attachMenu, renderMenuButton } from './menu.ts'
 import type { RenderContext } from './context.ts'
 import { statusLabel } from './status-label.ts'
 
@@ -96,7 +97,9 @@ function renderPhoneAreas(host: HTMLElement, ctx: RenderContext, areas: AreaSumm
 
 function renderAreaButtons(host: HTMLElement, ctx: RenderContext, areas: AreaSummary[]): void {
   for (const { meta, doingCount } of areas) {
-    const chip = host.createEl('button', { cls: 'wi-area-chip' })
+    // The phone has no right click, so each area row carries the ⋯ button beside its chip.
+    const row = Platform.isMobile ? host.createDiv({ cls: 'wi-area-row' }) : host
+    const chip = row.createEl('button', { cls: 'wi-area-chip' })
     chip.setAttr('aria-label', `${meta.title}, ${doingCount} Doing`)
     chip.createSpan({ cls: 'wi-area-title', text: meta.title })
     chip.createSpan({ cls: 'wi-area-count', text: String(doingCount) })
@@ -104,6 +107,8 @@ function renderAreaButtons(host: HTMLElement, ctx: RenderContext, areas: AreaSum
       event.preventDefault()
       void ctx.actions.open(meta, event.metaKey || event.ctrlKey)
     })
+    attachMenu(chip, ctx, meta)
+    renderMenuButton(row, ctx, meta)
   }
 }
 

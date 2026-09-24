@@ -983,3 +983,16 @@
   font-size: var(--font-ui-smaller);
   cursor: pointer;
 }
+
+/* On the phone, an area row holds its chip and the ⋯ button that opens the area's menu. */
+.wi-area-row {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  min-width: 0;
+}
+
+.wi-area-row > .wi-area-chip {
+  flex: 1 1 auto;
+  min-width: 0;
+}
