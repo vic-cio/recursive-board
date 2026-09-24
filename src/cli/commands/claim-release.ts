@@ -24,6 +24,7 @@ export interface ReleaseChange {
 
 export async function claimItem(vault: Vault, ref: string, agent: string): Promise<ClaimChange> {
   const item = vault.resolve(ref)
+  if (item.area) throw new Error(`${item.relPath} is an area, and an area cannot be claimed.`)
   if (item.parent === null) throw new Error(`${item.relPath} is a root, and a root cannot be claimed.`)
   const current = item.frontmatter.get('agent')
   const currentAgent = typeof current === 'string' && current.trim() !== '' ? current : undefined

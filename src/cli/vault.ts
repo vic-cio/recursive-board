@@ -18,7 +18,7 @@ import { parseFrontmatter, type Frontmatter } from '../shared/frontmatter.ts'
 import { parseVaultConfig, WI_CONFIG_FILE, type VaultConfig } from '../shared/vault-config.ts'
 import { archiveOwner } from '../shared/archive.ts'
 import {
-  BOARDS, FOLDERS, WORK_ITEM_TYPE, isStatus, parseWikilink, type Status,
+  BOARDS, FOLDERS, WORK_ITEM_TYPE, isArea, isStatus, parseWikilink, type Status,
 } from '../shared/schema.ts'
 
 export interface WorkItem {
@@ -36,6 +36,7 @@ export interface WorkItem {
   /** The raw `parent` value, so a malformed one can be reported rather than guessed at. */
   parentRaw: string | undefined
   board: boolean
+  area: boolean
   archived: boolean
   frontmatter: Frontmatter
   text: string
@@ -239,6 +240,7 @@ function toWorkItem(root: string, relPath: string, text: string): WorkItem | nul
     parent: parseWikilink(parentRaw),
     parentRaw: typeof parentRaw === 'string' ? parentRaw : undefined,
     board: frontmatter.get('board') === true,
+    area: isArea(frontmatter.get('area')),
     archived: frontmatter.get('archived') === true,
     frontmatter,
     text,

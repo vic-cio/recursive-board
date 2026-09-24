@@ -85,6 +85,27 @@ test('a non-root without a status is an error', async () => {
   assert.ok(rules((await run(fixture)).problems).includes('status-missing'))
 })
 
+test('an area with a parent and no status is valid, while an area status is rejected', async () => {
+  fixture = healthy()
+  fixture.write('Boards/Operations.md', item({
+    type: 'work-item', id: 'wi-0020', title: 'Operations', area: true,
+    parent: '"[[Main]]"', created: '2026-09-21', updated: '2026-09-21',
+  }))
+  assert.deepEqual((await run(fixture)).problems, [])
+
+  fixture.write('Boards/Operations.md', item({
+    type: 'work-item', id: 'wi-0020', title: 'Operations', area: true, status: 'doing',
+    parent: '"[[Main]]"', created: '2026-09-21', updated: '2026-09-21',
+  }))
+  assert.ok(rules((await run(fixture)).problems).includes('status-on-area'))
+
+  fixture.write('Boards/Operations.md', item({
+    type: 'work-item', id: 'wi-0020', title: 'Operations', area: false, status: 'doing',
+    parent: '"[[Main]]"', created: '2026-09-21', updated: '2026-09-21',
+  }))
+  assert.ok(rules((await run(fixture)).problems).includes('area-invalid'))
+})
+
 test('an unresolved parent is reported, and the item is left alone', async () => {
   fixture = healthy()
   const path = fixture.write('Boards/Orphan.md', item({

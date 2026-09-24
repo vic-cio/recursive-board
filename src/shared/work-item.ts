@@ -11,10 +11,9 @@ import { formatScalar, type Scalar } from './frontmatter.ts'
 import { WORK_ITEM_TYPE, formatWikilink, type Status } from './schema.ts'
 import { renderBody, requireTemplate } from './templates.ts'
 
-export interface NewWorkItem {
+interface NewWorkItemFields {
   id: string
   title: string
-  status: Status
   /** The parent's filename stem. The wikilink is authoritative for resolution (docs/adr/0002-work-item-identity-and-parent-links.md). */
   parentStem: string
   owner?: string | undefined
@@ -25,6 +24,11 @@ export interface NewWorkItem {
   /** A name from the template registry. Omitted uses the default. */
   template?: string | undefined
 }
+
+export type NewWorkItem = NewWorkItemFields & (
+  | { area: true; status?: never }
+  | { area?: false; status: Status }
+)
 
 export interface NewRootWorkItem {
   id: string
@@ -39,20 +43,25 @@ export interface NewRootWorkItem {
  * ticked" mean, and writing either would litter the vault with a key that says nothing.
  */
 export function renderWorkItem(item: NewWorkItem, extraSections: readonly string[] = []): string {
+  const template = requireTemplate(item.template)
+  if (Boolean(template.area) !== (item.area === true)) {
+    throw new Error(`template "${template.name}" does not match the work item kind`)
+  }
   const fields: [string, Scalar][] = [
     ['type', WORK_ITEM_TYPE],
     ['id', item.id],
     ['title', item.title],
-    ['status', item.status],
-    ['parent', formatWikilink(item.parentStem)],
   ]
+  if (item.area) fields.push(['area', true])
+  else fields.push(['status', item.status])
+  fields.push(['parent', formatWikilink(item.parentStem)])
   if (item.owner !== undefined && item.owner !== '') fields.push(['owner', item.owner])
   if (item.agent !== undefined && item.agent !== '') fields.push(['agent', item.agent])
   if (item.priority !== undefined) fields.push(['priority', item.priority])
   fields.push(['created', item.created], ['updated', item.updated])
 
   const frontmatter = fields.map(([key, value]) => `${key}: ${formatScalar(value)}`).join('\n')
-  return `---\n${frontmatter}\n---\n\n${renderBody(requireTemplate(item.template), extraSections)}`
+  return `---\n${frontmatter}\n---\n\n${renderBody(template, extraSections)}`
 }
 
 /** Renders a board root. Roots intentionally have neither parent nor status. */

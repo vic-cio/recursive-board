@@ -59,6 +59,18 @@ test('listChildren groups by status in column order', async () => {
   assert.deepEqual(groups.get('options')!, [])
 })
 
+test('listChildren separates areas from status-bearing children', async () => {
+  fixture = seed()
+  fixture.write('Boards/Operations.md', item({
+    type: 'work-item', id: 'wi-0090', title: 'Operations', area: true,
+    parent: '"[[Main]]"', created: '2026-09-21', updated: '2026-09-21',
+  }))
+  const result = listChildren(await loadVault(fixture.root), 'Main')
+  assert.deepEqual(result.areas.map((row) => row.item.title), ['Operations'])
+  assert.ok(result.children.every((row) => row.item.frontmatter.get('area') !== true))
+  assert.ok([...result.byStatus.values()].every((rows) => rows.every((row) => row.item.status !== undefined)))
+})
+
 test('listChildren filters to one status', async () => {
   fixture = seed()
   const vault = await loadVault(fixture.root)

@@ -42,6 +42,7 @@ export interface Spec {
   priority?: number
   tags?: string[]
   board?: boolean
+  area?: boolean
   blocked?: boolean
   prevStatus?: Status
   /** Frontmatter lines outside the schema, written as given. */
@@ -117,6 +118,8 @@ write untouched.
     updated: 1, tags: ['design', 'plugin'] },
   { id: 'wi-0020', title: 'Explore a command wrapper', parent: 'Main', status: 'options', created: 1,
     updated: 1, agent: 'codex' },
+  { id: 'wi-0021', title: 'Operations', parent: 'Main', area: true, created: 5, updated: 2,
+    body: OBJECTIVE('An ongoing space for work that does not have a definition of done.') },
 ]
 
 function daysAgo(days: number, now: Date): string {
@@ -146,17 +149,19 @@ function renderRoot(spec: Spec, now: Date): string {
 }
 
 function render(spec: Spec, parentStem: string, now: Date): string {
-  const text = renderWorkItem({
+  const common = {
     id: spec.id,
     title: spec.title,
-    status: spec.status ?? 'backlog',
     parentStem,
     owner: spec.owner,
     agent: spec.agent,
     priority: spec.priority,
     created: daysAgo(spec.created, now),
     updated: daysAgo(spec.updated, now),
-  })
+  }
+  const text = renderWorkItem(spec.area
+    ? { ...common, area: true, template: 'area' }
+    : { ...common, status: spec.status ?? 'backlog' })
   const close = text.indexOf('\n---\n', 4)
   const extra = extraLines(spec)
   const head = extra.length > 0 ? `${text.slice(0, close)}\n${extra.join('\n')}` : text.slice(0, close)

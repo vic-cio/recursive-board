@@ -20,6 +20,7 @@ export interface ChildRow {
 export interface ChildListing {
   parent: WorkItem
   children: ChildRow[]
+  areas: ChildRow[]
   byStatus: Map<Status, ChildRow[]>
   /** Set when the parent chain loops back on itself, which integrity rule 3 forbids. */
   cycle: boolean
@@ -43,6 +44,7 @@ export function listChildren(
 
   const parent = vault.resolve(ref)
   const rows: ChildRow[] = []
+  const areas: ChildRow[] = []
   const seen = new Set<string>([parent.relPath])
   let cycle = false
 
@@ -55,7 +57,9 @@ export function listChildren(
       seen.add(child.relPath)
       const effectiveArchived = vault.isArchived(child)
       if (!effectiveArchived || archived) {
-        rows.push({ item: child, childCount: vault.childrenOf(child).filter((kid) => !vault.isArchived(kid) || archived).length, depth, archived: effectiveArchived })
+        const row = { item: child, childCount: vault.childrenOf(child).filter((kid) => !vault.isArchived(kid) || archived).length, depth, archived: effectiveArchived }
+        if (child.area) areas.push(row)
+        else rows.push(row)
       }
       if (recursive) walk(child, depth + 1)
     }
@@ -69,5 +73,5 @@ export function listChildren(
     byStatus.set(value, filtered.filter((r) => r.item.status === value))
   }
 
-  return { parent, children: filtered, byStatus, cycle }
+  return { parent, children: filtered, areas: status === undefined ? areas : [], byStatus, cycle }
 }

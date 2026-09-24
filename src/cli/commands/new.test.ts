@@ -47,6 +47,19 @@ test('createItem writes a file into Boards with the nine-field shape', async () 
   assert.equal(fm.get('created'), fm.get('updated'))
 })
 
+test('createItem with the area template writes an area without a status', async () => {
+  fixture = seed()
+  const created = await createItem(await reload(fixture), {
+    title: 'Operations', parent: 'wi-0001', template: 'area',
+  })
+  const text = readFileSync(created.path, 'utf8')
+  const fm = parseFrontmatter(text)!
+  assert.equal(fm.get('area'), true)
+  assert.equal(fm.has('status'), false)
+  assert.equal(fm.get('parent'), '[[Main]]')
+  assert.match(text, /## Objective/)
+})
+
 test('createItem uses the configured folder and root when no parent is given', async () => {
   fixture = seed()
   fixture.write('.wi.json', '{"workItemFolder":"Projects","defaultRoot":"Launch"}')

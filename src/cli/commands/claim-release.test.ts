@@ -75,6 +75,15 @@ test('claim refuses a different agent, a done item, and a board with doing child
   assert.equal(fmOf(fixture).has('agent'), false)
 })
 
+test('claim refuses an area', async () => {
+  fixture = seed()
+  fixture.write('Boards/Operations.md', item({
+    type: 'work-item', id: 'wi-0090', title: 'Operations', area: true,
+    parent: '"[[Main]]"', created: '2026-09-21', updated: '2026-09-21',
+  }))
+  await assert.rejects(claimItem(await loadVault(fixture.root), 'wi-0090', 'codex'), /area/i)
+})
+
 test('release clears agent, moves to options, and appends one dated note before the next section', async () => {
   fixture = seed({ agent: 'codex', status: 'done', prev_status: 'doing' })
   const rootBefore = readFileSync(`${fixture.root}/Boards/Main.md`, 'utf8')

@@ -408,6 +408,14 @@ function runChildren(vault: Vault, rest: string[], values: Values, json: boolean
     print({
       parent: { id: listing.parent.id, path: listing.parent.relPath, board: listing.parent.board },
       cycle: listing.cycle,
+      areas: listing.areas.map((row) => ({
+        id: row.item.id,
+        title: row.item.title,
+        path: row.item.relPath,
+        children: row.childCount,
+        depth: row.depth,
+        archived: row.archived,
+      })),
       children: listing.children.map((row) => ({
         id: row.item.id,
         title: row.item.title,
@@ -424,7 +432,11 @@ function runChildren(vault: Vault, rest: string[], values: Values, json: boolean
   const out: string[] = [
     `${label(listing.parent)}${listing.parent.board ? '  [board]' : ''}`,
   ]
-  if (listing.children.length === 0) {
+  if (listing.areas.length > 0) {
+    out.push(`  Areas (${listing.areas.length})`)
+    for (const row of listing.areas) out.push(`    ${'  '.repeat(row.depth)}${row3(row)}`)
+  }
+  if (listing.children.length === 0 && listing.areas.length === 0) {
     out.push('  no children')
   } else if (values['tree'] === true || typeof values['status'] === 'string') {
     for (const row of listing.children) out.push(`  ${'  '.repeat(row.depth)}${row3(row)}`)

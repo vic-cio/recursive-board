@@ -129,15 +129,23 @@ function checkItem(item: WorkItem, vault: Vault, report: Reporter): void {
 
   const rawStatus = item.frontmatter.get('status')
   const isRoot = !item.frontmatter.has('parent')
+  const isArea = item.frontmatter.get('area') === true
+  const rawArea = item.frontmatter.get('area')
 
-  if (isRoot) {
+  if (rawArea !== undefined && rawArea !== true) {
+    say('area-invalid', 'error', `carries area: ${rawArea}. The only valid marker is area: true.`)
+  }
+
+  if (isArea && rawStatus !== undefined) {
+    say('status-on-area', 'error', 'is an area and carries a status. Areas have no status; remove the status field.')
+  } else if (isRoot) {
     if (rawStatus !== undefined) {
       say('status-on-root', 'error',
         `is a root and carries status "${rawStatus}". A root is not a card in anyone's column, so it takes no status.`)
     }
-  } else if (rawStatus === undefined) {
+  } else if (!isArea && rawStatus === undefined) {
     say('status-missing', 'error', `has no status. Use one of: ${STATUSES.join(', ')}.`)
-  } else if (!isStatus(rawStatus)) {
+  } else if (!isArea && !isStatus(rawStatus)) {
     say('status-invalid', 'error',
       `has status "${rawStatus}". The four values are ${STATUSES.join(', ')}.`)
   }

@@ -43,10 +43,12 @@ export async function createItem(vault: Vault, options: NewOptions): Promise<Cre
   }
 
   // Resolve the template before anything is written, so a bad name fails before a file exists.
-  requireTemplate(options.template)
-
+  const template = requireTemplate(options.template)
   const status = options.status ?? 'backlog'
-  if (!isStatus(status)) {
+  if (template.area && options.status !== undefined) {
+    throw new Error('an area cannot have a status')
+  }
+  if (!template.area && !isStatus(status)) {
     throw new Error(`"${status}" is not a status. Use backlog, options, doing or done.`)
   }
 
@@ -61,15 +63,17 @@ export async function createItem(vault: Vault, options: NewOptions): Promise<Cre
   }
 
   const stamp = today()
-  const fields: NewWorkItem = {
+  const common = {
     id,
     title,
-    status,
     parentStem: parent.stem,
     created: stamp,
     updated: stamp,
     template: options.template,
   }
+  const fields: NewWorkItem = template.area
+    ? { ...common, area: true }
+    : { ...common, status }
 
   for (const field of INHERITED_FIELDS) {
     // Absence is meaningful: never write a key the parent did not carry.

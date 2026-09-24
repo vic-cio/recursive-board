@@ -26,6 +26,8 @@ export interface BodyTemplate {
   /** One line, shown by `wi template list`. */
   description: string
   sections: Section[]
+  /** Area templates create ongoing spaces, which have no status column. */
+  area?: boolean
 }
 
 /**
@@ -48,6 +50,16 @@ export const TEMPLATES: readonly BodyTemplate[] = [
     description: 'A short guide to adding and moving cards on your first board.',
     sections: [
       { heading: 'Getting started', starter: 'Add cards from a board column. To move this card, open its card menu and choose “Move to…”.' },
+      { heading: 'Notes' },
+    ],
+  },
+  {
+    name: 'area',
+    description: 'An ongoing area of work with no status.',
+    area: true,
+    sections: [
+      { heading: 'Objective' },
+      { heading: 'Context' },
       { heading: 'Notes' },
     ],
   },
@@ -109,13 +121,16 @@ export function renderVaultTemplate(
     type: formatScalar(WORK_ITEM_TYPE),
     id: 'wi-XXXX',
     title: '',
-    status: 'backlog',
     parent: defaultRoot === null ? '' : formatScalar(formatWikilink(defaultRoot)),
     created: '',
     updated: '',
   }
-  const lines = CORE_FIELDS.filter((field) => field in placeholders).map(
+  if (template.area) placeholders['area'] = 'true'
+  else placeholders['status'] = 'backlog'
+  const fields = template.area ? CORE_FIELDS.filter((field) => field !== 'status') : CORE_FIELDS
+  const lines = fields.filter((field) => field in placeholders).map(
     (field) => `${field}: ${placeholders[field]}`.trimEnd(),
   )
+  if (template.area) lines.splice(3, 0, 'area: true')
   return `---\n${lines.join('\n')}\n---\n\n${renderBody(template, extraSections)}`
 }
