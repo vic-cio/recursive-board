@@ -26,6 +26,13 @@ export interface NewWorkItem {
   template?: string | undefined
 }
 
+export interface NewRootWorkItem {
+  id: string
+  title: string
+  created: string
+  updated: string
+}
+
 /**
  * Renders a complete work item file.
  * `board` and `prev_status` are never written here: absence is what "not a board" and "never
@@ -46,4 +53,18 @@ export function renderWorkItem(item: NewWorkItem, extraSections: readonly string
 
   const frontmatter = fields.map(([key, value]) => `${key}: ${formatScalar(value)}`).join('\n')
   return `---\n${frontmatter}\n---\n\n${renderBody(requireTemplate(item.template), extraSections)}`
+}
+
+/** Renders a board root. Roots intentionally have neither parent nor status. */
+export function renderRootWorkItem(item: NewRootWorkItem, extraSections: readonly string[] = []): string {
+  const fields: [string, Scalar][] = [
+    ['type', WORK_ITEM_TYPE],
+    ['id', item.id],
+    ['title', item.title],
+    ['created', item.created],
+    ['updated', item.updated],
+    ['board', true],
+  ]
+  const frontmatter = fields.map(([key, value]) => `${key}: ${formatScalar(value)}`).join('\n')
+  return `---\n${frontmatter}\n---\n\n${renderBody(requireTemplate(), extraSections)}`
 }

@@ -43,6 +43,14 @@ export const TEMPLATES: readonly BodyTemplate[] = [
       { heading: 'Notes' },
     ],
   },
+  {
+    name: 'first-board-card',
+    description: 'A short guide to adding and moving cards on your first board.',
+    sections: [
+      { heading: 'Getting started', starter: 'Add cards from a board column. To move this card, open its card menu and choose “Move to…”.' },
+      { heading: 'Notes' },
+    ],
+  },
 ]
 
 export const DEFAULT_TEMPLATE = 'work-item'

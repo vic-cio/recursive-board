@@ -19,6 +19,8 @@ import { mountAll, unmountAll } from './mount.ts'
 import { ChecklistComponents } from './ui/checklist.ts'
 import type { RenderContext } from './ui/context.ts'
 import { MoveModal } from './ui/move-modal.ts'
+import { CreateBoardModal } from './ui/create-board-modal.ts'
+import { createFirstBoard } from './first-board.ts'
 
 export default class RecursiveBoardPlugin extends Plugin {
   private index!: WorkItemIndex
@@ -31,6 +33,8 @@ export default class RecursiveBoardPlugin extends Plugin {
   private readonly checklistComponents = new ChecklistComponents()
   private pending: number | null = null
   private unloaded = false
+  private firstBoardNotice: Notice | null = null
+  private firstBoardDismissed = false
 
   override async onload(): Promise<void> {
     this.index = new WorkItemIndex(this.app, await this.readVaultConfig())
@@ -55,6 +59,14 @@ export default class RecursiveBoardPlugin extends Plugin {
       this.expandedPath = null // A new note means no card is expanded.
       this.schedule()
     }))
+
+    this.addCommand({
+      id: 'create-first-board',
+      name: 'Create your first board',
+      callback: () => new CreateBoardModal(this.app, (title) => {
+        void createFirstBoard(this.app, this.index, title)
+      }).open(),
+    })
 
     this.addCommand({
       id: 'toggle-board',
@@ -116,7 +128,10 @@ export default class RecursiveBoardPlugin extends Plugin {
     }))
 
     this.app.workspace.onLayoutReady(() => {
-      if (!this.unloaded) this.schedule()
+      if (!this.unloaded) {
+        this.schedule()
+        void this.showFirstBoardNotice()
+      }
     })
   }
 
@@ -126,13 +141,49 @@ export default class RecursiveBoardPlugin extends Plugin {
     this.peeking.clear()
     this.shownTabs.clear()
     this.shownArchived.clear()
+    this.firstBoardNotice?.hide()
+    this.firstBoardNotice = null
     unmountAll(this.app)
     this.checklistComponents.releaseAll()
   }
 
   private stale(): void {
     this.index.invalidate()
+    if (this.index.all().length > 0) {
+      this.firstBoardNotice?.hide()
+      this.firstBoardNotice = null
+    }
     this.schedule()
+  }
+
+  private async showFirstBoardNotice(): Promise<void> {
+    if (this.index.all().length > 0 || this.firstBoardNotice || this.firstBoardDismissed) return
+    const data = await this.loadData()
+    this.firstBoardDismissed = data?.firstBoardNoticeDismissed === true
+    if (this.firstBoardDismissed || this.index.all().length > 0 || this.unloaded) return
+
+    const fragment = createFragment((el) => {
+      el.createSpan({ text: 'No work items yet. ' })
+      const create = el.createEl('a', { text: 'Create your first board' })
+      create.addEventListener('click', (event) => {
+        event.preventDefault()
+        this.firstBoardNotice?.hide()
+        this.firstBoardNotice = null
+        new CreateBoardModal(this.app, (title) => {
+          void createFirstBoard(this.app, this.index, title)
+        }).open()
+      })
+      el.createSpan({ text: ' ' })
+      const dismiss = el.createEl('a', { text: 'Dismiss' })
+      dismiss.addEventListener('click', (event) => {
+        event.preventDefault()
+        this.firstBoardDismissed = true
+        this.firstBoardNotice?.hide()
+        this.firstBoardNotice = null
+        void this.saveData({ ...(data ?? {}), firstBoardNoticeDismissed: true })
+      })
+    })
+    this.firstBoardNotice = new Notice(fragment, 0)
   }
 
   private async readVaultConfig() {

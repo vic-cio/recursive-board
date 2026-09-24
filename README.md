@@ -48,6 +48,12 @@ Place an optional `.wi.json` file at the vault root to choose the work-item fold
 
 ## Start a board
 
+### Create one in Obsidian
+
+Enable Recursive Board in an empty vault. Use the **Create your first board** button in the notice, or run **Create your first board** from the command palette. Enter a name (the default is `Main`). The plugin creates the board, adds a starter card that explains how to move it, and opens the board.
+
+### Manual fallback
+
 1. Create the file `Boards/Project.md` with this content. A root item has no `parent` and no `status`:
 
    ```markdown
