@@ -44,7 +44,7 @@ Place an optional `.wi.json` file at the vault root to choose the work-item fold
 
 `wi setup` writes the selected vault to the user config at `$XDG_CONFIG_HOME/wi/config.json`, or `~/.config/wi/config.json` when `XDG_CONFIG_HOME` is unset. The format is `{"defaultVault":"/absolute/path/to/vault"}`. Vault detection uses Obsidian's registry on macOS, Linux, and Windows. `--vault <path>` selects a vault directly, and `--yes --vault <path>` runs without prompts.
 
-`wi` finds the vault from `--vault <path>`, then `$WI_VAULT`, then the nearest folder with `.wi.json` or `Boards/`.
+`wi` finds the vault from `--vault <path>`, then `$WI_VAULT`, then the nearest folder with `.wi.json` or `Boards/`, then the current Git repo's pointer, then `defaultVault` in `~/.config/wi/config.json` (or `$XDG_CONFIG_HOME/wi/config.json`). Use `wi here --vault <path> --board <ref>` once in a repo to save its vault and board outside the repo. The pointer is keyed by Git's common directory, so linked worktrees share it. Run `wi here` to print the current repo's pointer.
 
 ## Start a board
 
@@ -88,7 +88,7 @@ wi --help
 wi setup
 ```
 
-Run `wi` inside a vault, pass `--vault <path>`, or set `WI_VAULT`. Commands accept a work-item id, filename, or title as a reference. An id takes precedence when references are ambiguous. Add `--json` for machine-readable output. The `--vault <path>` and `--json` flags apply to all commands.
+Run `wi` inside a vault, pass `--vault <path>`, set `WI_VAULT`, or set a repo pointer with `wi here`. Commands accept a work-item id, filename, or title as a reference. An id takes precedence when references are ambiguous. Add `--json` for machine-readable output. The `--vault <path>` and `--json` flags apply to all commands. With a repo pointer, `wi new` uses its board when `--parent` is omitted, and `wi children` uses it when the reference is omitted.
 
 ## Use with coding agents
 
@@ -111,16 +111,17 @@ The pre-commit hook runs `wi validate` and stops a commit when the vault has err
 | Command | What it does |
 | --- | --- |
 | `wi setup [--yes] [--vault <path>] [--force]` | Installs the agent skill, selects and saves a default vault, and offers the Git validation hook for a Git vault. `--yes` requires `--vault` and asks no questions. |
-| `wi new <title> [--parent <ref>] [--status <status>] [--template <name>] [--owner <name>] [--agent <name>] [--priority <number>]` | Creates a work item under the given parent. If `--parent` is omitted, uses `defaultRoot` from `.wi.json`. |
+| `wi new <title> [--parent <ref>] [--status <status>] [--template <name>] [--owner <name>] [--agent <name>] [--priority <number>]` | Creates a work item under the given parent. If `--parent` is omitted, uses the repo pointer's board, then `defaultRoot` from `.wi.json`. |
 | `wi status <ref> <status>` | Changes an item's status. Use `backlog`, `options`, `doing`, or `done`. Leaving `done` clears the recorded previous status. |
 | `wi claim <ref> --agent <name>` | Claims a card for an agent and moves it to doing in one write. Refuses a different agent, a done card, or a board with a child in doing. Repeating an active claim by the same agent writes nothing. |
 | `wi release <ref> --reason <text> [--where <branch-or-path>]` | Clears the agent, moves the card to options, and adds a dated line to Notes with the reason and optional work location. Refuses an unclaimed card. |
 | `wi move <ref> --to <ref>` | Changes the item's parent. Its status stays the same, and its children move with it. |
 | `wi archive <ref> [--undo]` | Archives an item. `--undo` unarchives it. Archived items are hidden from normal reads; descendants are hidden with an archived parent. |
 | `wi rm <ref> [--recursive] [--dry-run]` | Moves an item to the vault's `.trash` folder. Use `--dry-run` to preview. Items with children require `--recursive`. |
-| `wi children <ref> [--status <status>] [--tree] [--archived]` | Lists an item's children. `--status` filters by status, `--tree` shows descendants, and `--archived` includes archived items. |
+| `wi children [<ref>] [--status <status>] [--tree] [--archived]` | Lists an item's children. If the ref is omitted, uses the repo pointer's board. `--status` filters by status, `--tree` shows descendants, and `--archived` includes archived items. |
 | `wi validate` | Checks work-item structure and reports errors and warnings. Exits with code 1 when it finds errors. |
 | `wi hook install\|uninstall\|status [--vault <path>]` | Installs, removes, or inspects the Git pre-commit validation hook. `install --force` replaces an unrelated hook. |
+| `wi here [--board <ref>] [--vault <path>]` | Prints this Git repo's pointer, or sets it in user config. Linked worktrees share the pointer. |
 | `wi template [list\|write]` | Lists available templates, or writes the code's templates into `Templates/` with `wi template write`. Defaults to `list`. |
 | `wi --help` or `wi help` | Prints usage, options, and notes. |
 | `wi --version` | Prints the installed CLI version. |

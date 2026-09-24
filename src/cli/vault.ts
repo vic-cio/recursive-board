@@ -8,9 +8,11 @@
  * The index also carries what it could not make sense of. An unaccounted file, a duplicate id,
  * a misplaced file: each is reported, and none causes an item to be dropped or repaired silently.
  */
-import { readdir, readFile } from 'node:fs/promises'
-import { existsSync } from 'node:fs'
-import { join, resolve as resolvePath, dirname, basename, sep } from 'node:path'
+import { readdir, readFile, mkdir, writeFile, rename } from 'node:fs/promises'
+import { existsSync, realpathSync } from 'node:fs'
+import { execFileSync } from 'node:child_process'
+import { homedir } from 'node:os'
+import { join, resolve as resolvePath, dirname, basename, sep, isAbsolute } from 'node:path'
 
 import { parseFrontmatter, type Frontmatter } from '../shared/frontmatter.ts'
 import { parseVaultConfig, WI_CONFIG_FILE, type VaultConfig } from '../shared/vault-config.ts'
@@ -67,6 +69,86 @@ export interface Vault {
 }
 
 const MARKDOWN = /\.md$/i
+
+export interface RepoPointer {
+  vault: string
+  board: string
+}
+
+function wiConfigDir(env: NodeJS.ProcessEnv = process.env): string {
+  const xdg = env['XDG_CONFIG_HOME']
+  return xdg && isAbsolute(xdg) ? join(xdg, 'wi') : join(homedir(), '.config', 'wi')
+}
+
+function gitCommonDir(start: string): string | null {
+  try {
+    const output = execFileSync('git', ['rev-parse', '--git-common-dir'], {
+      cwd: start,
+      encoding: 'utf8',
+      stdio: ['ignore', 'pipe', 'ignore'],
+    }).trim()
+    return realpathSync(resolvePath(start, output))
+  } catch {
+    return null
+  }
+}
+
+async function readJsonObject(path: string, description: string): Promise<Record<string, unknown> | null> {
+  let text: string
+  try {
+    text = await readFile(path, 'utf8')
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === 'ENOENT') return null
+    throw error
+  }
+  let value: unknown
+  try {
+    value = JSON.parse(text)
+  } catch {
+    throw new Error(`${description} must contain valid JSON.`)
+  }
+  if (value === null || typeof value !== 'object' || Array.isArray(value)) {
+    throw new Error(`${description} must contain a JSON object.`)
+  }
+  return value as Record<string, unknown>
+}
+
+/** Returns this repository's pointer, shared by linked worktrees. */
+export async function getRepoPointer(start: string, env: NodeJS.ProcessEnv = process.env): Promise<RepoPointer | null> {
+  const commonDir = gitCommonDir(start)
+  if (!commonDir) return null
+  const map = await readJsonObject(join(wiConfigDir(env), 'repos.json'), 'wi repos.json')
+  const value = map?.[commonDir]
+  if (value === undefined) return null
+  if (value === null || typeof value !== 'object' || Array.isArray(value)) {
+    throw new Error(`wi repos.json: entry for ${commonDir} must contain vault and board strings.`)
+  }
+  const entry = value as Record<string, unknown>
+  if (typeof entry['vault'] !== 'string' || typeof entry['board'] !== 'string') {
+    throw new Error(`wi repos.json: entry for ${commonDir} must contain vault and board strings.`)
+  }
+  return { vault: entry['vault'], board: entry['board'] }
+}
+
+/** Stores the repo pointer in the user's config directory, never in the repository. */
+export async function setRepoPointer(start: string, pointer: RepoPointer, env: NodeJS.ProcessEnv = process.env): Promise<void> {
+  const commonDir = gitCommonDir(start)
+  if (!commonDir) throw new Error('wi here must run inside a Git repository.')
+  const dir = wiConfigDir(env)
+  const path = join(dir, 'repos.json')
+  const map = await readJsonObject(path, 'wi repos.json') ?? {}
+  map[commonDir] = pointer
+  await mkdir(dir, { recursive: true })
+  const temporary = `${path}.${process.pid}.tmp`
+  await writeFile(temporary, `${JSON.stringify(map, null, 2)}\n`, 'utf8')
+  await rename(temporary, path)
+}
+
+/** Reads the fallback vault configured by `wi setup`, respecting XDG_CONFIG_HOME. */
+export async function getDefaultVault(env: NodeJS.ProcessEnv = process.env): Promise<string | null> {
+  const config = await readJsonObject(join(wiConfigDir(env), 'config.json'), 'wi config.json')
+  return typeof config?.['defaultVault'] === 'string' ? config['defaultVault'] : null
+}
 /**
  * Hidden files that are known to be harmless, so they are never reported. The OS writes
  * `.DS_Store`, and `.gitkeep` is a common way to keep an empty folder in Git.

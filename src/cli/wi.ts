@@ -13,7 +13,10 @@ import { parseArgs } from 'node:util'
 import { resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
-import { loadVault, findVaultRoot, type Vault, type WorkItem } from './vault.ts'
+import {
+  loadVault, findVaultRoot, getDefaultVault, getRepoPointer, setRepoPointer,
+  type Vault, type WorkItem,
+} from './vault.ts'
 import { createItem } from './commands/new.ts'
 import { setStatus } from './commands/status.ts'
 import { claimItem, releaseItem } from './commands/claim-release.ts'
@@ -40,17 +43,19 @@ Usage
   wi move <ref> --to <ref>
   wi archive <ref> [--undo]
   wi rm <ref> [--recursive] [--dry-run]
-  wi children <ref> [--status <s>] [--tree] [--archived]
+  wi children [<ref>] [--status <s>] [--tree] [--archived]
   wi validate
   wi template [list|write]
   wi hook <install|uninstall|status> [--force]
+  wi here [--board <ref>] [--vault <path>]
 
 A <ref> is a work item id, a filename or a title. An id always wins.
 A <status> is one of: ${STATUSES.join(', ')}.
 A <template> is one of: ${templateNames().join(', ')}.
 
 Options
-  --vault <path>   The vault root. Defaults to $WI_VAULT, then the nearest configured vault or Boards/.
+  --vault <path>   The vault root. Defaults to $WI_VAULT, the nearest vault, this repo's pointer, then defaultVault.
+  --board <ref>    Board work item used by wi here.
   --json           Machine-readable output.
   --force          Replace an unrelated hook, or an unmanaged skill during setup.
   --yes            Run setup without prompts; requires --vault <path>.
@@ -69,6 +74,7 @@ Notes
   client download the file, or delete the stray file, then retry. There is no --force.
   \`wi archive\` changes one flag. Descendants disappear with their parent at read time.
   \`wi new\` warns when such a file exists because a new id or filename may clash with it.
+  \`wi here\` reads or sets this repository's vault and board pointer in your user config.
 `
 
 const VERSION = '0.1.2'
@@ -91,6 +97,7 @@ async function main(argv: string[]): Promise<number> {
       priority: { type: 'string' },
       template: { type: 'string' },
       vault: { type: 'string' },
+      board: { type: 'string' },
       tree: { type: 'boolean', default: false },
       archived: { type: 'boolean', default: false },
       undo: { type: 'boolean', default: false },
@@ -108,7 +115,7 @@ async function main(argv: string[]): Promise<number> {
     process.stdout.write(`${VERSION}\n`)
     return 0
   }
-  const [command, ...rest] = positionals
+  let [command, ...rest] = positionals
   if (values.help || command === undefined || command === 'help') {
     process.stdout.write(HELP)
     return command === undefined && !values.help ? 2 : 0
@@ -126,6 +133,8 @@ async function main(argv: string[]): Promise<number> {
     })
     return 0
   }
+
+  if (command === 'here') return runHere(values, values.json === true)
 
   const vault = await openVault(values.vault)
   const json = values.json
@@ -146,6 +155,11 @@ async function main(argv: string[]): Promise<number> {
     case 'rm':
       return runRemove(vault, rest, values, json)
     case 'children':
+      if (rest.length === 0) {
+        const board = await repoBoardForVault(vault)
+        if (!board) throw new UsageError('wi children needs a <ref> or a matching board pointer from wi here.')
+        rest = [board]
+      }
       return runChildren(vault, rest, values, json)
     case 'validate':
       return runValidate(vault, json)
@@ -160,10 +174,18 @@ async function main(argv: string[]): Promise<number> {
 
 async function openVault(flag: string | undefined): Promise<Vault> {
   const hint = flag ?? process.env['WI_VAULT']
-  const root = hint ? resolve(hint) : findVaultRoot(process.cwd())
+  let root = hint ? resolve(hint) : findVaultRoot(process.cwd())
+  if (root === null) {
+    const pointer = await getRepoPointer(process.cwd())
+    root = pointer ? resolve(pointer.vault) : null
+  }
+  if (root === null) {
+    const configured = await getDefaultVault()
+    root = configured ? resolve(configured) : null
+  }
   if (root === null) {
     throw new UsageError(
-      'no vault found. Run wi inside a vault, pass --vault <path>, or set WI_VAULT.',
+      'no vault found. Run wi inside a vault, pass --vault <path>, set WI_VAULT, run wi here, or configure defaultVault with wi setup.',
     )
   }
   if (findVaultRoot(root) !== root) {
@@ -172,14 +194,46 @@ async function openVault(flag: string | undefined): Promise<Vault> {
   return loadVault(root)
 }
 
+async function runHere(values: Values, json: boolean): Promise<number> {
+  const start = process.cwd()
+  const hasFlags = typeof values['board'] === 'string' || typeof values['vault'] === 'string'
+  const needsExisting = !hasFlags || typeof values['board'] !== 'string' || typeof values['vault'] !== 'string'
+  const existing = needsExisting ? await getRepoPointer(start) : null
+  if (!hasFlags) {
+    if (!existing) throw new UsageError('no board pointer is set for this Git repository. Run wi here --board <ref> --vault <path>.')
+    if (json) process.stdout.write(`${JSON.stringify(existing)}\n`)
+    else process.stdout.write(`vault  ${existing.vault}\nboard  ${existing.board}\n`)
+    return 0
+  }
+
+  const vault = await openVault(typeof values['vault'] === 'string' ? values['vault'] : undefined)
+  const board = typeof values['board'] === 'string'
+    ? values['board']
+    : existing?.board ?? vault.config.defaultRoot
+  if (!board) throw new UsageError('wi here needs --board <ref> or an existing repo board pointer.')
+  const resolved = vault.resolve(board)
+  const pointer = { vault: vault.root, board: resolved.id ?? resolved.stem }
+  await setRepoPointer(start, pointer)
+  if (json) process.stdout.write(`${JSON.stringify(pointer)}\n`)
+  else process.stdout.write(`set repo pointer\nvault  ${pointer.vault}\nboard  ${pointer.board}\n`)
+  return 0
+}
+
+async function repoBoardForVault(vault: Vault): Promise<string | undefined> {
+  const pointer = await getRepoPointer(process.cwd())
+  return pointer && resolve(pointer.vault) === resolve(vault.root) ? pointer.board : undefined
+}
+
 type Values = Record<string, string | boolean | undefined>
 
 async function runNew(vault: Vault, rest: string[], values: Values, json: boolean): Promise<number> {
   const title = rest.join(' ').trim()
   if (title === '') throw new UsageError('wi new needs a title. Try: wi new "Build server" --parent Main')
 
-  const parent = typeof values['parent'] === 'string' ? values['parent'] : vault.config.defaultRoot
-  if (!parent) throw new UsageError('wi new needs --parent <ref> or defaultRoot in .wi.json.')
+  const explicitParent = typeof values['parent'] === 'string' ? values['parent'] : undefined
+  const pointerBoard = explicitParent === undefined ? await repoBoardForVault(vault) : undefined
+  const parent = explicitParent ?? pointerBoard ?? vault.config.defaultRoot
+  if (!parent) throw new UsageError('wi new needs --parent <ref>, a repo board pointer, or defaultRoot in .wi.json.')
 
   const priority = typeof values['priority'] === 'string' ? Number(values['priority']) : undefined
   if (priority !== undefined && !Number.isFinite(priority)) {

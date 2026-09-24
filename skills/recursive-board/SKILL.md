@@ -25,9 +25,13 @@ delete, how to name cards) take priority over this page.
 
 ## Reaching the vault
 
-`wi` finds the vault in this order: `--vault <path>`, then `$WI_VAULT`, then the nearest folder
-above the working directory that holds `.wi.json` or `Boards/`. Outside the vault, pass
-`--vault <path>` on every call or set `WI_VAULT`.
+`wi` finds the vault in this order: `--vault <path>`, `$WI_VAULT`, the nearest folder above the
+working directory that holds `.wi.json` or `Boards/`, this Git repo's pointer, then
+`defaultVault` in `~/.config/wi/config.json` (or `$XDG_CONFIG_HOME/wi/config.json`). To set a
+repo pointer, run `wi here --vault <path> --board <ref>` once from that repo. It is stored in
+user config outside the repo, keyed by Git's common directory, so linked worktrees share it.
+Run `wi here` to print the current repo's pointer. With a pointer, `wi new` defaults to its board
+and `wi children` can omit the reference. Explicit `--parent` and `wi children <ref>` still work.
 
 `wi --help` is the full command reference. Read it for any flag this page does not name.
 
@@ -40,6 +44,7 @@ and survives a rename.
 wi children <root> --tree          # the whole tree under a root item
 wi children <ref>                  # one board, grouped by status
 wi children <ref> --status doing   # one column
+wi children                       # use the repo pointer's board
 ```
 
 Add `--json` when you parse the result. A card's own text (objective, criteria, notes) is in
