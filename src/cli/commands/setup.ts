@@ -6,7 +6,7 @@ import { fileURLToPath } from 'node:url'
 import { createInterface } from 'node:readline/promises'
 import { stdin, stdout } from 'node:process'
 
-import { loadVault } from '../vault.ts'
+import { loadVault, wiConfigDir } from '../vault.ts'
 import { hookStatus, installHook } from './hook.ts'
 
 export interface RegistryLocation {
@@ -101,8 +101,8 @@ async function installSkillCopy(source: string, destination: string, force: bool
   return 'installed'
 }
 
-async function writeDefaultVault(home: string, vault: string, configHome?: string): Promise<string> {
-  const root = resolve(configHome || join(home, '.config'), 'wi')
+async function writeDefaultVault(vault: string): Promise<string> {
+  const root = wiConfigDir()
   const path = join(root, 'config.json')
   let current: Record<string, unknown> = {}
   try {
@@ -207,7 +207,7 @@ export async function runSetup(options: SetupOptions): Promise<void> {
   ]
   const outcomes = await Promise.all(destinations.map((destination) =>
     installSkillCopy(packagedSkill, destination, options.force)))
-  const configPath = await writeDefaultVault(home, vault, process.env['XDG_CONFIG_HOME'])
+  const configPath = await writeDefaultVault(vault)
 
   stdout.write(`wi setup: default vault ${vault}\n`)
   stdout.write(`wi setup: config ${configPath}\n`)

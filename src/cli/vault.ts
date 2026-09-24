@@ -75,7 +75,8 @@ export interface RepoPointer {
   board: string
 }
 
-function wiConfigDir(env: NodeJS.ProcessEnv = process.env): string {
+/** The user config folder `wi` shares between `wi setup` and `wi here`: `$XDG_CONFIG_HOME/wi` when absolute, else `~/.config/wi`. */
+export function wiConfigDir(env: NodeJS.ProcessEnv = process.env): string {
   const xdg = env['XDG_CONFIG_HOME']
   return xdg && isAbsolute(xdg) ? join(xdg, 'wi') : join(homedir(), '.config', 'wi')
 }
