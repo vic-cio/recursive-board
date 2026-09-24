@@ -1,13 +1,13 @@
 ---
 name: recursive-board
-description: Read and change work items in a Recursive Board vault through the `wi` CLI. Use when asked what is on a board, backlog or agenda; to add, tick, move, archive or remove a card; or to break work into child items. Also use whenever the working directory holds a `Boards/` folder or a `.wi.json` file.
+description: Read and change work items in a Recursive Board vault through the `wi` CLI. Use when asked what is on a board, backlog or agenda; to add, tick, move, archive or remove a card; to break work into child items; or to take on and work a card. Also use whenever the working directory holds a `Boards/` folder or a `.wi.json` file.
 ---
 
 # recursive-board
 
-A Recursive Board vault stores each work item as one Markdown file. `wi` is the only writer that
-knows the rules, so make every change to a work item through it. The Obsidian plugin and `wi`
-apply the same rules, so a change made here matches a change made by hand on the board.
+A Recursive Board vault stores each work item as one Markdown file. `wi` owns work-item metadata
+and applies the same rules as the Obsidian plugin. Edit card body text directly when the workflow
+below calls for it.
 
 ## Setup
 
@@ -73,6 +73,23 @@ wi rm <ref> --recursive --dry-run   # read what it lists, then run it without --
   branch or worktree path. Release clears the agent, returns the card to options, and records the
   continuation location in Notes.
 - Run `wi validate` after a batch of writes. Exit 0 is clean. Exit 1 lists what broke.
+
+## Working a card
+
+For `/recursive-board <card> <instruction>`, use the instruction to clarify the request and the
+card's Objective, Context and Acceptance Criteria as the brief:
+
+1. Resolve the vault and board from the repo map (`wi here`). If the repo has no entry, ask once
+   which board to use, then record it with `wi here --board <board> --vault <vault>`.
+2. Read the card body. If Objective or Acceptance Criteria is missing, write a proposed brief in
+   the card and ask for approval; wait before doing the work.
+3. Claim it with `wi claim <card> --agent <agent name>`. Work in the current repo on a new
+   `card/<slug>` branch. Run the repo's tests and commit the result.
+4. If the work is too large or cannot finish, stop with a split proposal or continuation note in
+   your report, then run `wi release <card> --reason <reason> --where <branch-or-path>`. Let the
+   dispatcher decide whether to create child cards.
+5. When finished, add one dated line under the card's Notes with the branch and result. Leave the
+   card in `doing` and stop for review. Do not merge or push; those wait for the owner's verdict.
 
 ## Outcomes
 
