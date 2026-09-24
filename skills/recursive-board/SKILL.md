@@ -9,6 +9,15 @@ A Recursive Board vault stores each work item as one Markdown file. `wi` is the 
 knows the rules, so make every change to a work item through it. The Obsidian plugin and `wi`
 apply the same rules, so a change made here matches a change made by hand on the board.
 
+## Setup
+
+After installing the `recursive-board` npm package, run `wi setup` once. It copies this skill to
+both `~/.claude/skills/recursive-board/` and `~/.agents/skills/recursive-board/`, detects vaults
+from Obsidian's registry, and saves the selected default vault. Use `wi setup --vault <path>` to
+select a vault directly, or `wi setup --yes --vault <path>` for unattended setup. Setup keeps
+symlinked development installs and refuses to replace an unmanaged skill folder unless passed
+`--force`.
+
 ## Before the first write
 
 If the vault root has an `AGENTS.md`, read it. The vault owner's rules there (what you may

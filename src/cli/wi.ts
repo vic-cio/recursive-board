@@ -24,12 +24,14 @@ import { removeItem } from './commands/remove.ts'
 import { moveItem } from './commands/move.ts'
 import { archiveItem } from './commands/archive.ts'
 import { hookStatus, installHook, uninstallHook } from './commands/hook.ts'
+import { runSetup } from './commands/setup.ts'
 import { STATUSES } from '../shared/schema.ts'
 import { templateNames } from '../shared/templates.ts'
 
 const HELP = `wi — the Recursive Board CLI
 
 Usage
+  wi setup [--yes] [--vault <path>] [--force]
   wi new <title> [--parent <ref>] [--status <s>] [--template <t>] [--owner <o>] [--agent <a>]
                                 [--priority <n>]
   wi status <ref> <status>
@@ -50,7 +52,8 @@ A <template> is one of: ${templateNames().join(', ')}.
 Options
   --vault <path>   The vault root. Defaults to $WI_VAULT, then the nearest configured vault or Boards/.
   --json           Machine-readable output.
-  --force          Replace another pre-commit hook with wi hook install.
+  --force          Replace an unrelated hook, or an unmanaged skill during setup.
+  --yes            Run setup without prompts; requires --vault <path>.
   -h, --help       This text.
   -V, --version    Print the version.
 
@@ -95,6 +98,7 @@ async function main(argv: string[]): Promise<number> {
       'dry-run': { type: 'boolean', default: false },
       json: { type: 'boolean', default: false },
       force: { type: 'boolean', default: false },
+      yes: { type: 'boolean', default: false },
       help: { type: 'boolean', short: 'h', default: false },
       version: { type: 'boolean', short: 'V', default: false },
     },
@@ -109,8 +113,18 @@ async function main(argv: string[]): Promise<number> {
     process.stdout.write(HELP)
     return command === undefined && !values.help ? 2 : 0
   }
-  if (values.force && (command !== 'hook' || rest[0] !== 'install')) {
-    throw new UsageError('--force applies only to wi hook install.')
+  if (values.force && !((command === 'hook' && rest[0] === 'install') || command === 'setup')) {
+    throw new UsageError('--force applies only to wi hook install or wi setup.')
+  }
+  if (values.yes && command !== 'setup') throw new UsageError('--yes applies only to wi setup.')
+  if (command === 'setup') {
+    if (rest.length > 0) throw new UsageError('wi setup takes options only. Run wi setup --help for usage.')
+    await runSetup({
+      ...(typeof values['vault'] === 'string' ? { vault: values['vault'] } : {}),
+      yes: values['yes'] === true,
+      force: values['force'] === true,
+    })
+    return 0
   }
 
   const vault = await openVault(values.vault)

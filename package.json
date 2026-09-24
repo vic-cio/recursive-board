@@ -16,7 +16,8 @@
     "wi": "./dist/wi/wi.js"
   },
   "files": [
-    "dist/wi/"
+    "dist/wi/",
+    "skills/"
   ],
   "scripts": {
     "test": "npm run typecheck && node --test 'src/**/*.test.ts' 'scripts/**/*.test.ts'",

@@ -1,6 +1,6 @@
 # Recursive Board
 
-> **Install with your agent.** Paste this prompt into your coding agent: "Install Recursive Board for me. Check that Node.js 20.12 or later is installed, run `npm install --global recursive-board`, and confirm that `wi --version` works. Download https://raw.githubusercontent.com/vic-cio/recursive-board/main/skills/recursive-board/SKILL.md to `recursive-board/SKILL.md` in your skills folder (for Claude Code, `~/.claude/skills/`; for other agents, `~/.agents/skills/`). Ask me for the path of my Obsidian vault. If I use one vault, offer to set `WI_VAULT` to that path in my shell profile. If the vault is a Git repository, run `wi hook install --vault <path>`. Then tell me to install and enable Recursive Board in Obsidian under Settings → Community plugins → Browse, and show me the output of `wi --help`."
+> **Install with your agent.** Paste this prompt into your coding agent: "Check that Node.js 20.12 or later is installed, run `npm install --global recursive-board`, then run `wi setup`."
 
 Recursive Board turns a folder of Markdown files in an Obsidian vault into a hierarchical work board. Each work item is one Markdown file. Its parent link defines where it belongs.
 
@@ -41,6 +41,8 @@ Place an optional `.wi.json` file at the vault root to choose the work-item fold
 ```
 
 `workItemFolder` is a vault-relative folder path. It defaults to `Boards`. `defaultRoot` is the filename stem of a root work item. It defaults to `null`, which means `wi new` needs an explicit `--parent`. `extraSections` is an array of non-empty, single-line headings. It defaults to `[]`. Each heading is added after the built-in template sections with an empty `- ` starter. The setting applies to `wi new`, `wi template write`, and items created in the plugin. Invalid values make `.wi.json` fail to load.
+
+`wi setup` writes the selected vault to the user config at `$XDG_CONFIG_HOME/wi/config.json`, or `~/.config/wi/config.json` when `XDG_CONFIG_HOME` is unset. The format is `{"defaultVault":"/absolute/path/to/vault"}`. Vault detection uses Obsidian's registry on macOS, Linux, and Windows. `--vault <path>` selects a vault directly, and `--yes --vault <path>` runs without prompts.
 
 `wi` finds the vault from `--vault <path>`, then `$WI_VAULT`, then the nearest folder with `.wi.json` or `Boards/`.
 
@@ -83,13 +85,14 @@ Reload Obsidian after replacing plugin files. If your vault syncs its `.obsidian
 ```sh
 npm install --global recursive-board
 wi --help
+wi setup
 ```
 
 Run `wi` inside a vault, pass `--vault <path>`, or set `WI_VAULT`. Commands accept a work-item id, filename, or title as a reference. An id takes precedence when references are ambiguous. Add `--json` for machine-readable output. The `--vault <path>` and `--json` flags apply to all commands.
 
 ## Use with coding agents
 
-`skills/recursive-board/SKILL.md` teaches an agent to read and change a vault through `wi`. Copy that folder into your agent's skills folder, for example `~/.claude/skills/` for Claude Code or `~/.agents/skills/`. From a source checkout, `npm run install:skill` links it there and links `wi` into `~/.local/bin`.
+`skills/recursive-board/SKILL.md` teaches an agent to read and change a vault through `wi`. `wi setup` installs copies into `~/.claude/skills/recursive-board/` and `~/.agents/skills/recursive-board/`. It leaves symlinked development installs alone and refuses to replace an unmanaged folder unless you pass `--force`. From a source checkout, `npm run install:skill` links the skill and `wi` into `~/.local/bin`.
 
 ## Install the Git validation hook
 
@@ -107,6 +110,7 @@ The pre-commit hook runs `wi validate` and stops a commit when the vault has err
 
 | Command | What it does |
 | --- | --- |
+| `wi setup [--yes] [--vault <path>] [--force]` | Installs the agent skill, selects and saves a default vault, and offers the Git validation hook for a Git vault. `--yes` requires `--vault` and asks no questions. |
 | `wi new <title> [--parent <ref>] [--status <status>] [--template <name>] [--owner <name>] [--agent <name>] [--priority <number>]` | Creates a work item under the given parent. If `--parent` is omitted, uses `defaultRoot` from `.wi.json`. |
 | `wi status <ref> <status>` | Changes an item's status. Use `backlog`, `options`, `doing`, or `done`. Leaving `done` clears the recorded previous status. |
 | `wi claim <ref> --agent <name>` | Claims a card for an agent and moves it to doing in one write. Refuses a different agent, a done card, or a board with a child in doing. Repeating an active claim by the same agent writes nothing. |
