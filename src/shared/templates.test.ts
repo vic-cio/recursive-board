@@ -58,6 +58,11 @@ test('renderBody includes a section starter where one is defined', () => {
   assert.match(body, /## Acceptance Criteria\n\n- \n/)
 })
 
+test('the first-board card explains how to promote itself', () => {
+  const body = renderBody(requireTemplate('first-board-card'))
+  assert.match(body, /Promote at the top of this card/)
+})
+
 test('the vault template parses as frontmatter with the core fields', () => {
   const text = renderVaultTemplate(requireTemplate())
   const fm = parseFrontmatter(text)

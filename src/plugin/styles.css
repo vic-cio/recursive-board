@@ -166,6 +166,28 @@
   background: none;
 }
 
+.wi-checklist-jump {
+  display: inline-flex;
+  align-items: center;
+  margin-top: 5px;
+  padding: 2px 5px;
+  border: 0;
+  background: none;
+  color: var(--text-accent);
+  font-size: var(--font-ui-smaller);
+  line-height: 1.4;
+  cursor: pointer;
+}
+
+.wi-checklist-jump:hover {
+  background: var(--background-modifier-hover);
+}
+
+.wi-checklist-jump:focus-visible {
+  outline: 2px solid var(--interactive-accent);
+  outline-offset: 1px;
+}
+
 .wi-crumb.is-orphan {
   display: inline-flex;
   align-items: center;

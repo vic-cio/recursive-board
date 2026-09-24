@@ -29,6 +29,8 @@ Optional fields include `owner`, `agent`, `priority`, `due`, `blocked`, `depends
 
 An item with `board: true` renders its children in status columns. Any other item renders its children as a checklist. The plugin reads the item's frontmatter and generates the view; the Markdown files remain the source of truth.
 
+Every child card has a **Promote** control at the top, even before it has children. Promote it to give its own children a board. A one-line child count at the top jumps to the checklist below the note.
+
 ## Vault configuration
 
 Place an optional `.wi.json` file at the vault root to choose the work-item folder, default parent, and extra sections for new items:

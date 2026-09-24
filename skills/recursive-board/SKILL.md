@@ -66,6 +66,8 @@ wi demote <ref>                     # render this item's children as a checklist
 wi rm <ref> --recursive --dry-run   # read what it lists, then run it without --dry-run
 ```
 
+In Obsidian, use **Promote** at the top of any child card to give it its own board, even before it has children. The child-count line at the top of a note jumps to its checklist below the body.
+
 - Write a new title as an imperative phrase. It becomes the filename, so make it unique.
 - `wi new` writes the frontmatter and the template sections. Fill the body sections with a file
   edit afterwards. Leave the frontmatter to `wi`.

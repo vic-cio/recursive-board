@@ -9,15 +9,14 @@
  * Ordering follows the prototype review: the Objective is what you came to read, so the metadata
  * strip and the board sit below the note body.
  *
- * The promote control does not. The review put it below the Objective with everything else, but
- * that leaves a checklist with its only route back to a board at the foot of the note, past the
- * whole body. A toggle in the note header keeps the board accessible, and the layout's open questions
- * record that the toggle was never specified. It lives in the top bar.
+ * The promote control and checklist shortcut sit at the top. The checklist itself remains below
+ * the note body, where the prototype review placed it.
  */
 import { setIcon } from 'obsidian'
 
 import type { WorkItemMeta } from '../index.ts'
 import type { RenderContext } from './context.ts'
+import { shouldRenderPromoteToggle } from './promote-visibility.ts'
 import { statusLabel } from './status-label.ts'
 
 /** The chain from the root down to this item, always visible at the top. */
@@ -64,11 +63,21 @@ export function renderBreadcrumbs(
  */
 function renderControls(bar: HTMLElement, ctx: RenderContext, meta: WorkItemMeta): void {
   const childCount = ctx.index.childCount(meta.file)
-  if (childCount === 0 && !meta.board && !meta.area) return
+  if (childCount === 0 && !meta.board && !meta.area && meta.parentLink === null) return
 
   const group = bar.createDiv({ cls: 'wi-controls' })
   if (meta.board || meta.area) renderViewSwitch(group, ctx, meta)
-  if (!meta.area) renderPromoteToggle(group, ctx, meta)
+  if (shouldRenderPromoteToggle({ meta, childCount })) renderPromoteToggle(group, ctx, meta)
+}
+
+/** A visible shortcut to the checklist at the foot of a long note. */
+export function renderChecklistJump(host: HTMLElement, target: HTMLElement, childCount: number): void {
+  const summary = childCount === 0
+    ? 'No children'
+    : `${childCount} ${childCount === 1 ? 'child' : 'children'}`
+  const button = host.createEl('button', { cls: 'wi-checklist-jump', text: `${summary} · Add` })
+  button.setAttr('aria-label', `Jump to checklist: ${summary}`)
+  button.addEventListener('click', () => target.scrollIntoView({ behavior: 'smooth', block: 'start' }))
 }
 
 /** Showing the text of a promoted board instead of its columns. Session only. */
