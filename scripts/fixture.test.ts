@@ -44,7 +44,7 @@ test('the generated fixture contains a valid area', async () => {
   const vault = await generated()
   const area = vault.resolve('wi-0021')
   assert.equal(area.area, true)
-  assert.equal(area.status, undefined)
+  assert.equal(area.status, 'backlog')
   assert.equal(area.parent, 'Main')
 })
 

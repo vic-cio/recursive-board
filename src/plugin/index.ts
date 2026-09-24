@@ -229,14 +229,14 @@ export interface AreaSummary {
   doingCount: number
 }
 
-/** Areas belong above the status groups; their count is their active Doing cards. */
+/** Open areas belong above the status groups; their count is their active Doing cards. */
 export function toAreas(
   children: WorkItemMeta[],
   childrenOf: (area: WorkItemMeta) => WorkItemMeta[],
   showArchived = false,
 ): AreaSummary[] {
   return children
-    .filter((child) => child.area && (showArchived || !child.effectiveArchived))
+    .filter((child) => child.area && child.status !== 'done' && (showArchived || !child.effectiveArchived))
     .map((meta) => ({
       meta,
       doingCount: childrenOf(meta).filter((child) =>
@@ -251,7 +251,7 @@ export function toAreas(
  */
 export function toColumns(children: WorkItemMeta[], now: Date = new Date(), showArchived = false): Column[] {
   const cutoff = doneCutoff(now)
-  const cards = children.filter((child) => !child.area)
+  const cards = children
   return STATUSES.map((status) => {
     const all = cards.filter((c) => c.status === status)
     const archived = all.filter((c) => c.effectiveArchived)

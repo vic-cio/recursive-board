@@ -26,7 +26,7 @@ interface NewWorkItemFields {
 }
 
 export type NewWorkItem = NewWorkItemFields & (
-  | { area: true; status?: never }
+  | { area: true; status: Status }
   | { area?: false; status: Status }
 )
 
@@ -67,8 +67,8 @@ export function renderWorkItem(item: NewWorkItem, extraSections: readonly string
     ['id', item.id],
     ['title', item.title],
   ]
+  fields.push(['status', item.status])
   if (item.area) fields.push(['area', true])
-  else fields.push(['status', item.status])
   fields.push(['parent', formatWikilink(item.parentStem)])
   if (item.owner !== undefined && item.owner !== '') fields.push(['owner', item.owner])
   if (item.agent !== undefined && item.agent !== '') fields.push(['agent', item.agent])

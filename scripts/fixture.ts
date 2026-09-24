@@ -118,7 +118,7 @@ write untouched.
     updated: 1, tags: ['design', 'plugin'] },
   { id: 'wi-0020', title: 'Explore a command wrapper', parent: 'Main', status: 'options', created: 1,
     updated: 1, agent: 'codex' },
-  { id: 'wi-0021', title: 'Operations', parent: 'Main', area: true, created: 5, updated: 2,
+  { id: 'wi-0021', title: 'Operations', parent: 'Main', area: true, status: 'backlog', created: 5, updated: 2,
     body: OBJECTIVE('An ongoing space for work that does not have a definition of done.') },
 ]
 
@@ -160,7 +160,7 @@ function render(spec: Spec, parentStem: string, now: Date): string {
     updated: daysAgo(spec.updated, now),
   }
   const text = renderWorkItem(spec.area
-    ? { ...common, area: true, template: 'area' }
+    ? { ...common, area: true, status: spec.status ?? 'backlog', template: 'area' }
     : { ...common, status: spec.status ?? 'backlog' })
   const close = text.indexOf('\n---\n', 4)
   const extra = extraLines(spec)

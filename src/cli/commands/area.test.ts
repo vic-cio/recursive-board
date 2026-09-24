@@ -25,7 +25,6 @@ function seed(extra: Record<string, string | number | boolean> = {}): Fixture {
     created: '2026-09-21', updated: '2026-09-21',
   }
   Object.assign(fields, extra)
-  if (extra['status'] === undefined) delete fields['status']
   f.write('Boards/Streaming.md', item(fields, '# Streaming\n\nHuman prose.\n'))
   return f
 }
@@ -38,7 +37,7 @@ test('setArea converts a card and preserves unrelated frontmatter and body', asy
   const result = await setArea(await loadVault(fixture.root), 'wi-0005', { off: false })
   assert.equal(result.changed, true)
   assert.equal(fmOf(fixture).get('area'), true)
-  assert.equal(fmOf(fixture).has('status'), false)
+  assert.equal(fmOf(fixture).get('status'), 'options')
   assert.equal(fmOf(fixture).has('prev_status'), false)
   assert.equal(fmOf(fixture).get('mystery_key'), 'keep me')
   assert.equal(fmOf(fixture).get('owner'), 'Morgan')
@@ -53,13 +52,13 @@ test('setArea stamps updated and writes only the item', async () => {
   assert.equal(readFileSync(`${fixture.root}/Boards/Main.md`, 'utf8'), parentBefore)
 })
 
-test('setArea converts an unclaimed card in doing', async () => {
+test('setArea converts an unclaimed card in doing and keeps its status', async () => {
   // A board that never finishes sits in doing; it is the main case for an area.
   fixture = seed({ status: 'doing' })
   await setArea(await loadVault(fixture.root), 'wi-0005', { off: false })
   const fm = fmOf(fixture)
   assert.equal(fm.get('area'), true)
-  assert.equal(fm.has('status'), false)
+  assert.equal(fm.get('status'), 'doing')
 })
 
 test('setArea refuses a card with an agent', async () => {
@@ -70,29 +69,13 @@ test('setArea refuses a card with an agent', async () => {
   )
 })
 
-test('setArea requires a status when converting an area back to a card', async () => {
-  fixture = seed({ area: true, status: undefined as never })
-  await assert.rejects(
-    setArea(await loadVault(fixture.root), 'wi-0005', { off: true }),
-    /--status/i,
-  )
-})
-
-test('setArea converts an area back to a card with the requested status', async () => {
-  fixture = seed({ area: true, status: undefined as never, prev_status: 'doing' })
-  const result = await setArea(await loadVault(fixture.root), 'wi-0005', { off: true, status: 'backlog' })
+test('setArea converts an area back to a card without changing its status', async () => {
+  fixture = seed({ area: true, prev_status: 'doing' })
+  const result = await setArea(await loadVault(fixture.root), 'wi-0005', { off: true })
   assert.equal(result.changed, true)
   assert.equal(fmOf(fixture).has('area'), false)
-  assert.equal(fmOf(fixture).get('status'), 'backlog')
+  assert.equal(fmOf(fixture).get('status'), 'options')
   assert.equal(fmOf(fixture).has('prev_status'), false)
   assert.equal(fmOf(fixture).get('mystery_key'), 'keep me')
   assert.ok(textOf(fixture).endsWith('# Streaming\n\nHuman prose.\n'))
-})
-
-test('setArea validates the requested card status', async () => {
-  fixture = seed({ area: true, status: undefined as never })
-  await assert.rejects(
-    setArea(await loadVault(fixture.root), 'wi-0005', { off: true, status: 'active' }),
-    /not a status/i,
-  )
 })

@@ -38,7 +38,6 @@ export function areaEdits(item: AreaItemState, target: AreaTarget): Edit[] {
   if (target.kind === 'area') {
     return [
       { op: 'set', key: 'area', value: true },
-      { op: 'remove', key: 'status' },
       { op: 'remove', key: 'prev_status' },
     ]
   }

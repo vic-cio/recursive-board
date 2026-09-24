@@ -40,7 +40,7 @@ Usage
   wi new <title> [--parent <ref>] [--status <s>] [--template <t>] [--owner <o>] [--agent <a>]
                                 [--priority <n>]
   wi status <ref> <status>
-  wi area <ref> [--off --status <status>]
+  wi area <ref> [--off]
   wi claim <ref> --agent <name>
   wi release <ref> --reason <text> [--where <branch-or-path>]
   wi move <ref> --to <ref>
@@ -78,8 +78,8 @@ Notes
   folder, because the index cannot read it and may be missing a work item. Let the sync
   client download the file, or delete the stray file, then retry. There is no --force.
   \`wi archive\` changes one flag. Descendants disappear with their parent at read time.
-  \`wi area <ref>\` removes status and prev_status and marks a card as an area. It refuses a card
-  with an agent. Use \`wi area <ref> --off --status <status>\` to convert back.
+  \`wi area <ref>\` marks a card as an area and keeps its status. It refuses a card with an agent.
+  Use \`wi area <ref> --off\` to convert back without changing its status.
   \`wi new\` warns when such a file exists because a new id or filename may clash with it.
   \`wi here\` reads or sets this repository's vault and board pointer in your user config.
 `
@@ -304,11 +304,11 @@ async function runStatus(vault: Vault, rest: string[], json: boolean): Promise<n
 async function runArea(vault: Vault, rest: string[], values: Values, json: boolean): Promise<number> {
   const ref = rest.join(' ').trim()
   if (ref === '') {
-    throw new UsageError('wi area needs a <ref>. Use --off --status <status> to convert an area back to a card.')
+    throw new UsageError('wi area needs a <ref>. Use --off to convert an area back to a card.')
   }
+  if (typeof values['status'] === 'string') throw new UsageError('--status does not apply to wi area; conversion preserves the current status.')
   const change = await setArea(vault, ref, {
     off: values['off'] === true,
-    ...(typeof values['status'] === 'string' ? { status: values['status'] } : {}),
   })
   if (json) {
     print({

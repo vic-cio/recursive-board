@@ -36,7 +36,7 @@ test('areaEdits converts a child card and preserves unrelated fields and body', 
   const converted = applyEdits(source, areaEdits(card, { kind: 'area' }))
   const result = fields(converted)
   assert.equal(result.get('area'), true)
-  assert.equal(result.has('status'), false)
+  assert.equal(result.get('status'), 'options')
   assert.equal(result.has('prev_status'), false)
   assert.equal(result.get('owner'), 'Morgan')
   assert.equal(result.get('mystery_key'), 'keep me')
@@ -44,7 +44,7 @@ test('areaEdits converts a child card and preserves unrelated fields and body', 
 })
 
 test('areaEdits converts an area to the chosen status and removes stale area history', () => {
-  const area: AreaItemState = { ...card, isArea: true, status: undefined }
+  const area: AreaItemState = { ...card, isArea: true }
   const target: AreaTarget = { kind: 'card', status: 'backlog' }
   const converted = applyEdits(source, areaEdits(area, target))
   const result = fields(converted)
@@ -52,6 +52,11 @@ test('areaEdits converts an area to the chosen status and removes stale area his
   assert.equal(result.get('status'), 'backlog')
   assert.equal(result.has('prev_status'), false)
   assert.equal(result.get('mystery_key'), 'keep me')
+})
+
+test('areaEdits keeps the current status when converting a card to an area', () => {
+  const result = fields(applyEdits(source, areaEdits(card, { kind: 'area' })))
+  assert.equal(result.get('status'), card.status)
 })
 
 test('areaEdits refuses a root', () => {

@@ -55,7 +55,7 @@ export const TEMPLATES: readonly BodyTemplate[] = [
   },
   {
     name: 'area',
-    description: 'An ongoing area of work with no status.',
+    description: 'An ongoing area of work.',
     area: true,
     sections: [
       { heading: 'Objective' },
@@ -125,12 +125,12 @@ export function renderVaultTemplate(
     created: '',
     updated: '',
   }
+  placeholders['status'] = 'backlog'
   if (template.area) placeholders['area'] = 'true'
-  else placeholders['status'] = 'backlog'
-  const fields = template.area ? CORE_FIELDS.filter((field) => field !== 'status') : CORE_FIELDS
+  const fields = CORE_FIELDS
   const lines = fields.filter((field) => field in placeholders).map(
     (field) => `${field}: ${placeholders[field]}`.trimEnd(),
   )
-  if (template.area) lines.splice(3, 0, 'area: true')
+  if (template.area) lines.splice(4, 0, 'area: true')
   return `---\n${lines.join('\n')}\n---\n\n${renderBody(template, extraSections)}`
 }

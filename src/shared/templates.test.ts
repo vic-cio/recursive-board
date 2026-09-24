@@ -24,11 +24,11 @@ test('every template has a name, a description and at least one section', () => 
   }
 })
 
-test('the area template marks an ongoing space and omits status', () => {
+test('the area template marks an ongoing space with a backlog status', () => {
   const text = renderVaultTemplate(requireTemplate('area'))
   const frontmatter = parseFrontmatter(text)!
   assert.equal(frontmatter.get('area'), true)
-  assert.equal(frontmatter.has('status'), false)
+  assert.equal(frontmatter.get('status'), 'backlog')
 })
 
 test('requireTemplate falls back to the default', () => {

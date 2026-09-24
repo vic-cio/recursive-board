@@ -42,6 +42,7 @@ export function renderCard(
   if (meta.labels.length > 0) renderLabels(face.createDiv({ cls: 'wi-labels' }), meta.labels)
 
   const head = face.createDiv({ cls: 'wi-card-head' })
+  if (meta.area) head.createSpan({ cls: 'wi-area-mark', text: 'Area', attr: { 'aria-label': 'Area' } })
   const title = head.createDiv({ cls: 'wi-card-title', text: meta.title })
   renderMenuButton(head, ctx, meta)
   renderRemove(head, ctx, meta)

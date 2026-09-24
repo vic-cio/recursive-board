@@ -55,8 +55,8 @@ its file in the work-item folder (`Boards/` by default). Read the file.
 ```bash
 wi new "<title>" --parent <ref> [--status backlog] [--priority <n>]   # 1 is the highest
 wi status <ref> <backlog|options|doing|done>
-wi area <ref>                         # convert a card to an area
-wi area <ref> --off --status backlog  # convert an area back to a card
+wi area <ref>                         # mark a card as an area
+wi area <ref> --off                   # remove the area mark
 wi claim <ref> --agent <name>        # assign and move to doing in one write
 wi release <ref> --reason <text> [--where <branch-or-path>]
 wi move <ref> --to <new parent ref>
@@ -72,7 +72,7 @@ In Obsidian, use **Promote** at the top of any child card to give it its own boa
 - `wi new` writes the frontmatter and the template sections. Fill the body sections with a file
   edit afterwards. Leave the frontmatter to `wi`.
 - To untick a done item, set it back to its `prev_status`.
-- `wi area <ref>` removes `status` and `prev_status` and marks the item as an area. It refuses a card with an agent. Convert it back with `wi area <ref> --off --status <status>`; the status is required.
+- `wi area <ref>` marks the item as an area and keeps its status. It removes `prev_status` and refuses a card with an agent. Convert it back with `wi area <ref> --off`; its status stays the same.
 - A dispatcher claims cards from options for its workers. `wi claim` refuses a card claimed by a
   different agent, a done card, or a board with a child in doing. A repeat by the same agent in
   doing writes nothing.

@@ -23,7 +23,7 @@ Each work item is a Markdown file in the configured work-item folder. The defaul
 | `updated` | Last-updated date in `YYYY-MM-DD` form. |
 | `board` | Set to `true` to render this item's children as a board. Otherwise omit it. |
 | `prev_status` | Previous status recorded when an item moves to `done`; cleared when it leaves `done`. |
-| `area` | Set to `true` for an ongoing area. Areas have no `status` or `prev_status`. |
+| `area` | Set to `true` for an ongoing area. Areas keep a status and have no `prev_status`. |
 
 Optional fields include `owner`, `agent`, `priority`, `due`, `blocked`, `depends_on`, `tags`, and `archived`. Unknown frontmatter keys are preserved. `wi validate` reports them as warnings.
 
@@ -122,7 +122,7 @@ The pre-commit hook runs `wi validate` and stops a commit when the vault has err
 | `wi setup [--yes] [--vault <path>] [--force]` | Installs the agent skill, selects and saves a default vault, and offers the Git validation hook for a Git vault. `--yes` requires `--vault` and asks no questions. |
 | `wi new <title> [--parent <ref>] [--status <status>] [--template <name>] [--owner <name>] [--agent <name>] [--priority <number>]` | Creates a work item under the given parent. If `--parent` is omitted, uses the repo pointer's board, then `defaultRoot` from `.wi.json`. |
 | `wi status <ref> <status>` | Changes an item's status. Use `backlog`, `options`, `doing`, or `done`. Leaving `done` clears the recorded previous status. |
-| `wi area <ref> [--off --status <status>]` | Converts a card to an area, or converts an area back to a card with the explicit status. Conversion refuses a card with an agent. |
+| `wi area <ref> [--off]` | Marks a card as an area or removes the area mark. The current status stays in place. Conversion refuses a card with an agent. |
 | `wi claim <ref> --agent <name>` | Claims a card for an agent and moves it to doing in one write. Refuses a different agent, a done card, or a board with a child in doing. Repeating an active claim by the same agent writes nothing. |
 | `wi release <ref> --reason <text> [--where <branch-or-path>]` | Clears the agent, moves the card to options, and adds a dated line to Notes with the reason and optional work location. Refuses an unclaimed card. |
 | `wi move <ref> --to <ref>` | Changes the item's parent. Its status stays the same, and its children move with it. |
@@ -133,9 +133,13 @@ The pre-commit hook runs `wi validate` and stops a commit when the vault has err
 | `wi validate` | Checks work-item structure and reports errors and warnings. Exits with code 1 when it finds errors. |
 | `wi hook install\|uninstall\|status [--vault <path>]` | Installs, removes, or inspects the Git pre-commit validation hook. `install --force` replaces an unrelated hook. |
 | `wi here [--board <ref>] [--vault <path>]` | Prints this Git repo's pointer, or sets it in user config. Linked worktrees share the pointer. |
+
 | `wi template [list\|write]` | Lists available templates, or writes the code's templates into `Templates/` with `wi template write`. Defaults to `list`. |
 | `wi --help` or `wi help` | Prints usage, options, and notes. |
 | `wi --version` | Prints the installed CLI version. |
+
+`wi new --template area` creates an area in `backlog` by default. Pass `--status` to choose its
+starting status. Areas appear in their status column and in the area bar until they move to `done`.
 
 `wi move`, `wi rm`, and `wi archive` refuse to run when a hidden non-Markdown file is in the work-item folder. The index cannot read that file, so it may be missing a work item. Let the sync client finish downloading it or remove the stray file, then retry. There is no force option. `wi new` still creates the item and warns on stderr because a new id or filename may clash with an unread file. `wi validate` reports a warning if `defaultRoot` names no root item.
 

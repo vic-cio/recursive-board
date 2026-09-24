@@ -55,14 +55,20 @@ test('toColumns groups children by status', () => {
   assert.deepEqual(columns[2]!.visible.map((c) => c.stem), ['B'])
 })
 
-test('areas stay outside status columns and count active Doing cards', () => {
-  const area = meta({ stem: 'Area', area: true })
+test('areas appear in their status columns and count active Doing cards', () => {
+  const area = meta({ stem: 'Area', area: true, status: 'doing' })
   const doing = card('Doing', 'doing')
   const archived = meta({ stem: 'Archived', status: 'doing', effectiveArchived: true })
-  const nestedArea = meta({ stem: 'Nested', area: true })
+  const nestedArea = meta({ stem: 'Nested', area: true, status: 'backlog' })
   const summaries = toAreas([area], (item) => item === area ? [doing, archived, nestedArea] : [])
   assert.deepEqual(summaries.map((entry) => [entry.meta.stem, entry.doingCount]), [['Area', 1]])
-  assert.deepEqual(toColumns([area, doing], NOW)[2]!.visible.map((item) => item.stem), ['Doing'])
+  assert.deepEqual(toColumns([area, doing], NOW)[2]!.visible.map((item) => item.stem), ['Area', 'Doing'])
+})
+
+test('done areas leave the area bar and stay in Done', () => {
+  const area = meta({ stem: 'Done area', area: true, status: 'done', updated: '2026-09-20' })
+  assert.deepEqual(toAreas([area], () => []), [])
+  assert.deepEqual(toColumns([area], NOW)[3]!.visible.map((item) => item.stem), ['Done area'])
 })
 
 test('area summaries respect the board archived-items view', () => {

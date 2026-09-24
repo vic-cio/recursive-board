@@ -572,6 +572,16 @@
   color: var(--color-purple);
 }
 
+.wi-area-mark {
+  flex: none;
+  border: 1px solid var(--interactive-accent);
+  border-radius: 8px;
+  padding: 0 5px;
+  color: var(--interactive-accent);
+  font-size: 10px;
+  line-height: 1.5;
+}
+
 .wi-card-body {
   margin-top: 8px;
   padding-top: 8px;

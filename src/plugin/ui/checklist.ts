@@ -170,6 +170,7 @@ function decorateRow(row: HTMLElement, ctx: RenderContext, meta: WorkItemMeta): 
   }
 
   const extras = row.createSpan({ cls: 'wi-row-extras' })
+  if (meta.area) extras.createSpan({ cls: 'wi-area-mark', text: 'Area', attr: { 'aria-label': 'Area' } })
   if (meta.status !== undefined && meta.status !== 'done') {
     extras.createSpan({ cls: `wi-check-status is-${meta.status}`, text: statusLabel(meta.status) })
   }

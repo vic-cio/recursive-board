@@ -48,7 +48,7 @@ test('createItem writes a file into Boards with the nine-field shape', async () 
   assert.equal(fm.get('created'), fm.get('updated'))
 })
 
-test('createItem with the area template writes an area without a status', async () => {
+test('createItem with the area template writes a backlog area by default', async () => {
   fixture = seed()
   const created = await createItem(await reload(fixture), {
     title: 'Operations', parent: 'wi-0001', template: 'area',
@@ -56,9 +56,17 @@ test('createItem with the area template writes an area without a status', async 
   const text = readFileSync(created.path, 'utf8')
   const fm = parseFrontmatter(text)!
   assert.equal(fm.get('area'), true)
-  assert.equal(fm.has('status'), false)
+  assert.equal(fm.get('status'), 'backlog')
   assert.equal(fm.get('parent'), '[[Main]]')
   assert.match(text, /## Objective/)
+})
+
+test('createItem with the area template accepts an explicit status', async () => {
+  fixture = seed()
+  const created = await createItem(await reload(fixture), {
+    title: 'Operations', parent: 'wi-0001', template: 'area', status: 'doing',
+  })
+  assert.equal(parseFrontmatter(readFileSync(created.path, 'utf8'))!.get('status'), 'doing')
 })
 
 test('createItem uses the configured folder and root when no parent is given', async () => {

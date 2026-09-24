@@ -64,11 +64,11 @@ test('wi --help documents area conversion', async () => {
   fixture = seed()
   const { code, stdout } = await wi(['--help'])
   assert.equal(code, 0)
-  assert.match(stdout, /wi area <ref> \[--off --status <status>\]/)
+  assert.match(stdout, /wi area <ref> \[--off\]/)
   assert.match(stdout, /It refuses a card\s+with an agent/i)
 })
 
-test('wi area converts a card to an area and back with an explicit status', async () => {
+test('wi area converts a card to an area and back while preserving its status', async () => {
   fixture = seed()
   const path = join(fixture.root, 'Boards/Build server.md')
   const source = readFileSync(path, 'utf8').replace(/^status: doing$/m, 'status: options')
@@ -80,15 +80,15 @@ test('wi area converts a card to an area and back with an explicit status', asyn
   assert.equal(JSON.parse(toArea.stdout).to, 'area')
   let text = readFileSync(path, 'utf8')
   assert.match(text, /^area: true$/m)
-  assert.doesNotMatch(text, /^status:/m)
+  assert.match(text, /^status: options$/m)
   assert.doesNotMatch(text, /^prev_status:/m)
 
-  const toCard = await wi(['area', 'wi-0004', '--off', '--status', 'done', '--json'])
+  const toCard = await wi(['area', 'wi-0004', '--off', '--json'])
   assert.equal(toCard.code, 0, toCard.stderr)
-  assert.equal(JSON.parse(toCard.stdout).status, 'done')
+  assert.equal(JSON.parse(toCard.stdout).status, 'options')
   text = readFileSync(path, 'utf8')
   assert.doesNotMatch(text, /^area:/m)
-  assert.match(text, /^status: done$/m)
+  assert.match(text, /^status: options$/m)
   assert.match(text, /^owner: sam$/m)
   assert.ok(text.endsWith('# Build server\n'))
 })
