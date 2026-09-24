@@ -4,6 +4,7 @@ import { execFile } from 'node:child_process'
 import { mkdtempSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
+import { fileURLToPath } from 'node:url'
 import { promisify } from 'node:util'
 import { detectObsidianRegistryPath, rankObsidianVaults, readObsidianVaults } from './setup.ts'
 
@@ -22,11 +23,11 @@ test('Obsidian registry paths follow macOS, Linux, and Windows conventions', () 
 test('setup --yes --vault installs both skill copies and writes config under temp HOME', async () => {
   const home = mkdtempSync(join(tmpdir(), 'wi-setup-home-'))
   const vault = mkdtempSync(join(tmpdir(), 'wi-setup-vault-'))
-  const entry = new URL('../wi.ts', import.meta.url)
+  const entry = fileURLToPath(new URL('../wi.ts', import.meta.url))
   const configRoot = join(home, '.config', 'wi')
 
   try {
-    await run('node', [entry.pathname, 'setup', '--yes', '--vault', vault], {
+    await run('node', [entry, 'setup', '--yes', '--vault', vault], {
       env: { ...process.env, HOME: home, XDG_CONFIG_HOME: join(home, '.config') },
     })
     assert.deepEqual(JSON.parse(readFileSync(join(configRoot, 'config.json'), 'utf8')),
