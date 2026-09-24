@@ -54,6 +54,8 @@ export default class RecursiveBoardPlugin extends Plugin {
       this,
       () => this.statusColors,
       (key, color) => this.updateStatusColor(key, color),
+      () => this.index?.config.maxAgents ?? null,
+      (maxAgents) => this.updateMaxAgents(maxAgents),
     ))
 
     this.index = new WorkItemIndex(this.app, await this.readVaultConfig())
@@ -223,6 +225,23 @@ export default class RecursiveBoardPlugin extends Plugin {
     if (Object.keys(next).length > 0) this.storedData.statusColors = next
     else delete this.storedData.statusColors
     await this.saveData(this.storedData)
+  }
+
+  private async updateMaxAgents(maxAgents: number | null): Promise<void> {
+    try {
+      const adapter = this.app.vault.adapter
+      const existing = await adapter.exists(WI_CONFIG_FILE) ? await adapter.read(WI_CONFIG_FILE) : '{}'
+      const parsed: unknown = JSON.parse(existing)
+      if (typeof parsed !== 'object' || parsed === null || Array.isArray(parsed)) throw new Error('expected an object')
+      const config: Record<string, unknown> = { ...parsed }
+      if (maxAgents === null) delete config['maxAgents']
+      else config['maxAgents'] = maxAgents
+      await adapter.write(WI_CONFIG_FILE, `${JSON.stringify(config, null, 2)}\n`)
+      await this.reloadConfig()
+    } catch (error) {
+      const reason = error instanceof Error ? error.message : String(error)
+      new Notice(`Recursive Board could not update ${WI_CONFIG_FILE}: ${reason}`)
+    }
   }
 
   private applyStatusColors(): void {

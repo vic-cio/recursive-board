@@ -76,6 +76,9 @@ In Obsidian, use **Promote** at the top of any child card to give it its own boa
 - A dispatcher claims cards from options for its workers. `wi claim` refuses a card claimed by a
   different agent, a done card, or a board with a child in doing. A repeat by the same agent in
   doing writes nothing.
+- Before starting a worker, a dispatcher runs `wi agents`. It holds off when `activeAgents`
+  reaches `maxAgents`; `null` means no limit is set. `WI_MAX_AGENTS` overrides the vault setting
+  for one run. This limit is advisory: `wi claim` does not enforce it.
 - When a worker stops, its dispatcher runs `wi release` with a reason and, when available, the
   branch or worktree path. Release clears the agent, returns the card to options, and records the
   continuation location in Notes.

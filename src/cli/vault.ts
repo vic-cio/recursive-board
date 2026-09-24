@@ -69,6 +69,17 @@ export interface Vault {
   isArchived(item: WorkItem): boolean
 }
 
+/** The environment is a per-run override for the vault's advisory dispatcher limit. */
+export function maxAgentsForRun(vault: Vault, env: NodeJS.ProcessEnv = process.env): number | null {
+  const override = env['WI_MAX_AGENTS']
+  if (override === undefined) return vault.config.maxAgents
+  if (override.trim() === '') return null
+  if (!/^\d+$/.test(override) || !Number.isSafeInteger(Number(override))) {
+    throw new Error('WI_MAX_AGENTS must be a non-negative whole number.')
+  }
+  return Number(override)
+}
+
 const MARKDOWN = /\.md$/i
 
 export interface RepoPointer {

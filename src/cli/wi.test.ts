@@ -19,10 +19,10 @@ afterEach(() => {
 
 interface Result { code: number; stdout: string; stderr: string }
 
-async function wi(args: string[], vault?: string): Promise<Result> {
+async function wi(args: string[], vault?: string, env: NodeJS.ProcessEnv = {}): Promise<Result> {
   try {
     const { stdout, stderr } = await run('node', [CLI, ...args], {
-      env: { ...process.env, WI_VAULT: vault ?? fixture!.root },
+      env: { ...process.env, WI_VAULT: vault ?? fixture!.root, ...env },
     })
     return { code: 0, stdout, stderr }
   } catch (error) {
@@ -30,6 +30,58 @@ async function wi(args: string[], vault?: string): Promise<Result> {
     return { code: e.code ?? 1, stdout: e.stdout ?? '', stderr: e.stderr ?? '' }
   }
 }
+
+test('wi agents prints the configured agent limit and claimed doing count', async () => {
+  fixture = seed()
+  fixture.write('.wi.json', '{"maxAgents":2}')
+  const source = readFileSync(join(fixture.root, 'Boards/Build server.md'), 'utf8')
+    .replace('owner: sam', 'owner: sam\nagent: codex')
+  writeFileSync(join(fixture.root, 'Boards/Build server.md'), source)
+  fixture.write('Boards/Another.md', item({
+    type: 'work-item', id: 'wi-0005', title: 'Another', status: 'doing', agent: 'claude',
+    parent: '"[[Main]]"', created: '2026-09-21', updated: '2026-09-21',
+  }))
+  fixture.write('Boards/Waiting.md', item({
+    type: 'work-item', id: 'wi-0006', title: 'Waiting', status: 'options', agent: 'pi',
+    parent: '"[[Main]]"', created: '2026-09-21', updated: '2026-09-21',
+  }))
+
+  const result = await wi(['agents', '--json'])
+  assert.equal(result.code, 0, result.stderr)
+  assert.deepEqual(JSON.parse(result.stdout), { maxAgents: 2, activeAgents: 2 })
+})
+
+test('WI_MAX_AGENTS overrides the vault config for one dispatcher run', async () => {
+  fixture = seed()
+  fixture.write('.wi.json', '{"maxAgents":2}')
+  const result = await wi(['agents', '--json'], undefined, { WI_MAX_AGENTS: '5' })
+  assert.equal(result.code, 0, result.stderr)
+  assert.equal(JSON.parse(result.stdout).maxAgents, 5)
+})
+
+test('an empty WI_MAX_AGENTS removes the cap for that run', async () => {
+  fixture = seed()
+  fixture.write('.wi.json', '{"maxAgents":2}')
+  const result = await wi(['agents', '--json'], undefined, { WI_MAX_AGENTS: '' })
+  assert.equal(result.code, 0, result.stderr)
+  assert.equal(JSON.parse(result.stdout).maxAgents, null)
+})
+
+test('WI_MAX_AGENTS must be a non-negative whole number', async () => {
+  fixture = seed()
+  const result = await wi(['agents'], undefined, { WI_MAX_AGENTS: '1.5' })
+  assert.equal(result.code, 2)
+  assert.match(result.stderr, /WI_MAX_AGENTS must be a non-negative whole number/)
+})
+
+test('wi claim remains advisory when the active agent count reaches the limit', async () => {
+  fixture = seed()
+  fixture.write('.wi.json', '{"maxAgents":0}')
+  const result = await wi(['claim', 'wi-0004', '--agent', 'codex'])
+  assert.equal(result.code, 0, result.stderr)
+  assert.match(result.stdout, /doing/)
+  assert.match(result.stderr, /agent limit is 0/)
+})
 
 function seed(): Fixture {
   const f = makeVault()
@@ -66,6 +118,7 @@ test('wi --help documents area conversion', async () => {
   assert.equal(code, 0)
   assert.match(stdout, /wi area <ref> \[--off\]/)
   assert.match(stdout, /It refuses a card\s+with an agent/i)
+  assert.match(stdout, /wi agents/)
 })
 
 test('wi area converts a card to an area and back while preserving its status', async () => {

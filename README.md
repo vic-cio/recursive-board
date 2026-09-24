@@ -33,17 +33,20 @@ Every child card has a **Promote** control at the top, even before it has childr
 
 ## Vault configuration
 
-Place an optional `.wi.json` file at the vault root to choose the work-item folder, default parent, and extra sections for new items:
+Place an optional `.wi.json` file at the vault root to choose the work-item folder, default parent, extra sections for new items, and the dispatcher's advisory agent limit:
 
 ```json
 {
   "workItemFolder": "Boards",
   "defaultRoot": "Project",
-  "extraSections": ["References", "Risks"]
+  "extraSections": ["References", "Risks"],
+  "maxAgents": 3
 }
 ```
 
 `workItemFolder` is a vault-relative folder path. It defaults to `Boards`. `defaultRoot` is the filename stem of a root work item. It defaults to `null`, which means `wi new` needs an explicit `--parent`. `extraSections` is an array of non-empty, single-line headings. It defaults to `[]`. Each heading is added after the built-in template sections with an empty `- ` starter. The setting applies to `wi new`, `wi template write`, and items created in the plugin. Invalid values make `.wi.json` fail to load.
+
+`maxAgents` is a non-negative whole number, or `null` for no limit. The plugin settings tab writes it to `.wi.json`. `WI_MAX_AGENTS` overrides it for one CLI run. `wi agents` prints the effective limit and the number of cards in doing with an agent. The limit is advisory: dispatchers use the count to decide whether to start a worker, and `wi claim` still succeeds over the limit.
 
 `wi setup` writes the selected vault to the user config at `$XDG_CONFIG_HOME/wi/config.json`, or `~/.config/wi/config.json` when `XDG_CONFIG_HOME` is unset. The format is `{"defaultVault":"/absolute/path/to/vault"}`. Vault detection uses Obsidian's registry on macOS, Linux, and Windows. `--vault <path>` selects a vault directly, and `--yes --vault <path>` runs without prompts.
 
@@ -124,6 +127,7 @@ The pre-commit hook runs `wi validate` and stops a commit when the vault has err
 | `wi status <ref> <status>` | Changes an item's status. Use `backlog`, `options`, `doing`, or `done`. Leaving `done` clears the recorded previous status. |
 | `wi area <ref> [--off]` | Marks a card as an area or removes the area mark. The current status stays in place. Conversion refuses a card with an agent. |
 | `wi claim <ref> --agent <name>` | Claims a card for an agent and moves it to doing in one write. Refuses a different agent, a done card, or a board with a child in doing. Repeating an active claim by the same agent writes nothing. |
+| `wi agents` | Prints the configured agent limit and count of cards in doing with an agent. `--json` returns `maxAgents` and `activeAgents`. |
 | `wi release <ref> --reason <text> [--where <branch-or-path>]` | Clears the agent, moves the card to options, and adds a dated line to Notes with the reason and optional work location. Refuses an unclaimed card. |
 | `wi move <ref> --to <ref>` | Changes the item's parent. Its status stays the same, and its children move with it. |
 | `wi archive <ref> [--undo]` | Archives an item. `--undo` unarchives it. Archived items are hidden from normal reads; descendants are hidden with an archived parent. |
@@ -147,7 +151,7 @@ starting status. Areas appear in their status column. Areas in options or doing 
 
 Use `wi` for work-item changes. Do not edit work-item Markdown directly with scripts or bulk text tools. Use `wi validate` to check the vault after changes. `wi rm` moves items into `.trash`; removing a parent requires `--recursive`. Use `wi rm <ref> --dry-run` to review the affected items first.
 
-A dispatcher assigns a card with `wi claim <ref> --agent <name>`. If that worker stops, the dispatcher runs `wi release <ref> --reason <text> [--where <branch-or-path>]` so the next worker can find the unfinished work. Keep a card in doing until its work is accepted.
+A dispatcher runs `wi agents` before starting workers and holds off when `activeAgents` reaches `maxAgents`; `null` means there is no configured limit. Set `WI_MAX_AGENTS` for a one-run override. The limit is advisory, and `wi claim` does not enforce it. A dispatcher assigns a card with `wi claim <ref> --agent <name>`. If that worker stops, the dispatcher runs `wi release <ref> --reason <text> [--where <branch-or-path>]` so the next worker can find the unfinished work. Keep a card in doing until its work is accepted.
 
 ## Development
 

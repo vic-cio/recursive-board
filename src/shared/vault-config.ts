@@ -10,12 +10,15 @@ export interface VaultConfig {
   defaultRoot: string | null
   /** Headings appended to every new work-item body. */
   extraSections: string[]
+  /** Advisory maximum number of claimed doing cards for dispatchers. */
+  maxAgents: number | null
 }
 
 export const DEFAULT_VAULT_CONFIG: Readonly<VaultConfig> = {
   workItemFolder: 'Boards',
   defaultRoot: null,
   extraSections: [],
+  maxAgents: null,
 }
 
 /** Parse at the vault boundary; malformed config must never silently select another folder. */
@@ -34,6 +37,7 @@ export function parseVaultConfig(text: string | null): VaultConfig {
   const folderValue = 'workItemFolder' in value ? value.workItemFolder : undefined
   const rootValue = 'defaultRoot' in value ? value.defaultRoot : undefined
   const sectionsValue = 'extraSections' in value ? value.extraSections : undefined
+  const maxAgentsValue = 'maxAgents' in value ? value.maxAgents : undefined
   let workItemFolder = DEFAULT_VAULT_CONFIG.workItemFolder
   if (folderValue !== undefined) {
     if (typeof folderValue !== 'string') {
@@ -69,5 +73,12 @@ export function parseVaultConfig(text: string | null): VaultConfig {
       extraSections.push(heading)
     }
   }
-  return { workItemFolder, defaultRoot, extraSections }
+  let maxAgents: number | null = null
+  if (maxAgentsValue !== undefined && maxAgentsValue !== null) {
+    if (typeof maxAgentsValue !== 'number' || !Number.isSafeInteger(maxAgentsValue) || maxAgentsValue < 0) {
+      throw new Error(`${WI_CONFIG_FILE}: maxAgents must be a non-negative whole number or null.`)
+    }
+    maxAgents = maxAgentsValue
+  }
+  return { workItemFolder, defaultRoot, extraSections, maxAgents }
 }

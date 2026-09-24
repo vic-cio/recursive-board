@@ -14,7 +14,7 @@ import { resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 import {
-  loadVault, findVaultRoot, getDefaultVault, getRepoPointer, setRepoPointer,
+  loadVault, findVaultRoot, getDefaultVault, getRepoPointer, setRepoPointer, maxAgentsForRun,
   type Vault, type WorkItem,
 } from './vault.ts'
 import { createItem } from './commands/new.ts'
@@ -42,6 +42,7 @@ Usage
   wi status <ref> <status>
   wi area <ref> [--off]
   wi claim <ref> --agent <name>
+  wi agents
   wi release <ref> --reason <text> [--where <branch-or-path>]
   wi move <ref> --to <ref>
   wi archive <ref> [--undo]
@@ -80,6 +81,8 @@ Notes
   \`wi archive\` changes one flag. Descendants disappear with their parent at read time.
   \`wi area <ref>\` marks a card as an area and keeps its status. It refuses a card with an agent.
   Use \`wi area <ref> --off\` to convert back without changing its status.
+  \`wi agents\` reports the advisory limit and claimed doing-card count. WI_MAX_AGENTS overrides
+  maxAgents from .wi.json for one run. Dispatchers decide whether to wait; wi claim does not enforce it.
   \`wi new\` warns when such a file exists because a new id or filename may clash with it.
   \`wi here\` reads or sets this repository's vault and board pointer in your user config.
 `
@@ -157,6 +160,8 @@ async function main(argv: string[]): Promise<number> {
       return runArea(vault, rest, values, json)
     case 'claim':
       return runClaim(vault, rest, values, json)
+    case 'agents':
+      return runAgents(vault, rest, json)
     case 'release':
       return runRelease(vault, rest, values, json)
     case 'move':
@@ -339,12 +344,34 @@ async function runClaim(vault: Vault, rest: string[], values: Values, json: bool
   const ref = rest.join(' ').trim()
   if (ref === '') throw new UsageError('wi claim needs a <ref> and --agent <name>.')
   const agent = singleLineOption(values, 'agent')
+  const maxAgents = maxAgentsForRun(vault)
+  const activeAgents = countActiveAgents(vault)
   const change = await claimItem(vault, ref, agent)
   if (json) print({ id: change.item.id, path: change.item.relPath, agent: change.agent,
     from: change.from ?? null, to: change.to, changed: change.changed })
   else process.stdout.write(change.changed
     ? `${label(change.item)}  ${change.from ?? '—'} → doing  (agent: ${agent})\n`
     : `${label(change.item)} is already claimed by ${agent} in doing. Nothing written.\n`)
+  if (change.changed && maxAgents !== null && activeAgents + 1 > maxAgents) {
+    process.stderr.write(`wi: warning: agent limit is ${maxAgents}; ${activeAgents + 1} cards are now doing with an agent.\n`)
+  }
+  return 0
+}
+
+function countActiveAgents(vault: Vault): number {
+  return vault.items.filter((item) => {
+    const agent = item.frontmatter.get('agent')
+    return item.status === 'doing' && typeof agent === 'string' && agent.trim() !== ''
+  }).length
+}
+
+function runAgents(vault: Vault, rest: string[], json: boolean): number {
+  if (rest.length > 0) throw new UsageError('wi agents takes no arguments.')
+  const maxAgents = maxAgentsForRun(vault)
+  const activeAgents = countActiveAgents(vault)
+  const result = { maxAgents, activeAgents }
+  if (json) print(result)
+  else process.stdout.write(`limit  ${maxAgents === null ? 'none' : maxAgents}\ndoing with agent  ${activeAgents}\n`)
   return 0
 }
 

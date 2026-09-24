@@ -40,16 +40,22 @@ function themeColor(setting: typeof COLOR_SETTINGS[number]): string {
 export class StatusColorSettingTab extends PluginSettingTab {
   private readonly colors: () => StatusColors
   private readonly changeColor: (key: StatusColorKey, color: string | undefined) => Promise<void>
+  private readonly maxAgents: () => number | null
+  private readonly changeMaxAgents: (maxAgents: number | null) => Promise<void>
 
   constructor(
     app: App,
     plugin: Plugin,
     colors: () => StatusColors,
     changeColor: (key: StatusColorKey, color: string | undefined) => Promise<void>,
+    maxAgents: () => number | null,
+    changeMaxAgents: (maxAgents: number | null) => Promise<void>,
   ) {
     super(app, plugin)
     this.colors = colors
     this.changeColor = changeColor
+    this.maxAgents = maxAgents
+    this.changeMaxAgents = changeMaxAgents
   }
 
   override display(): void {
@@ -75,5 +81,25 @@ export class StatusColorSettingTab extends PluginSettingTab {
             this.display()
           }))
     }
+
+    containerEl.createEl('h3', { text: 'Dispatcher' })
+    new Setting(containerEl)
+      .setName('Concurrent agent limit')
+      .setDesc('Maximum claimed cards in doing for this vault. Dispatchers read this with wi agents. WI_MAX_AGENTS overrides it for one run.')
+      .addText((text) => {
+        text.inputEl.type = 'number'
+        text.inputEl.min = '0'
+        text.inputEl.step = '1'
+        text.setPlaceholder('No limit')
+          .setValue(this.maxAgents()?.toString() ?? '')
+          .onChange((value) => {
+            if (value === '') {
+              void this.changeMaxAgents(null)
+              return
+            }
+            const parsed = Number(value)
+            if (Number.isSafeInteger(parsed) && parsed >= 0) void this.changeMaxAgents(parsed)
+          })
+      })
   }
 }
