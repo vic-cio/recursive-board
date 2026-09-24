@@ -10,6 +10,7 @@
 import { normalizePath, Notice, TFile, type App } from 'obsidian'
 
 import { applyStampedEdits, type Edit } from '../shared/edits.ts'
+import { areaEdits, type AreaTarget } from '../shared/area.ts'
 import { archiveEdits, activeDescendant } from '../shared/archive.ts'
 import {
   boardEdits, moveEdits, moveRefusal, statusEdits, untickTarget,
@@ -92,6 +93,23 @@ export class Actions {
       promoted ? `promote ${meta.title}` : `demote ${meta.title}`,
       () => this.edit(meta.file, boardEdits(promoted), `${promoted ? 'promote' : 'demote'} ${meta.title}`),
     )
+  }
+
+  /** Convert a child card and an area through the same tested rule as `wi area`. */
+  async convertArea(meta: WorkItemMeta, target: AreaTarget): Promise<void> {
+    const label = target.kind === 'area' ? 'make area' : `make card ${target.status}`
+    const done = await this.run(`${label} ${meta.title}`, async () => {
+      const edits = areaEdits({
+        label: meta.file.path,
+        isRoot: meta.parentLink === null,
+        isArea: meta.area,
+        status: meta.status,
+        agent: meta.agent,
+      }, target)
+      await this.edit(meta.file, edits, `${label} ${meta.title}`)
+      return true
+    })
+    if (done) this.undoableNotice(`${target.kind === 'area' ? 'Made area' : `Made card in ${target.status}`} ${meta.title}`)
   }
 
   /** Archive one file. The index applies its flag to descendants when it reads them. */

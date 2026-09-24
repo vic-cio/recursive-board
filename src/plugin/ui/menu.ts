@@ -14,6 +14,7 @@ import { Menu, Notice, Platform, setIcon } from 'obsidian'
 import { STATUSES } from '../../shared/schema.ts'
 import type { WorkItemMeta } from '../index.ts'
 import type { RenderContext } from './context.ts'
+import { AreaStatusModal } from './area-status-modal.ts'
 import { MoveModal } from './move-modal.ts'
 import { statusLabel } from './status-label.ts'
 
@@ -60,6 +61,21 @@ function buildMenu(ctx: RenderContext, meta: WorkItemMeta): Menu {
     .setTitle('Move to…')
     .setIcon('folder-input')
     .onClick(() => new MoveModal(ctx.app, ctx.index, ctx.actions, meta).open()))
+
+  if (meta.parentLink !== null) {
+    menu.addSeparator()
+    if (meta.area) {
+      menu.addItem((item) => item
+        .setTitle('Make card…')
+        .setIcon('square-kanban')
+        .onClick(() => new AreaStatusModal(ctx.app, ctx.actions, meta).open()))
+    } else {
+      menu.addItem((item) => item
+        .setTitle('Make area')
+        .setIcon('circle-plus')
+        .onClick(() => void ctx.actions.convertArea(meta, { kind: 'area' })))
+    }
+  }
 
   // A root takes no status, so it gets no status entries.
   if (meta.parentLink !== null && !meta.area) {
