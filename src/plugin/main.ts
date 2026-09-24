@@ -9,9 +9,9 @@
  * `path`, `child_process` or `electron`. Two guards enforce that: `tsconfig.plugin.json` has no
  * Node types, and `build/forbidden-imports.mjs` fails the build.
  */
-import { MarkdownView, Notice, normalizePath, Platform, Plugin, TFile } from 'obsidian'
+import { MarkdownView, Notice, normalizePath, Platform, Plugin, TFile, type Editor } from 'obsidian'
 import { parseVaultConfig, WI_CONFIG_FILE } from '../shared/vault-config.ts'
-import type { Status } from '../shared/schema.ts'
+import { today, type Status } from '../shared/schema.ts'
 
 import { Actions } from './actions.ts'
 import { WorkItemIndex } from './index.ts'
@@ -21,6 +21,7 @@ import type { RenderContext } from './ui/context.ts'
 import { MoveModal } from './ui/move-modal.ts'
 import { CreateBoardModal } from './ui/create-board-modal.ts'
 import { createFirstBoard } from './first-board.ts'
+import { replaceChangedSpan, stampObservedChange } from './updated.ts'
 
 export default class RecursiveBoardPlugin extends Plugin {
   private index!: WorkItemIndex
@@ -31,6 +32,8 @@ export default class RecursiveBoardPlugin extends Plugin {
   private readonly shownTabs = new Map<string, Status>()
   private readonly shownArchived = new Set<string>()
   private readonly checklistComponents = new ChecklistComponents()
+  /** Last observed document per editor, used to reject no-op editor notifications. */
+  private readonly editorValues = new WeakMap<Editor, string>()
   private pending: number | null = null
   private unloaded = false
   private firstBoardNotice: Notice | null = null
@@ -39,6 +42,9 @@ export default class RecursiveBoardPlugin extends Plugin {
   override async onload(): Promise<void> {
     this.index = new WorkItemIndex(this.app, await this.readVaultConfig())
     this.actions = new Actions(this.app, this.index)
+
+    this.rememberActiveEditor()
+    this.registerEvent(this.app.workspace.on('editor-change', (editor) => this.editorChanged(editor)))
 
     // The cache is the source the board reads (the board index), so any change to it redraws.
     this.registerEvent(this.app.metadataCache.on('changed', () => this.stale()))
@@ -54,9 +60,13 @@ export default class RecursiveBoardPlugin extends Plugin {
     }))
 
     this.registerEvent(this.app.workspace.on('layout-change', () => this.schedule()))
-    this.registerEvent(this.app.workspace.on('active-leaf-change', () => this.schedule()))
+    this.registerEvent(this.app.workspace.on('active-leaf-change', () => {
+      this.rememberActiveEditor()
+      this.schedule()
+    }))
     this.registerEvent(this.app.workspace.on('file-open', () => {
       this.expandedPath = null // A new note means no card is expanded.
+      this.rememberActiveEditor()
       this.schedule()
     }))
 
@@ -129,6 +139,7 @@ export default class RecursiveBoardPlugin extends Plugin {
 
     this.app.workspace.onLayoutReady(() => {
       if (!this.unloaded) {
+        this.rememberActiveEditor()
         this.schedule()
         void this.showFirstBoardNotice()
       }
@@ -184,6 +195,24 @@ export default class RecursiveBoardPlugin extends Plugin {
       })
     })
     this.firstBoardNotice = new Notice(fragment, 0)
+  }
+
+  private rememberActiveEditor(): void {
+    const view = this.app.workspace.getActiveViewOfType(MarkdownView)
+    if (view) this.editorValues.set(view.editor, view.editor.getValue())
+  }
+
+  private editorChanged(editor: Editor): void {
+    const view = this.app.workspace.getActiveViewOfType(MarkdownView)
+    if (!view || view.editor !== editor) return
+
+    const current = editor.getValue()
+    const previous = this.editorValues.get(editor)
+    this.editorValues.set(editor, current)
+    if (previous === undefined) return
+
+    const stamped = stampObservedChange({ kind: 'editor', previous, current, stamp: today() })
+    if (stamped !== current) replaceChangedSpan(editor, current, stamped)
   }
 
   private async readVaultConfig() {
