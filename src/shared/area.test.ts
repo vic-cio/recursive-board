@@ -1,7 +1,7 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 
-import { areaEdits, type AreaItemState, type AreaTarget } from './area.ts'
+import { areaEdits, areaRefusal, type AreaItemState, type AreaTarget } from './area.ts'
 import { applyEdits } from './edits.ts'
 import { parseFrontmatter, type Frontmatter } from './frontmatter.ts'
 
@@ -61,11 +61,8 @@ test('areaEdits refuses a root', () => {
   )
 })
 
-test('areaEdits refuses a doing card and a claimed card', () => {
-  assert.throws(
-    () => areaEdits({ ...card, status: 'doing' }, { kind: 'area' }),
-    /in doing/i,
-  )
+test('areaEdits converts a doing card and refuses a claimed one', () => {
+  assert.equal(areaRefusal({ ...card, status: 'doing' }, 'area'), null)
   assert.throws(
     () => areaEdits({ ...card, agent: 'codex' }, { kind: 'area' }),
     /has agent "codex"/i,

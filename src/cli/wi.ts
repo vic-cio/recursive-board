@@ -79,7 +79,7 @@ Notes
   client download the file, or delete the stray file, then retry. There is no --force.
   \`wi archive\` changes one flag. Descendants disappear with their parent at read time.
   \`wi area <ref>\` removes status and prev_status and marks a card as an area. It refuses a card
-  in doing or with an agent. Use \`wi area <ref> --off --status <status>\` to convert back.
+  with an agent. Use \`wi area <ref> --off --status <status>\` to convert back.
   \`wi new\` warns when such a file exists because a new id or filename may clash with it.
   \`wi here\` reads or sets this repository's vault and board pointer in your user config.
 `

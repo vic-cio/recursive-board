@@ -5,8 +5,9 @@ supersedes: docs/adr/0028-area-work-items.md (conversion scope)
 # Convert cards and areas with `wi area`
 
 `wi area <ref>` converts a child card to an area. It sets `area: true` and removes `status` and
-`prev_status`. It refuses a card in `doing` or with a non-empty `agent`; those signals mean work
-is active and should be resolved before the item changes kind. Root items are not cards or areas
+`prev_status`. It refuses a card with a non-empty `agent`: an agent means claimed work, which
+should be released before the item changes kind. A card in `doing` with no agent converts. A
+board that never finishes sits in doing, and that board is the main case for an area. Root items are not cards or areas
 in this command and cannot be converted.
 
 `wi area <ref> --off --status <status>` converts an area back to a card. The caller must choose

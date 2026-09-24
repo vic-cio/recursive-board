@@ -53,12 +53,13 @@ test('setArea stamps updated and writes only the item', async () => {
   assert.equal(readFileSync(`${fixture.root}/Boards/Main.md`, 'utf8'), parentBefore)
 })
 
-test('setArea refuses a card in doing', async () => {
+test('setArea converts an unclaimed card in doing', async () => {
+  // A board that never finishes sits in doing; it is the main case for an area.
   fixture = seed({ status: 'doing' })
-  await assert.rejects(
-    setArea(await loadVault(fixture.root), 'wi-0005', { off: false }),
-    /doing/i,
-  )
+  await setArea(await loadVault(fixture.root), 'wi-0005', { off: false })
+  const fm = fmOf(fixture)
+  assert.equal(fm.get('area'), true)
+  assert.equal(fm.has('status'), false)
 })
 
 test('setArea refuses a card with an agent', async () => {

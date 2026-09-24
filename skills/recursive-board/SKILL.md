@@ -72,7 +72,7 @@ In Obsidian, use **Promote** at the top of any child card to give it its own boa
 - `wi new` writes the frontmatter and the template sections. Fill the body sections with a file
   edit afterwards. Leave the frontmatter to `wi`.
 - To untick a done item, set it back to its `prev_status`.
-- `wi area <ref>` removes `status` and `prev_status` and marks the item as an area. It refuses a card in doing or with an agent. Convert it back with `wi area <ref> --off --status <status>`; the status is required.
+- `wi area <ref>` removes `status` and `prev_status` and marks the item as an area. It refuses a card with an agent. Convert it back with `wi area <ref> --off --status <status>`; the status is required.
 - A dispatcher claims cards from options for its workers. `wi claim` refuses a card claimed by a
   different agent, a done card, or a board with a child in doing. A repeat by the same agent in
   doing writes nothing.

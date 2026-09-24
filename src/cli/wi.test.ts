@@ -65,7 +65,7 @@ test('wi --help documents area conversion', async () => {
   const { code, stdout } = await wi(['--help'])
   assert.equal(code, 0)
   assert.match(stdout, /wi area <ref> \[--off --status <status>\]/)
-  assert.match(stdout, /in doing or with an agent/i)
+  assert.match(stdout, /It refuses a card\s+with an agent/i)
 })
 
 test('wi area converts a card to an area and back with an explicit status', async () => {

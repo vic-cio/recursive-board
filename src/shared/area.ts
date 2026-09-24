@@ -24,9 +24,6 @@ export function areaRefusal(item: AreaItemState, direction: AreaTarget['kind']):
   }
 
   if (item.isArea) return `${item.label} is already an area.`
-  if (item.status === 'doing') {
-    return `${item.label} is in doing. Move it out of doing before converting it to an area.`
-  }
   if (item.agent !== undefined && item.agent.trim() !== '') {
     return `${item.label} has agent "${item.agent}". Release it before converting it to an area.`
   }
