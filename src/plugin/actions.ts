@@ -15,7 +15,7 @@ import {
   boardEdits, moveEdits, moveRefusal, statusEdits, untickTarget,
 } from '../shared/transitions.ts'
 import { fileNameFor, newId, today, type Status } from '../shared/schema.ts'
-import { renderWorkItem } from '../shared/work-item.ts'
+import { inheritedChildFields, renderWorkItem } from '../shared/work-item.ts'
 import type { WorkItemIndex, WorkItemMeta } from './index.ts'
 import { UndoStack } from './undo.ts'
 
@@ -174,10 +174,7 @@ export class Actions {
       title,
       status,
       parentStem: parent.stem,
-      // Inheritance costs nothing, and without it the badges are blank on the items you create
-      // most often.
-      owner: parent.owner,
-      agent: parent.agent,
+      ...inheritedChildFields(parent, status),
       created: stamp,
       updated: stamp,
     }, this.index.config.extraSections)

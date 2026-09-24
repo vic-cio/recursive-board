@@ -37,8 +37,7 @@ export function renderAddRow(
     event.preventDefault()
     const title = input.value
     input.value = ''
-    // New items inherit owner and agent from the parent, so the badges are not blank on
-    // exactly the items you create most often.
+    // New items inherit the parent's owner; agent inheritance follows the shared status rule.
     void ctx.actions.createChild(parent, title, status)
   })
 }

@@ -9,9 +9,9 @@ import { existsSync } from 'node:fs'
 import { join } from 'node:path'
 
 import { writeAtomic } from '../write.ts'
-import { renderWorkItem, type NewWorkItem } from '../../shared/work-item.ts'
+import { inheritedChildFields, renderWorkItem, type NewWorkItem } from '../../shared/work-item.ts'
 import { requireTemplate } from '../../shared/templates.ts'
-import { INHERITED_FIELDS, fileNameFor, isStatus, newId, today, type Status } from '../../shared/schema.ts'
+import { fileNameFor, isStatus, newId, today, type Status } from '../../shared/schema.ts'
 import type { Vault } from '../vault.ts'
 
 export interface NewOptions {
@@ -71,18 +71,20 @@ export async function createItem(vault: Vault, options: NewOptions): Promise<Cre
     updated: stamp,
     template: options.template,
   }
+  const inherited = inheritedChildFields({
+    owner: textField(parent.frontmatter.get('owner')),
+    agent: textField(parent.frontmatter.get('agent')),
+  }, template.area ? undefined : status, options)
   const fields: NewWorkItem = template.area
-    ? { ...common, area: true }
-    : { ...common, status }
-
-  for (const field of INHERITED_FIELDS) {
-    // Absence is meaningful: never write a key the parent did not carry.
-    const value = options[field] ?? parent.frontmatter.get(field)
-    if (value !== undefined && value !== '') fields[field] = String(value)
-  }
+    ? { ...common, ...inherited, area: true }
+    : { ...common, ...inherited, status }
   if (options.priority !== undefined) fields.priority = options.priority
 
   await writeAtomic(path, renderWorkItem(fields, vault.config.extraSections))
 
   return { id, stem, relPath, path, parentStem: parent.stem }
+}
+
+function textField(value: string | number | boolean | null | undefined): string | undefined {
+  return value === undefined || value === null ? undefined : String(value)
 }

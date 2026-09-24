@@ -35,9 +35,6 @@ export const OPTIONAL_FIELDS = [
   'area', // docs/adr/0028-area-work-items.md: an ongoing space with no status.
 ] as const
 
-/** Fields a new child inherits from its parent, as both writers do for new children. */
-export const INHERITED_FIELDS = ['owner', 'agent'] as const
-
 export const WORK_ITEM_TYPE = 'work-item'
 
 export function isArea(value: unknown): boolean {

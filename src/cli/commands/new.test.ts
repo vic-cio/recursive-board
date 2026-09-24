@@ -42,6 +42,7 @@ test('createItem writes a file into Boards with the nine-field shape', async () 
   assert.match(String(fm.get('id')), /^wi-[a-z0-9]{4}$/)
   assert.equal(fm.get('title'), 'Streaming')
   assert.equal(fm.get('status'), 'backlog')
+  assert.equal(fm.has('agent'), false, 'default backlog items are not assigned to the parent agent')
   assert.equal(fm.get('parent'), '[[Build server]]')
   assert.match(String(fm.get('created')), /^\d{4}-\d{2}-\d{2}$/)
   assert.equal(fm.get('created'), fm.get('updated'))
@@ -79,12 +80,25 @@ test('createItem never writes board or prev_status on a fresh item', async () =>
   assert.equal(fm.has('prev_status'), false)
 })
 
-test('createItem inherits owner and agent from the parent', async () => {
-  fixture = seed()
-  const created = await createItem(await reload(fixture), { title: 'Streaming', parent: 'wi-0004' })
-  const fm = parseFrontmatter(readFileSync(created.path, 'utf8'))!
-  assert.equal(fm.get('owner'), 'sam')
-  assert.equal(fm.get('agent'), 'codex')
+test('createItem always inherits owner, and inherits agent only for doing', async (t) => {
+  for (const [status, expectedAgent] of [
+    ['backlog', undefined],
+    ['options', undefined],
+    ['doing', 'codex'],
+    ['done', undefined],
+  ] as const) {
+    await t.test(status, async () => {
+      fixture = seed()
+      const created = await createItem(await reload(fixture), {
+        title: 'Streaming', parent: 'wi-0004', status,
+      })
+      const fm = parseFrontmatter(readFileSync(created.path, 'utf8'))!
+      assert.equal(fm.get('owner'), 'sam')
+      assert.equal(fm.get('agent'), expectedAgent)
+      fixture.cleanup()
+      fixture = undefined
+    })
+  }
 })
 
 test('createItem does not invent owner or agent when the parent has none', async () => {
@@ -101,6 +115,14 @@ test('an explicit owner beats the inherited one', async () => {
     title: 'Streaming', parent: 'wi-0004', owner: 'lee',
   })
   assert.equal(parseFrontmatter(readFileSync(created.path, 'utf8'))!.get('owner'), 'lee')
+})
+
+test('an explicit agent beats the status-based inheritance rule', async () => {
+  fixture = seed()
+  const created = await createItem(await reload(fixture), {
+    title: 'Streaming', parent: 'wi-0004', status: 'options', agent: 'lee',
+  })
+  assert.equal(parseFrontmatter(readFileSync(created.path, 'utf8'))!.get('agent'), 'lee')
 })
 
 test('createItem accepts a status, which is how the board add row works', async () => {
