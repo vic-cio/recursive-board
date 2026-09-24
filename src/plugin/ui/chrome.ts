@@ -9,7 +9,7 @@
  * Ordering follows the prototype review: the Objective is what you came to read, so the metadata
  * strip and the board sit below the note body.
  *
- * The promote control and checklist shortcut sit at the top. The checklist itself remains below
+ * The checklist shortcut and the promote control sit side by side in the top bar. The checklist itself remains below
  * the note body, where the prototype review placed it.
  */
 import { setIcon } from 'obsidian'
@@ -24,6 +24,7 @@ export function renderBreadcrumbs(
   host: HTMLElement,
   ctx: RenderContext,
   meta: WorkItemMeta,
+  checklist?: HTMLElement,
 ): void {
   const bar = host.createDiv({ cls: 'wi-breadcrumbs' })
   const trail = bar.createDiv({ cls: 'wi-crumb-trail' })
@@ -47,7 +48,7 @@ export function renderBreadcrumbs(
   }
   trail.createSpan({ cls: 'wi-crumb is-current', text: meta.title })
 
-  renderControls(bar, ctx, meta)
+  renderControls(bar, ctx, meta, checklist)
 }
 
 /**
@@ -61,21 +62,27 @@ export function renderBreadcrumbs(
  * They are labelled with the words the design docs use, rather than both saying "Board", because
  * a button that reads the same as its neighbour but does something durable is a trap.
  */
-function renderControls(bar: HTMLElement, ctx: RenderContext, meta: WorkItemMeta): void {
+function renderControls(
+  bar: HTMLElement,
+  ctx: RenderContext,
+  meta: WorkItemMeta,
+  checklist: HTMLElement | undefined,
+): void {
   const childCount = ctx.index.childCount(meta.file)
-  if (childCount === 0 && !meta.board && !meta.area && meta.parentLink === null) return
+  if (!checklist && childCount === 0 && !meta.board && !meta.area && meta.parentLink === null) return
 
   const group = bar.createDiv({ cls: 'wi-controls' })
+  if (checklist) renderChecklistJump(group, checklist, childCount)
   if (opensAsBoard(meta)) renderViewSwitch(group, ctx, meta)
   if (shouldRenderPromoteToggle({ meta, childCount })) renderPromoteToggle(group, ctx, meta)
 }
 
-/** A visible shortcut to the checklist at the foot of a long note. */
-export function renderChecklistJump(host: HTMLElement, target: HTMLElement, childCount: number): void {
+/** A visible shortcut to the checklist at the foot of a long note, beside Promote. */
+function renderChecklistJump(host: HTMLElement, target: HTMLElement, childCount: number): void {
   const summary = childCount === 0
     ? 'No children'
     : `${childCount} ${childCount === 1 ? 'child' : 'children'}`
-  const button = host.createEl('button', { cls: 'wi-checklist-jump', text: `${summary} · Add` })
+  const button = host.createEl('button', { cls: 'wi-control wi-checklist-jump', text: `${summary} · Add` })
   button.setAttr('aria-label', `Jump to checklist: ${summary}`)
   button.addEventListener('click', () => target.scrollIntoView({ behavior: 'smooth', block: 'start' }))
 }

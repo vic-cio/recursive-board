@@ -24,7 +24,7 @@ import { MarkdownView, Platform, type App, type WorkspaceLeaf } from 'obsidian'
 
 import { renderBoard } from './ui/board.ts'
 import { renderChecklist } from './ui/checklist.ts'
-import { renderBreadcrumbs, renderChecklistJump, renderMetaStrip } from './ui/chrome.ts'
+import { renderBreadcrumbs, renderMetaStrip } from './ui/chrome.ts'
 import type { RenderContext } from './ui/context.ts'
 import { opensAsBoard, type WorkItemMeta } from './index.ts'
 
@@ -132,12 +132,9 @@ export function mountLeaf(leaf: WorkspaceLeaf, ctx: RenderContext): void {
   clearTakeover(view)
   view.contentEl.addClass(REGION_HOST)
   for (const sizer of sizersOf(view)) {
-    const top = region(sizer, TOP, true)
-    renderBreadcrumbs(top, ctx, meta)
-
     // The Objective is what you came to read, so everything else sits below the body.
     const bottom = region(sizer, BOTTOM, false)
-    renderChecklistJump(top, bottom, ctx.index.childCount(meta.file))
+    renderBreadcrumbs(region(sizer, TOP, true), ctx, meta, bottom)
     renderMetaStrip(bottom, meta)
     renderChecklist(bottom, ctx, ctx.index.childrenOf(meta.file), {
       grouped: opensAsBoard(meta),
