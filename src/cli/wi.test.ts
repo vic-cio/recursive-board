@@ -220,6 +220,36 @@ test('wi --help lists claim and release', async () => {
   assert.match(stdout, /wi release <ref> --reason <text>/)
 })
 
+test('wi promote and demote expose JSON results and are idempotent', async () => {
+  fixture = seed()
+  const promoted = await wi(['promote', 'wi-0001', '--json'])
+  assert.equal(promoted.code, 0, promoted.stderr)
+  assert.deepEqual(JSON.parse(promoted.stdout), {
+    id: 'wi-0001', path: 'Boards/Main.md', promoted: true, changed: true,
+  })
+  const before = readFileSync(join(fixture.root, 'Boards/Main.md'), 'utf8')
+  const repeated = await wi(['promote', 'wi-0001', '--json'])
+  assert.deepEqual(JSON.parse(repeated.stdout), {
+    id: 'wi-0001', path: 'Boards/Main.md', promoted: true, changed: false,
+  })
+  assert.equal(readFileSync(join(fixture.root, 'Boards/Main.md'), 'utf8'), before)
+
+  const demoted = await wi(['demote', 'wi-0001', '--json'])
+  assert.equal(demoted.code, 0, demoted.stderr)
+  assert.deepEqual(JSON.parse(demoted.stdout), {
+    id: 'wi-0001', path: 'Boards/Main.md', promoted: false, changed: true,
+  })
+  assert.doesNotMatch(readFileSync(join(fixture.root, 'Boards/Main.md'), 'utf8'), /^board:/m)
+})
+
+test('wi --help lists promote and demote', async () => {
+  fixture = seed()
+  const { code, stdout } = await wi(['--help'])
+  assert.equal(code, 0)
+  assert.match(stdout, /wi promote <ref>/)
+  assert.match(stdout, /wi demote <ref>/)
+})
+
 test('an unresolvable ref exits 2 and says what to try', async () => {
   fixture = seed()
   const { code, stderr } = await wi(['status', 'wi-nope', 'doing'])

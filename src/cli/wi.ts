@@ -26,6 +26,7 @@ import { listTemplates, writeTemplates } from './commands/template.ts'
 import { removeItem } from './commands/remove.ts'
 import { moveItem } from './commands/move.ts'
 import { archiveItem } from './commands/archive.ts'
+import { setPromoted } from './commands/promote.ts'
 import { hookStatus, installHook, uninstallHook } from './commands/hook.ts'
 import { runSetup } from './commands/setup.ts'
 import { STATUSES } from '../shared/schema.ts'
@@ -42,6 +43,8 @@ Usage
   wi release <ref> --reason <text> [--where <branch-or-path>]
   wi move <ref> --to <ref>
   wi archive <ref> [--undo]
+  wi promote <ref>
+  wi demote <ref>
   wi rm <ref> [--recursive] [--dry-run]
   wi children [<ref>] [--status <s>] [--tree] [--archived]
   wi validate
@@ -152,6 +155,10 @@ async function main(argv: string[]): Promise<number> {
       return runMove(vault, rest, values, json)
     case 'archive':
       return runArchive(vault, rest, values, json)
+    case 'promote':
+      return runPromote(vault, rest, true, json)
+    case 'demote':
+      return runPromote(vault, rest, false, json)
     case 'rm':
       return runRemove(vault, rest, values, json)
     case 'children':
@@ -353,6 +360,19 @@ async function runArchive(vault: Vault, rest: string[], values: Values, json: bo
   } else {
     const verb = change.archived ? 'archived' : 'unarchived'
     process.stdout.write(`${label(change.item)}  ${verb}${change.changed ? '' : ' (already so; nothing written)'}\n`)
+  }
+  return 0
+}
+
+async function runPromote(vault: Vault, rest: string[], promoted: boolean, json: boolean): Promise<number> {
+  const ref = rest.join(' ').trim()
+  if (ref === '') throw new UsageError(`wi ${promoted ? 'promote' : 'demote'} needs a <ref>.`)
+  const change = await setPromoted(vault, ref, promoted)
+  if (json) {
+    print({ id: change.item.id, path: change.item.relPath, promoted: change.promoted, changed: change.changed })
+  } else {
+    const verb = promoted ? 'promoted' : 'demoted'
+    process.stdout.write(`${label(change.item)}  ${change.changed ? verb : `already ${promoted ? 'a board' : 'a card'}; nothing written`}\n`)
   }
   return 0
 }

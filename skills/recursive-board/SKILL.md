@@ -59,6 +59,8 @@ wi claim <ref> --agent <name>        # assign and move to doing in one write
 wi release <ref> --reason <text> [--where <branch-or-path>]
 wi move <ref> --to <new parent ref>
 wi archive <ref>                    # --undo reverses it
+wi promote <ref>                    # render this item's children as a board
+wi demote <ref>                     # render this item's children as a checklist
 wi rm <ref> --recursive --dry-run   # read what it lists, then run it without --dry-run
 ```
 
