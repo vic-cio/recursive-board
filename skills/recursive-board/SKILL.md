@@ -84,6 +84,14 @@ In Obsidian, use **Promote** at the top of any child card to give it its own boa
   continuation location in Notes.
 - Run `wi validate` after a batch of writes. Exit 0 is clean. Exit 1 lists what broke.
 
+## Writing a card
+
+A card has one deliverable. When a card names more than one, give each deliverable its own child
+card with `wi new "<title>" --parent <card>`. Do this when you write the card, or before you or a
+worker start it. The children are the todo list: move each child to done when it is finished. The
+parent is done when every child is done. A worker reads its card's open children as its scope, so
+the board shows what is still open.
+
 ## Working a card
 
 For `/recursive-board <card> <instruction>`, use the instruction to clarify the request and the
