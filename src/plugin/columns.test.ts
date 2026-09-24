@@ -71,8 +71,14 @@ test('done areas leave the area bar and stay in Done', () => {
   assert.deepEqual(toColumns([area], NOW)[3]!.visible.map((item) => item.stem), ['Done area'])
 })
 
+test('backlog areas leave the area bar and stay in Backlog', () => {
+  const area = meta({ stem: 'Someday area', area: true, status: 'backlog' })
+  assert.deepEqual(toAreas([area], () => []), [])
+  assert.deepEqual(toColumns([area], NOW)[0]!.visible.map((item) => item.stem), ['Someday area'])
+})
+
 test('area summaries respect the board archived-items view', () => {
-  const area = meta({ stem: 'Archived area', area: true, effectiveArchived: true })
+  const area = meta({ stem: 'Archived area', area: true, status: 'doing', effectiveArchived: true })
   const doing = meta({ stem: 'Archived card', status: 'doing', effectiveArchived: true })
   const childrenOf = () => [doing]
   assert.deepEqual(toAreas([area], childrenOf), [])

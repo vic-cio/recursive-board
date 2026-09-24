@@ -139,7 +139,7 @@ The pre-commit hook runs `wi validate` and stops a commit when the vault has err
 | `wi --version` | Prints the installed CLI version. |
 
 `wi new --template area` creates an area in `backlog` by default. Pass `--status` to choose its
-starting status. Areas appear in their status column and in the area bar until they move to `done`.
+starting status. Areas appear in their status column. Areas in options or doing also appear in the area bar; a backlog or done area stays in its column only.
 
 `wi move`, `wi rm`, and `wi archive` refuse to run when a hidden non-Markdown file is in the work-item folder. The index cannot read that file, so it may be missing a work item. Let the sync client finish downloading it or remove the stray file, then retry. There is no force option. `wi new` still creates the item and warns on stderr because a new id or filename may clash with an unread file. `wi validate` reports a warning if `defaultRoot` names no root item.
 

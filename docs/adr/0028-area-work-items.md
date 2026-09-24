@@ -12,8 +12,9 @@ while their status is not `done`. Areas cannot be claimed by an agent.
 together, so the two writers use the same renderer. The marker is a field rather than a template
 name in stored Markdown because the file must retain its meaning after it is moved or edited.
 
-The plugin also presents open areas in a separate area bar above the status columns. A done area
-stays in the Done column and leaves that bar. Its bar count is the number of its own non-archived
+The plugin also presents live areas, those in options or doing, in a separate area bar above the
+status columns. A backlog area is not live yet and a done area has retired, so each stays in its
+column and leaves that bar. Its bar count is the number of its own non-archived
 Doing cards.
 
 ## Considered options

@@ -229,14 +229,14 @@ export interface AreaSummary {
   doingCount: number
 }
 
-/** Open areas belong above the status groups; their count is their active Doing cards. */
+/** Live areas (options or doing) belong in the bar above the status groups; their count is their active Doing cards. */
 export function toAreas(
   children: WorkItemMeta[],
   childrenOf: (area: WorkItemMeta) => WorkItemMeta[],
   showArchived = false,
 ): AreaSummary[] {
   return children
-    .filter((child) => child.area && child.status !== 'done' && (showArchived || !child.effectiveArchived))
+    .filter((child) => child.area && (child.status === 'options' || child.status === 'doing') && (showArchived || !child.effectiveArchived))
     .map((meta) => ({
       meta,
       doingCount: childrenOf(meta).filter((child) =>
