@@ -43,13 +43,14 @@ test('areaEdits converts a child card and preserves unrelated fields and body', 
   assert.ok(converted.endsWith('# Streaming\n'))
 })
 
-test('areaEdits converts an area to the chosen status and removes stale area history', () => {
+test('areaEdits converts an area back to a card in the status it has', () => {
   const area: AreaItemState = { ...card, isArea: true }
-  const target: AreaTarget = { kind: 'card', status: 'backlog' }
-  const converted = applyEdits(source, areaEdits(area, target))
-  const result = fields(converted)
+  const target: AreaTarget = { kind: 'card' }
+  const edits = areaEdits(area, target)
+  assert.equal(edits.some((edit) => edit.key === 'status'), false)
+  const result = fields(applyEdits(source, edits))
   assert.equal(result.has('area'), false)
-  assert.equal(result.get('status'), 'backlog')
+  assert.equal(result.get('status'), fields(source).get('status'))
   assert.equal(result.has('prev_status'), false)
   assert.equal(result.get('mystery_key'), 'keep me')
 })
@@ -80,7 +81,7 @@ test('areaEdits refuses converting an item in the wrong direction', () => {
     /already an area/i,
   )
   assert.throws(
-    () => areaEdits(card, { kind: 'card', status: 'doing' }),
+    () => areaEdits(card, { kind: 'card' }),
     /not an area/i,
   )
 })

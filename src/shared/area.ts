@@ -12,7 +12,7 @@ export interface AreaItemState {
 
 export type AreaTarget =
   | { kind: 'area' }
-  | { kind: 'card'; status: Status }
+  | { kind: 'card' }
 
 /** Why a conversion is not allowed, or null when the requested direction is valid. */
 export function areaRefusal(item: AreaItemState, direction: AreaTarget['kind']): string | null {
@@ -42,9 +42,9 @@ export function areaEdits(item: AreaItemState, target: AreaTarget): Edit[] {
     ]
   }
 
+  // An area keeps its status, so turning it back into a card leaves the status as it is.
   return [
     { op: 'remove', key: 'area' },
-    { op: 'set', key: 'status', value: target.status },
     { op: 'remove', key: 'prev_status' },
   ]
 }

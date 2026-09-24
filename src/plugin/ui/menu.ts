@@ -14,7 +14,6 @@ import { Menu, Notice, Platform, setIcon } from 'obsidian'
 import { STATUSES } from '../../shared/schema.ts'
 import type { WorkItemMeta } from '../index.ts'
 import type { RenderContext } from './context.ts'
-import { AreaStatusModal } from './area-status-modal.ts'
 import { MoveModal } from './move-modal.ts'
 import { statusLabel } from './status-label.ts'
 
@@ -66,9 +65,9 @@ function buildMenu(ctx: RenderContext, meta: WorkItemMeta): Menu {
     menu.addSeparator()
     if (meta.area) {
       menu.addItem((item) => item
-        .setTitle('Make card…')
+        .setTitle('Make card')
         .setIcon('square-kanban')
-        .onClick(() => new AreaStatusModal(ctx.app, ctx.actions, meta).open()))
+        .onClick(() => void ctx.actions.convertArea(meta, { kind: 'card' })))
     } else {
       menu.addItem((item) => item
         .setTitle('Make area')

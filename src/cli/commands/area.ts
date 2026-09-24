@@ -38,7 +38,7 @@ export async function setArea(vault: Vault, ref: string, options: AreaOptions): 
   if (options.off) {
     const status = item.status
     if (!isStatus(status)) throw new Error(`${item.relPath} has no valid status to preserve.`)
-    const target: AreaTarget = { kind: 'card', status }
+    const target: AreaTarget = { kind: 'card' }
     const edits = areaEdits(state, target)
     const before = item.text
     const after = await editItem(item, edits)

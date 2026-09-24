@@ -97,7 +97,7 @@ export class Actions {
 
   /** Convert a child card and an area through the same tested rule as `wi area`. */
   async convertArea(meta: WorkItemMeta, target: AreaTarget): Promise<void> {
-    const label = target.kind === 'area' ? 'make area' : `make card ${target.status}`
+    const label = target.kind === 'area' ? 'make area' : 'make card'
     const done = await this.run(`${label} ${meta.title}`, async () => {
       const edits = areaEdits({
         label: meta.file.path,
@@ -109,7 +109,7 @@ export class Actions {
       await this.edit(meta.file, edits, `${label} ${meta.title}`)
       return true
     })
-    if (done) this.undoableNotice(`${target.kind === 'area' ? 'Made area' : `Made card in ${target.status}`} ${meta.title}`)
+    if (done) this.undoableNotice(`${target.kind === 'area' ? 'Made area' : 'Made card'} ${meta.title}`)
   }
 
   /** Archive one file. The index applies its flag to descendants when it reads them. */
