@@ -1,5 +1,7 @@
 # Recursive Board
 
+> **Install with your agent.** Paste this prompt into your coding agent: "Install Recursive Board for me. Check that Node.js 20.12 or later is installed, run `npm install --global recursive-board`, and confirm that `wi --version` works. Download https://raw.githubusercontent.com/vic-cio/recursive-board/main/skills/recursive-board/SKILL.md to `recursive-board/SKILL.md` in your skills folder (for Claude Code, `~/.claude/skills/`; for other agents, `~/.agents/skills/`). Ask me for the path of my Obsidian vault. If I use one vault, offer to set `WI_VAULT` to that path in my shell profile. If the vault is a Git repository, run `wi hook install --vault <path>`. Then tell me to install and enable Recursive Board in Obsidian under Settings → Community plugins → Browse, and show me the output of `wi --help`."
+
 Recursive Board turns a folder of Markdown files in an Obsidian vault into a hierarchical work board. Each work item is one Markdown file. Its parent link defines where it belongs.
 
 **Markdown is canonical. The plugin is a view, never the database.** The plugin renders and edits work items in Obsidian. The `wi` command-line tool supports scripts and agents. Both use the same schema and rules.
