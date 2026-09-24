@@ -22,11 +22,11 @@
    * a light theme it is white on near-white.
    */
   --wi-rgb-backlog: var(--mono-rgb-100, 128, 128, 128);
-  --wi-rgb-options: var(--color-yellow-rgb, 224, 172, 0);
-  --wi-rgb-doing: var(--color-blue-rgb, 8, 109, 221);
-  --wi-rgb-done: var(--color-green-rgb, 8, 185, 78);
-  --wi-rgb-blocked: var(--color-red-rgb, 233, 49, 71);
-  --wi-rgb-agent: var(--color-purple-rgb, 168, 130, 255);
+  --wi-rgb-options: var(--wi-custom-rgb-options, var(--color-yellow-rgb, 224, 172, 0));
+  --wi-rgb-doing: var(--wi-custom-rgb-doing, var(--color-blue-rgb, 8, 109, 221));
+  --wi-rgb-done: var(--wi-custom-rgb-done, var(--color-green-rgb, 8, 185, 78));
+  --wi-rgb-blocked: var(--wi-custom-rgb-blocked, var(--color-red-rgb, 233, 49, 71));
+  --wi-rgb-agent: var(--wi-custom-rgb-agent, var(--color-purple-rgb, 168, 130, 255));
 
   /* How strongly a status shows: on a pill, on a whole card, and on a card's edge. */
   --wi-tint-pill: 0.16;

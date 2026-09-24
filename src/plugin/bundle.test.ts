@@ -12,8 +12,10 @@ import { fileURLToPath } from 'node:url'
 const root = join(dirname(fileURLToPath(import.meta.url)), '..', '..')
 
 class FakePlugin {}
+class FakePluginSettingTab {}
 const obsidian = {
   Plugin: FakePlugin,
+  PluginSettingTab: FakePluginSettingTab,
   MarkdownView: class {},
   Notice: class {},
   Platform: { isMobile: false },

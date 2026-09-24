@@ -22,6 +22,7 @@ import { MoveModal } from './ui/move-modal.ts'
 import { CreateBoardModal } from './ui/create-board-modal.ts'
 import { createFirstBoard } from './first-board.ts'
 import { replaceChangedSpan, stampObservedChange } from './updated.ts'
+import { parseStatusColors, StatusColorSettingTab, type StatusColorKey, type StatusColors } from './settings.ts'
 
 export default class RecursiveBoardPlugin extends Plugin {
   private index!: WorkItemIndex
@@ -38,8 +39,23 @@ export default class RecursiveBoardPlugin extends Plugin {
   private unloaded = false
   private firstBoardNotice: Notice | null = null
   private firstBoardDismissed = false
+  private storedData: Record<string, unknown> = {}
+  private statusColors: StatusColors = {}
 
   override async onload(): Promise<void> {
+    const storedData: unknown = await this.loadData()
+    if (typeof storedData === 'object' && storedData !== null && !Array.isArray(storedData)) {
+      this.storedData = Object.fromEntries(Object.entries(storedData))
+    }
+    this.statusColors = parseStatusColors(this.storedData.statusColors)
+    this.applyStatusColors()
+    this.addSettingTab(new StatusColorSettingTab(
+      this.app,
+      this,
+      () => this.statusColors,
+      (key, color) => this.updateStatusColor(key, color),
+    ))
+
     this.index = new WorkItemIndex(this.app, await this.readVaultConfig())
     this.actions = new Actions(this.app, this.index)
 
@@ -169,8 +185,7 @@ export default class RecursiveBoardPlugin extends Plugin {
 
   private async showFirstBoardNotice(): Promise<void> {
     if (this.index.all().length > 0 || this.firstBoardNotice || this.firstBoardDismissed) return
-    const data = await this.loadData()
-    this.firstBoardDismissed = data?.firstBoardNoticeDismissed === true
+    this.firstBoardDismissed = this.storedData.firstBoardNoticeDismissed === true
     if (this.firstBoardDismissed || this.index.all().length > 0 || this.unloaded) return
 
     const fragment = createFragment((el) => {
@@ -191,10 +206,39 @@ export default class RecursiveBoardPlugin extends Plugin {
         this.firstBoardDismissed = true
         this.firstBoardNotice?.hide()
         this.firstBoardNotice = null
-        void this.saveData({ ...(data ?? {}), firstBoardNoticeDismissed: true })
+        this.storedData = { ...this.storedData, firstBoardNoticeDismissed: true }
+        void this.saveData(this.storedData)
       })
     })
     this.firstBoardNotice = new Notice(fragment, 0)
+  }
+
+  private async updateStatusColor(key: StatusColorKey, color: string | undefined): Promise<void> {
+    const next = { ...this.statusColors }
+    if (color === undefined) delete next[key]
+    else next[key] = color
+    this.statusColors = next
+    this.applyStatusColors()
+
+    if (Object.keys(next).length > 0) this.storedData.statusColors = next
+    else delete this.storedData.statusColors
+    await this.saveData(this.storedData)
+  }
+
+  private applyStatusColors(): void {
+    const names: Readonly<Record<StatusColorKey, string>> = {
+      options: '--wi-custom-rgb-options',
+      doing: '--wi-custom-rgb-doing',
+      done: '--wi-custom-rgb-done',
+      blocked: '--wi-custom-rgb-blocked',
+      agent: '--wi-custom-rgb-agent',
+    }
+    for (const key of ['options', 'doing', 'done', 'blocked', 'agent'] as const) {
+      const color = this.statusColors[key]
+      const value = color ? color.slice(1).match(/.{2}/g)?.map((channel) => Number.parseInt(channel, 16)).join(', ') : ''
+      if (value) this.app.workspace.containerEl.style.setProperty(names[key], value)
+      else this.app.workspace.containerEl.style.removeProperty(names[key])
+    }
   }
 
   private rememberActiveEditor(): void {
