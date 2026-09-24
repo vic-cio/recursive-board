@@ -62,7 +62,7 @@ function buildMenu(ctx: RenderContext, meta: WorkItemMeta): Menu {
     .onClick(() => new MoveModal(ctx.app, ctx.index, ctx.actions, meta).open()))
 
   // A root takes no status, so it gets no status entries.
-  if (meta.parentLink !== null) {
+  if (meta.parentLink !== null && !meta.area) {
     menu.addSeparator()
     for (const status of STATUSES) {
       menu.addItem((item) => item
@@ -72,11 +72,13 @@ function buildMenu(ctx: RenderContext, meta: WorkItemMeta): Menu {
     }
   }
 
-  menu.addSeparator()
-  menu.addItem((item) => item
-    .setTitle(meta.board ? 'Demote to checklist' : 'Promote to board')
-    .setIcon('columns-3')
-    .onClick(() => void ctx.actions.setPromoted(meta, !meta.board)))
+  if (!meta.area) {
+    menu.addSeparator()
+    menu.addItem((item) => item
+      .setTitle(meta.board ? 'Demote to checklist' : 'Promote to board')
+      .setIcon('columns-3')
+      .onClick(() => void ctx.actions.setPromoted(meta, !meta.board)))
+  }
   if (meta.id !== undefined) {
     const id = meta.id
     menu.addItem((item) => item

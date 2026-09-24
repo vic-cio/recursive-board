@@ -64,11 +64,11 @@ export function renderBreadcrumbs(
  */
 function renderControls(bar: HTMLElement, ctx: RenderContext, meta: WorkItemMeta): void {
   const childCount = ctx.index.childCount(meta.file)
-  if (childCount === 0 && !meta.board) return
+  if (childCount === 0 && !meta.board && !meta.area) return
 
   const group = bar.createDiv({ cls: 'wi-controls' })
-  if (meta.board) renderViewSwitch(group, ctx, meta)
-  renderPromoteToggle(group, ctx, meta)
+  if (meta.board || meta.area) renderViewSwitch(group, ctx, meta)
+  if (!meta.area) renderPromoteToggle(group, ctx, meta)
 }
 
 /** Showing the text of a promoted board instead of its columns. Session only. */

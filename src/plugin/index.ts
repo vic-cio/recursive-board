@@ -30,6 +30,7 @@ export interface WorkItemMeta {
   /** The file the parent link resolves to, or null when the item is a root or an orphan. */
   parent: TFile | null
   board: boolean
+  area: boolean
   archived: boolean
   /** Own flag or an ancestor's flag, computed by the index on each rebuild. */
   effectiveArchived: boolean
@@ -124,6 +125,7 @@ export class WorkItemIndex {
         ? this.app.metadataCache.getFirstLinkpathDest(parentLink, file.path)
         : null,
       board: frontmatter['board'] === true,
+      area: frontmatter['area'] === true,
       archived: frontmatter['archived'] === true,
       effectiveArchived: false,
       priority: typeof priority === 'number' ? priority : undefined,
@@ -217,14 +219,36 @@ export interface Column {
   archived: WorkItemMeta[]
 }
 
+export interface AreaSummary {
+  meta: WorkItemMeta
+  doingCount: number
+}
+
+/** Areas belong above the status groups; their count is their active Doing cards. */
+export function toAreas(
+  children: WorkItemMeta[],
+  childrenOf: (area: WorkItemMeta) => WorkItemMeta[],
+  showArchived = false,
+): AreaSummary[] {
+  return children
+    .filter((child) => child.area && (showArchived || !child.effectiveArchived))
+    .map((meta) => ({
+      meta,
+      doingCount: childrenOf(meta).filter((child) =>
+        !child.area && child.status === 'doing' && (showArchived || !child.effectiveArchived),
+      ).length,
+    }))
+}
+
 /**
  * Groups children into the four columns, applying the rolling Done window.
  * The window is a render filter, so it adds nothing to the canonical layer and cannot corrupt it.
  */
 export function toColumns(children: WorkItemMeta[], now: Date = new Date(), showArchived = false): Column[] {
   const cutoff = doneCutoff(now)
+  const cards = children.filter((child) => !child.area)
   return STATUSES.map((status) => {
-    const all = children.filter((c) => c.status === status)
+    const all = cards.filter((c) => c.status === status)
     const archived = all.filter((c) => c.effectiveArchived)
     const live = all.filter((c) => !c.effectiveArchived)
     if (status !== 'done') return { status, visible: showArchived ? all : live, hidden: 0, archived }

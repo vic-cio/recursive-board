@@ -311,6 +311,48 @@
   align-items: start;
 }
 
+/* Areas are navigable boards in their own right, so they sit above status columns. */
+.wi-area-strip {
+  display: flex;
+  gap: 6px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  margin-bottom: var(--wi-gap);
+  padding: 1px 1px 5px;
+  white-space: nowrap;
+  scrollbar-width: thin;
+}
+
+.wi-area-chip {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: 7px;
+  max-width: 260px;
+  min-height: 30px;
+  padding: 3px 9px;
+  border: 1px solid var(--background-modifier-border);
+  border-radius: 15px;
+  box-shadow: none;
+  background: var(--background-secondary);
+  color: var(--text-normal);
+  cursor: pointer;
+  font-size: var(--font-ui-smaller);
+}
+
+.wi-area-title {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.wi-area-count,
+.wi-area-group-count {
+  flex: none;
+  color: var(--text-faint);
+  font-variant-numeric: tabular-nums;
+}
+
 .wi-column {
   display: flex;
   flex-direction: column;
@@ -770,6 +812,54 @@
   flex-direction: column;
   min-height: 0;
   gap: 10px;
+}
+
+.wi-area-group {
+  flex: none;
+  border-radius: var(--wi-radius);
+  background: var(--background-secondary);
+}
+
+.wi-area-heading {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  min-height: 38px;
+  padding: 6px 10px;
+  color: var(--text-muted);
+  font-size: var(--font-ui-smaller);
+  cursor: pointer;
+  list-style: none;
+}
+
+.wi-area-heading::-webkit-details-marker {
+  display: none;
+}
+
+.wi-area-heading::before {
+  content: '›';
+  display: inline-block;
+  color: var(--text-faint);
+  transition: transform 100ms ease-out;
+}
+
+.wi-area-group[open] > .wi-area-heading::before {
+  transform: rotate(90deg);
+}
+
+.wi-area-list {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  padding: 0 8px 8px;
+}
+
+.wi-area-list .wi-area-chip {
+  width: 100%;
+  max-width: none;
+  justify-content: space-between;
+  min-width: 0;
+  text-align: left;
 }
 
 .wi-tabs {

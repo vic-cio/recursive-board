@@ -5,7 +5,7 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 
-import { toColumns, compareSiblings, type WorkItemMeta } from './index.ts'
+import { toAreas, toColumns, compareSiblings, type WorkItemMeta } from './index.ts'
 import { doneCutoff } from '../shared/schema.ts'
 import type { Status } from '../shared/schema.ts'
 
@@ -21,6 +21,7 @@ function meta(over: Partial<WorkItemMeta> & { stem: string }): WorkItemMeta {
     parentLink: over.parentLink ?? 'Main',
     parent: over.parent ?? null,
     board: over.board ?? false,
+    area: over.area ?? false,
     priority: over.priority,
     updated: over.updated,
     owner: over.owner,
@@ -52,6 +53,24 @@ test('toColumns groups children by status', () => {
   ], NOW)
   assert.deepEqual(columns[0]!.visible.map((c) => c.stem), ['A', 'C'])
   assert.deepEqual(columns[2]!.visible.map((c) => c.stem), ['B'])
+})
+
+test('areas stay outside status columns and count active Doing cards', () => {
+  const area = meta({ stem: 'Area', area: true })
+  const doing = card('Doing', 'doing')
+  const archived = meta({ stem: 'Archived', status: 'doing', effectiveArchived: true })
+  const nestedArea = meta({ stem: 'Nested', area: true })
+  const summaries = toAreas([area], (item) => item === area ? [doing, archived, nestedArea] : [])
+  assert.deepEqual(summaries.map((entry) => [entry.meta.stem, entry.doingCount]), [['Area', 1]])
+  assert.deepEqual(toColumns([area, doing], NOW)[2]!.visible.map((item) => item.stem), ['Doing'])
+})
+
+test('area summaries respect the board archived-items view', () => {
+  const area = meta({ stem: 'Archived area', area: true, effectiveArchived: true })
+  const doing = meta({ stem: 'Archived card', status: 'doing', effectiveArchived: true })
+  const childrenOf = () => [doing]
+  assert.deepEqual(toAreas([area], childrenOf), [])
+  assert.equal(toAreas([area], childrenOf, true)[0]?.doingCount, 1)
 })
 
 test('a done item inside the window shows', () => {

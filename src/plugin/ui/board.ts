@@ -15,7 +15,7 @@
 import { Platform } from 'obsidian'
 
 import type { Status } from '../../shared/schema.ts'
-import { toColumns, type Column, type WorkItemMeta } from '../index.ts'
+import { toAreas, toColumns, type AreaSummary, type Column, type WorkItemMeta } from '../index.ts'
 import { renderAddRow, renderHiddenNote } from './add-row.ts'
 import { renderArchiveNote, showingArchived } from './archive-note.ts'
 import { renderCard } from './card.ts'
@@ -29,11 +29,13 @@ export function renderBoard(
   children: WorkItemMeta[],
 ): void {
   const columns = toColumns(children, new Date(), showingArchived(ctx, parent))
+  const areas = toAreas(children, (area) => ctx.index.childrenOf(area.file), showingArchived(ctx, parent))
   const archivedCount = children.filter((c) => c.effectiveArchived).length
   if (Platform.isMobile) {
-    renderTabbed(host.createDiv({ cls: 'wi-tabbed' }), ctx, parent, columns, archivedCount)
+    renderTabbed(host.createDiv({ cls: 'wi-tabbed' }), ctx, parent, columns, areas, archivedCount)
     return
   }
+  if (areas.length > 0) renderDesktopAreas(host, ctx, areas)
   const board = host.createDiv({ cls: 'wi-board' })
   for (const column of columns) {
     renderColumn(board, ctx, parent, column.status, column.visible, column.hidden)
@@ -51,9 +53,11 @@ function renderTabbed(
   ctx: RenderContext,
   parent: WorkItemMeta,
   columns: Column[],
+  areas: AreaSummary[],
   archivedCount: number,
 ): void {
   host.empty()
+  if (areas.length > 0) renderPhoneAreas(host, ctx, areas)
   const shown = ctx.selectedTab(parent.file.path) ?? defaultTab(columns)
 
   const tabs = host.createDiv({ cls: 'wi-tabs', attr: { role: 'tablist' } })
@@ -66,7 +70,7 @@ function renderTabbed(
     tab.createSpan({ cls: 'wi-tab-count', text: String(column.visible.length) })
     tab.addEventListener('click', () => {
       ctx.selectTab(parent.file.path, column.status)
-      renderTabbed(host, ctx, parent, columns, archivedCount)
+      renderTabbed(host, ctx, parent, columns, areas, archivedCount)
       ctx.checklistComponents.releaseDisconnected()
     })
   }
@@ -75,6 +79,32 @@ function renderTabbed(
   const board = host.createDiv({ cls: 'wi-board' })
   renderColumn(board, ctx, parent, column.status, column.visible, column.hidden)
   renderArchiveNote(host, ctx, parent, archivedCount)
+}
+
+function renderDesktopAreas(host: HTMLElement, ctx: RenderContext, areas: AreaSummary[]): void {
+  const strip = host.createDiv({ cls: 'wi-area-strip', attr: { 'aria-label': 'Areas' } })
+  renderAreaButtons(strip, ctx, areas)
+}
+
+function renderPhoneAreas(host: HTMLElement, ctx: RenderContext, areas: AreaSummary[]): void {
+  const group = host.createEl('details', { cls: 'wi-area-group' })
+  const summary = group.createEl('summary', { cls: 'wi-area-heading' })
+  summary.createSpan({ text: 'Areas' })
+  summary.createSpan({ cls: 'wi-area-group-count', text: String(areas.length) })
+  renderAreaButtons(group.createDiv({ cls: 'wi-area-list' }), ctx, areas)
+}
+
+function renderAreaButtons(host: HTMLElement, ctx: RenderContext, areas: AreaSummary[]): void {
+  for (const { meta, doingCount } of areas) {
+    const chip = host.createEl('button', { cls: 'wi-area-chip' })
+    chip.setAttr('aria-label', `${meta.title}, ${doingCount} Doing`)
+    chip.createSpan({ cls: 'wi-area-title', text: meta.title })
+    chip.createSpan({ cls: 'wi-area-count', text: String(doingCount) })
+    chip.addEventListener('click', (event) => {
+      event.preventDefault()
+      void ctx.actions.open(meta, event.metaKey || event.ctrlKey)
+    })
+  }
 }
 
 function renderColumn(

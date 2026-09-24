@@ -114,8 +114,9 @@ export function mountLeaf(leaf: WorkspaceLeaf, ctx: RenderContext): void {
     return
   }
 
-  // A promoted item is a board first on both devices (docs/adr/0022-phone-board-navigation.md).
-  const takesOver = meta.board && !ctx.isPeeking(file.path)
+  // Promoted items and areas are boards first on both devices. Areas are boards by definition,
+  // without carrying the separate `board: true` marker.
+  const takesOver = (meta.board || meta.area) && !ctx.isPeeking(file.path)
 
   if (takesOver) {
     clearSizers(view)
@@ -137,7 +138,7 @@ export function mountLeaf(leaf: WorkspaceLeaf, ctx: RenderContext): void {
     const bottom = region(sizer, BOTTOM, false)
     renderMetaStrip(bottom, meta)
     renderChecklist(bottom, ctx, ctx.index.childrenOf(meta.file), {
-      grouped: meta.board,
+      grouped: meta.board || meta.area,
       parent: meta,
       archiveParent: meta,
     })
