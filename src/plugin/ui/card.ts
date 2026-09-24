@@ -16,8 +16,10 @@ import { labelColour, labelText } from '../../shared/labels.ts'
 import { bodyOf, listItems, section } from '../../shared/sections.ts'
 import type { WorkItemMeta } from '../index.ts'
 import type { RenderContext } from './context.ts'
+import { showingArchived } from './archive-note.ts'
 import { renderChecklist } from './checklist.ts'
 import { attachMenu, renderMenuButton } from './menu.ts'
+import { previewChildren } from './preview-children.ts'
 
 /** Draws one card, expanded or not, and returns its element. */
 export function renderCard(
@@ -176,6 +178,17 @@ function renderCode(host: HTMLElement, id: string): void {
   })
 }
 
+/** Done children as one line. It opens the card, where the full checklist or Done column is. */
+function renderDoneFold(host: HTMLElement, ctx: RenderContext, meta: WorkItemMeta, count: number): void {
+  const fold = host.createEl('button', { cls: 'wi-done-fold', text: `${count} done` })
+  fold.setAttr('aria-label', `${count} done. Open ${meta.title}`)
+  fold.addEventListener('click', (event) => {
+    event.preventDefault()
+    event.stopPropagation() // Opening the card must not also collapse it.
+    void ctx.actions.open(meta, event.metaKey || event.ctrlKey)
+  })
+}
+
 async function renderExpansion(
   host: HTMLElement,
   ctx: RenderContext,
@@ -196,7 +209,12 @@ async function renderExpansion(
   const children = ctx.index.childrenOf(meta.file)
   if (children.length > 0) {
     host.createDiv({ cls: 'wi-card-section', text: 'Children' })
-    renderChecklist(host, ctx, children, { grouped: false, parent: undefined, archiveParent: meta })
+    const { open, doneCount } = previewChildren(children, showingArchived(ctx, meta))
+    // With every child done, the count line alone says it; "No children yet" would be wrong.
+    if (open.length > 0 || doneCount === 0) {
+      renderChecklist(host, ctx, open, { grouped: false, parent: undefined, archiveParent: meta })
+    }
+    if (doneCount > 0) renderDoneFold(host, ctx, meta, doneCount)
   }
 
   // The id lives here rather than on the face (docs/adr/0021-card-and-row-typography.md): it is for

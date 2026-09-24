@@ -807,6 +807,24 @@
   padding: 4px 2px;
 }
 
+/* An expanded card's done children, folded into one line that opens the card. */
+.wi-done-fold {
+  display: block;
+  font-size: var(--font-ui-smaller);
+  color: var(--text-muted);
+  background: none;
+  box-shadow: none;
+  border: none;
+  padding: 4px 2px;
+  height: auto;
+  cursor: pointer;
+}
+
+.wi-done-fold:hover {
+  color: var(--text-normal);
+  text-decoration: underline;
+}
+
 /* ---------- mobile (docs/adr/0022-phone-board-navigation.md) ----------
  * A promoted board takes the pane over on the phone too, as four tabs over one group of cards.
  * The phone floats its header and its nav bar over the content, so the overlay pads for both.
