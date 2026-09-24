@@ -2,13 +2,14 @@
  * The "Move to…" picker: a fuzzy search over every work item this one may move under.
  *
  * A target that would make the parent chain loop is left out rather than refused after the
- * choice, so everything offered works. Boards come first, because a board is where a card is
+ * choice, so everything offered works. Boards and areas come first, because a board is where a card is
  * usually moved to; any work item can still be a parent.
  */
 import { FuzzySuggestModal, type App, type FuzzyMatch } from 'obsidian'
 
 import type { Actions } from '../actions.ts'
-import type { WorkItemIndex, WorkItemMeta } from '../index.ts'
+import { opensAsBoard, type WorkItemIndex, type WorkItemMeta } from '../index.ts'
+import { compareMoveTargets } from './move-order.ts'
 
 export class MoveModal extends FuzzySuggestModal<WorkItemMeta> {
   private readonly meta: WorkItemMeta
@@ -28,7 +29,7 @@ export class MoveModal extends FuzzySuggestModal<WorkItemMeta> {
       .all()
       .filter((target) => target.file.path !== this.meta.parent?.path)
       .filter((target) => this.actions.moveRefusal(this.meta, target) === null)
-      .sort((a, b) => Number(b.board) - Number(a.board) || a.title.localeCompare(b.title))
+      .sort(compareMoveTargets)
   }
 
   getItemText(target: WorkItemMeta): string {
@@ -37,7 +38,7 @@ export class MoveModal extends FuzzySuggestModal<WorkItemMeta> {
 
   override renderSuggestion(match: FuzzyMatch<WorkItemMeta>, el: HTMLElement): void {
     const target = match.item
-    el.createDiv({ text: target.board ? `${target.title}  ▦` : target.title })
+    el.createDiv({ text: opensAsBoard(target) ? `${target.title}  ▦` : target.title })
     const path = this.index.ancestorsOf(target.file).map((a) => a.title).join(' › ')
     if (path !== '') el.createEl('small', { cls: 'wi-move-path', text: path })
   }

@@ -219,6 +219,11 @@ export interface Column {
   archived: WorkItemMeta[]
 }
 
+/** A promoted item or an area: both open as a board of columns. */
+export function opensAsBoard(meta: Pick<WorkItemMeta, 'board' | 'area'>): boolean {
+  return meta.board || meta.area
+}
+
 export interface AreaSummary {
   meta: WorkItemMeta
   doingCount: number

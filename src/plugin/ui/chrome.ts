@@ -14,7 +14,7 @@
  */
 import { setIcon } from 'obsidian'
 
-import type { WorkItemMeta } from '../index.ts'
+import { opensAsBoard, type WorkItemMeta } from '../index.ts'
 import type { RenderContext } from './context.ts'
 import { shouldRenderPromoteToggle } from './promote-visibility.ts'
 import { statusLabel } from './status-label.ts'
@@ -66,7 +66,7 @@ function renderControls(bar: HTMLElement, ctx: RenderContext, meta: WorkItemMeta
   if (childCount === 0 && !meta.board && !meta.area && meta.parentLink === null) return
 
   const group = bar.createDiv({ cls: 'wi-controls' })
-  if (meta.board || meta.area) renderViewSwitch(group, ctx, meta)
+  if (opensAsBoard(meta)) renderViewSwitch(group, ctx, meta)
   if (shouldRenderPromoteToggle({ meta, childCount })) renderPromoteToggle(group, ctx, meta)
 }
 

@@ -26,7 +26,7 @@ import { renderBoard } from './ui/board.ts'
 import { renderChecklist } from './ui/checklist.ts'
 import { renderBreadcrumbs, renderChecklistJump, renderMetaStrip } from './ui/chrome.ts'
 import type { RenderContext } from './ui/context.ts'
-import type { WorkItemMeta } from './index.ts'
+import { opensAsBoard, type WorkItemMeta } from './index.ts'
 
 const TOP = 'wi-region-top'
 const BOTTOM = 'wi-region-bottom'
@@ -116,7 +116,7 @@ export function mountLeaf(leaf: WorkspaceLeaf, ctx: RenderContext): void {
 
   // Promoted items and areas are boards first on both devices. Areas are boards by definition,
   // without carrying the separate `board: true` marker.
-  const takesOver = (meta.board || meta.area) && !ctx.isPeeking(file.path)
+  const takesOver = opensAsBoard(meta) && !ctx.isPeeking(file.path)
 
   if (takesOver) {
     clearSizers(view)
@@ -140,7 +140,7 @@ export function mountLeaf(leaf: WorkspaceLeaf, ctx: RenderContext): void {
     renderChecklistJump(top, bottom, ctx.index.childCount(meta.file))
     renderMetaStrip(bottom, meta)
     renderChecklist(bottom, ctx, ctx.index.childrenOf(meta.file), {
-      grouped: meta.board || meta.area,
+      grouped: opensAsBoard(meta),
       parent: meta,
       archiveParent: meta,
     })
