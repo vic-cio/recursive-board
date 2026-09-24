@@ -3,7 +3,7 @@ import assert from 'node:assert/strict'
 import { execFile } from 'node:child_process'
 import { promisify } from 'node:util'
 import { fileURLToPath } from 'node:url'
-import { readFileSync, rmSync } from 'node:fs'
+import { readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 
 import { makeVault, item, type Fixture } from './test-helpers.ts'
@@ -58,6 +58,39 @@ test('wi with no command prints help and exits 2', async () => {
   const { code, stdout } = await wi([])
   assert.equal(code, 2)
   assert.match(stdout, /Usage/)
+})
+
+test('wi --help documents area conversion', async () => {
+  fixture = seed()
+  const { code, stdout } = await wi(['--help'])
+  assert.equal(code, 0)
+  assert.match(stdout, /wi area <ref> \[--off --status <status>\]/)
+  assert.match(stdout, /in doing or with an agent/i)
+})
+
+test('wi area converts a card to an area and back with an explicit status', async () => {
+  fixture = seed()
+  const path = join(fixture.root, 'Boards/Build server.md')
+  const source = readFileSync(path, 'utf8').replace(/^status: doing$/m, 'status: options')
+  const withPrior = source.replace('status: options', 'status: options\nprev_status: backlog')
+  writeFileSync(path, withPrior)
+
+  const toArea = await wi(['area', 'wi-0004', '--json'])
+  assert.equal(toArea.code, 0, toArea.stderr)
+  assert.equal(JSON.parse(toArea.stdout).to, 'area')
+  let text = readFileSync(path, 'utf8')
+  assert.match(text, /^area: true$/m)
+  assert.doesNotMatch(text, /^status:/m)
+  assert.doesNotMatch(text, /^prev_status:/m)
+
+  const toCard = await wi(['area', 'wi-0004', '--off', '--status', 'done', '--json'])
+  assert.equal(toCard.code, 0, toCard.stderr)
+  assert.equal(JSON.parse(toCard.stdout).status, 'done')
+  text = readFileSync(path, 'utf8')
+  assert.doesNotMatch(text, /^area:/m)
+  assert.match(text, /^status: done$/m)
+  assert.match(text, /^owner: sam$/m)
+  assert.ok(text.endsWith('# Build server\n'))
 })
 
 test('wi validate exits 0 on a healthy vault', async () => {

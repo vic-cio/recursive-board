@@ -27,6 +27,7 @@ import { removeItem } from './commands/remove.ts'
 import { moveItem } from './commands/move.ts'
 import { archiveItem } from './commands/archive.ts'
 import { setPromoted } from './commands/promote.ts'
+import { setArea } from './commands/area.ts'
 import { hookStatus, installHook, uninstallHook } from './commands/hook.ts'
 import { runSetup } from './commands/setup.ts'
 import { STATUSES } from '../shared/schema.ts'
@@ -39,6 +40,7 @@ Usage
   wi new <title> [--parent <ref>] [--status <s>] [--template <t>] [--owner <o>] [--agent <a>]
                                 [--priority <n>]
   wi status <ref> <status>
+  wi area <ref> [--off --status <status>]
   wi claim <ref> --agent <name>
   wi release <ref> --reason <text> [--where <branch-or-path>]
   wi move <ref> --to <ref>
@@ -76,6 +78,8 @@ Notes
   folder, because the index cannot read it and may be missing a work item. Let the sync
   client download the file, or delete the stray file, then retry. There is no --force.
   \`wi archive\` changes one flag. Descendants disappear with their parent at read time.
+  \`wi area <ref>\` removes status and prev_status and marks a card as an area. It refuses a card
+  in doing or with an agent. Use \`wi area <ref> --off --status <status>\` to convert back.
   \`wi new\` warns when such a file exists because a new id or filename may clash with it.
   \`wi here\` reads or sets this repository's vault and board pointer in your user config.
 `
@@ -104,6 +108,7 @@ async function main(argv: string[]): Promise<number> {
       tree: { type: 'boolean', default: false },
       archived: { type: 'boolean', default: false },
       undo: { type: 'boolean', default: false },
+      off: { type: 'boolean', default: false },
       recursive: { type: 'boolean', short: 'r', default: false },
       'dry-run': { type: 'boolean', default: false },
       json: { type: 'boolean', default: false },
@@ -127,6 +132,7 @@ async function main(argv: string[]): Promise<number> {
     throw new UsageError('--force applies only to wi hook install or wi setup.')
   }
   if (values.yes && command !== 'setup') throw new UsageError('--yes applies only to wi setup.')
+  if (values.off && command !== 'area') throw new UsageError('--off applies only to wi area.')
   if (command === 'setup') {
     if (rest.length > 0) throw new UsageError('wi setup takes options only. Run wi setup --help for usage.')
     await runSetup({
@@ -147,6 +153,8 @@ async function main(argv: string[]): Promise<number> {
       return runNew(vault, rest, values, json)
     case 'status':
       return runStatus(vault, rest, json)
+    case 'area':
+      return runArea(vault, rest, values, json)
     case 'claim':
       return runClaim(vault, rest, values, json)
     case 'release':
@@ -289,6 +297,31 @@ async function runStatus(vault: Vault, rest: string[], json: boolean): Promise<n
   } else {
     const recorded = change.recorded ? `  (prev_status: ${change.recorded})` : ''
     process.stdout.write(`${label(change.item)}  ${change.from ?? '—'} → ${change.to}${recorded}\n`)
+  }
+  return 0
+}
+
+async function runArea(vault: Vault, rest: string[], values: Values, json: boolean): Promise<number> {
+  const ref = rest.join(' ').trim()
+  if (ref === '') {
+    throw new UsageError('wi area needs a <ref>. Use --off --status <status> to convert an area back to a card.')
+  }
+  const change = await setArea(vault, ref, {
+    off: values['off'] === true,
+    ...(typeof values['status'] === 'string' ? { status: values['status'] } : {}),
+  })
+  if (json) {
+    print({
+      id: change.item.id,
+      path: change.item.relPath,
+      from: change.from,
+      to: change.to,
+      status: change.status ?? null,
+      changed: change.changed,
+    })
+  } else {
+    process.stdout.write(`${label(change.item)}  ${change.from} → ${change.to}` +
+      `${change.status ? `  (status: ${change.status})` : ''}\n`)
   }
   return 0
 }

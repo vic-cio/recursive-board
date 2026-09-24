@@ -23,6 +23,7 @@ Each work item is a Markdown file in the configured work-item folder. The defaul
 | `updated` | Last-updated date in `YYYY-MM-DD` form. |
 | `board` | Set to `true` to render this item's children as a board. Otherwise omit it. |
 | `prev_status` | Previous status recorded when an item moves to `done`; cleared when it leaves `done`. |
+| `area` | Set to `true` for an ongoing area. Areas have no `status` or `prev_status`. |
 
 Optional fields include `owner`, `agent`, `priority`, `due`, `blocked`, `depends_on`, `tags`, and `archived`. Unknown frontmatter keys are preserved. `wi validate` reports them as warnings.
 
@@ -119,6 +120,7 @@ The pre-commit hook runs `wi validate` and stops a commit when the vault has err
 | `wi setup [--yes] [--vault <path>] [--force]` | Installs the agent skill, selects and saves a default vault, and offers the Git validation hook for a Git vault. `--yes` requires `--vault` and asks no questions. |
 | `wi new <title> [--parent <ref>] [--status <status>] [--template <name>] [--owner <name>] [--agent <name>] [--priority <number>]` | Creates a work item under the given parent. If `--parent` is omitted, uses the repo pointer's board, then `defaultRoot` from `.wi.json`. |
 | `wi status <ref> <status>` | Changes an item's status. Use `backlog`, `options`, `doing`, or `done`. Leaving `done` clears the recorded previous status. |
+| `wi area <ref> [--off --status <status>]` | Converts a card to an area, or converts an area back to a card with the explicit status. Conversion refuses a card in doing or with an agent. |
 | `wi claim <ref> --agent <name>` | Claims a card for an agent and moves it to doing in one write. Refuses a different agent, a done card, or a board with a child in doing. Repeating an active claim by the same agent writes nothing. |
 | `wi release <ref> --reason <text> [--where <branch-or-path>]` | Clears the agent, moves the card to options, and adds a dated line to Notes with the reason and optional work location. Refuses an unclaimed card. |
 | `wi move <ref> --to <ref>` | Changes the item's parent. Its status stays the same, and its children move with it. |
