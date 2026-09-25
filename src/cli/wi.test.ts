@@ -555,3 +555,15 @@ test('brief flags outside wi new are refused', async () => {
   assert.equal(result.code, 2)
   assert.match(result.stderr, /apply only to wi new/)
 })
+
+test('wi children marks a blocked card', async () => {
+  fixture = seed()
+  fixture.write('Boards/Stuck.md', item({
+    type: 'work-item', id: 'wi-0009', title: 'Stuck', status: 'options', blocked: true,
+    parent: '"[[Main]]"', created: '2026-09-21', updated: '2026-09-21',
+  }))
+  const text = await wi(['children', 'Main'])
+  assert.match(text.stdout, /wi-0009 +options +Stuck +\[blocked\]/)
+  const json = await wi(['children', 'Main', '--json'])
+  assert.equal(JSON.parse(json.stdout).children.find((c: { id: string }) => c.id === 'wi-0009').blocked, true)
+})
