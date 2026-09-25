@@ -91,6 +91,18 @@ test('an agent can hold a card and the subtask it works now, in either order', a
   await assert.rejects(claimItem(await loadVault(fixture.root), 'wi-0003', 'luna'), /already claimed by codex/)
 })
 
+test('claim refuses a blocked card, but a holder can repeat its claim', async () => {
+  fixture = seed({ blocked: true })
+  const before = textOf(fixture)
+  await assert.rejects(claimItem(await loadVault(fixture.root), 'wi-0002', 'codex'), /is blocked/)
+  assert.equal(textOf(fixture), before)
+  fixture.cleanup()
+
+  fixture = seed({ blocked: true, status: 'doing', agent: 'codex' })
+  const repeat = await claimItem(await loadVault(fixture.root), 'wi-0002', 'codex')
+  assert.equal(repeat.changed, false)
+})
+
 test('claim refuses an area', async () => {
   fixture = seed()
   fixture.write('Boards/Operations.md', item({

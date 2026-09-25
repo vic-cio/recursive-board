@@ -16,6 +16,10 @@ Workers claimed only their top card, so their subtasks moved with no agent on th
 subtask shows what each agent does now. Counting cards would then charge one agent several times
 against `maxAgents`.
 
+`wi claim` also refuses a card with `blocked: true`, unless the same agent already holds it in
+doing. A blocked card waits on something outside the worker's reach, so a dispatcher skips it.
+`wi children` marks it `[blocked]` and reports `blocked` in its JSON.
+
 `wi status <ref> done` reports the parent when that was its last open child, and does not close
 it. A parent can have criteria of its own beyond its children, and closing it would write a second
 file.

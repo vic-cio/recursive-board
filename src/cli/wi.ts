@@ -93,6 +93,7 @@ Notes
   \`wi archive\` changes one flag. Descendants disappear with their parent at read time.
   \`wi area <ref>\` marks a card as an area and keeps its status. It refuses a card with an agent.
   Use \`wi area <ref> --off\` to convert back without changing its status.
+  \`wi claim\` refuses a card with blocked: true, and \`wi children\` marks one [blocked].
   \`wi claim\` lets an agent hold a card and its subtasks at once. It refuses a board with a child in
   doing that a different agent or a person works.
   \`wi agents\` reports the advisory limit, the number of distinct agents with a doing card, and each
@@ -581,6 +582,7 @@ function runChildren(vault: Vault, rest: string[], values: Values, json: boolean
         children: row.childCount,
         depth: row.depth,
         archived: row.archived,
+        blocked: row.item.frontmatter.get('blocked') === true,
       })),
     })
     return 0
@@ -718,7 +720,8 @@ function row3(row: ChildRow): string {
   const kids = row.childCount > 0 ? `  (${row.childCount})` : ''
   const board = row.item.board ? '  [board]' : ''
   const archived = row.archived ? '  [archived]' : ''
-  return `${row.item.id ?? '(no id)'}  ${status.padEnd(7)}  ${row.item.title ?? row.item.stem}${kids}${board}${archived}`
+  const blocked = row.item.frontmatter.get('blocked') === true ? '  [blocked]' : ''
+  return `${row.item.id ?? '(no id)'}  ${status.padEnd(7)}  ${row.item.title ?? row.item.stem}${kids}${board}${blocked}${archived}`
 }
 
 function print(value: unknown): void {

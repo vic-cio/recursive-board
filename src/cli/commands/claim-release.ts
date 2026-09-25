@@ -28,6 +28,10 @@ export async function claimItem(vault: Vault, ref: string, agent: string): Promi
   if (item.parent === null) throw new Error(`${item.relPath} is a root, and a root cannot be claimed.`)
   const current = item.frontmatter.get('agent')
   const currentAgent = typeof current === 'string' && current.trim() !== '' ? current : undefined
+  const holding = currentAgent === agent && item.status === 'doing'
+  if (!holding && item.frontmatter.get('blocked') === true) {
+    throw new Error(`${item.relPath} is blocked. Clear its blocked flag when the block is gone, or claim another card.`)
+  }
   const edits = claimEdits(
     item.status, currentAgent, agent, item.frontmatter.has('prev_status'),
     item.board && vault.childrenOf(item).some((child) =>
