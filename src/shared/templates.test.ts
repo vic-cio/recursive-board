@@ -3,7 +3,7 @@ import assert from 'node:assert/strict'
 
 import {
   TEMPLATES, DEFAULT_TEMPLATE, findTemplate, requireTemplate, templateNames,
-  renderBody, renderVaultTemplate,
+  renderBody, renderVaultTemplate, briefGaps,
 } from './templates.ts'
 import { parseFrontmatter } from './frontmatter.ts'
 import { STATUSES, WORK_ITEM_TYPE } from './schema.ts'
@@ -95,4 +95,32 @@ test('the vault template leaves the fields a human fills in blank', () => {
 test('the vault template and a new work item share one body', () => {
   const body = renderBody(requireTemplate())
   assert.ok(renderVaultTemplate(requireTemplate()).endsWith(body))
+})
+
+test('renderBody fills the brief in place of the starters', () => {
+  const body = renderBody(requireTemplate(), ['Knowledge'], {
+    objective: 'Price the demolition lines.',
+    context: ['From the site survey.', 'Use the 2026 rates.'],
+    criteria: ['Every line has a rate', 'The total matches the survey'],
+  })
+  assert.equal(body, [
+    '## Objective', '', 'Price the demolition lines.', '',
+    '## Context', '', 'From the site survey.', '', 'Use the 2026 rates.', '',
+    '## Acceptance Criteria', '', '- Every line has a rate', '- The total matches the survey', '',
+    '## Notes', '',
+    '## Knowledge', '', '- ', '',
+  ].join('\n'))
+})
+
+test('renderBody refuses a brief section the template lacks', () => {
+  assert.throws(() => renderBody(requireTemplate('area'), [], { criteria: ['Done'] }),
+    /template "area" has no Acceptance Criteria section/)
+  assert.throws(() => renderBody(requireTemplate(), [], { criteria: ['one\ntwo'] }), /one line/)
+})
+
+test('briefGaps names the empty Objective and criteria the template asks for', () => {
+  assert.deepEqual(briefGaps(requireTemplate()), ['Objective', 'Acceptance Criteria'])
+  assert.deepEqual(briefGaps(requireTemplate(), { objective: 'x', criteria: ['y'] }), [])
+  assert.deepEqual(briefGaps(requireTemplate('area')), ['Objective'])
+  assert.deepEqual(briefGaps(requireTemplate('first-board-card')), [])
 })

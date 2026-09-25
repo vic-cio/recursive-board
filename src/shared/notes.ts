@@ -1,4 +1,5 @@
 import { frontmatterBody } from './frontmatter.ts'
+import { today } from './schema.ts'
 
 interface Heading { level: number; title: string; start: number; end: number }
 
@@ -45,7 +46,20 @@ export function appendNote(text: string, line: string): string {
   const trailing = /(?:\r?\n[ \t]*)*$/.exec(content)?.[0] ?? ''
   const prose = content.slice(0, content.length - trailing.length)
   const insertion = prose === ''
-    ? `${content}${line}${eol}${next ? eol : ''}`
+    ? `${eol}${eol}${line}${eol}${next ? eol : ''}`
     : `${prose}${eol}${line}${trailing || eol}`
   return text.slice(0, start) + insertion + text.slice(end)
+}
+
+/**
+ * A progress line for Notes: `- 2026-09-25 14:03, codex: Priced the demolition lines.`
+ * The time is local, like every date here, and tells two lines on one day apart.
+ */
+export function noteLine(text: string, agent?: string, now: Date = new Date()): string {
+  const body = text.trim()
+  if (body === '') throw new Error('a note needs text.')
+  if (/[\r\n]/.test(body)) throw new Error('a note must be one line.')
+  const pad = (n: number) => String(n).padStart(2, '0')
+  const who = agent?.trim() ? `, ${agent.trim()}` : ''
+  return `- ${today(now)} ${pad(now.getHours())}:${pad(now.getMinutes())}${who}: ${body}`
 }

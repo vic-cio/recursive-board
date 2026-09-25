@@ -12,6 +12,8 @@ export interface VaultConfig {
   extraSections: string[]
   /** Advisory maximum number of claimed doing cards for dispatchers. */
   maxAgents: number | null
+  /** `wi new` promotes a parent to a board when it gives the parent its first child. */
+  autoPromote: boolean
 }
 
 export const DEFAULT_VAULT_CONFIG: Readonly<VaultConfig> = {
@@ -19,6 +21,7 @@ export const DEFAULT_VAULT_CONFIG: Readonly<VaultConfig> = {
   defaultRoot: null,
   extraSections: [],
   maxAgents: null,
+  autoPromote: true,
 }
 
 /** Parse at the vault boundary; malformed config must never silently select another folder. */
@@ -38,6 +41,7 @@ export function parseVaultConfig(text: string | null): VaultConfig {
   const rootValue = 'defaultRoot' in value ? value.defaultRoot : undefined
   const sectionsValue = 'extraSections' in value ? value.extraSections : undefined
   const maxAgentsValue = 'maxAgents' in value ? value.maxAgents : undefined
+  const autoPromoteValue = 'autoPromote' in value ? value.autoPromote : undefined
   let workItemFolder = DEFAULT_VAULT_CONFIG.workItemFolder
   if (folderValue !== undefined) {
     if (typeof folderValue !== 'string') {
@@ -80,5 +84,9 @@ export function parseVaultConfig(text: string | null): VaultConfig {
     }
     maxAgents = maxAgentsValue
   }
-  return { workItemFolder, defaultRoot, extraSections, maxAgents }
+  if (autoPromoteValue !== undefined && typeof autoPromoteValue !== 'boolean') {
+    throw new Error(`${WI_CONFIG_FILE}: autoPromote must be true or false.`)
+  }
+  const autoPromote = autoPromoteValue ?? DEFAULT_VAULT_CONFIG.autoPromote
+  return { workItemFolder, defaultRoot, extraSections, maxAgents, autoPromote }
 }

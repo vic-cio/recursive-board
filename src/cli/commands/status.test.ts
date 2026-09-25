@@ -1,6 +1,7 @@
 import { test, afterEach } from 'node:test'
 import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
+import { join } from 'node:path'
 
 import { setStatus } from './status.ts'
 import { loadVault } from '../vault.ts'
@@ -123,4 +124,28 @@ test('setStatus touches exactly one file, which is the whole point of the model'
   const mainBefore = readFileSync(`${fixture.root}/Boards/Main.md`, 'utf8')
   await setStatus(await loadVault(fixture.root), 'wi-0005', 'done')
   assert.equal(readFileSync(`${fixture.root}/Boards/Main.md`, 'utf8'), mainBefore)
+})
+
+test('done on the last open child reports the parent, and writes nothing to it', async () => {
+  fixture = seed()
+  const sub = (id: string, title: string, status: string, extra = {}) => fixture!.write(`Boards/${title}.md`, item({
+    type: 'work-item', id, title, status, parent: '"[[Streaming]]"', created: '2026-09-21', updated: '2026-09-21', ...extra,
+  }))
+  sub('wi-0006', 'First', 'done')
+  sub('wi-0007', 'Second', 'doing')
+  sub('wi-0008', 'Shelved', 'backlog', { archived: true })
+  sub('wi-0009', 'Third', 'doing')
+  const parentBefore = readFileSync(join(fixture.root, 'Boards', 'Streaming.md'), 'utf8')
+
+  const notLast = await setStatus(await loadVault(fixture.root), 'wi-0007', 'done')
+  assert.equal(notLast.parentReady, undefined)
+  const last = await setStatus(await loadVault(fixture.root), 'wi-0009', 'done')
+  assert.equal(last.parentReady?.id, 'wi-0005')
+  assert.equal(readFileSync(join(fixture.root, 'Boards', 'Streaming.md'), 'utf8'), parentBefore)
+})
+
+test('done under a root reports no parent', async () => {
+  fixture = seed()
+  const change = await setStatus(await loadVault(fixture.root), 'wi-0005', 'done')
+  assert.equal(change.parentReady, undefined)
 })

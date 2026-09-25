@@ -21,6 +21,12 @@ export interface StatusChange {
   /** The value written to `prev_status`, when the move was into `done`. */
   recorded: Status | undefined
   changed: boolean
+  /**
+   * The parent, when this move made the last of its children done and the parent is still open.
+   * `wi status` only reports it. Closing the parent is a judgement for whoever owns it, and a
+   * write to the parent would break one file per operation.
+   */
+  parentReady: WorkItem | undefined
 }
 
 export async function setStatus(vault: Vault, ref: string, status: string): Promise<StatusChange> {
@@ -38,10 +44,17 @@ export async function setStatus(vault: Vault, ref: string, status: string): Prom
   const from = item.status
   const edits = statusEdits(from, status, item.frontmatter.has('prev_status'))
   if (edits === null) {
-    return { item, from, to: status, recorded: undefined, changed: false }
+    return { item, from, to: status, recorded: undefined, changed: false, parentReady: undefined }
   }
   const recorded = status === 'done' ? from : undefined
 
   await editItem(item, edits)
-  return { item, from, to: status, recorded, changed: true }
+  return { item, from, to: status, recorded, changed: true, parentReady: status === 'done' ? readyParent(vault, item) : undefined }
+}
+
+function readyParent(vault: Vault, item: WorkItem): WorkItem | undefined {
+  const parent = vault.resolveLink(item.parent)
+  if (parent === undefined || !parent.frontmatter.has('parent') || parent.area || parent.status === 'done') return undefined
+  const open = vault.childrenOf(parent).filter((child) => !child.archived && child !== item && child.status !== 'done')
+  return open.length === 0 ? parent : undefined
 }

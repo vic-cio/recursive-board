@@ -46,9 +46,18 @@ test('wi agents prints the configured agent limit and claimed doing count', asyn
     parent: '"[[Main]]"', created: '2026-09-21', updated: '2026-09-21',
   }))
 
+  fixture.write('Boards/Subtask.md', item({
+    type: 'work-item', id: 'wi-0007', title: 'Subtask', status: 'doing', agent: 'codex',
+    parent: '"[[Build server]]"', created: '2026-09-21', updated: '2026-09-21',
+  }))
+
   const result = await wi(['agents', '--json'])
   assert.equal(result.code, 0, result.stderr)
-  assert.deepEqual(JSON.parse(result.stdout), { maxAgents: 2, activeAgents: 2 })
+  const report = JSON.parse(result.stdout)
+  assert.equal(report.maxAgents, 2)
+  assert.equal(report.activeAgents, 2, 'codex holds a card and its subtask, and counts once')
+  assert.deepEqual(report.claims.map((c: { agent: string; id: string }) => `${c.agent} ${c.id}`).sort(),
+    ['claude wi-0005', 'codex wi-0004', 'codex wi-0007'])
 })
 
 test('WI_MAX_AGENTS overrides the vault config for one dispatcher run', async () => {
@@ -512,4 +521,37 @@ test('wi archive hides a card, --archived lists it, and --undo restores it', asy
   assert.equal(undone.code, 0, undone.stderr)
   assert.doesNotMatch(readFileSync(join(fixture.root, 'Boards/Build server.md'), 'utf8'), /^archived:/m)
   assert.equal(JSON.parse((await wi(['children', 'Main', '--json'])).stdout).children.length, 1)
+})
+
+test('wi new writes a brief from flags, and --strict refuses a card without one', async () => {
+  fixture = seed()
+  const made = await wi(['new', 'Price demolition', '--parent', 'Main', '--objective', 'Price every line.',
+    '--context', 'Survey.', '--criteria', 'Each line has a rate', '--criteria', 'Total checked', '--json'])
+  assert.equal(made.code, 0, made.stderr)
+  assert.equal(made.stderr, '')
+  const text = readFileSync(join(fixture.root, JSON.parse(made.stdout).path), 'utf8')
+  assert.match(text, /## Acceptance Criteria\n\n- Each line has a rate\n- Total checked\n/)
+
+  const bare = await wi(['new', 'Bare', '--parent', 'Main'])
+  assert.equal(bare.code, 0)
+  assert.match(bare.stderr, /has no Objective or Acceptance Criteria/)
+
+  const strict = await wi(['new', 'Strict', '--parent', 'Main', '--strict'])
+  assert.equal(strict.code, 2)
+  assert.match(strict.stderr, /no Objective or Acceptance Criteria/)
+})
+
+test('wi note appends a stamped line naming the agent', async () => {
+  fixture = seed()
+  const result = await wi(['note', 'Build server', 'Priced', '12 lines.', '--agent', 'dispatcher'])
+  assert.equal(result.code, 0, result.stderr)
+  const text = readFileSync(join(fixture.root, 'Boards/Build server.md'), 'utf8')
+  assert.match(text, /## Notes\n\n- \d{4}-\d{2}-\d{2} \d{2}:\d{2}, dispatcher: Priced 12 lines\.\n$/)
+})
+
+test('brief flags outside wi new are refused', async () => {
+  fixture = seed()
+  const result = await wi(['status', 'Build server', 'done', '--objective', 'x'])
+  assert.equal(result.code, 2)
+  assert.match(result.stderr, /apply only to wi new/)
 })

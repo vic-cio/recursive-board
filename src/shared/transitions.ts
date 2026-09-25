@@ -33,20 +33,27 @@ export function statusEdits(
   return edits
 }
 
-/** A claim is one status transition and one agent edit on the same card. */
+/**
+ * A claim is one status transition and one agent edit on the same card.
+ * `hasOtherDoingChild` is a child in doing that someone other than this agent works: a person, or
+ * another agent. A child this agent holds does not block, so an agent can hold a card and the
+ * subtask it works now, in either order.
+ */
 export function claimEdits(
   from: Status | undefined,
   currentAgent: string | undefined,
   agent: string,
   hasPrevStatus: boolean,
-  hasDoingChild: boolean,
+  hasOtherDoingChild: boolean,
 ): Edit[] | null {
   if (from === 'done') throw new Error('a done card cannot be claimed.')
   if (currentAgent && currentAgent !== agent) {
     throw new Error(`already claimed by ${currentAgent}. Release that claim first.`)
   }
   if (currentAgent === agent && from === 'doing') return null
-  if (hasDoingChild) throw new Error('this board has a child in doing. Release or finish the child first.')
+  if (hasOtherDoingChild) {
+    throw new Error('this board has a child in doing that another agent or a person works. Release or finish that child first.')
+  }
   const status = statusEdits(from, 'doing', hasPrevStatus)
   if (currentAgent === agent) return status
   return [...(status ?? []), { op: 'set', key: 'agent', value: agent }]
@@ -75,6 +82,25 @@ export function boardEdits(promoted: boolean): Edit[] {
   return promoted
     ? [{ op: 'set', key: 'board', value: true }]
     : [{ op: 'remove', key: 'board' }]
+}
+
+export interface FirstChildParent {
+  isRoot: boolean
+  area: boolean
+  /** True when the parent carries a `board` key, set or invalid. */
+  hasBoardKey: boolean
+  /** Children before the new one, archived ones included. */
+  childCount: number
+}
+
+/**
+ * Whether giving a parent a new child also promotes the parent (docs/adr/0035-promote-a-parent-on-its-first-child.md).
+ * Only the first child promotes. A parent that already has children and no board is a checklist
+ * someone chose or demoted, and a later child must not undo that.
+ */
+export function firstChildPromotion(parent: FirstChildParent, autoPromote: boolean): Edit[] | null {
+  if (!autoPromote || parent.isRoot || parent.area || parent.hasBoardKey || parent.childCount > 0) return null
+  return boardEdits(true)
 }
 
 /**
