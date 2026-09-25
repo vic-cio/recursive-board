@@ -40,7 +40,9 @@ would break both. This one is held by tests alone.
 
 **One file per operation.** A card's status and its parent live in the child. Never write to a
 parent to record something about a child: that property is what makes a move safe on a synced
-vault, and losing it is not visible until two devices conflict.
+vault, and losing it is not visible until two devices conflict. The one exception is
+[0035](docs/adr/0035-promote-a-parent-on-its-first-child.md): `wi new` sets `board: true` on a parent
+at its first child.
 
 ## Working here
 

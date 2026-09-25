@@ -33,20 +33,23 @@ Every child card has a **Promote** control at the top, even before it has childr
 
 ## Vault configuration
 
-Place an optional `.wi.json` file at the vault root to choose the work-item folder, default parent, extra sections for new items, and the dispatcher's advisory agent limit:
+Place an optional `.wi.json` file at the vault root to choose the work-item folder, default parent, extra sections for new items, the dispatcher's advisory agent limit, and whether `wi new` promotes a parent:
 
 ```json
 {
   "workItemFolder": "Boards",
   "defaultRoot": "Project",
   "extraSections": ["References", "Risks"],
-  "maxAgents": 3
+  "maxAgents": 3,
+  "autoPromote": true
 }
 ```
 
 `workItemFolder` is a vault-relative folder path. It defaults to `Boards`. `defaultRoot` is the filename stem of a root work item. It defaults to `null`, which means `wi new` needs an explicit `--parent`. `extraSections` is an array of non-empty, single-line headings. It defaults to `[]`. Each heading is added after the built-in template sections with an empty `- ` starter. The setting applies to `wi new`, `wi template write`, and items created in the plugin. Invalid values make `.wi.json` fail to load.
 
-`maxAgents` is a non-negative whole number, or `null` for no limit. The plugin settings tab writes it to `.wi.json`. `WI_MAX_AGENTS` overrides it for one CLI run. `wi agents` prints the effective limit and the number of cards in doing with an agent. The limit is advisory: dispatchers use the count to decide whether to start a worker, and `wi claim` still succeeds over the limit.
+`maxAgents` is a non-negative whole number, or `null` for no limit. The plugin settings tab writes it to `.wi.json`. `WI_MAX_AGENTS` overrides it for one CLI run. `wi agents` prints the effective limit, the number of distinct agents with a card in doing, and each claimed doing card. An agent that holds a card and its current subtask counts once. The limit is advisory: dispatchers use the count to decide whether to start a worker, and `wi claim` still succeeds over the limit.
+
+`autoPromote` is `true` or `false`. It defaults to `true`. When `wi new` gives a card its first child, it also sets `board: true` on that card, so the children show as a board. It never changes a root, an area, a card that already has children, or a card that has a `board` key. Items added in Obsidian are not promoted: a person who adds to a checklist chose a checklist.
 
 `wi setup` writes the selected vault to the user config at `$XDG_CONFIG_HOME/wi/config.json`, or `~/.config/wi/config.json` when `XDG_CONFIG_HOME` is unset. The format is `{"defaultVault":"/absolute/path/to/vault"}`. Vault detection uses Obsidian's registry on macOS, Linux, and Windows. `--vault <path>` selects a vault directly, and `--yes --vault <path>` runs without prompts.
 
@@ -123,11 +126,12 @@ The pre-commit hook runs `wi validate` and stops a commit when the vault has err
 | Command | What it does |
 | --- | --- |
 | `wi setup [--yes] [--vault <path>] [--force]` | Installs the agent skill, selects and saves a default vault, and offers the Git validation hook for a Git vault. `--yes` requires `--vault` and asks no questions. |
-| `wi new <title> [--parent <ref>] [--status <status>] [--template <name>] [--owner <name>] [--agent <name>] [--priority <number>]` | Creates a work item under the given parent. If `--parent` is omitted, uses the repo pointer's board, then `defaultRoot` from `.wi.json`. |
-| `wi status <ref> <status>` | Changes an item's status. Use `backlog`, `options`, `doing`, or `done`. Leaving `done` clears the recorded previous status. |
+| `wi new <title> [--parent <ref>] [--status <status>] [--template <name>] [--owner <name>] [--agent <name>] [--priority <number>] [--objective <text>] [--context <text>]... [--criteria <text>]... [--strict]` | Creates a work item under the given parent. If `--parent` is omitted, uses the repo pointer's board, then `defaultRoot` from `.wi.json`. The brief flags fill the body: repeat `--context` for each paragraph and `--criteria` for each criterion. It warns when the card has no Objective or Acceptance Criteria, and `--strict` refuses the card instead. Unsafe filename characters in the title become hyphens; a filename clash adds the id suffix and never overwrites. See `autoPromote`. |
+| `wi status <ref> <status>` | Changes an item's status. Use `backlog`, `options`, `doing`, or `done`. Leaving `done` clears the recorded previous status. When the item was its parent's last open child, it says so; it does not close the parent. |
+| `wi note <ref> <text> [--agent <name>]` | Appends `- <date> <time>, <agent>: <text>` under the card's Notes. The agent defaults to the card's agent. The write re-reads the card under a lock, so two notes at the same moment both survive. |
 | `wi area <ref> [--off]` | Marks a card as an area or removes the area mark. The current status stays in place. Conversion refuses a card with an agent. |
-| `wi claim <ref> --agent <name>` | Claims a card for an agent and moves it to doing in one write. Refuses a different agent, a done card, or a board with a child in doing. Repeating an active claim by the same agent writes nothing. |
-| `wi agents` | Prints the configured agent limit and count of cards in doing with an agent. `--json` returns `maxAgents` and `activeAgents`. |
+| `wi claim <ref> --agent <name>` | Claims a card for an agent and moves it to doing in one write. Refuses a different agent, a done card, or a board with a child in doing that another agent or a person works. An agent can hold a card and its current subtask at once. Repeating an active claim by the same agent writes nothing. |
+| `wi agents` | Prints the configured agent limit, the number of distinct agents with a card in doing, and each claimed doing card. `--json` returns `maxAgents`, `activeAgents` and `claims`. |
 | `wi release <ref> --reason <text> [--where <branch-or-path>]` | Clears the agent, moves the card to options, and adds a dated line to Notes with the reason and optional work location. Refuses an unclaimed card. |
 | `wi move <ref> --to <ref>` | Changes the item's parent. Its status stays the same, and its children move with it. |
 | `wi archive <ref> [--undo]` | Archives an item. `--undo` unarchives it. Archived items are hidden from normal reads; descendants are hidden with an archived parent. |

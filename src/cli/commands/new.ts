@@ -8,10 +8,11 @@
 import { existsSync } from 'node:fs'
 import { join } from 'node:path'
 
-import { writeAtomic } from '../write.ts'
+import { editItem, writeAtomic } from '../write.ts'
 import { inheritedChildFields, renderWorkItem, type NewWorkItem } from '../../shared/work-item.ts'
-import { requireTemplate } from '../../shared/templates.ts'
-import { fileNameFor, isStatus, newId, today, type Status } from '../../shared/schema.ts'
+import { briefGaps, renderBody, requireTemplate, type Brief } from '../../shared/templates.ts'
+import { firstChildPromotion } from '../../shared/transitions.ts'
+import { fileNameFor, fileNameStem, isStatus, newId, today, type Status } from '../../shared/schema.ts'
 import type { Vault } from '../vault.ts'
 
 export interface NewOptions {
@@ -24,6 +25,9 @@ export interface NewOptions {
   priority?: number
   /** A name from the template registry. Omitted uses the default. */
   template?: string
+  brief?: Brief
+  /** Refuse to create a card whose template asks for an Objective or criteria the brief lacks. */
+  strict?: boolean
 }
 
 export interface Created {
@@ -32,6 +36,12 @@ export interface Created {
   relPath: string
   path: string
   parentStem: string
+  /** True when this child was the parent's first and the parent became a board. */
+  promotedParent: boolean
+  /** Brief sections the template asks for and the card leaves empty. */
+  gaps: string[]
+  /** True when another item took the plain filename, so the file carries the id suffix. */
+  renamed: boolean
 }
 
 export async function createItem(vault: Vault, options: NewOptions): Promise<Created> {
@@ -50,6 +60,12 @@ export async function createItem(vault: Vault, options: NewOptions): Promise<Cre
   }
 
   const parent = vault.resolve(parentRef)
+  const gaps = briefGaps(template, options.brief)
+  if (options.strict && gaps.length > 0) {
+    throw new Error(`the card has no ${gaps.join(' or ')}. Pass --objective and --criteria, or drop --strict.`)
+  }
+  // Render the body first, so a brief the template cannot hold fails before a file exists.
+  renderBody(template, vault.config.extraSections, options.brief)
 
   const id = newId(vault.takenIds)
   const stem = fileNameFor(title, id, vault.takenStems)
@@ -67,6 +83,7 @@ export async function createItem(vault: Vault, options: NewOptions): Promise<Cre
     created: stamp,
     updated: stamp,
     template: options.template,
+    brief: options.brief,
   }
   const inherited = inheritedChildFields({
     owner: textField(parent.frontmatter.get('owner')),
@@ -79,7 +96,19 @@ export async function createItem(vault: Vault, options: NewOptions): Promise<Cre
 
   await writeAtomic(path, renderWorkItem(fields, vault.config.extraSections))
 
-  return { id, stem, relPath, path, parentStem: parent.stem }
+  // A second file write, after the child exists: see docs/adr/0035-promote-a-parent-on-its-first-child.md.
+  const promotion = firstChildPromotion({
+    isRoot: parent.parent === null && !parent.frontmatter.has('parent'),
+    area: parent.area,
+    hasBoardKey: parent.frontmatter.has('board'),
+    childCount: vault.childrenOf(parent).length,
+  }, vault.config.autoPromote)
+  if (promotion) await editItem(parent, promotion)
+
+  return {
+    id, stem, relPath, path, parentStem: parent.stem,
+    promotedParent: promotion !== null, gaps, renamed: stem !== fileNameStem(title),
+  }
 }
 
 function textField(value: string | number | boolean | null | undefined): string | undefined {

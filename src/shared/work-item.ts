@@ -9,7 +9,7 @@
  */
 import { formatScalar, type Scalar } from './frontmatter.ts'
 import { WORK_ITEM_TYPE, formatWikilink, type Status } from './schema.ts'
-import { renderBody, requireTemplate } from './templates.ts'
+import { renderBody, requireTemplate, type Brief } from './templates.ts'
 
 interface NewWorkItemFields {
   id: string
@@ -23,6 +23,7 @@ interface NewWorkItemFields {
   updated: string
   /** A name from the template registry. Omitted uses the default. */
   template?: string | undefined
+  brief?: Brief | undefined
 }
 
 export type NewWorkItem = NewWorkItemFields & (
@@ -76,7 +77,7 @@ export function renderWorkItem(item: NewWorkItem, extraSections: readonly string
   fields.push(['created', item.created], ['updated', item.updated])
 
   const frontmatter = fields.map(([key, value]) => `${key}: ${formatScalar(value)}`).join('\n')
-  return `---\n${frontmatter}\n---\n\n${renderBody(template, extraSections)}`
+  return `---\n${frontmatter}\n---\n\n${renderBody(template, extraSections, item.brief)}`
 }
 
 /** Renders a board root. Roots intentionally have neither parent nor status. */

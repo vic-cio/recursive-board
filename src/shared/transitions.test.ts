@@ -1,7 +1,7 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 
-import { moveEdits, moveRefusal } from './transitions.ts'
+import { firstChildPromotion, moveEdits, moveRefusal } from './transitions.ts'
 
 // A small tree, keyed the way either writer keys it: Main > Project > Server > Auth, Main > Site.
 const PARENTS: Record<string, string | null> = {
@@ -56,4 +56,14 @@ test('moveRefusal terminates on a vault whose parent chain already loops', () =>
 test('moveRefusal allows moving an orphan, because that is how an orphan is repaired', () => {
   const orphaned = () => null
   assert.equal(moveRefusal({ item: 'lost', isRoot: false, target: 'main', parentOf: orphaned }), null)
+})
+
+test('firstChildPromotion promotes a plain card on its first child only', () => {
+  const card = { isRoot: false, area: false, hasBoardKey: false, childCount: 0 }
+  assert.deepEqual(firstChildPromotion(card, true), [{ op: 'set', key: 'board', value: true }])
+  assert.equal(firstChildPromotion(card, false), null, 'the vault setting turns it off')
+  assert.equal(firstChildPromotion({ ...card, childCount: 1 }, true), null, 'a chosen checklist stays one')
+  assert.equal(firstChildPromotion({ ...card, hasBoardKey: true }, true), null)
+  assert.equal(firstChildPromotion({ ...card, isRoot: true }, true), null)
+  assert.equal(firstChildPromotion({ ...card, area: true }, true), null)
 })

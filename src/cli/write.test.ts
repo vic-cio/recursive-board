@@ -1,6 +1,6 @@
 import { test, afterEach } from 'node:test'
 import assert from 'node:assert/strict'
-import { readFileSync } from 'node:fs'
+import { readFileSync, writeFileSync } from 'node:fs'
 
 import { applyEdits, withStamp, writeAtomic, editItem } from './write.ts'
 import { loadVault } from './vault.ts'
@@ -100,4 +100,27 @@ test('editItem stamps updated when only the body edit changes the file', async (
   assert.doesNotMatch(after, /^updated: 2026-09-21$/m)
   assert.match(after, /^updated: \d{4}-\d{2}-\d{2}$/m)
   assert.equal(readFileSync(path, 'utf8'), after)
+})
+
+test('editItem applies its edits to the file as it is now, not as it was loaded', async () => {
+  fixture = makeVault()
+  const path = fixture.write('Boards/Build server.md', TEXT)
+  const vault = await loadVault(fixture.root)
+  const loaded = vault.resolve('wi-0004')
+  writeFileSync(path, TEXT.replace('Human prose', 'A newer edit. Human prose'))
+  await editItem(loaded, [{ op: 'set', key: 'status', value: 'doing' }])
+  const after = readFileSync(path, 'utf8')
+  assert.match(after, /^status: doing$/m)
+  assert.match(after, /A newer edit\./)
+})
+
+test('concurrent editItem calls on one file keep every write', async () => {
+  fixture = makeVault()
+  const path = fixture.write('Boards/Build server.md', TEXT)
+  const vault = await loadVault(fixture.root)
+  const loaded = vault.resolve('wi-0004')
+  await Promise.all(Array.from({ length: 8 }, (_, n) =>
+    editItem(loaded, [], (text) => `${text}line ${n}\n`)))
+  const after = readFileSync(path, 'utf8')
+  for (let n = 0; n < 8; n++) assert.match(after, new RegExp(`^line ${n}$`, 'm'))
 })

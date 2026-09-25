@@ -20,6 +20,7 @@ import {
 import { createItem } from './commands/new.ts'
 import { setStatus } from './commands/status.ts'
 import { claimItem, releaseItem } from './commands/claim-release.ts'
+import { addNote } from './commands/note.ts'
 import { listChildren, type ChildRow } from './commands/children.ts'
 import { validate, type Problem } from './commands/validate.ts'
 import { listTemplates, writeTemplates } from './commands/template.ts'
@@ -38,8 +39,10 @@ const HELP = `wi — the Recursive Board CLI
 Usage
   wi setup [--yes] [--vault <path>] [--force]
   wi new <title> [--parent <ref>] [--status <s>] [--template <t>] [--owner <o>] [--agent <a>]
-                                [--priority <n>]
+                 [--priority <n>] [--objective <text>] [--context <text>]... [--criteria <text>]...
+                 [--strict]
   wi status <ref> <status>
+  wi note <ref> <text> [--agent <name>]
   wi area <ref> [--off]
   wi claim <ref> --agent <name>
   wi agents
@@ -69,6 +72,15 @@ Options
   -V, --version    Print the version.
 
 Notes
+  \`wi new\` writes the brief: --objective once, --context and --criteria once per paragraph or
+  criterion. It warns when the card has no Objective or Acceptance Criteria; --strict refuses it.
+  A title's unsafe filename characters become hyphens. When another item has the same filename,
+  the new file gets the id's suffix; wi never writes over a file.
+  \`wi new\` makes a parent a board when it gives the parent its first child. Set
+  "autoPromote": false in .wi.json to turn this off. A root or an area is never changed.
+  \`wi note\` appends "- <date> <time>, <agent>: <text>" under Notes. The agent defaults to the
+  card's agent. The write re-reads the card under a lock, so two notes at once both survive.
+  \`wi status <ref> done\` says when that was the parent's last open child. It does not close the parent.
   Unticking a done item is \`wi status <ref> <its prev_status>\`, which also clears the record.
   \`wi validate\` exits 1 when the vault has errors, so it works as a pre-commit hook.
   \`wi template write\` regenerates Templates/ from the code, which is authoritative.
@@ -81,7 +93,10 @@ Notes
   \`wi archive\` changes one flag. Descendants disappear with their parent at read time.
   \`wi area <ref>\` marks a card as an area and keeps its status. It refuses a card with an agent.
   Use \`wi area <ref> --off\` to convert back without changing its status.
-  \`wi agents\` reports the advisory limit and claimed doing-card count. WI_MAX_AGENTS overrides
+  \`wi claim\` lets an agent hold a card and its subtasks at once. It refuses a board with a child in
+  doing that a different agent or a person works.
+  \`wi agents\` reports the advisory limit, the number of distinct agents with a doing card, and each
+  claimed doing card. WI_MAX_AGENTS overrides
   maxAgents from .wi.json for one run. Dispatchers decide whether to wait; wi claim does not enforce it.
   \`wi new\` warns when such a file exists because a new id or filename may clash with it.
   \`wi here\` reads or sets this repository's vault and board pointer in your user config.
@@ -106,6 +121,10 @@ async function main(argv: string[]): Promise<number> {
       where: { type: 'string' },
       priority: { type: 'string' },
       template: { type: 'string' },
+      objective: { type: 'string' },
+      context: { type: 'string', multiple: true },
+      criteria: { type: 'string', multiple: true },
+      strict: { type: 'boolean', default: false },
       vault: { type: 'string' },
       board: { type: 'string' },
       tree: { type: 'boolean', default: false },
@@ -136,6 +155,10 @@ async function main(argv: string[]): Promise<number> {
   }
   if (values.yes && command !== 'setup') throw new UsageError('--yes applies only to wi setup.')
   if (values.off && command !== 'area') throw new UsageError('--off applies only to wi area.')
+  if ((values.objective !== undefined || values.context !== undefined || values.criteria !== undefined || values.strict) &&
+    command !== 'new') {
+    throw new UsageError('--objective, --context, --criteria and --strict apply only to wi new.')
+  }
   if (command === 'setup') {
     if (rest.length > 0) throw new UsageError('wi setup takes options only. Run wi setup --help for usage.')
     await runSetup({
@@ -158,6 +181,8 @@ async function main(argv: string[]): Promise<number> {
       return runStatus(vault, rest, json)
     case 'area':
       return runArea(vault, rest, values, json)
+    case 'note':
+      return runNote(vault, rest, values, json)
     case 'claim':
       return runClaim(vault, rest, values, json)
     case 'agents':
@@ -244,7 +269,7 @@ async function repoBoardForVault(vault: Vault): Promise<string | undefined> {
   return pointer && resolve(pointer.vault) === resolve(vault.root) ? pointer.board : undefined
 }
 
-type Values = Record<string, string | boolean | undefined>
+type Values = Record<string, string | string[] | boolean | undefined>
 
 async function runNew(vault: Vault, rest: string[], values: Values, json: boolean): Promise<number> {
   const title = rest.join(' ').trim()
@@ -268,6 +293,12 @@ async function runNew(vault: Vault, rest: string[], values: Values, json: boolea
     ...(typeof values['agent'] === 'string' ? { agent: values['agent'] } : {}),
     ...(typeof values['template'] === 'string' ? { template: values['template'] } : {}),
     ...(priority !== undefined ? { priority } : {}),
+    brief: {
+      objective: typeof values['objective'] === 'string' ? values['objective'] : undefined,
+      context: Array.isArray(values['context']) ? values['context'] : undefined,
+      criteria: Array.isArray(values['criteria']) ? values['criteria'] : undefined,
+    },
+    strict: values['strict'] === true,
   })
 
   if (vault.unaccounted.length > 0) {
@@ -277,8 +308,22 @@ async function runNew(vault: Vault, rest: string[], values: Values, json: boolea
     )
   }
 
-  if (json) print({ id: created.id, path: created.relPath, parent: created.parentStem })
-  else process.stdout.write(`${created.id}  ${created.relPath}  (child of ${created.parentStem})\n`)
+  if (created.gaps.length > 0) {
+    process.stderr.write(`wi: warning: ${created.id} has no ${created.gaps.join(' or ')}. ` +
+      `Pass --objective and --criteria, or fill the card before work starts.\n`)
+  }
+  if (created.renamed) {
+    process.stderr.write(`wi: note: another item has this filename, so this one is ${created.relPath}. ` +
+      `If they are different work, give the card a more specific title.\n`)
+  }
+
+  if (json) {
+    print({ id: created.id, path: created.relPath, parent: created.parentStem,
+      promoted_parent: created.promotedParent, gaps: created.gaps })
+  } else {
+    process.stdout.write(`${created.id}  ${created.relPath}  (child of ${created.parentStem})\n`)
+    if (created.promotedParent) process.stdout.write(`${created.parentStem}  promoted to a board (its first child)\n`)
+  }
   return 0
 }
 
@@ -296,12 +341,18 @@ async function runStatus(vault: Vault, rest: string[], json: boolean): Promise<n
       to: change.to,
       prev_status: change.recorded ?? null,
       changed: change.changed,
+      parent_ready: change.parentReady?.id ?? null,
     })
   } else if (!change.changed) {
     process.stdout.write(`${label(change.item)} is already ${change.to}. Nothing written.\n`)
   } else {
     const recorded = change.recorded ? `  (prev_status: ${change.recorded})` : ''
     process.stdout.write(`${label(change.item)}  ${change.from ?? '—'} → ${change.to}${recorded}\n`)
+  }
+  const ready = change.parentReady
+  if (ready && !json) {
+    process.stdout.write(`${label(ready)}  every child is done. If its own criteria are met, run: ` +
+      `wi status ${ready.id ?? ready.stem} done\n`)
   }
   return 0
 }
@@ -345,33 +396,59 @@ async function runClaim(vault: Vault, rest: string[], values: Values, json: bool
   if (ref === '') throw new UsageError('wi claim needs a <ref> and --agent <name>.')
   const agent = singleLineOption(values, 'agent')
   const maxAgents = maxAgentsForRun(vault)
-  const activeAgents = countActiveAgents(vault)
+  const active = activeAgentNames(vault)
   const change = await claimItem(vault, ref, agent)
   if (json) print({ id: change.item.id, path: change.item.relPath, agent: change.agent,
     from: change.from ?? null, to: change.to, changed: change.changed })
   else process.stdout.write(change.changed
     ? `${label(change.item)}  ${change.from ?? '—'} → doing  (agent: ${agent})\n`
     : `${label(change.item)} is already claimed by ${agent} in doing. Nothing written.\n`)
-  if (change.changed && maxAgents !== null && activeAgents + 1 > maxAgents) {
-    process.stderr.write(`wi: warning: agent limit is ${maxAgents}; ${activeAgents + 1} cards are now doing with an agent.\n`)
+  if (change.changed && maxAgents !== null && !active.has(agent) && active.size + 1 > maxAgents) {
+    process.stderr.write(`wi: warning: agent limit is ${maxAgents}; ${active.size + 1} agents now have a doing card.\n`)
   }
   return 0
 }
 
-function countActiveAgents(vault: Vault): number {
-  return vault.items.filter((item) => {
+async function runNote(vault: Vault, rest: string[], values: Values, json: boolean): Promise<number> {
+  const [ref, ...words] = rest
+  const text = words.join(' ').trim()
+  if (ref === undefined || text === '') {
+    throw new UsageError('wi note needs a <ref> and the text. Try: wi note wi-a7f3 "Priced 12 lines."')
+  }
+  const agent = values['agent'] === undefined ? undefined : singleLineOption(values, 'agent')
+  const added = await addNote(vault, ref, text, agent)
+  if (json) print({ id: added.item.id, path: added.item.relPath, line: added.line })
+  else process.stdout.write(`${label(added.item)}  ${added.line}\n`)
+  return 0
+}
+
+/** Doing cards that carry an agent. One agent may hold a card and its current subtask. */
+function claimedDoing(vault: Vault): { agent: string; item: WorkItem }[] {
+  return vault.items.flatMap((item) => {
     const agent = item.frontmatter.get('agent')
     return item.status === 'doing' && typeof agent === 'string' && agent.trim() !== ''
-  }).length
+      ? [{ agent, item }]
+      : []
+  })
+}
+
+function activeAgentNames(vault: Vault): Set<string> {
+  return new Set(claimedDoing(vault).map((claim) => claim.agent))
 }
 
 function runAgents(vault: Vault, rest: string[], json: boolean): number {
   if (rest.length > 0) throw new UsageError('wi agents takes no arguments.')
   const maxAgents = maxAgentsForRun(vault)
-  const activeAgents = countActiveAgents(vault)
-  const result = { maxAgents, activeAgents }
-  if (json) print(result)
-  else process.stdout.write(`limit  ${maxAgents === null ? 'none' : maxAgents}\ndoing with agent  ${activeAgents}\n`)
+  const claims = claimedDoing(vault).sort((a, b) => a.agent.localeCompare(b.agent))
+  const activeAgents = new Set(claims.map((claim) => claim.agent)).size
+  if (json) {
+    print({ maxAgents, activeAgents, claims: claims.map(({ agent, item }) => ({
+      agent, id: item.id ?? null, title: item.title ?? item.stem, path: item.relPath,
+    })) })
+    return 0
+  }
+  process.stdout.write(`limit  ${maxAgents === null ? 'none' : maxAgents}\nagents with a doing card  ${activeAgents}\n`)
+  for (const { agent, item } of claims) process.stdout.write(`  ${agent}  ${label(item)}\n`)
   return 0
 }
 

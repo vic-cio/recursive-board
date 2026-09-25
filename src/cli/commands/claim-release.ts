@@ -30,7 +30,8 @@ export async function claimItem(vault: Vault, ref: string, agent: string): Promi
   const currentAgent = typeof current === 'string' && current.trim() !== '' ? current : undefined
   const edits = claimEdits(
     item.status, currentAgent, agent, item.frontmatter.has('prev_status'),
-    item.board && vault.childrenOf(item).some((child) => child.status === 'doing'),
+    item.board && vault.childrenOf(item).some((child) =>
+      child.status === 'doing' && child.frontmatter.get('agent') !== agent),
   )
   if (edits === null) return { item, agent, from: item.status, to: 'doing', changed: false }
   await editItem(item, edits)

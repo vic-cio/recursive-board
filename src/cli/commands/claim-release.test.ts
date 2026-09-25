@@ -75,6 +75,22 @@ test('claim refuses a different agent, a done item, and a board with doing child
   assert.equal(fmOf(fixture).has('agent'), false)
 })
 
+test('an agent can hold a card and the subtask it works now, in either order', async () => {
+  fixture = seed({ board: true })
+  fixture.write('Boards/Child.md', item({ type: 'work-item', id: 'wi-0003', title: 'Child', status: 'options', parent: '"[[Task]]"', created: '2026-09-21', updated: '2026-09-21' }))
+  await claimItem(await loadVault(fixture.root), 'wi-0002', 'codex')
+  const child = await claimItem(await loadVault(fixture.root), 'wi-0003', 'codex')
+  assert.equal(child.changed, true)
+  fixture.cleanup()
+
+  fixture = seed({ board: true })
+  fixture.write('Boards/Child.md', item({ type: 'work-item', id: 'wi-0003', title: 'Child', status: 'doing', agent: 'codex', parent: '"[[Task]]"', created: '2026-09-21', updated: '2026-09-21' }))
+  const parent = await claimItem(await loadVault(fixture.root), 'wi-0002', 'codex')
+  assert.equal(parent.changed, true)
+  assert.equal(fmOf(fixture).get('agent'), 'codex')
+  await assert.rejects(claimItem(await loadVault(fixture.root), 'wi-0003', 'luna'), /already claimed by codex/)
+})
+
 test('claim refuses an area', async () => {
   fixture = seed()
   fixture.write('Boards/Operations.md', item({
