@@ -1,7 +1,7 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 
-import { parseFrontmatter, setKey, removeKey, formatScalar } from './frontmatter.ts'
+import { parseFrontmatter, setKey, removeKey, formatScalar, getList, setList } from './frontmatter.ts'
 
 const ITEM = `---
 type: work-item
@@ -199,4 +199,22 @@ test('formatScalar quotes only what YAML would otherwise misread', () => {
 
 test('formatScalar escapes a quote inside a value', () => {
   assert.equal(formatScalar('say "hi"'), '"say \\"hi\\""')
+})
+
+test('getList reads block, flow and plain string lists', () => {
+  const block = '---\nid: wi-1\ntags:\n  - design\n  - "area/x"\nupdated: 2026-09-21\n---\nbody'
+  assert.deepEqual(getList(block, 'tags'), ['design', 'area/x'])
+  assert.deepEqual(getList('---\ntags: [a, "b"]\n---\n', 'tags'), ['a', 'b'])
+  assert.deepEqual(getList('---\ntags: a, b c\n---\n', 'tags'), ['a', 'b', 'c'])
+  assert.equal(getList('---\nid: wi-1\n---\n', 'tags'), undefined)
+})
+
+test('setList replaces the entry in place and copies every other byte', () => {
+  const before = '---\nid: wi-1\ntags: [design]\nmystery: keep\n---\nbody\n'
+  assert.equal(setList(before, 'tags', ['design', 'area/x']),
+    '---\nid: wi-1\ntags:\n  - design\n  - area/x\nmystery: keep\n---\nbody\n')
+  assert.equal(setList('---\nid: wi-1\n---\n', 'tags', ['a']), '---\nid: wi-1\ntags:\n  - a\n---\n')
+  assert.equal(setList(before, 'tags', []), '---\nid: wi-1\nmystery: keep\n---\nbody\n')
+  const same = '---\ntags:\n  - a\n---\n'
+  assert.equal(setList(same, 'tags', ['a']), same)
 })

@@ -12,6 +12,8 @@ import {
   CORE_FIELDS, OPTIONAL_FIELDS, STATUSES, isStatus, parseWikilink,
 } from '../../shared/schema.ts'
 import type { Vault, WorkItem } from '../vault.ts'
+import { staleAreaTags } from './retag.ts'
+import { isAreaTag } from '../../shared/area-tags.ts'
 
 export type Severity = 'error' | 'warning'
 
@@ -54,6 +56,14 @@ export async function validate(vault: Vault): Promise<Report> {
   checkDefaultRoot(vault, report)
   checkRoots(vault, report)
   checkCycles(vault, report)
+  if (vault.config.areaTags) {
+    for (const { item, to } of staleAreaTags(vault)) {
+      const tag = to.find(isAreaTag)
+      report('area-tag-stale', 'warning', item.relPath, item.id, tag
+        ? `should carry the area tag ${tag}. Run wi retag.`
+        : 'carries an area tag but sits in no area. Run wi retag.')
+    }
+  }
 
   problems.sort((a, b) => a.relPath.localeCompare(b.relPath) || a.rule.localeCompare(b.rule))
 

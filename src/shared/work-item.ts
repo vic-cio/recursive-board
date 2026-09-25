@@ -19,6 +19,8 @@ interface NewWorkItemFields {
   owner?: string | undefined
   agent?: string | undefined
   priority?: number | undefined
+  /** Written as a block list, the way Obsidian writes `tags`. */
+  tags?: readonly string[] | undefined
   created: string
   updated: string
   /** A name from the template registry. Omitted uses the default. */
@@ -76,8 +78,11 @@ export function renderWorkItem(item: NewWorkItem, extraSections: readonly string
   if (item.priority !== undefined) fields.push(['priority', item.priority])
   fields.push(['created', item.created], ['updated', item.updated])
 
-  const frontmatter = fields.map(([key, value]) => `${key}: ${formatScalar(value)}`).join('\n')
-  return `---\n${frontmatter}\n---\n\n${renderBody(template, extraSections, item.brief)}`
+  const lines = fields.map(([key, value]) => `${key}: ${formatScalar(value)}`)
+  if (item.tags !== undefined && item.tags.length > 0) {
+    lines.push('tags:', ...item.tags.map((tag) => `  - ${formatScalar(tag)}`))
+  }
+  return `---\n${lines.join('\n')}\n---\n\n${renderBody(template, extraSections, item.brief)}`
 }
 
 /** Renders a board root. Roots intentionally have neither parent nor status. */

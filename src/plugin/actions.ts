@@ -17,6 +17,7 @@ import {
 } from '../shared/transitions.ts'
 import { fileNameFor, newId, today, type Status } from '../shared/schema.ts'
 import { inheritedChildFields, renderWorkItem } from '../shared/work-item.ts'
+import { areaTagFor, type AreaNode } from '../shared/area-tags.ts'
 import type { WorkItemIndex, WorkItemMeta } from './index.ts'
 import { UndoStack } from './undo.ts'
 
@@ -168,6 +169,17 @@ export class Actions {
     if (done) this.undoableNotice(`Moved ${meta.title} to ${target.title}`)
   }
 
+  /** The item, then each ancestor up to the root, for the area tag. A loop stops where it repeats. */
+  private chainOf(start: WorkItemMeta): AreaNode[] {
+    const chain: AreaNode[] = []
+    const seen = new Set<string>()
+    for (let item: WorkItemMeta | null = start; item && !seen.has(item.file.path); item = this.index.get(item.parent)) {
+      seen.add(item.file.path)
+      chain.push({ title: item.title, area: item.area })
+    }
+    return chain
+  }
+
   /**
    * The add row at the foot of a column (docs/adr/0017-inline-status-capture.md).
    * Typing a title and pressing enter is one action, which is what makes a board a capture
@@ -187,12 +199,14 @@ export class Actions {
     }
 
     const stamp = today()
+    const areaTag = this.index.config.areaTags ? areaTagFor([{ title, area: false }, ...this.chainOf(parent)]) : null
     const text = renderWorkItem({
       id,
       title,
       status,
       parentStem: parent.stem,
       ...inheritedChildFields(parent, status),
+      ...(areaTag === null ? {} : { tags: [areaTag] }),
       created: stamp,
       updated: stamp,
     }, this.index.config.extraSections)

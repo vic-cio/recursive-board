@@ -5,21 +5,21 @@ import { DEFAULT_VAULT_CONFIG, parseVaultConfig } from './vault-config.ts'
 
 test('a missing vault config keeps Boards and has no default root', () => {
   assert.deepEqual(parseVaultConfig(null), DEFAULT_VAULT_CONFIG)
-  assert.deepEqual(parseVaultConfig(null), { workItemFolder: 'Boards', defaultRoot: null, extraSections: [], maxAgents: null, autoPromote: true })
+  assert.deepEqual(parseVaultConfig(null), { workItemFolder: 'Boards', defaultRoot: null, extraSections: [], maxAgents: null, autoPromote: true, areaTags: false })
 })
 
 test('the vault config selects a work-item folder and root filename', () => {
   assert.deepEqual(parseVaultConfig('{"workItemFolder":"Projects/Work","defaultRoot":"House move"}'), {
-    workItemFolder: 'Projects/Work', defaultRoot: 'House move', extraSections: [], maxAgents: null, autoPromote: true,
+    workItemFolder: 'Projects/Work', defaultRoot: 'House move', extraSections: [], maxAgents: null, autoPromote: true, areaTags: false,
   })
 })
 
 test('an existing config can set either option alone', () => {
   assert.deepEqual(parseVaultConfig('{"workItemFolder":"Projects/"}'), {
-    workItemFolder: 'Projects', defaultRoot: null, extraSections: [], maxAgents: null, autoPromote: true,
+    workItemFolder: 'Projects', defaultRoot: null, extraSections: [], maxAgents: null, autoPromote: true, areaTags: false,
   })
   assert.deepEqual(parseVaultConfig('{"defaultRoot":"Home"}'), {
-    workItemFolder: 'Boards', defaultRoot: 'Home', extraSections: [], maxAgents: null, autoPromote: true,
+    workItemFolder: 'Boards', defaultRoot: 'Home', extraSections: [], maxAgents: null, autoPromote: true, areaTags: false,
   })
 })
 
@@ -55,4 +55,10 @@ test('autoPromote defaults to true and accepts only a boolean', () => {
   assert.equal(parseVaultConfig('{}').autoPromote, true)
   assert.equal(parseVaultConfig('{"autoPromote":false}').autoPromote, false)
   assert.throws(() => parseVaultConfig('{"autoPromote":"no"}'), /autoPromote must be true or false/)
+})
+
+test('areaTags defaults to false and accepts only a boolean', () => {
+  assert.equal(parseVaultConfig('{}').areaTags, false)
+  assert.equal(parseVaultConfig('{"areaTags":true}').areaTags, true)
+  assert.throws(() => parseVaultConfig('{"areaTags":1}'), /areaTags must be true or false/)
 })

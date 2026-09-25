@@ -12,6 +12,7 @@
 import type { App, TFile } from 'obsidian'
 
 import { readLabels } from '../shared/labels.ts'
+import { isAreaTag } from '../shared/area-tags.ts'
 import { DEFAULT_VAULT_CONFIG, type VaultConfig } from '../shared/vault-config.ts'
 import { archiveOwner } from '../shared/archive.ts'
 import {
@@ -134,7 +135,8 @@ export class WorkItemIndex {
       agent: str(frontmatter['agent']),
       blocked: frontmatter['blocked'] === true,
       prevStatus: isStatus(prev) ? prev : undefined,
-      labels: readLabels(frontmatter['tags']),
+      // An area tag repeats what the board already shows, so it draws no chip (ADR 0039).
+      labels: readLabels(frontmatter['tags']).filter((label) => !isAreaTag(label)),
     }
   }
 

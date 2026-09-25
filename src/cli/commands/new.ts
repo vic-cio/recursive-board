@@ -12,6 +12,8 @@ import { editItem, writeAtomic } from '../write.ts'
 import { inheritedChildFields, renderWorkItem, type NewWorkItem } from '../../shared/work-item.ts'
 import { briefGaps, renderBody, requireTemplate, type Brief } from '../../shared/templates.ts'
 import { firstChildPromotion } from '../../shared/transitions.ts'
+import { areaTagFor } from '../../shared/area-tags.ts'
+import { chainOf } from './retag.ts'
 import { fileNameFor, fileNameStem, isStatus, newId, today, type Status } from '../../shared/schema.ts'
 import type { Vault } from '../vault.ts'
 
@@ -93,6 +95,10 @@ export async function createItem(vault: Vault, options: NewOptions): Promise<Cre
     ? { ...common, ...inherited, area: true, status }
     : { ...common, ...inherited, status }
   if (options.priority !== undefined) fields.priority = options.priority
+  const areaTag = vault.config.areaTags
+    ? areaTagFor([{ title, area: template.area === true }, ...chainOf(vault, parent)])
+    : null
+  if (areaTag !== null) fields.tags = [areaTag]
 
   await writeAtomic(path, renderWorkItem(fields, vault.config.extraSections))
 
