@@ -21,6 +21,7 @@ import { createItem } from './commands/new.ts'
 import { setStatus } from './commands/status.ts'
 import { claimItem, releaseItem } from './commands/claim-release.ts'
 import { addNote } from './commands/note.ts'
+import { retag, staleAreaTags, writeGraphColours } from './commands/retag.ts'
 import { listChildren, type ChildRow } from './commands/children.ts'
 import { validate, type Problem } from './commands/validate.ts'
 import { listTemplates, writeTemplates } from './commands/template.ts'
@@ -54,6 +55,8 @@ Usage
   wi rm <ref> [--recursive] [--dry-run]
   wi children [<ref>] [--status <s>] [--tree] [--archived]
   wi validate
+  wi retag [--dry-run]
+  wi graph
   wi template [list|write]
   wi hook <install|uninstall|status> [--force]
   wi here [--board <ref>] [--vault <path>]
@@ -78,6 +81,10 @@ Notes
   the new file gets the id's suffix; wi never writes over a file.
   \`wi new\` makes a parent a board when it gives the parent its first child. Set
   "autoPromote": false in .wi.json to turn this off. A root or an area is never changed.
+  With "areaTags": true in .wi.json, each work item carries one tag naming its areas, such as
+  area/work/website. \`wi new\` writes it. After \`wi move\` or \`wi area\`, run \`wi retag\` to fix
+  the tags below. \`wi graph\` writes a colour group per area to .obsidian/graph.json and keeps
+  your own groups. Close the graph view first: Obsidian may write over the file.
   \`wi note\` appends "- <date> <time>, <agent>: <text>" under Notes. The agent defaults to the
   card's agent. The write re-reads the card under a lock, so two notes at once both survive.
   \`wi status <ref> done\` says when that was the parent's last open child. It does not close the parent.
@@ -181,7 +188,7 @@ async function main(argv: string[]): Promise<number> {
     case 'status':
       return runStatus(vault, rest, json)
     case 'area':
-      return runArea(vault, rest, values, json)
+      return withRetagHint(vault, () => runArea(vault, rest, values, json))
     case 'note':
       return runNote(vault, rest, values, json)
     case 'claim':
@@ -191,7 +198,7 @@ async function main(argv: string[]): Promise<number> {
     case 'release':
       return runRelease(vault, rest, values, json)
     case 'move':
-      return runMove(vault, rest, values, json)
+      return withRetagHint(vault, () => runMove(vault, rest, values, json))
     case 'archive':
       return runArchive(vault, rest, values, json)
     case 'promote':
@@ -209,6 +216,10 @@ async function main(argv: string[]): Promise<number> {
       return runChildren(vault, rest, values, json)
     case 'validate':
       return runValidate(vault, json)
+    case 'retag':
+      return runRetag(vault, rest, values, json)
+    case 'graph':
+      return runGraph(vault, rest, json)
     case 'template':
       return runTemplate(vault, rest, json)
     case 'hook':
@@ -607,6 +618,39 @@ function runChildren(vault: Vault, rest: string[], values: Values, json: boolean
   }
   if (listing.cycle) out.push('  ! the parent chain loops. Run wi validate.')
   process.stdout.write(`${out.join('\n')}\n`)
+  return 0
+}
+
+/** A move or an area change can leave area tags below it stale. Say so, since it writes one file. */
+async function withRetagHint(vault: Vault, run: () => Promise<number>): Promise<number> {
+  const code = await run()
+  if (vault.config.areaTags) {
+    const stale = staleAreaTags(await loadVault(vault.root)).length
+    if (stale > 0) process.stderr.write(`wi: ${stale} work item${stale === 1 ? ' has' : 's have'} a stale area tag. Run wi retag.\n`)
+  }
+  return code
+}
+
+async function runRetag(vault: Vault, rest: string[], values: Values, json: boolean): Promise<number> {
+  if (rest.length > 0) throw new UsageError('wi retag takes no arguments.')
+  const dryRun = values['dry-run'] === true
+  const changed = await retag(vault, dryRun)
+  if (json) {
+    print({ dryRun, changed: changed.map(({ item, from, to }) => ({ id: item.id ?? null, path: item.relPath, from, to })) })
+    return 0
+  }
+  const verb = dryRun ? 'would retag' : 'retagged'
+  for (const { item, to } of changed) process.stdout.write(`${verb}  ${label(item)}  [${to.join(', ')}]\n`)
+  process.stdout.write(`${changed.length} work item${changed.length === 1 ? '' : 's'}${dryRun ? ', nothing written' : ''}\n`)
+  return 0
+}
+
+async function runGraph(vault: Vault, rest: string[], json: boolean): Promise<number> {
+  if (rest.length > 0) throw new UsageError('wi graph takes no arguments.')
+  const written = await writeGraphColours(vault)
+  if (json) print(written)
+  else process.stdout.write(`wrote ${written.groups} area colour groups to ${written.path}, kept ${written.kept} of your own\n` +
+    'reopen the graph view to see them\n')
   return 0
 }
 

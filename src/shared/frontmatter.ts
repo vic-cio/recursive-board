@@ -8,7 +8,8 @@
  *
  * It understands scalars, which is every field in the v1 schema. A block entry such as a `tags:`
  * list parses as a keyed entry with no scalar value, so it is preserved and can be replaced or
- * removed as a unit, but it is not read as a list.
+ * removed as a unit. `getList` and `setList` read and replace a list of strings, such as `tags`,
+ * as that unit.
  */
 
 export type Scalar = string | number | boolean
@@ -204,4 +205,61 @@ export function removeKey(text: string, key: string): string {
 
 function defaultEnd(text: string): string {
   return text.includes('\r\n') ? '\r\n' : '\n'
+}
+
+/**
+ * Reads a list of strings: a block list, a flow list, or one string split on commas and spaces,
+ * the three forms Obsidian accepts for `tags`. Returns undefined when the key is absent.
+ */
+export function getList(text: string, key: string): string[] | undefined {
+  const block = splitBlock(text)
+  if (!block) return undefined
+  const entry = readEntries(block.lines).find((e) => e.key === key)
+  if (!entry) return undefined
+  const first = KEY_LINE.exec(block.lines[entry.start]!)?.[2]?.trim() ?? ''
+  let parts: string[]
+  if (first.startsWith('[')) {
+    parts = first.replace(/^\[|\]$/g, '').split(',')
+  } else if (first !== '') {
+    parts = first.split(/[,\s]+/)
+  } else {
+    parts = block.lines.slice(entry.start + 1, entry.end)
+      .map((line) => /^[ \t]*-[ \t]+(.*)$/.exec(line)?.[1] ?? '')
+  }
+  return parts
+    .map((part) => {
+      const value = parseScalar(part)
+      return typeof value === 'string' ? value : value === undefined ? '' : String(value)
+    })
+    .map((part) => part.trim())
+    .filter((part) => part !== '')
+}
+
+/**
+ * Replaces a list as one entry, written as a block list the way Obsidian writes `tags`.
+ * An empty list removes the key. The entry keeps its place; a new one goes before the fence.
+ */
+export function setList(text: string, key: string, values: readonly string[]): string {
+  if (values.length === 0) return removeKey(text, key)
+  const block = splitBlock(text)
+  if (!block) throw new Error(`cannot set "${key}": the file has no frontmatter`)
+  const entry = readEntries(block.lines).find((e) => e.key === key)
+  const current = getList(text, key)
+  if (entry && current !== undefined && current.length === values.length &&
+    current.every((value, i) => value === values[i]) &&
+    block.lines.slice(entry.start + 1, entry.end).every((line) => /^[ \t]*-[ \t]/.test(line))) {
+    return text
+  }
+  const eol = defaultEnd(text)
+  const replacement = [`${key}:`, ...values.map((value) => `  - ${formatScalar(value)}`)]
+  const lines = [...block.lines]
+  const ends = [...block.ends]
+  if (entry) {
+    lines.splice(entry.start, entry.end - entry.start, ...replacement)
+    ends.splice(entry.start, entry.end - entry.start, ...replacement.map(() => eol))
+  } else {
+    lines.push(...replacement)
+    ends.push(...replacement.map(() => eol))
+  }
+  return rewrite(text, block, lines, ends)
 }

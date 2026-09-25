@@ -5,17 +5,20 @@
  * why nothing here ever rebuilds a frontmatter block. This module imports nothing from Node, so
  * the plugin bundle can carry it to iOS.
  */
-import { setKey, removeKey, type Scalar } from './frontmatter.ts'
+import { setKey, removeKey, setList, type Scalar } from './frontmatter.ts'
 import { today } from './schema.ts'
 
 export type Edit =
   | { op: 'set'; key: string; value: Scalar }
   | { op: 'remove'; key: string }
+  | { op: 'list'; key: string; values: readonly string[] }
 
 export function applyEdits(text: string, edits: readonly Edit[]): string {
   let out = text
   for (const edit of edits) {
-    out = edit.op === 'set' ? setKey(out, edit.key, edit.value) : removeKey(out, edit.key)
+    out = edit.op === 'set'
+      ? setKey(out, edit.key, edit.value)
+      : edit.op === 'list' ? setList(out, edit.key, edit.values) : removeKey(out, edit.key)
   }
   return out
 }
