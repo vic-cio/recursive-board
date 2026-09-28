@@ -4,6 +4,7 @@ import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
 
 import { firstBoardPlan, mergeDefaultRoot } from './first-board.ts'
+import { mergeDefaultRootNote } from './vault-config-note.ts'
 import { loadVault } from '../cli/vault.ts'
 import { validate } from '../cli/commands/validate.ts'
 import { makeVault, type Fixture } from '../cli/test-helpers.ts'
@@ -21,7 +22,7 @@ test('first board plan creates valid root and example child files', async () => 
     now: new Date(2026, 8, 24), random: () => 0,
   })
   for (const file of plan.files) fixture.write(`Boards/${file.path}`, file.text)
-  fixture.write('.wi.json', plan.configText)
+  fixture.write('Recursive Board config.md', plan.configText)
 
   const result = await validate(await loadVault(fixture.root))
   assert.equal(result.errorCount, 0)
@@ -33,6 +34,15 @@ test('first board plan creates valid root and example child files', async () => 
 
 test('config merge sets defaultRoot and preserves existing keys', () => {
   assert.deepEqual(JSON.parse(mergeDefaultRoot('{"workItemFolder":"Projects","custom":true}', 'Main')),
+    { workItemFolder: 'Projects', custom: true, defaultRoot: 'Main' })
+})
+
+test('config merge updates the marked config block and preserves Markdown text', () => {
+  const existing = '# Settings\n\nKeep this text.\n\n<!-- recursive-board-config -->\n```json\n{"workItemFolder":"Projects","custom":true}\n```\n'
+  const updated = mergeDefaultRootNote(existing, 'Main')
+  assert.match(updated, /^# Settings\n\nKeep this text\.\n/)
+  assert.match(updated, /\n```\n$/)
+  assert.deepEqual(JSON.parse(updated.match(/```json\n([\s\S]*?)\n```/)?.[1] ?? 'null'),
     { workItemFolder: 'Projects', custom: true, defaultRoot: 'Main' })
 })
 
