@@ -185,3 +185,27 @@ export function ago(ms: number, now: number): string {
   if (minutes < 24 * 60) return `${Math.round(minutes / 60)} h`
   return new Date(ms).toLocaleDateString(undefined, { day: 'numeric', month: 'short' })
 }
+
+export interface Attention<T> {
+  card: T
+  /** `started`: in doing while it waits on open cards. `archived`: it waits on an archived card that is not done. */
+  reason: 'started' | 'archived'
+  cards: T[]
+}
+
+/**
+ * Dependency problems a person should look at (docs/adr/0041-card-dependencies.md). The board lets
+ * a person start a waiting card, so the dashboard is where that shows afterwards.
+ */
+export function needsAttention<T extends DashItem>(cards: T[], dependenciesOf: (card: T) => T[]): Attention<T>[] {
+  const found: Attention<T>[] = []
+  for (const card of cards) {
+    if (card.status === 'done') continue
+    const dependencies = dependenciesOf(card)
+    const archived = dependencies.filter((dependency) => dependency.effectiveArchived && dependency.status !== 'done')
+    if (archived.length > 0) found.push({ card, reason: 'archived', cards: archived })
+    const open = dependencies.filter((dependency) => dependency.status !== 'done')
+    if (card.status === 'doing' && open.length > 0) found.push({ card, reason: 'started', cards: open })
+  }
+  return found
+}

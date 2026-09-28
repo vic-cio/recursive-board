@@ -35,6 +35,7 @@ export function renderCard(
   if (meta.status !== undefined) card.addClass(`is-${meta.status}`)
   card.toggleClass('is-expanded', expanded)
   card.toggleClass('is-blocked', meta.blocked)
+  card.toggleClass('is-waiting', ctx.index.openDependencies(meta).length > 0)
   card.toggleClass('is-archived', meta.effectiveArchived)
   card.dataset['path'] = meta.file.path
 
@@ -127,7 +128,7 @@ export function renderLabels(host: HTMLElement, labels: string[]): void {
   }
 }
 
-/** Child count, board, priority, blocked marker, owner or agent initial. No other fields appear on the collapsed face. */
+/** Child count, board, priority, blocked and waiting markers, owner or agent initial. No other fields appear on the collapsed face. */
 function renderBadges(host: HTMLElement, ctx: RenderContext, meta: WorkItemMeta): void {
   const children = ctx.index.childCount(meta.file)
   if (children > 0) {
@@ -145,6 +146,14 @@ function renderBadges(host: HTMLElement, ctx: RenderContext, meta: WorkItemMeta)
   if (meta.blocked) {
     const badge = host.createSpan({ cls: 'wi-badge wi-badge-blocked', attr: { 'aria-label': 'Blocked' } })
     setIcon(badge, 'octagon-alert')
+  }
+  // A card that waits on other cards (docs/adr/0041-card-dependencies.md). Not the red octagon:
+  // that marks a block outside the board, and this one clears itself.
+  const waits = ctx.index.openDependencies(meta)
+  if (waits.length > 0) {
+    const names = waits.map((dependency) => dependency.title).join(', ')
+    const badge = host.createSpan({ cls: 'wi-badge wi-badge-waiting', attr: { 'aria-label': `Waits on ${names}` } })
+    setIcon(badge, 'hourglass')
   }
   const who = meta.agent ?? meta.owner
   if (who !== undefined) {

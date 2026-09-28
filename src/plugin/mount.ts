@@ -124,7 +124,7 @@ export function mountLeaf(leaf: WorkspaceLeaf, ctx: RenderContext): void {
     clearFloatingHeader(view, layer)
     renderBreadcrumbs(layer, ctx, meta)
     const body = layer.createDiv({ cls: 'wi-takeover-body' })
-    renderMetaStrip(body, meta)
+    renderMetaStrip(body, meta, ctx)
     renderBoard(body, ctx, meta, ctx.index.childrenOf(meta.file))
     return
   }
@@ -135,7 +135,7 @@ export function mountLeaf(leaf: WorkspaceLeaf, ctx: RenderContext): void {
     // The Objective is what you came to read, so everything else sits below the body.
     const bottom = region(sizer, BOTTOM, false)
     renderBreadcrumbs(region(sizer, TOP, true), ctx, meta, bottom)
-    renderMetaStrip(bottom, meta)
+    renderMetaStrip(bottom, meta, ctx)
     renderChecklist(bottom, ctx, ctx.index.childrenOf(meta.file), {
       grouped: opensAsBoard(meta),
       parent: meta,

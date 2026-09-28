@@ -7,8 +7,8 @@ import { ItemView, Notice, Platform, setIcon, TFile, type WorkspaceLeaf } from '
 
 import type { WorkItemIndex, WorkItemMeta } from '../index.ts'
 import {
-  ago, agentGroups, areaPath, cardsInScope, groupName, groupUnder, inFocus, parseReviewLine, progress, waitsForReview,
-  type Claim, type DashTree, type Group,
+  ago, agentGroups, areaPath, cardsInScope, groupName, groupUnder, inFocus, needsAttention, parseReviewLine, progress, waitsForReview,
+  type Attention, type Claim, type DashTree, type Group,
 } from '../dashboard-model.ts'
 
 export const DASHBOARD_VIEW = 'recursive-board-dashboard'
@@ -106,7 +106,11 @@ export class DashboardView extends ItemView {
     this.drawTrail(el, focus, tree)
 
     const lower = el.createDiv('wi-dash-lower')
-    this.drawReviews(lower.createDiv('wi-dash-panel'), reviews, state)
+    const main = lower.createDiv('wi-dash-column')
+    const attention = needsAttention(cards.filter((card) => inFocus(card, focus, tree)),
+      (card) => card.dependsOn.map((file) => this.host.index.get(file)).filter((found): found is WorkItemMeta => found !== null))
+    if (attention.length > 0) this.drawAttention(main.createDiv('wi-dash-panel'), attention)
+    this.drawReviews(main.createDiv('wi-dash-panel'), reviews, state)
     const side = lower.createDiv('wi-dash-panel')
     this.drawProgress(side, cards, tree, focus)
     this.drawAgents(side, cards, tree, state, focus)
@@ -168,6 +172,24 @@ export class DashboardView extends ItemView {
     }
     return rows.sort((a, b) =>
       Number(a.group.area === null) - Number(b.group.area === null) || a.group.name.localeCompare(b.group.name))
+  }
+
+  /** Dependency problems (docs/adr/0041-card-dependencies.md). Drawn only when there is one. */
+  private drawAttention(panel: HTMLElement, list: Attention<WorkItemMeta>[]): void {
+    this.panelHead(panel, 'alert-triangle', 'Needs attention', String(list.length)).addClass('is-attention')
+    const box = panel.createDiv('wi-dash-agents')
+    for (const { card, reason, cards } of list) {
+      const row = box.createDiv('wi-dash-agent')
+      setIcon(row.createSpan('wi-dash-icon'), reason === 'started' ? 'hourglass' : 'archive')
+      const body = row.createDiv('wi-dash-agent-body')
+      this.link(body, card.title, () => this.openFile(card.file))
+      const line = body.createDiv({ cls: 'wi-dash-muted' })
+      line.createSpan({ text: reason === 'started' ? 'In doing, but still waits on ' : 'Waits on archived ' })
+      cards.forEach((other, i) => {
+        if (i > 0) line.createSpan({ text: ', ' })
+        this.link(line, other.title, () => this.openFile(other.file))
+      })
+    }
   }
 
   private drawReviews(panel: HTMLElement, rows: ReviewRow[], state: DashboardState): void {

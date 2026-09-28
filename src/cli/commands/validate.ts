@@ -14,6 +14,8 @@ import {
 import type { Vault, WorkItem } from '../vault.ts'
 import { staleAreaTags } from './retag.ts'
 import { isAreaTag } from '../../shared/area-tags.ts'
+import { dependencyCycle } from '../../shared/dependencies.ts'
+import { dependenciesOf, titleOf } from '../dependencies.ts'
 
 export type Severity = 'error' | 'warning'
 
@@ -56,6 +58,7 @@ export async function validate(vault: Vault): Promise<Report> {
   checkDefaultRoot(vault, report)
   checkRoots(vault, report)
   checkCycles(vault, report)
+  checkDependencies(vault, report)
   if (vault.config.areaTags) {
     for (const { item, to } of staleAreaTags(vault)) {
       const tag = to.find(isAreaTag)
@@ -74,6 +77,35 @@ export async function validate(vault: Vault): Promise<Report> {
     warningCount: problems.length - errorCount,
     ok: errorCount === 0,
     itemCount: vault.items.length,
+  }
+}
+
+/** docs/adr/0041-card-dependencies.md. */
+function checkDependencies(vault: Vault, report: Reporter): void {
+  for (const item of vault.items) {
+    const { resolved, unresolved, malformed } = dependenciesOf(vault, item)
+    for (const value of malformed) {
+      report('depends-malformed', 'error', item.relPath, item.id,
+        `has depends_on entry ${JSON.stringify(value)}, which is not a wikilink. Write each entry as "[[Title]]", or use wi depend.`)
+    }
+    for (const target of unresolved) {
+      report('depends-unresolved', 'error', item.relPath, item.id,
+        `depends on [[${target}]], which does not resolve to a work item. Fix the link, or remove it with wi depend ${item.id ?? item.stem} --on "${target}" --off.`)
+    }
+    for (const dependency of resolved) {
+      if (dependency.parent === null) {
+        report('depends-on-root', 'error', item.relPath, item.id,
+          `depends on the root ${titleOf(dependency)}. A root is never done, so the card could never start.`)
+      } else if (dependency.status !== 'done' && vault.isArchived(dependency) && item.status !== 'done' && !vault.isArchived(item)) {
+        report('depends-archived', 'warning', item.relPath, item.id,
+          `waits on ${titleOf(dependency)}, which is archived but not done. Remove the dependency, or unarchive it.`)
+      }
+    }
+    const cycle = dependencyCycle(item, (node) => dependenciesOf(vault, node).resolved)
+    if (cycle) {
+      report('depends-cycle', 'error', item.relPath, item.id,
+        `waits on itself through ${cycle.map(titleOf).join(' → ')}. None of these cards can start. Remove one dependency.`)
+    }
   }
 }
 

@@ -121,8 +121,8 @@ function renderPromoteToggle(group: HTMLElement, ctx: RenderContext, meta: WorkI
   button.addEventListener('click', () => void ctx.actions.setPromoted(meta, !meta.board))
 }
 
-/** Status, priority, owner, agent and id. A strip of facts, not a form. */
-export function renderMetaStrip(host: HTMLElement, meta: WorkItemMeta): void {
+/** Status, priority, owner, agent and id, and the cards it waits on. A strip of facts, not a form. */
+export function renderMetaStrip(host: HTMLElement, meta: WorkItemMeta, ctx?: RenderContext): void {
   const strip = host.createDiv({ cls: 'wi-meta' })
 
   if (meta.status !== undefined) {
@@ -131,6 +131,19 @@ export function renderMetaStrip(host: HTMLElement, meta: WorkItemMeta): void {
     strip.createSpan({ cls: 'wi-pill is-root', text: 'Root' })
   }
   if (meta.blocked) strip.createSpan({ cls: 'wi-pill is-blocked', text: 'Blocked' })
+  const waits = ctx?.index.openDependencies(meta) ?? []
+  if (waits.length > 0) {
+    const pill = strip.createSpan({ cls: 'wi-pill is-waiting' })
+    pill.createSpan({ text: 'Waits on ' })
+    waits.forEach((dependency, i) => {
+      if (i > 0) pill.createSpan({ text: ', ' })
+      const link = pill.createEl('a', { text: dependency.title, href: '#' })
+      link.addEventListener('click', (event) => {
+        event.preventDefault()
+        void ctx!.actions.open(dependency)
+      })
+    })
+  }
   if (meta.priority !== undefined) strip.createSpan({ cls: 'wi-pill', text: `P${meta.priority}` })
   if (meta.owner !== undefined) strip.createSpan({ cls: 'wi-pill', text: meta.owner })
   if (meta.agent !== undefined) strip.createSpan({ cls: 'wi-pill is-agent', text: meta.agent })
