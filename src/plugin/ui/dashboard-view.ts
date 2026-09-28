@@ -277,7 +277,7 @@ export class DashboardView extends ItemView {
       if (web && Platform.isMobileApp && isLoopbackWebAddress(row.path)) {
         nameCell.createSpan({ cls: 'wi-dash-muted', text: 'Open it on the computer that runs it' })
       } else {
-        this.link(nameCell, name, () => web ? this.openWeb(row.path, state.webReviewMode) : this.openPath(row.path))
+        this.link(nameCell, name, () => web ? this.openWeb(row.path, this.host.state().webReviewMode) : this.openPath(row.path))
       }
       tr.createEl('td', { cls: 'wi-dash-muted', text: web ? 'Web page' : TYPES[ext] ?? ext.toUpperCase() })
 
@@ -441,14 +441,25 @@ export class DashboardView extends ItemView {
    */
   private async openWeb(url: string, mode: WebReviewMode): Promise<void> {
     if (mode === 'browser') {
-      window.open(url)
+      this.openInBrowser(url)
       return
     }
     // Obsidian's own registry, missing from its type definitions.
     const plugins = (this.app as unknown as { internalPlugins?: { getEnabledPluginById?: (id: string) => unknown } }).internalPlugins
     if (mode === 'webviewer' && Platform.isDesktopApp && plugins?.getEnabledPluginById?.('webviewer')) {
       await this.app.workspace.getLeaf('tab').setViewState({ type: 'webviewer', state: { url, navigate: true }, active: true })
-    } else window.open(url)
+    } else this.openInBrowser(url)
+  }
+
+  /**
+   * The system browser. On a desktop, `window.open` goes to a Web viewer tab when that core
+   * plugin opens external links, so it uses Electron's shell, which Obsidian exposes as a global.
+   * A global needs no import, so the bundle still loads on iOS (see ios-safety.test.ts).
+   */
+  private openInBrowser(url: string): void {
+    const shell = (window as unknown as { electron?: { shell?: { openExternal?: (url: string) => Promise<void> } } }).electron?.shell
+    if (Platform.isDesktopApp && shell?.openExternal) void shell.openExternal(url)
+    else window.open(url)
   }
 
   /** Markdown opens in Obsidian. Other files open in their own app on a desktop, and in Obsidian on a phone. */

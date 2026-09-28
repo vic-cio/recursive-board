@@ -254,7 +254,8 @@ export default class RecursiveBoardPlugin extends Plugin {
     this.dashboard = { ...this.dashboard, ...patch }
     this.storedData.dashboard = this.dashboard
     await this.saveData(this.storedData)
-    if ('you' in patch) this.refreshDashboards()
+    // These change what the dashboard draws or how a row opens, so it redraws at once.
+    if ('you' in patch || 'webReviewMode' in patch) this.refreshDashboards()
   }
 
   /** Reuses an open dashboard tab, like the graph view. */
