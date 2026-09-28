@@ -18,7 +18,7 @@ it.
 Each verdict is one write to the card's own file: the note and the frontmatter change together.
 The rule lives in `src/shared/review.ts`, so a later `wi` command applies the same edits. A
 verdict refuses a card that is not in doing. The comment is one line, because a note is one line.
-After a verdict, the dashboard removes the card's ticks from that person's tick file, so a card
+After a verdict, the dashboard removes the card's ticks from that person's entry in the plugin data, so a card
 sent back starts its next review clean. The notice that confirms a verdict carries Undo, like a move.
 
 ## Why
