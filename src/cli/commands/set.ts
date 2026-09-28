@@ -6,7 +6,7 @@
  * credit old cards, but no later run can rewrite who made one.
  */
 import { editItem, type Edit } from '../write.ts'
-import { asLink, displayName } from '../../shared/authorship.ts'
+import { asName, displayName } from '../../shared/authorship.ts'
 import type { Vault, WorkItem } from '../vault.ts'
 
 export interface SetOptions {
@@ -30,7 +30,7 @@ export async function setPeople(vault: Vault, ref: string, options: SetOptions):
   const changed: string[] = []
   const current = (key: string) => item.frontmatter.get(key)
 
-  const assign = async (key: 'owner' | 'role', value: string | undefined) => {
+  const assign = (key: 'owner' | 'role', value: string | undefined) => {
     if (value === undefined) return
     if (value.trim() === '') {
       if (current(key) !== undefined) {
@@ -39,23 +39,23 @@ export async function setPeople(vault: Vault, ref: string, options: SetOptions):
       }
       return
     }
-    // An owner stays plain text when no note has that name, as wi new writes it.
-    const next = key === 'owner' && await vault.resolveNote(displayName(value)!) === undefined ? value.trim() : asLink(value)
+    const next = asName(value)
     if (current(key) !== next) {
       edits.push({ op: 'set', key, value: next })
       changed.push(key)
     }
   }
-  await assign('owner', options.owner)
-  await assign('role', options.role)
+  assign('owner', options.owner)
+  assign('role', options.role)
 
   if (options.creator !== undefined) {
-    const next = asLink(options.creator)
+    const next = asName(options.creator)
     const had = current('creator')
-    if (had !== undefined && had !== next) {
+    if (had !== undefined && displayName(had) !== next) {
       throw new Error(`${item.relPath} was made by ${displayName(had)}. A creator is set once and never changes.`)
     }
-    if (had === undefined) {
+    // A creator written as a link before names were plain is rewritten as the same name.
+    if (had !== next) {
       edits.push({ op: 'set', key: 'creator', value: next })
       changed.push('creator')
     }

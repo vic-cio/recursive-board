@@ -16,7 +16,7 @@ import { staleAreaTags } from './retag.ts'
 import { isAreaTag } from '../../shared/area-tags.ts'
 import { dependencyCycle } from '../../shared/dependencies.ts'
 import { dependenciesOf, titleOf } from '../dependencies.ts'
-import { LINK_FIELDS, linkTypeProblem, type LinkField } from '../../shared/authorship.ts'
+import { displayName, LINK_FIELDS, linkTypeProblem, type LinkField } from '../../shared/authorship.ts'
 
 export type Severity = 'error' | 'warning'
 
@@ -83,31 +83,30 @@ export async function validate(vault: Vault): Promise<Report> {
 }
 
 /**
- * docs/adr/0042-creator-and-role.md: creator, owner and role link to person and role notes. An
- * unresolved link is an error, like an unresolved parent. A wrong type is a warning, because another
- * vault may type its people notes differently. A plain-text owner is fine; creator and role are new,
- * so they are always links.
+ * docs/adr/0042-creator-and-role.md: creator, owner and role hold the plain name of a person or
+ * role note. A link draws a graph edge from every card to its creator, so it is a warning. A
+ * creator or role with no note of that name is a warning; so is a note of the wrong type. An owner
+ * with no note is fine, because a vault need not keep person notes.
  */
 async function checkPeopleAndRoles(vault: Vault, report: Reporter): Promise<void> {
   for (const item of vault.items) {
     for (const field of Object.keys(LINK_FIELDS) as LinkField[]) {
       const raw = item.frontmatter.get(field)
-      if (raw === undefined) continue
-      const target = parseWikilink(raw)
-      if (target === null) {
+      const name = displayName(raw)
+      if (name === undefined) continue
+      if (parseWikilink(raw) !== null) {
+        report(`${field}-link`, 'warning', item.relPath, item.id,
+          `has ${field} ${JSON.stringify(raw)}. Write the plain name, ${field}: ${name}, so the graph has no edge to it. wi set rewrites it.`)
+      }
+      const note = await vault.resolveNote(name)
+      if (note === undefined) {
         if (field !== 'owner') {
-          report(`${field}-not-link`, 'warning', item.relPath, item.id,
-            `has ${field} ${JSON.stringify(raw)}. Write it as a link to a ${field === 'role' ? 'role' : 'person or role'} note: ${field}: "[[${String(raw)}]]".`)
+          report(`${field}-unknown`, 'warning', item.relPath, item.id,
+            `names ${name} as its ${field}, and no note has that name. Make a ${field === 'role' ? 'role' : 'person or role'} note called ${name}.`)
         }
         continue
       }
-      const note = await vault.resolveNote(target)
-      if (note === undefined) {
-        report(`${field}-unresolved`, 'error', item.relPath, item.id,
-          `links ${field} to [[${target}]], which does not resolve to a note. Create the note, or fix the link.`)
-        continue
-      }
-      const problem = linkTypeProblem(field, target, note.type)
+      const problem = linkTypeProblem(field, name, note.type)
       if (problem !== null) report(`${field}-type`, 'warning', item.relPath, item.id, problem)
     }
     if (item.frontmatter.has('creator_model') && !item.frontmatter.has('creator')) {

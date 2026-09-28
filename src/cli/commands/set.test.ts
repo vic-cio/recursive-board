@@ -22,26 +22,27 @@ function seed(extra: Record<string, string> = {}): Fixture {
 }
 const textOf = (f: Fixture) => readFileSync(`${f.root}/Boards/Task.md`, 'utf8')
 
-test('wi set writes owner and role as links, and an empty value removes them', async () => {
-  fixture = seed({ owner: 'Victor' })
-  const change = await setPeople(await loadVault(fixture.root), 'Task', { owner: 'Victor', role: 'Checker' })
+test('wi set writes owner and role as plain names, and an empty value removes them', async () => {
+  fixture = seed({ owner: '"[[Victor]]"' })
+  const change = await setPeople(await loadVault(fixture.root), 'Task', { owner: 'Victor', role: '[[Checker]]' })
   assert.deepEqual(change.changed, ['owner', 'role'])
-  assert.match(textOf(fixture), /^owner: "\[\[Victor\]\]"$/m)
-  assert.match(textOf(fixture), /^role: "\[\[Checker\]\]"$/m)
+  assert.match(textOf(fixture), /^owner: Victor$/m)
+  assert.match(textOf(fixture), /^role: Checker$/m)
   await setPeople(await loadVault(fixture.root), 'Task', { role: '' })
   assert.doesNotMatch(textOf(fixture), /^role:/m)
 })
 
-test('an owner with no note stays plain text', async () => {
-  fixture = seed()
-  await setPeople(await loadVault(fixture.root), 'Task', { owner: 'jo' })
-  assert.match(textOf(fixture), /^owner: jo$/m)
+test('a creator written as a link is rewritten as the same plain name', async () => {
+  fixture = seed({ creator: '"[[Victor]]"' })
+  const change = await setPeople(await loadVault(fixture.root), 'Task', { creator: 'Victor' })
+  assert.deepEqual(change.changed, ['creator'])
+  assert.match(textOf(fixture), /^creator: Victor$/m)
 })
 
 test('the creator is set once and never changes', async () => {
   fixture = seed()
   await setPeople(await loadVault(fixture.root), 'Task', { creator: 'Session agent', model: 'claude-opus-5-5' })
-  assert.match(textOf(fixture), /^creator: "\[\[Session agent\]\]"\ncreator_model: claude-opus-5-5$/m)
+  assert.match(textOf(fixture), /^creator: Session agent\ncreator_model: claude-opus-5-5$/m)
   const again = await setPeople(await loadVault(fixture.root), 'Task', { creator: 'Session agent', model: 'claude-opus-5-5' })
   assert.deepEqual(again.changed, [])
   await assert.rejects(setPeople(await loadVault(fixture.root), 'Task', { creator: 'Victor' }), /set once/)

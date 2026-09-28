@@ -19,7 +19,7 @@ import { fileNameFor, newId, today, type Status } from '../shared/schema.ts'
 import { inheritedChildFields, renderWorkItem } from '../shared/work-item.ts'
 import { areaTagFor, type AreaNode } from '../shared/area-tags.ts'
 import { dependencyEdit, dependencyPath } from '../shared/dependencies.ts'
-import { asLink } from '../shared/authorship.ts'
+import { asName } from '../shared/authorship.ts'
 import type { WorkItemIndex, WorkItemMeta } from './index.ts'
 import { UndoStack } from './undo.ts'
 
@@ -252,7 +252,7 @@ export class Actions {
       ...inheritedChildFields(parent, status),
       ...(areaTag === null ? {} : { tags: [areaTag] }),
       // A person typed this card on the board (docs/adr/0042-creator-and-role.md).
-      ...(this.you().trim() === '' ? {} : { creator: asLink(this.you()) }),
+      ...(this.you().trim() === '' ? {} : { creator: asName(this.you()) }),
       created: stamp,
       updated: stamp,
     }, this.index.config.extraSections)

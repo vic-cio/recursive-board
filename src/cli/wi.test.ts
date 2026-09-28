@@ -542,17 +542,18 @@ test('wi new writes a brief from flags, and --strict refuses a card without one'
   assert.match(strict.stderr, /no Objective or Acceptance Criteria/)
 })
 
-test('wi new writes creator, model and role as links, from flags or the environment', async () => {
+test('wi new writes creator, model and role as plain names, from flags or the environment', async () => {
   fixture = seed()
   const flags = await wi(['new', 'Check rates', '--parent', 'Main', '--objective', 'Check.', '--criteria', 'Done',
-    '--creator', 'Project lead', '--model', 'gpt-6-luna', '--role', 'Checker', '--json'])
+    '--creator', 'Project lead', '--model', 'gpt-6-luna', '--role', '[[Checker]]', '--owner', 'Victor', '--json'])
   assert.equal(flags.code, 0, flags.stderr)
   const text = readFileSync(join(fixture.root, JSON.parse(flags.stdout).path), 'utf8')
-  assert.match(text, /^role: "\[\[Checker\]\]"\ncreator: "\[\[Project lead\]\]"\ncreator_model: gpt-6-luna$/m)
+  assert.match(text, /^owner: Victor$/m)
+  assert.match(text, /^role: Checker\ncreator: Project lead\ncreator_model: gpt-6-luna$/m)
 
   const env = await wi(['new', 'From env', '--parent', 'Main', '--json'], undefined, { WI_CREATOR: 'Session agent', WI_MODEL: 'claude-opus-5-5' })
   const envText = readFileSync(join(fixture.root, JSON.parse(env.stdout).path), 'utf8')
-  assert.match(envText, /^creator: "\[\[Session agent\]\]"\ncreator_model: claude-opus-5-5$/m)
+  assert.match(envText, /^creator: Session agent\ncreator_model: claude-opus-5-5$/m)
   assert.doesNotMatch(env.stderr, /no creator/)
 
   const bare = await wi(['new', 'Nobody', '--parent', 'Main', '--objective', 'x', '--criteria', 'y'])
@@ -562,33 +563,24 @@ test('wi new writes creator, model and role as links, from flags or the environm
   assert.match(strict.stderr, /no creator/)
 })
 
-test('an owner becomes a link only when its note exists', async () => {
-  fixture = seed()
-  fixture.write('People/Victor.md', '---\ntype: person\n---\n')
-  const linked = await wi(['new', 'Mine', '--parent', 'Main', '--owner', 'Victor', '--creator', 'Victor', '--json'])
-  assert.match(readFileSync(join(fixture.root, JSON.parse(linked.stdout).path), 'utf8'), /^owner: "\[\[Victor\]\]"$/m)
-  const plain = await wi(['new', 'Theirs', '--parent', 'Main', '--owner', 'jo', '--creator', 'Victor', '--json'])
-  assert.match(readFileSync(join(fixture.root, JSON.parse(plain.stdout).path), 'utf8'), /^owner: jo$/m)
-})
-
-test('wi validate checks creator, owner and role links against notes anywhere', async () => {
+test('wi validate checks creator, owner and role names against notes anywhere', async () => {
   fixture = seed()
   fixture.write('People/Victor.md', '---\ntype: person\n---\n')
   fixture.write('Roles/Checker.md', '---\ntype: role\n---\nThe procedure.\n')
   fixture.write('Notes/Loose.md', 'no frontmatter\n')
   const base = { type: 'work-item', status: 'options', parent: '"[[Main]]"', created: '2026-09-21', updated: '2026-09-21' }
-  fixture.write('Boards/Good.md', item({ ...base, id: 'wi-9001', title: 'Good', creator: '"[[Checker]]"', creator_model: 'gpt-6-luna', owner: '"[[Victor]]"', role: '"[[Checker]]"' }))
-  fixture.write('Boards/Bad.md', item({ ...base, id: 'wi-9002', title: 'Bad', creator: '"[[Nobody]]"', owner: '"[[Checker]]"', role: '"[[Loose]]"' }))
-  fixture.write('Boards/Plain.md', item({ ...base, id: 'wi-9003', title: 'Plain', creator: 'claude', owner: 'sam' }))
+  fixture.write('Boards/Good.md', item({ ...base, id: 'wi-9001', title: 'Good', creator: 'Checker', creator_model: 'gpt-6-luna', owner: 'Victor', role: 'Checker' }))
+  fixture.write('Boards/Bad.md', item({ ...base, id: 'wi-9002', title: 'Bad', creator: 'Nobody', owner: 'Checker', role: 'Loose' }))
+  fixture.write('Boards/Linked.md', item({ ...base, id: 'wi-9003', title: 'Linked', creator: '"[[Victor]]"', owner: 'sam' }))
   const result = await wi(['validate', '--json'])
   const problems = (JSON.parse(result.stdout) as { problems: { relPath: string; rule: string }[] }).problems
-    .filter((problem) => ['Boards/Good.md', 'Boards/Bad.md', 'Boards/Plain.md'].includes(problem.relPath))
+    .filter((problem) => ['Boards/Good.md', 'Boards/Bad.md', 'Boards/Linked.md'].includes(problem.relPath))
     .map((problem) => `${problem.relPath} ${problem.rule}`)
   assert.deepEqual(problems, [
-    'Boards/Bad.md creator-unresolved',
+    'Boards/Bad.md creator-unknown',
     'Boards/Bad.md owner-type',
     'Boards/Bad.md role-type',
-    'Boards/Plain.md creator-not-link',
+    'Boards/Linked.md creator-link',
   ])
 })
 

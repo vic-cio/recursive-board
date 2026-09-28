@@ -14,7 +14,7 @@ import { briefGaps, renderBody, requireTemplate, type Brief } from '../../shared
 import { firstChildPromotion } from '../../shared/transitions.ts'
 import { areaTagFor } from '../../shared/area-tags.ts'
 import { chainOf } from './retag.ts'
-import { asLink } from '../../shared/authorship.ts'
+import { asName } from '../../shared/authorship.ts'
 import { fileNameFor, fileNameStem, isStatus, newId, today, type Status } from '../../shared/schema.ts'
 import type { Vault } from '../vault.ts'
 
@@ -75,7 +75,7 @@ export async function createItem(vault: Vault, options: NewOptions): Promise<Cre
   if (options.strict && gaps.length > 0) {
     throw new Error(`the card has no ${gaps.join(' or ')}. Pass --objective and --criteria, or drop --strict.`)
   }
-  const creator = options.creator?.trim() ? asLink(options.creator) : undefined
+  const creator = options.creator?.trim() ? asName(options.creator) : undefined
   if (options.strict && creator === undefined) {
     throw new Error('the card has no creator. Pass --creator, or set WI_CREATOR, or drop --strict.')
   }
@@ -110,11 +110,8 @@ export async function createItem(vault: Vault, options: NewOptions): Promise<Cre
   if (options.priority !== undefined) fields.priority = options.priority
   if (creator !== undefined) fields.creator = creator
   if (creator !== undefined && options.model?.trim()) fields.creatorModel = options.model.trim()
-  if (options.role?.trim()) fields.role = asLink(options.role)
-  // An owner becomes a link when a note of that name exists; plain text stays for vaults without person notes.
-  if (fields.owner !== undefined && options.owner !== undefined && await vault.resolveNote(options.owner) !== undefined) {
-    fields.owner = asLink(options.owner)
-  }
+  if (options.role?.trim()) fields.role = asName(options.role)
+  if (options.owner?.trim()) fields.owner = asName(options.owner)
   const areaTag = vault.config.areaTags
     ? areaTagFor([{ title, area: template.area === true }, ...chainOf(vault, parent)])
     : null
