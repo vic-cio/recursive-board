@@ -18,6 +18,7 @@ import {
 import { fileNameFor, newId, today, type Status } from '../shared/schema.ts'
 import { inheritedChildFields, renderWorkItem } from '../shared/work-item.ts'
 import { areaTagFor, type AreaNode } from '../shared/area-tags.ts'
+import { dependencyEdit, dependencyPath } from '../shared/dependencies.ts'
 import type { WorkItemIndex, WorkItemMeta } from './index.ts'
 import { UndoStack } from './undo.ts'
 
@@ -79,7 +80,45 @@ export class Actions {
   async setStatus(meta: WorkItemMeta, to: Status): Promise<void> {
     const edits = statusEdits(meta.status, to, meta.prevStatus !== undefined)
     if (edits === null) return
-    await this.run(`move ${meta.title}`, () => this.edit(meta.file, edits, `mark ${meta.title} ${to}`))
+    const done = await this.run(`move ${meta.title}`, async () => {
+      await this.edit(meta.file, edits, `mark ${meta.title} ${to}`)
+      return true
+    })
+    // wi refuses to start such a card. A person may, so the board only says so (docs/adr/0041-card-dependencies.md).
+    if (done && to === 'doing') {
+      const waits = this.index.openDependencies(meta)
+      if (waits.length > 0) new Notice(`${meta.title} still waits on ${waits.map((dependency) => dependency.title).join(', ')}.`)
+      if (meta.blocked) new Notice(`${meta.title} is marked blocked.`)
+    }
+  }
+
+  /** A card this one may wait on: not itself, not a root, and not one that already waits on it. */
+  dependencyRefusal(meta: WorkItemMeta, target: WorkItemMeta): string | null {
+    if (target.file === meta.file) return 'a card cannot wait on itself.'
+    if (target.parentLink === null) return 'a root is never done.'
+    const path = dependencyPath(target, meta, (node) => node.dependsOn
+      .map((file) => this.index.get(file))
+      .filter((found): found is WorkItemMeta => found !== null))
+    return path ? `${target.title} already waits on ${meta.title}.` : null
+  }
+
+  /** Adds or removes one entry in the waiting card's `depends_on`, the same edit as `wi depend`. */
+  async setDependency(meta: WorkItemMeta, target: WorkItemMeta, on: boolean): Promise<void> {
+    const refusal = on ? this.dependencyRefusal(meta, target) : null
+    if (refusal !== null) {
+      new Notice(`${meta.title} cannot wait on ${target.title}: ${refusal}`)
+      return
+    }
+    const edit = dependencyEdit(meta.dependsOnRaw, target.stem, on,
+      (link) => this.app.metadataCache.getFirstLinkpathDest(link, meta.file.path) === target.file)
+    if (edit === null) return
+    const label = on ? `${meta.title} waits on ${target.title}` : `${meta.title} no longer waits on ${target.title}`
+    const what = on ? `make ${meta.title} wait on ${target.title}` : `stop ${meta.title} waiting on ${target.title}`
+    const done = await this.run(what, async () => {
+      await this.edit(meta.file, [edit], label)
+      return true
+    })
+    if (done) this.undoableNotice(label)
   }
 
   /** Ticking a checklist box. Unticking restores exactly what the item was. */

@@ -758,7 +758,8 @@
 
 .wi-check-status,
 .wi-check-count,
-.wi-check-blocked {
+.wi-check-blocked,
+.wi-check-waiting {
   flex: none;
   font-size: var(--font-ui-smaller);
   color: var(--text-faint);
@@ -1094,3 +1095,26 @@
 .wi-dash-project:not(.is-area) { cursor: default; }
 .wi-dash-project:not(.is-area):hover { background: none; }
 .wi-dash-back { margin-left: auto; display: inline-flex; align-items: center; gap: var(--size-4-1); font-size: var(--font-ui-small); }
+
+/* A card that waits on other cards (docs/adr/0041-card-dependencies.md). */
+.wi-badge-waiting {
+  background: rgba(var(--wi-rgb-options), var(--wi-tint-pill));
+  color: var(--color-orange);
+}
+
+.wi-pill.is-waiting {
+  background: rgba(var(--wi-rgb-options), var(--wi-tint-pill));
+  color: var(--color-orange);
+}
+
+.wi-pill.is-waiting a {
+  color: inherit;
+}
+
+.wi-check-waiting {
+  background: rgba(var(--wi-rgb-options), var(--wi-tint-pill));
+  color: var(--color-orange);
+}
+.wi-dash-column { display: flex; flex-direction: column; gap: var(--size-4-3); min-width: 0; }
+.wi-dash-panel-head.is-attention .wi-dash-icon { color: var(--color-orange); }
+.wi-dash-panel-head + .wi-dash-agents { margin-top: var(--size-4-2); }

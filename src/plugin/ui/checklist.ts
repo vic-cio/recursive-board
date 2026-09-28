@@ -178,6 +178,10 @@ function decorateRow(row: HTMLElement, ctx: RenderContext, meta: WorkItemMeta): 
   const children = ctx.index.childCount(meta.file)
   if (children > 0) extras.createSpan({ cls: 'wi-check-count', text: `${children}` })
   if (meta.blocked) extras.createSpan({ cls: 'wi-check-blocked', text: 'Blocked' })
+  const waits = ctx.index.openDependencies(meta)
+  if (waits.length > 0) {
+    extras.createSpan({ cls: 'wi-check-waiting', text: 'Waiting', attr: { 'aria-label': `Waits on ${waits.map((dependency) => dependency.title).join(', ')}` } })
+  }
   renderMenuButton(extras, ctx, meta)
   renderRemove(extras, ctx, meta)
   attachMenu(row, ctx, meta)

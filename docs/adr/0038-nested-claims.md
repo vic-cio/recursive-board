@@ -18,7 +18,8 @@ against `maxAgents`.
 
 `wi claim` also refuses a card with `blocked: true`, unless the same agent already holds it in
 doing. A blocked card waits on something outside the worker's reach, so a dispatcher skips it.
-`wi children` marks it `[blocked]` and reports `blocked` in its JSON.
+`wi children` marks it `[blocked]` and reports `blocked` in its JSON. Since 0041, `wi status <ref>
+doing` refuses it too, and both refuse a card that waits on a card that is not done.
 
 `wi status <ref> done` reports the parent when that was its last open child, and does not close
 it. A parent can have criteria of its own beyond its children, and closing it would write a second

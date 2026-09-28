@@ -15,6 +15,7 @@ import { readLabels } from '../shared/labels.ts'
 import { isAreaTag } from '../shared/area-tags.ts'
 import { DEFAULT_VAULT_CONFIG, type VaultConfig } from '../shared/vault-config.ts'
 import { archiveOwner } from '../shared/archive.ts'
+import { dependsOnValues, isOpenDependency, parseDependsOn } from '../shared/dependencies.ts'
 import {
   doneCutoff, isStatus, parseWikilink, STATUSES, WORK_ITEM_TYPE, type Status,
 } from '../shared/schema.ts'
@@ -40,6 +41,10 @@ export interface WorkItemMeta {
   owner: string | undefined
   agent: string | undefined
   blocked: boolean
+  /** The raw `depends_on` entries, kept for an edit (docs/adr/0041-card-dependencies.md). */
+  dependsOnRaw: string[]
+  /** The files the `depends_on` links resolve to. */
+  dependsOn: TFile[]
   prevStatus: Status | undefined
   /** Entries from `tags`. A label is a real Obsidian tag, not a field of its own. */
   labels: string[]
@@ -114,6 +119,12 @@ export class WorkItemIndex {
     const status: unknown = frontmatter['status']
     const prev: unknown = frontmatter['prev_status']
     const priority: unknown = frontmatter['priority']
+    const dependsOnRaw = dependsOnValues(frontmatter['depends_on']).map(String)
+    const dependsOn: TFile[] = []
+    for (const target of parseDependsOn(dependsOnRaw).targets) {
+      const found = this.app.metadataCache.getFirstLinkpathDest(target, file.path)
+      if (found && !dependsOn.includes(found)) dependsOn.push(found)
+    }
 
     return {
       file,
@@ -134,6 +145,8 @@ export class WorkItemIndex {
       owner: str(frontmatter['owner']),
       agent: str(frontmatter['agent']),
       blocked: frontmatter['blocked'] === true,
+      dependsOnRaw,
+      dependsOn,
       prevStatus: isStatus(prev) ? prev : undefined,
       // An area tag repeats what the board already shows, so it draws no chip (ADR 0039).
       labels: readLabels(frontmatter['tags']).filter((label) => !isAreaTag(label)),
@@ -181,6 +194,20 @@ export class WorkItemIndex {
       current = meta.parent
     }
     return chain
+  }
+
+  /** The cards this item still waits on: its dependencies that are not done. A done card waits on nothing. */
+  openDependencies(meta: WorkItemMeta): WorkItemMeta[] {
+    if (meta.status === 'done') return []
+    return meta.dependsOn
+      .map((file) => this.get(file))
+      .filter((dependency): dependency is WorkItemMeta => dependency !== null && isOpenDependency(dependency))
+  }
+
+  /** The items whose dependencies include this one. */
+  dependentsOf(meta: WorkItemMeta): WorkItemMeta[] {
+    this.ensureFresh()
+    return [...this.items.values()].filter((other) => other.dependsOn.includes(meta.file))
   }
 
   /** Every work item, in no particular order. The move picker's candidate list. */

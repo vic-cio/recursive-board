@@ -2,7 +2,7 @@ import { test } from 'node:test'
 import assert from 'node:assert/strict'
 
 import {
-  agentGroups, areaOf, cardsInScope, IDLE_MS, parseReviewLine, progress, waitsForReview, type DashItem, type DashTree,
+  agentGroups, areaOf, cardsInScope, IDLE_MS, needsAttention, parseReviewLine, progress, waitsForReview, type DashItem, type DashTree,
 } from './dashboard-model.ts'
 
 interface Fake extends DashItem { parent: Fake | null; mtime: number }
@@ -135,4 +135,20 @@ test('a focus narrows to one area and groups by the next area down', () => {
   assert.deepEqual(names(board), ['Directly in Board 1/1'])
   assert.deepEqual(agentGroups(cards, 'Victor', tree, 0, dev).map((group) => group.name), ['Theme'])
   assert.deepEqual(agentGroups(cards, 'Victor', tree, 0, board), [])
+})
+
+test('the dashboard flags a started card that still waits, and a wait on an archived card', () => {
+  const { add } = vault()
+  const root = add('Home', null)
+  const spec = add('Spec', root, { status: 'doing' })
+  const dropped = add('Dropped', root, { status: 'options', effectiveArchived: true })
+  const build = add('Build', root, { status: 'doing' })
+  const later = add('Later', root, { status: 'backlog' })
+  const done = add('Done', root, { status: 'done' })
+  const deps = new Map<Fake, Fake[]>([[build, [spec]], [later, [dropped, spec]], [done, [spec]]])
+  const found = needsAttention([spec, build, later, done], (card) => deps.get(card) ?? [])
+  assert.deepEqual(found.map((a) => `${a.card.title} ${a.reason} ${a.cards.map((c) => c.title).join('+')}`), [
+    'Build started Spec',
+    'Later archived Dropped',
+  ])
 })

@@ -15,6 +15,7 @@ import { STATUSES } from '../../shared/schema.ts'
 import type { WorkItemMeta } from '../index.ts'
 import type { RenderContext } from './context.ts'
 import { MoveModal } from './move-modal.ts'
+import { DependModal } from './depend-modal.ts'
 import { statusLabel } from './status-label.ts'
 
 /** Opens the menu for a work item on a right click. */
@@ -60,6 +61,22 @@ function buildMenu(ctx: RenderContext, meta: WorkItemMeta): Menu {
     .setTitle('Move to…')
     .setIcon('folder-input')
     .onClick(() => new MoveModal(ctx.app, ctx.index, ctx.actions, meta).open()))
+
+  // Dependencies (docs/adr/0041-card-dependencies.md). An area is ongoing and waits on nothing.
+  if (meta.parentLink !== null && !meta.area) {
+    menu.addItem((item) => item
+      .setTitle('Waits on…')
+      .setIcon('hourglass')
+      .onClick(() => new DependModal(ctx.app, ctx.index, ctx.actions, meta).open()))
+    for (const file of meta.dependsOn) {
+      const dependency = ctx.index.get(file)
+      if (!dependency) continue
+      menu.addItem((item) => item
+        .setTitle(`Stop waiting on ${dependency.title}`)
+        .setIcon('x')
+        .onClick(() => void ctx.actions.setDependency(meta, dependency, false)))
+    }
+  }
 
   if (meta.parentLink !== null) {
     menu.addSeparator()
