@@ -5,7 +5,7 @@ amends: docs/adr/0015-checklist-and-board-navigation.md (when an item becomes a 
 # Promote a parent on its first child
 
 When `wi new` gives a card its first child, it also writes `board: true` to that card. The vault
-setting `autoPromote` in `.wi.json` turns this off; it defaults to `true`.
+setting `autoPromote` in the vault config turns this off; it defaults to `true`.
 
 Agents that split a card into steps did not run `wi promote`, so the owner saw a checklist where
 they expected a board. Promotion at the moment of the split needs no agent to remember it.

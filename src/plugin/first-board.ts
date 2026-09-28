@@ -1,7 +1,8 @@
 import { Notice, normalizePath, TFile, type App } from 'obsidian'
 
 import { firstBoardNameStem, firstBoardPlan } from '../shared/first-board.ts'
-import { parseVaultConfig, WI_CONFIG_FILE } from '../shared/vault-config.ts'
+import { parseVaultConfig, parseVaultConfigNote, WI_CONFIG_FILE } from '../shared/vault-config.ts'
+import { VAULT_CONFIG_NOTE } from '../shared/vault-config-note.ts'
 import type { WorkItemIndex } from './index.ts'
 
 export async function createFirstBoard(app: App, index: WorkItemIndex, rawTitle: string): Promise<void> {
@@ -20,16 +21,18 @@ export async function createFirstBoard(app: App, index: WorkItemIndex, rawTitle:
   }
 
   const adapter = app.vault.adapter
-  const configFile = app.vault.getFileByPath(WI_CONFIG_FILE)
-  const configExists = await adapter.exists(WI_CONFIG_FILE)
+  const configFile = app.vault.getFileByPath(VAULT_CONFIG_NOTE)
+  const configExists = await adapter.exists(VAULT_CONFIG_NOTE)
+  const legacyExists = !configExists && await adapter.exists(WI_CONFIG_FILE)
   const configText = configFile instanceof TFile
     ? await app.vault.read(configFile)
-    : configExists ? await adapter.read(WI_CONFIG_FILE) : null
+    : configExists ? await adapter.read(VAULT_CONFIG_NOTE)
+      : legacyExists ? await adapter.read(WI_CONFIG_FILE) : null
 
   // Parse before any writes, so a bad existing setting cannot leave a half-created board.
   let config
   try {
-    config = parseVaultConfig(configText)
+    config = configExists ? parseVaultConfigNote(configText ?? '') : parseVaultConfig(configText)
   } catch (error) {
     new Notice(error instanceof Error ? error.message : String(error))
     return
@@ -38,6 +41,7 @@ export async function createFirstBoard(app: App, index: WorkItemIndex, rawTitle:
   const plan = firstBoardPlan({
     title,
     configText,
+    configSource: configExists ? 'note' : 'legacy',
     takenIds: index.takenIds(),
     takenStems: index.takenStems(),
     extraSections: config.extraSections,
@@ -49,7 +53,7 @@ export async function createFirstBoard(app: App, index: WorkItemIndex, rawTitle:
     return
   }
   if (configExists && !configFile) {
-    new Notice(`${WI_CONFIG_FILE} exists but is not a Markdown file. Nothing was written.`)
+    new Notice(`${VAULT_CONFIG_NOTE} exists but is not a Markdown file. Nothing was written.`)
     return
   }
 
@@ -59,7 +63,7 @@ export async function createFirstBoard(app: App, index: WorkItemIndex, rawTitle:
       await app.vault.create(paths[i]!, plan.files[i]!.text)
     }
     if (configFile instanceof TFile) await app.vault.modify(configFile, plan.configText)
-    else await app.vault.create(WI_CONFIG_FILE, plan.configText)
+    else await app.vault.create(VAULT_CONFIG_NOTE, plan.configText)
 
     const rootFile = app.vault.getFileByPath(paths[0]!)
     if (!rootFile) throw new Error('The new board file could not be opened.')

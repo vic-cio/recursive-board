@@ -33,8 +33,10 @@ Every child card has a **Promote** control at the top, even before it has childr
 
 ## Vault configuration
 
-Place an optional `.wi.json` file at the vault root to choose the work-item folder, default parent, extra sections for new items, the dispatcher's advisory agent limit, and whether `wi new` promotes a parent:
+Place `Recursive Board config.md` at the vault root to set the work-item folder, default parent, extra sections, agent limit, and first-child promotion:
 
+````markdown
+<!-- recursive-board-config -->
 ```json
 {
   "workItemFolder": "Boards",
@@ -45,10 +47,19 @@ Place an optional `.wi.json` file at the vault root to choose the work-item fold
   "areaTags": false
 }
 ```
+````
 
-`workItemFolder` is a vault-relative folder path. It defaults to `Boards`. `defaultRoot` is the filename stem of a root work item. It defaults to `null`, which means `wi new` needs an explicit `--parent`. `extraSections` is an array of non-empty, single-line headings. It defaults to `[]`. Each heading is added after the built-in template sections with an empty `- ` starter. The setting applies to `wi new`, `wi template write`, and items created in the plugin. Invalid values make `.wi.json` fail to load.
+The JSON fence must follow the `recursive-board-config` marker. Keep other note text outside the fence. Config writers keep that text and unknown JSON keys.
 
-`maxAgents` is a non-negative whole number, or `null` for no limit. The plugin settings tab writes it to `.wi.json`. `WI_MAX_AGENTS` overrides it for one CLI run. `wi agents` prints the effective limit, the number of distinct agents with a card in doing, and each claimed doing card. An agent that holds a card and its current subtask counts once. The limit is advisory: dispatchers use the count to decide whether to start a worker, and `wi claim` still succeeds over the limit.
+`workItemFolder` is a vault-relative folder path. It defaults to `Boards`. `defaultRoot` is a root filename stem. It defaults to `null`, so `wi new` needs an explicit `--parent`. `extraSections` lists non-empty, single-line headings. Each heading follows the built-in sections with an empty `- ` starter. These settings apply to `wi new`, `wi template write`, and plugin item creation. Invalid values stop config loading.
+
+`maxAgents` is a non-negative whole number or `null` for no limit. The plugin settings tab writes it to the config note. `WI_MAX_AGENTS` overrides it for one CLI run. `wi agents` reports the limit and claimed cards. One agent counts once when it holds a card and its subtask. The limit is advisory. `wi claim` can exceed it.
+
+When the note is absent, `wi` and the plugin read `.wi.json` as a legacy fallback. When both files exist, they read the note alone. An invalid note reports an error. It does not use `.wi.json`.
+
+Preview a legacy migration with `wi config migrate`. Review the proposed note. Run `wi config migrate --apply` to create it. Migration refuses an existing note and keeps `.wi.json` intact. Config reads do not migrate files.
+
+Obsidian Sync excludes dotfiles. It can restrict additional file types. Check the `Sync all other types` setting for the vault. [Read the Obsidian Sync settings](https://obsidian.md/help/sync/settings).
 
 `autoPromote` is `true` or `false`. It defaults to `true`. When `wi new` gives a card its first child, it also sets `board: true` on that card, so the children show as a board. It never changes a root, an area, a card that already has children, or a card that has a `board` key. Items added in Obsidian are not promoted: a person who adds to a checklist chose a checklist.
 
@@ -56,13 +67,13 @@ Place an optional `.wi.json` file at the vault root to choose the work-item fold
 
 `wi setup` writes the selected vault to the user config at `$XDG_CONFIG_HOME/wi/config.json`, or `~/.config/wi/config.json` when `XDG_CONFIG_HOME` is unset. The format is `{"defaultVault":"/absolute/path/to/vault"}`. Vault detection uses Obsidian's registry on macOS, Linux, and Windows. `--vault <path>` selects a vault directly, and `--yes --vault <path>` runs without prompts.
 
-`wi` finds the vault from `--vault <path>`, then `$WI_VAULT`, then the nearest folder with `.wi.json` or `Boards/`, then the current Git repo's pointer, then `defaultVault` in `~/.config/wi/config.json` (or `$XDG_CONFIG_HOME/wi/config.json`). Use `wi here --vault <path> --board <ref>` once in a repo to save its vault and board outside the repo. The pointer is keyed by Git's common directory, so linked worktrees share it. Run `wi here` to print the current repo's pointer.
+`wi` finds the vault from `--vault <path>`, then `$WI_VAULT`, then the nearest folder with the config note, `.wi.json`, or `Boards/`, then the current Git repo's pointer, then `defaultVault` in `~/.config/wi/config.json` (or `$XDG_CONFIG_HOME/wi/config.json`). Use `wi here --vault <path> --board <ref>` once in a repo to save its vault and board outside the repo. The pointer is keyed by Git's common directory, so linked worktrees share it. Run `wi here` to print the current repo's pointer.
 
 ## Start a board
 
 ### Create one in Obsidian
 
-Enable Recursive Board in an empty vault. Use the **Create your first board** button in the notice, or run **Create your first board** from the command palette. Enter a name (the default is `Main`). The plugin creates the board, adds a starter card that explains how to move it, and opens the board.
+Enable Recursive Board in an empty vault. Use the **Create your first board** button in the notice, or run **Create your first board** from the command palette. Enter a name. The default is `Main`. The plugin creates the board and a starter card. It sets `defaultRoot` in the config note, then opens the board.
 
 ### Manual fallback
 
@@ -79,7 +90,7 @@ Enable Recursive Board in an empty vault. Use the **Create your first board** bu
    ---
    ```
 
-2. Create `.wi.json` at the vault root with `{"defaultRoot": "Project"}`.
+2. Create `Recursive Board config.md` at the vault root. Add the marker, then a JSON fence with `{"defaultRoot": "Project"}`.
 3. Add a card with `wi new "Write the first card"`.
 4. Open `Project` in Obsidian. The plugin shows its children as a board.
 
@@ -139,7 +150,7 @@ The pre-commit hook runs `wi validate` and stops a commit when the vault has err
 | Command | What it does |
 | --- | --- |
 | `wi setup [--yes] [--vault <path>] [--force]` | Installs the agent skill, selects and saves a default vault, and offers the Git validation hook for a Git vault. `--yes` requires `--vault` and asks no questions. |
-| `wi new <title> [--parent <ref>] [--status <status>] [--template <name>] [--owner <name>] [--agent <name>] [--priority <number>] [--objective <text>] [--context <text>]... [--criteria <text>]... [--strict]` | Creates a work item under the given parent. If `--parent` is omitted, uses the repo pointer's board, then `defaultRoot` from `.wi.json`. The brief flags fill the body: repeat `--context` for each paragraph and `--criteria` for each criterion. It wraps bare angle placeholders in backticks and preserves code, links, autolinks, and HTML. It warns when the card has no Objective or Acceptance Criteria, and `--strict` refuses the card instead. Unsafe filename characters in the title become hyphens; a filename clash adds the id suffix and never overwrites. See `autoPromote`. |
+| `wi new <title> [--parent <ref>] [--status <status>] [--template <name>] [--owner <name>] [--agent <name>] [--priority <number>] [--objective <text>] [--context <text>]... [--criteria <text>]... [--strict]` | Creates a work item under the given parent. If `--parent` is omitted, uses the repo pointer's board, then `defaultRoot` from the config note. The brief flags fill the body: repeat `--context` for each paragraph and `--criteria` for each criterion. It wraps bare angle placeholders in backticks and preserves code, links, autolinks, and HTML. It warns when the card has no Objective or Acceptance Criteria, and `--strict` refuses the card instead. Unsafe filename characters in the title become hyphens; a filename clash adds the id suffix and never overwrites. See `autoPromote`. |
 | `wi status <ref> <status>` | Changes an item's status. Use `backlog`, `options`, `doing`, or `done`. Leaving `done` clears the recorded previous status. When the item was its parent's last open child, it says so; it does not close the parent. |
 | `wi note <ref> <text> [--agent <name>]` | Appends `- <date> <time>, <agent>: <text>` under the card's Notes. It wraps bare angle placeholders in backticks and preserves code, links, autolinks, and HTML. The agent defaults to the card's agent. The write re-reads the card under a lock, so two notes at the same moment both survive. |
 | `wi new … [--creator <name>] [--model <id>] [--role <name>]` | Records who made the card and which role does its work, as the plain names of person and role notes (any folder), so the graph gets no edge to them. `--creator` and `--model` fall back to `WI_CREATOR` and `WI_MODEL`. `wi new` warns when a card has no creator; `--strict` refuses it. `wi note` then names its writer as "Role (model)". |

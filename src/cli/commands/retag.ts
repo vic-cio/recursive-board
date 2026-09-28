@@ -58,7 +58,7 @@ export function staleAreaTags(vault: Vault): Stale[] {
 
 function requireAreaTags(vault: Vault): void {
   if (!vault.config.areaTags) {
-    throw new Error('area tags are off in this vault. Set "areaTags": true in .wi.json first.')
+    throw new Error('area tags are off in this vault. Set "areaTags": true in Recursive Board config.md first.')
   }
 }
 
