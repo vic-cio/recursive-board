@@ -1,5 +1,6 @@
 /** The one vault-level setting read by both wi and the plugin. No platform imports belong here. */
 import { fileNameStem } from './schema.ts'
+import { parseConfigNote, parseLegacyConfig } from './vault-config-note.ts'
 
 export const WI_CONFIG_FILE = '.wi.json'
 
@@ -30,15 +31,16 @@ export const DEFAULT_VAULT_CONFIG: Readonly<VaultConfig> = {
 /** Parse at the vault boundary; malformed config must never silently select another folder. */
 export function parseVaultConfig(text: string | null): VaultConfig {
   if (text === null) return { ...DEFAULT_VAULT_CONFIG, extraSections: [] }
-  let value: unknown
-  try {
-    value = JSON.parse(text)
-  } catch {
-    throw new Error(`${WI_CONFIG_FILE} must contain valid JSON.`)
-  }
-  if (typeof value !== 'object' || value === null || Array.isArray(value)) {
-    throw new Error(`${WI_CONFIG_FILE} must contain a JSON object.`)
-  }
+  return parseVaultConfigValues(parseLegacyConfig(text), WI_CONFIG_FILE)
+}
+
+/** Parse a validated config object from a selected source file. */
+export function parseVaultConfigNote(text: string): VaultConfig {
+  return parseVaultConfigValues(parseConfigNote(text), 'Recursive Board config.md')
+}
+
+/** Parse values after the selected file parser has checked its external format. */
+export function parseVaultConfigValues(value: Record<string, unknown>, source: string): VaultConfig {
 
   const folderValue = 'workItemFolder' in value ? value.workItemFolder : undefined
   const rootValue = 'defaultRoot' in value ? value.defaultRoot : undefined
@@ -49,7 +51,7 @@ export function parseVaultConfig(text: string | null): VaultConfig {
   let workItemFolder = DEFAULT_VAULT_CONFIG.workItemFolder
   if (folderValue !== undefined) {
     if (typeof folderValue !== 'string') {
-      throw new Error(`${WI_CONFIG_FILE}: workItemFolder must be a vault-relative folder path.`)
+      throw new Error(`${source}: workItemFolder must be a vault-relative folder path.`)
     }
     workItemFolder = folderValue.replace(/\/$/, '')
     if (
@@ -57,26 +59,26 @@ export function parseVaultConfig(text: string | null): VaultConfig {
       workItemFolder.split('/').some((part) => part === '' || part === '.' || part === '..') ||
       /[\\:\0]/.test(workItemFolder)
     ) {
-      throw new Error(`${WI_CONFIG_FILE}: workItemFolder must be a vault-relative folder path.`)
+      throw new Error(`${source}: workItemFolder must be a vault-relative folder path.`)
     }
   }
 
   let defaultRoot: string | null = null
   if (rootValue !== undefined && rootValue !== null) {
     if (typeof rootValue !== 'string' || rootValue === '' || fileNameStem(rootValue) !== rootValue) {
-      throw new Error(`${WI_CONFIG_FILE}: defaultRoot must be a work-item filename stem.`)
+      throw new Error(`${source}: defaultRoot must be a work-item filename stem.`)
     }
     defaultRoot = rootValue
   }
   const extraSections: string[] = []
   if (sectionsValue !== undefined) {
     if (!Array.isArray(sectionsValue)) {
-      throw new Error(`${WI_CONFIG_FILE}: extraSections must be an array of non-empty, single-line headings.`)
+      throw new Error(`${source}: extraSections must be an array of non-empty, single-line headings.`)
     }
     const headings: unknown[] = sectionsValue
     for (const heading of headings) {
       if (typeof heading !== 'string' || heading.trim() === '' || /[\r\n]/.test(heading)) {
-        throw new Error(`${WI_CONFIG_FILE}: extraSections must be an array of non-empty, single-line headings.`)
+        throw new Error(`${source}: extraSections must be an array of non-empty, single-line headings.`)
       }
       extraSections.push(heading)
     }
@@ -84,16 +86,16 @@ export function parseVaultConfig(text: string | null): VaultConfig {
   let maxAgents: number | null = null
   if (maxAgentsValue !== undefined && maxAgentsValue !== null) {
     if (typeof maxAgentsValue !== 'number' || !Number.isSafeInteger(maxAgentsValue) || maxAgentsValue < 0) {
-      throw new Error(`${WI_CONFIG_FILE}: maxAgents must be a non-negative whole number or null.`)
+      throw new Error(`${source}: maxAgents must be a non-negative whole number or null.`)
     }
     maxAgents = maxAgentsValue
   }
   if (autoPromoteValue !== undefined && typeof autoPromoteValue !== 'boolean') {
-    throw new Error(`${WI_CONFIG_FILE}: autoPromote must be true or false.`)
+    throw new Error(`${source}: autoPromote must be true or false.`)
   }
   const autoPromote = autoPromoteValue ?? DEFAULT_VAULT_CONFIG.autoPromote
   if (areaTagsValue !== undefined && typeof areaTagsValue !== 'boolean') {
-    throw new Error(`${WI_CONFIG_FILE}: areaTags must be true or false.`)
+    throw new Error(`${source}: areaTags must be true or false.`)
   }
   const areaTags = areaTagsValue ?? DEFAULT_VAULT_CONFIG.areaTags
   return { workItemFolder, defaultRoot, extraSections, maxAgents, autoPromote, areaTags }

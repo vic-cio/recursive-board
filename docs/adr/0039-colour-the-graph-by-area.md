@@ -3,7 +3,7 @@ status: accepted
 ---
 # Colour the graph by area
 
-With `"areaTags": true` in `.wi.json`, every work item under an area carries one nested tag that
+With `"areaTags": true` in the vault config, every work item under an area carries one nested tag that
 names its areas from the top down: `area/work/web-site`. An area carries its own path. A root, and
 an item in no area, carries none. The setting is off by default, because it adds a tag to almost
 every card in a vault that has areas.
