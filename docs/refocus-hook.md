@@ -92,7 +92,7 @@ Set `WI_VAULT` when the agent cannot find the intended vault from its working fo
 | --- | --- |
 | `WI_REFOCUS=off` | Disable every refocus event. |
 | `WI_REFOCUS=on` | Enable compaction delivery and Claude transcript growth. This is the default. |
-| `WI_REFOCUS=threshold` | Enable transcript growth checks with the configured byte threshold. |
+| `WI_REFOCUS=threshold` | Alias of `on`. Use `WI_REFOCUS_BYTES` to change the transcript growth threshold. |
 | `WI_REFOCUS_BYTES=2600000` | Set Claude's transcript growth threshold in bytes. The default is 2,600,000 bytes. |
 | `WI_REFOCUS_NOW=1` | Request one refocus when the next user prompt arrives. Unset or change its value before you request another refocus. |
 | `WI_CARD=wi-...` | Select one work item directly. This takes priority over `WI_AGENT`. |
