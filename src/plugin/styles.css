@@ -1060,6 +1060,7 @@
 .wi-dash-name { display: inline-flex; gap: var(--size-4-2); align-items: center; }
 .wi-dash-nowrap { white-space: nowrap; }
 .wi-dash-check { max-width: 320px; }
+.wi-dash-names { display: flex; flex-wrap: wrap; gap: var(--size-4-2); margin-top: var(--size-4-2); }
 .wi-dash-verdict { display: flex; flex-wrap: wrap; gap: var(--size-4-2); margin-top: var(--size-4-2); }
 .wi-dash-verdict.wi-dash-hidden { display: none; }
 .wi-send-back-comment { width: 100%; resize: vertical; margin-top: var(--size-4-2); }

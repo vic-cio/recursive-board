@@ -321,6 +321,13 @@ export class DashboardView extends ItemView {
     input.addEventListener('change', () => {
       void this.host.save({ you: input.value.trim() })
     })
+    // A phone shows a datalist only in the keyboard bar, so each person note is also one tap.
+    const names = this.host.personNames()
+    if (names.length === 0) return
+    const buttons = panel.createDiv('wi-dash-names')
+    for (const name of names) {
+      buttons.createEl('button', { text: name }).onclick = () => void this.host.save({ you: name })
+    }
   }
 
   /** Writes the verdict, then forgets the card's ticks: a card sent back starts its next review clean. */
