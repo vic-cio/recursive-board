@@ -54,7 +54,8 @@ export function wrapAnglePlaceholders(markdown: string): string {
 
     if (markdown[index] === '<') {
       const close = markdown.indexOf('>', index + 1)
-      if (close !== -1) {
+      const nextOpen = markdown.indexOf('<', index + 1)
+      if (close !== -1 && (nextOpen === -1 || nextOpen > close)) {
         const token = markdown.slice(index, close + 1)
         result += isBarePlaceholder(markdown, index, token) ? `\`${token}\`` : token
         index = close + 1
