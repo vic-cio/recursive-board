@@ -67,6 +67,16 @@ export interface Vault {
   resolve(ref: string): WorkItem
   childrenOf(item: WorkItem): WorkItem[]
   isArchived(item: WorkItem): boolean
+  /**
+   * Finds any note in the vault that a link names, as Obsidian would, with its `type`. Person and
+   * role notes may sit in any folder (docs/adr/0042-creator-and-role.md). Reads the vault once.
+   */
+  resolveNote(target: string): Promise<VaultNote | undefined>
+}
+
+export interface VaultNote {
+  relPath: string
+  type: unknown
 }
 
 /** The environment is a per-run override for the vault's advisory dispatcher limit. */
@@ -391,6 +401,36 @@ export async function loadVault(root: string): Promise<Vault> {
     resolve,
     childrenOf: (item) => children.get(item.stem.toLowerCase()) ?? [],
     isArchived: (item) => archiveOwner(item, (current) => resolveLink(current.parent) ?? null, (current) => current.archived) !== null,
+    resolveNote: noteResolver(root),
+  }
+}
+
+/** Folders a vault keeps for tools, never for notes. */
+const NOT_NOTES = new Set(['.obsidian', '.git', '.trash', 'node_modules'])
+
+function noteResolver(root: string): (target: string) => Promise<VaultNote | undefined> {
+  let index: Promise<Map<string, string>> | undefined
+  const build = async () => {
+    const byKey = new Map<string, string>()
+    const entries = await readdir(root, { withFileTypes: true, recursive: true })
+    for (const entry of entries) {
+      if (entry.isDirectory() || !MARKDOWN.test(entry.name)) continue
+      const rel = `${(entry.parentPath ?? root).slice(root.length + 1).split(sep).join('/')}/${entry.name}`.replace(/^\//, '')
+      if (rel.split('/').some((part) => NOT_NOTES.has(part))) continue
+      const path = rel.replace(MARKDOWN, '').toLowerCase()
+      const stem = entry.name.replace(MARKDOWN, '').toLowerCase()
+      // A bare name matches the first note with that filename; a path matches exactly.
+      if (!byKey.has(stem)) byKey.set(stem, rel)
+      byKey.set(path, rel)
+    }
+    return byKey
+  }
+  return async (target) => {
+    index ??= build()
+    const relPath = (await index).get(target.trim().replace(MARKDOWN, '').toLowerCase())
+    if (relPath === undefined) return undefined
+    const text = await readFile(join(root, ...relPath.split('/')), 'utf8')
+    return { relPath, type: parseFrontmatter(text)?.get('type') }
   }
 }
 

@@ -16,6 +16,7 @@ import { staleAreaTags } from './retag.ts'
 import { isAreaTag } from '../../shared/area-tags.ts'
 import { dependencyCycle } from '../../shared/dependencies.ts'
 import { dependenciesOf, titleOf } from '../dependencies.ts'
+import { LINK_FIELDS, linkTypeProblem, type LinkField } from '../../shared/authorship.ts'
 
 export type Severity = 'error' | 'warning'
 
@@ -59,6 +60,7 @@ export async function validate(vault: Vault): Promise<Report> {
   checkRoots(vault, report)
   checkCycles(vault, report)
   checkDependencies(vault, report)
+  await checkPeopleAndRoles(vault, report)
   if (vault.config.areaTags) {
     for (const { item, to } of staleAreaTags(vault)) {
       const tag = to.find(isAreaTag)
@@ -77,6 +79,40 @@ export async function validate(vault: Vault): Promise<Report> {
     warningCount: problems.length - errorCount,
     ok: errorCount === 0,
     itemCount: vault.items.length,
+  }
+}
+
+/**
+ * docs/adr/0042-creator-and-role.md: creator, owner and role link to person and role notes. An
+ * unresolved link is an error, like an unresolved parent. A wrong type is a warning, because another
+ * vault may type its people notes differently. A plain-text owner is fine; creator and role are new,
+ * so they are always links.
+ */
+async function checkPeopleAndRoles(vault: Vault, report: Reporter): Promise<void> {
+  for (const item of vault.items) {
+    for (const field of Object.keys(LINK_FIELDS) as LinkField[]) {
+      const raw = item.frontmatter.get(field)
+      if (raw === undefined) continue
+      const target = parseWikilink(raw)
+      if (target === null) {
+        if (field !== 'owner') {
+          report(`${field}-not-link`, 'warning', item.relPath, item.id,
+            `has ${field} ${JSON.stringify(raw)}. Write it as a link to a ${field === 'role' ? 'role' : 'person or role'} note: ${field}: "[[${String(raw)}]]".`)
+        }
+        continue
+      }
+      const note = await vault.resolveNote(target)
+      if (note === undefined) {
+        report(`${field}-unresolved`, 'error', item.relPath, item.id,
+          `links ${field} to [[${target}]], which does not resolve to a note. Create the note, or fix the link.`)
+        continue
+      }
+      const problem = linkTypeProblem(field, target, note.type)
+      if (problem !== null) report(`${field}-type`, 'warning', item.relPath, item.id, problem)
+    }
+    if (item.frontmatter.has('creator_model') && !item.frontmatter.has('creator')) {
+      report('creator-model-alone', 'warning', item.relPath, item.id, 'has creator_model but no creator. Add the creator it describes.')
+    }
   }
 }
 

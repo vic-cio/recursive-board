@@ -18,6 +18,10 @@ interface NewWorkItemFields {
   parentStem: string
   owner?: string | undefined
   agent?: string | undefined
+  /** Links to a person or role note (docs/adr/0042-creator-and-role.md). */
+  creator?: string | undefined
+  creatorModel?: string | undefined
+  role?: string | undefined
   priority?: number | undefined
   /** Written as a block list, the way Obsidian writes `tags`. */
   tags?: readonly string[] | undefined
@@ -75,6 +79,9 @@ export function renderWorkItem(item: NewWorkItem, extraSections: readonly string
   fields.push(['parent', formatWikilink(item.parentStem)])
   if (item.owner !== undefined && item.owner !== '') fields.push(['owner', item.owner])
   if (item.agent !== undefined && item.agent !== '') fields.push(['agent', item.agent])
+  if (item.role !== undefined && item.role !== '') fields.push(['role', item.role])
+  if (item.creator !== undefined && item.creator !== '') fields.push(['creator', item.creator])
+  if (item.creatorModel !== undefined && item.creatorModel !== '') fields.push(['creator_model', item.creatorModel])
   if (item.priority !== undefined) fields.push(['priority', item.priority])
   fields.push(['created', item.created], ['updated', item.updated])
 

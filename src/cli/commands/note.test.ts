@@ -36,7 +36,7 @@ test('addNote appends under Notes, names the card agent, and stamps updated', as
 
 test('addNote takes an explicit agent, such as a dispatcher', async () => {
   fixture = seed()
-  const added = await addNote(await loadVault(fixture.root), 'wi-0002', 'Worker started.', 'dispatcher', now)
+  const added = await addNote(await loadVault(fixture.root), 'wi-0002', 'Worker started.', { agent: 'dispatcher' }, now)
   assert.equal(added.line, '- 2026-09-25 14:03, dispatcher: Worker started.')
 })
 
@@ -44,7 +44,7 @@ test('notes from two writers that loaded the same vault both survive', async () 
   fixture = seed()
   const a = await loadVault(fixture.root)
   const b = await loadVault(fixture.root)
-  await Promise.all([addNote(a, 'Task', 'From A.', 'a', now), addNote(b, 'Task', 'From B.', 'b', now)])
+  await Promise.all([addNote(a, 'Task', 'From A.', { agent: 'a' }, now), addNote(b, 'Task', 'From B.', { agent: 'b' }, now)])
   assert.match(textOf(fixture), /, a: From A\./)
   assert.match(textOf(fixture), /, b: From B\./)
 })

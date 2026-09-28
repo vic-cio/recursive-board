@@ -43,7 +43,7 @@ Usage
   wi setup [--yes] [--vault <path>] [--force]
   wi new <title> [--parent <ref>] [--status <s>] [--template <t>] [--owner <o>] [--agent <a>]
                  [--priority <n>] [--objective <text>] [--context <text>]... [--criteria <text>]...
-                 [--strict]
+                 [--creator <name>] [--model <id>] [--role <name>] [--strict]
   wi status <ref> <status>
   wi note <ref> <text> [--agent <name>]
   wi area <ref> [--off]
@@ -88,8 +88,11 @@ Notes
   area/work/website. \`wi new\` writes it. After \`wi move\` or \`wi area\`, run \`wi retag\` to fix
   the tags below. \`wi graph\` writes a colour group per area to .obsidian/graph.json and keeps
   your own groups. Close the graph view first: Obsidian may write over the file.
-  \`wi note\` appends "- <date> <time>, <agent>: <text>" under Notes. The agent defaults to the
-  card's agent. The write re-reads the card under a lock, so two notes at once both survive.
+  \`wi new\` writes creator, creator_model and role as links to person or role notes. --creator and
+  --model fall back to WI_CREATOR and WI_MODEL; wi new warns when a card has no creator, and
+  --strict refuses it. An --owner that names an existing note becomes a link.
+  \`wi note\` appends "- <date> <time>, <writer>: <text>" under Notes. The writer is --agent, or
+  "<WI_CREATOR or the card's role> (<WI_MODEL>)", or the card's agent. The write re-reads the card under a lock, so two notes at once both survive.
   \`wi status <ref> done\` says when that was the parent's last open child. It does not close the parent.
   Unticking a done item is \`wi status <ref> <its prev_status>\`, which also clears the record.
   \`wi validate\` exits 1 when the vault has errors, so it works as a pre-commit hook.
@@ -129,6 +132,9 @@ async function main(argv: string[]): Promise<number> {
     options: {
       parent: { type: 'string' },
       to: { type: 'string' },
+      creator: { type: 'string' },
+      model: { type: 'string' },
+      role: { type: 'string' },
       on: { type: 'string' },
       status: { type: 'string' },
       owner: { type: 'string' },
@@ -172,9 +178,9 @@ async function main(argv: string[]): Promise<number> {
   if (values.yes && command !== 'setup') throw new UsageError('--yes applies only to wi setup.')
   if (values.off && command !== 'area' && command !== 'depend') throw new UsageError('--off applies only to wi area and wi depend.')
   if (values.on !== undefined && command !== 'depend') throw new UsageError('--on applies only to wi depend.')
-  if ((values.objective !== undefined || values.context !== undefined || values.criteria !== undefined || values.strict) &&
-    command !== 'new') {
-    throw new UsageError('--objective, --context, --criteria and --strict apply only to wi new.')
+  if ((values.objective !== undefined || values.context !== undefined || values.criteria !== undefined || values.strict ||
+    values.creator !== undefined || values.model !== undefined || values.role !== undefined) && command !== 'new') {
+    throw new UsageError('--objective, --context, --criteria, --creator, --model, --role and --strict apply only to wi new.')
   }
   if (command === 'setup') {
     if (rest.length > 0) throw new UsageError('wi setup takes options only. Run wi setup --help for usage.')
@@ -316,6 +322,9 @@ async function runNew(vault: Vault, rest: string[], values: Values, json: boolea
     ...(typeof values['agent'] === 'string' ? { agent: values['agent'] } : {}),
     ...(typeof values['template'] === 'string' ? { template: values['template'] } : {}),
     ...(priority !== undefined ? { priority } : {}),
+    ...optional('creator', typeof values['creator'] === 'string' ? values['creator'] : envText('WI_CREATOR')),
+    ...optional('model', typeof values['model'] === 'string' ? values['model'] : envText('WI_MODEL')),
+    ...optional('role', typeof values['role'] === 'string' ? values['role'] : undefined),
     brief: {
       objective: typeof values['objective'] === 'string' ? values['objective'] : undefined,
       context: Array.isArray(values['context']) ? values['context'] : undefined,
@@ -334,6 +343,10 @@ async function runNew(vault: Vault, rest: string[], values: Values, json: boolea
   if (created.gaps.length > 0) {
     process.stderr.write(`wi: warning: ${created.id} has no ${created.gaps.join(' or ')}. ` +
       `Pass --objective and --criteria, or fill the card before work starts.\n`)
+  }
+  if (created.uncredited) {
+    process.stderr.write(`wi: warning: ${created.id} has no creator. Pass --creator (and --model for an agent), ` +
+      `or set WI_CREATOR and WI_MODEL.\n`)
   }
   if (created.renamed) {
     process.stderr.write(`wi: note: another item has this filename, so this one is ${created.relPath}. ` +
@@ -451,6 +464,16 @@ async function runClaim(vault: Vault, rest: string[], values: Values, json: bool
   return 0
 }
 
+/** An environment variable's text, or undefined when it is unset or blank. */
+function envText(name: string): string | undefined {
+  const value = process.env[name]?.trim()
+  return value ? value : undefined
+}
+
+function optional<K extends string>(key: K, value: string | undefined): { [P in K]?: string } {
+  return (value === undefined ? {} : { [key]: value }) as { [P in K]?: string }
+}
+
 async function runNote(vault: Vault, rest: string[], values: Values, json: boolean): Promise<number> {
   const [ref, ...words] = rest
   const text = words.join(' ').trim()
@@ -458,7 +481,7 @@ async function runNote(vault: Vault, rest: string[], values: Values, json: boole
     throw new UsageError('wi note needs a <ref> and the text. Try: wi note wi-a7f3 "Priced 12 lines."')
   }
   const agent = values['agent'] === undefined ? undefined : singleLineOption(values, 'agent')
-  const added = await addNote(vault, ref, text, agent)
+  const added = await addNote(vault, ref, text, { agent, creator: envText('WI_CREATOR'), model: envText('WI_MODEL') })
   if (json) print({ id: added.item.id, path: added.item.relPath, line: added.line })
   else process.stdout.write(`${label(added.item)}  ${added.line}\n`)
   return 0

@@ -22,7 +22,8 @@ interface Result { code: number; stdout: string; stderr: string }
 async function wi(args: string[], vault?: string, env: NodeJS.ProcessEnv = {}): Promise<Result> {
   try {
     const { stdout, stderr } = await run('node', [CLI, ...args], {
-      env: { ...process.env, WI_VAULT: vault ?? fixture!.root, ...env },
+      // A blank WI_CREATOR and WI_MODEL mean unset, so the caller's shell cannot change a result.
+      env: { ...process.env, WI_CREATOR: '', WI_MODEL: '', WI_VAULT: vault ?? fixture!.root, ...env },
     })
     return { code: 0, stdout, stderr }
   } catch (error) {
@@ -526,7 +527,7 @@ test('wi archive hides a card, --archived lists it, and --undo restores it', asy
 test('wi new writes a brief from flags, and --strict refuses a card without one', async () => {
   fixture = seed()
   const made = await wi(['new', 'Price demolition', '--parent', 'Main', '--objective', 'Price every line.',
-    '--context', 'Survey.', '--criteria', 'Each line has a rate', '--criteria', 'Total checked', '--json'])
+    '--context', 'Survey.', '--criteria', 'Each line has a rate', '--criteria', 'Total checked', '--creator', 'Victor', '--json'])
   assert.equal(made.code, 0, made.stderr)
   assert.equal(made.stderr, '')
   const text = readFileSync(join(fixture.root, JSON.parse(made.stdout).path), 'utf8')
@@ -539,6 +540,63 @@ test('wi new writes a brief from flags, and --strict refuses a card without one'
   const strict = await wi(['new', 'Strict', '--parent', 'Main', '--strict'])
   assert.equal(strict.code, 2)
   assert.match(strict.stderr, /no Objective or Acceptance Criteria/)
+})
+
+test('wi new writes creator, model and role as links, from flags or the environment', async () => {
+  fixture = seed()
+  const flags = await wi(['new', 'Check rates', '--parent', 'Main', '--objective', 'Check.', '--criteria', 'Done',
+    '--creator', 'Project lead', '--model', 'gpt-6-luna', '--role', 'Checker', '--json'])
+  assert.equal(flags.code, 0, flags.stderr)
+  const text = readFileSync(join(fixture.root, JSON.parse(flags.stdout).path), 'utf8')
+  assert.match(text, /^role: "\[\[Checker\]\]"\ncreator: "\[\[Project lead\]\]"\ncreator_model: gpt-6-luna$/m)
+
+  const env = await wi(['new', 'From env', '--parent', 'Main', '--json'], undefined, { WI_CREATOR: 'Session agent', WI_MODEL: 'claude-opus-5-5' })
+  const envText = readFileSync(join(fixture.root, JSON.parse(env.stdout).path), 'utf8')
+  assert.match(envText, /^creator: "\[\[Session agent\]\]"\ncreator_model: claude-opus-5-5$/m)
+  assert.doesNotMatch(env.stderr, /no creator/)
+
+  const bare = await wi(['new', 'Nobody', '--parent', 'Main', '--objective', 'x', '--criteria', 'y'])
+  assert.match(bare.stderr, /has no creator/)
+  const strict = await wi(['new', 'Strict nobody', '--parent', 'Main', '--objective', 'x', '--criteria', 'y', '--strict'])
+  assert.equal(strict.code, 2)
+  assert.match(strict.stderr, /no creator/)
+})
+
+test('an owner becomes a link only when its note exists', async () => {
+  fixture = seed()
+  fixture.write('People/Victor.md', '---\ntype: person\n---\n')
+  const linked = await wi(['new', 'Mine', '--parent', 'Main', '--owner', 'Victor', '--creator', 'Victor', '--json'])
+  assert.match(readFileSync(join(fixture.root, JSON.parse(linked.stdout).path), 'utf8'), /^owner: "\[\[Victor\]\]"$/m)
+  const plain = await wi(['new', 'Theirs', '--parent', 'Main', '--owner', 'jo', '--creator', 'Victor', '--json'])
+  assert.match(readFileSync(join(fixture.root, JSON.parse(plain.stdout).path), 'utf8'), /^owner: jo$/m)
+})
+
+test('wi validate checks creator, owner and role links against notes anywhere', async () => {
+  fixture = seed()
+  fixture.write('People/Victor.md', '---\ntype: person\n---\n')
+  fixture.write('Roles/Checker.md', '---\ntype: role\n---\nThe procedure.\n')
+  fixture.write('Notes/Loose.md', 'no frontmatter\n')
+  const base = { type: 'work-item', status: 'options', parent: '"[[Main]]"', created: '2026-09-21', updated: '2026-09-21' }
+  fixture.write('Boards/Good.md', item({ ...base, id: 'wi-9001', title: 'Good', creator: '"[[Checker]]"', creator_model: 'gpt-6-luna', owner: '"[[Victor]]"', role: '"[[Checker]]"' }))
+  fixture.write('Boards/Bad.md', item({ ...base, id: 'wi-9002', title: 'Bad', creator: '"[[Nobody]]"', owner: '"[[Checker]]"', role: '"[[Loose]]"' }))
+  fixture.write('Boards/Plain.md', item({ ...base, id: 'wi-9003', title: 'Plain', creator: 'claude', owner: 'sam' }))
+  const result = await wi(['validate', '--json'])
+  const problems = (JSON.parse(result.stdout) as { problems: { relPath: string; rule: string }[] }).problems
+    .filter((problem) => ['Boards/Good.md', 'Boards/Bad.md', 'Boards/Plain.md'].includes(problem.relPath))
+    .map((problem) => `${problem.relPath} ${problem.rule}`)
+  assert.deepEqual(problems, [
+    'Boards/Bad.md creator-unresolved',
+    'Boards/Bad.md owner-type',
+    'Boards/Bad.md role-type',
+    'Boards/Plain.md creator-not-link',
+  ])
+})
+
+test('wi note names the writer by role and model', async () => {
+  fixture = seed()
+  const result = await wi(['note', 'Build server', 'Checked', 'rates.'], undefined, { WI_CREATOR: 'Checker', WI_MODEL: 'gpt-6-luna' })
+  assert.equal(result.code, 0, result.stderr)
+  assert.match(readFileSync(join(fixture.root, 'Boards/Build server.md'), 'utf8'), /, Checker \(gpt-6-luna\): Checked rates\.\n$/)
 })
 
 test('wi note appends a stamped line naming the agent', async () => {
