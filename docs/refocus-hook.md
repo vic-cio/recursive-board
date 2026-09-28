@@ -79,6 +79,10 @@ command = "WI_REFOCUS_RUNTIME=codex WI_BIN=\"/path/to/recursive-board/dist/wi/wi
 
 Codex sends `source: compact` before the next model request. The hook returns `hookSpecificOutput.additionalContext`. The `PostCompact` event does not deliver plain text as context.
 
+Open `/hooks` in Codex and review the exact command before trusting it.
+Codex skips new or changed hooks until you trust their current definitions.
+Keep this registration opt-in and keep existing hook entries.
+
 ## Choose when the hook runs
 
 The default hook is enabled after registration. Set environment variables in the command or agent environment.
