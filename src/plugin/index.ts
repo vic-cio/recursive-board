@@ -15,6 +15,7 @@ import { readLabels } from '../shared/labels.ts'
 import { isAreaTag } from '../shared/area-tags.ts'
 import { DEFAULT_VAULT_CONFIG, type VaultConfig } from '../shared/vault-config.ts'
 import { archiveOwner } from '../shared/archive.ts'
+import { displayName } from '../shared/authorship.ts'
 import { dependsOnValues, isOpenDependency, parseDependsOn } from '../shared/dependencies.ts'
 import {
   doneCutoff, isStatus, parseWikilink, STATUSES, WORK_ITEM_TYPE, type Status,
@@ -38,8 +39,18 @@ export interface WorkItemMeta {
   effectiveArchived: boolean
   priority: number | undefined
   updated: string | undefined
+  /** The owner's name: a link's target, or plain text. */
   owner: string | undefined
+  /** The note the owner links to, when it is a link that resolves. */
+  ownerFile: TFile | null
   agent: string | undefined
+  /** The person or role that made the item, by name (docs/adr/0042-creator-and-role.md). */
+  creator: string | undefined
+  creatorFile: TFile | null
+  creatorModel: string | undefined
+  /** The role that must do the work, by name. */
+  role: string | undefined
+  roleFile: TFile | null
   blocked: boolean
   /** The raw `depends_on` entries, kept for an edit (docs/adr/0041-card-dependencies.md). */
   dependsOnRaw: string[]
@@ -142,8 +153,14 @@ export class WorkItemIndex {
       effectiveArchived: false,
       priority: typeof priority === 'number' ? priority : undefined,
       updated: str(frontmatter['updated']),
-      owner: str(frontmatter['owner']),
+      owner: displayName(frontmatter['owner']),
+      ownerFile: this.linkedFile(frontmatter['owner'], file),
       agent: str(frontmatter['agent']),
+      creator: displayName(frontmatter['creator']),
+      creatorFile: this.linkedFile(frontmatter['creator'], file),
+      creatorModel: str(frontmatter['creator_model']),
+      role: displayName(frontmatter['role']),
+      roleFile: this.linkedFile(frontmatter['role'], file),
       blocked: frontmatter['blocked'] === true,
       dependsOnRaw,
       dependsOn,
@@ -151,6 +168,12 @@ export class WorkItemIndex {
       // An area tag repeats what the board already shows, so it draws no chip (ADR 0039).
       labels: readLabels(frontmatter['tags']).filter((label) => !isAreaTag(label)),
     }
+  }
+
+  /** The note a link field points to, or null when it is plain text or does not resolve. */
+  private linkedFile(value: unknown, from: TFile): TFile | null {
+    const target = parseWikilink(value)
+    return target === null ? null : this.app.metadataCache.getFirstLinkpathDest(target, from.path)
   }
 
   /** The work item a file is, or null when the file is not one. */

@@ -75,7 +75,10 @@ function clearTakeover(view: MarkdownView): void {
   for (const el of view.contentEl.querySelectorAll(`.${TAKEOVER}`)) el.remove()
 }
 
+const PROPERTIES_HIDDEN = 'wi-properties-hidden'
+
 function clear(view: MarkdownView): void {
+  view.contentEl.removeClass(PROPERTIES_HIDDEN)
   clearSizers(view)
   clearTakeover(view)
 }
@@ -109,6 +112,9 @@ export function mountLeaf(leaf: WorkspaceLeaf, ctx: RenderContext): void {
 
   const file = view.file
   const meta = ctx.index.get(file)
+  // The meta strip says what the raw Properties panel says, so a work item hides the panel until
+  // its Properties button shows it (docs/adr/0042-creator-and-role.md). Other notes keep it.
+  view.contentEl.toggleClass(PROPERTIES_HIDDEN, meta !== null && !ctx.isShowingProperties(file.path))
   if (!meta) {
     clear(view)
     return

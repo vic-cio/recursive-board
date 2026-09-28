@@ -28,6 +28,9 @@ export interface RenderContext {
   setPeek(path: string, peeking: boolean): void
   selectedTab(path: string): Status | undefined
   selectTab(path: string, status: Status): void
+  /** True when the raw Properties panel shows on this work item (docs/adr/0042-creator-and-role.md). */
+  isShowingProperties(path: string): boolean
+  toggleProperties(path: string): void
   isShowingArchived(path: string): boolean
   toggleArchived(path: string): void
 }
