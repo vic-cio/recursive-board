@@ -125,7 +125,11 @@
 /* ---------- breadcrumbs (the flat work-item folder) ---------- */
 
 .wi-region-top.wi-region {
-  margin-bottom: 4px;
+  margin-bottom: 16px;
+}
+
+.wi-region-meta.wi-region {
+  margin: 4px 0 16px;
 }
 
 .wi-breadcrumbs {

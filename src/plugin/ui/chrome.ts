@@ -6,8 +6,8 @@
  * item rather than only on boards, because the prototype review found they are the primary way
  * back.
  *
- * Ordering follows the prototype review: the Objective is what you came to read, so the metadata
- * strip and the board sit below the note body.
+ * The metadata strip sits under the note's title, because it stands in for the Properties panel
+ * there (docs/adr/0042-creator-and-role.md). The checklist and the board sit below the note body.
  *
  * The checklist shortcut and the promote control sit side by side in the top bar. The checklist itself remains below
  * the note body, where the prototype review placed it.

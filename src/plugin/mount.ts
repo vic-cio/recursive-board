@@ -29,6 +29,7 @@ import type { RenderContext } from './ui/context.ts'
 import { opensAsBoard, type WorkItemMeta } from './index.ts'
 
 const TOP = 'wi-region-top'
+const META = 'wi-region-meta'
 const BOTTOM = 'wi-region-bottom'
 const REGION = 'wi-region'
 const TAKEOVER = 'wi-takeover'
@@ -62,6 +63,24 @@ function region(sizer: HTMLElement, cls: string, atTop: boolean): HTMLElement {
   const trailing = sizer.querySelector<HTMLElement>(`:scope > :is(${TRAILING})`)
   if (trailing) trailing.before(el)
   else sizer.append(el)
+  return el
+}
+
+/**
+ * The meta strip goes under the note's title and its Properties panel, above the body: the facts
+ * about a card are read before its text. Editing mode keeps the title and panel as children of the
+ * sizer, reading mode inside `.mod-header`.
+ */
+function metaRegion(sizer: HTMLElement): HTMLElement {
+  const existing = sizer.querySelector<HTMLElement>(`:scope > .${META}`)
+  if (existing) {
+    existing.empty()
+    return existing
+  }
+  const el = createDiv({ cls: `${REGION} ${META}` })
+  const header = [...sizer.querySelectorAll<HTMLElement>(`:scope > :is(.mod-header, .inline-title, .metadata-container, .${TOP})`)].pop()
+  if (header) header.after(el)
+  else sizer.prepend(el)
   return el
 }
 
@@ -157,11 +176,11 @@ export function mountLeaf(leaf: WorkspaceLeaf, ctx: RenderContext): void {
   clearTakeover(view)
   view.contentEl.addClass(REGION_HOST)
   for (const sizer of sizersOf(view)) {
-    // The Objective is what you came to read, so everything else sits below the body.
+    // The facts sit under the title; the checklist sits below the body, which is what you came to read.
     const bottom = region(sizer, BOTTOM, false)
     renderBreadcrumbs(region(sizer, TOP, true), ctx, meta, bottom, !showsInlineTitle(ctx))
     closeScrollGap(sizer, bottom)
-    renderMetaStrip(bottom, meta, ctx)
+    renderMetaStrip(metaRegion(sizer), meta, ctx)
     renderChecklist(bottom, ctx, ctx.index.childrenOf(meta.file), {
       grouped: opensAsBoard(meta),
       parent: meta,
