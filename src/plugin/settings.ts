@@ -42,6 +42,8 @@ export class StatusColorSettingTab extends PluginSettingTab {
   private readonly changeColor: (key: StatusColorKey, color: string | undefined) => Promise<void>
   private readonly maxAgents: () => number | null
   private readonly changeMaxAgents: (maxAgents: number | null) => Promise<void>
+  private readonly you: () => string
+  private readonly changeYou: (you: string) => Promise<void>
 
   constructor(
     app: App,
@@ -50,12 +52,16 @@ export class StatusColorSettingTab extends PluginSettingTab {
     changeColor: (key: StatusColorKey, color: string | undefined) => Promise<void>,
     maxAgents: () => number | null,
     changeMaxAgents: (maxAgents: number | null) => Promise<void>,
+    you: () => string,
+    changeYou: (you: string) => Promise<void>,
   ) {
     super(app, plugin)
     this.colors = colors
     this.changeColor = changeColor
     this.maxAgents = maxAgents
     this.changeMaxAgents = changeMaxAgents
+    this.you = you
+    this.changeYou = changeYou
   }
 
   override display(): void {
@@ -101,5 +107,14 @@ export class StatusColorSettingTab extends PluginSettingTab {
             if (Number.isSafeInteger(parsed) && parsed >= 0) void this.changeMaxAgents(parsed)
           })
       })
+
+    containerEl.createEl('h3', { text: 'Dashboard' })
+    new Setting(containerEl)
+      .setName('Your name')
+      .setDesc('The owner name on cards that wait for your review. The dashboard lists a card in doing with this owner and no open child.')
+      .addText((text) => text
+        .setPlaceholder('Name')
+        .setValue(this.you())
+        .onChange((value) => void this.changeYou(value.trim())))
   }
 }
