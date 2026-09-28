@@ -3,7 +3,7 @@ status: accepted
 ---
 # Print objective chains and deliver them at agent boundaries
 
-`wi objective [<ref>]` prints the selected work item's Objective and each ancestor Objective up to the root. Without `<ref>`, it uses `WI_CARD`. When `WI_CARD` cannot resolve, it uses `WI_AGENT` only when one deepest doing claim has a valid parent chain.
+`wi objective [<ref>]` prints the selected work item's Objective and each ancestor Objective up to the root. Without `<ref>`, it uses `WI_CARD`. When `WI_CARD` cannot resolve, it uses `WI_AGENT` only when every doing claim lies on one valid ancestor chain. It selects the deepest claim in that chain. Claims on separate branches stay silent, even when their depths differ.
 
 The output marks a missing Objective. It stops at a broken parent, cycle, or output limit. It never guesses a parent.
 
@@ -17,7 +17,7 @@ The hook is opt-in. Setup does not edit a user's Claude or Codex configuration. 
 
 `objective` names the data the CLI emits. `refocus` names the runtime feature. The `WI_REFOCUS_` prefix keeps its settings generic and groups related controls.
 
-`WI_CARD` is the exact dispatcher choice. The agent fallback supports existing sessions, while requiring one deepest valid claim prevents a guessed branch.
+`WI_CARD` is the exact dispatcher choice. The agent fallback supports existing sessions. Requiring every claim on one ancestor chain prevents a guessed branch.
 
 Claude and Codex expose different compaction boundaries. Claude's `PostCompact` discards `systemMessage` and `continue`. Codex ignores plain text from `PostCompact`. Their documented compact `SessionStart` events can add context before the model continues, so the hook uses those events.
 

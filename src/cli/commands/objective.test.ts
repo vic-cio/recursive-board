@@ -86,7 +86,7 @@ test('WI_CARD takes priority over WI_AGENT', async () => {
   assert.doesNotMatch(result.stdout, /Other \(wi-0004\)/)
 })
 
-test('WI_AGENT selects the unique deepest doing claim', async () => {
+test('WI_AGENT stays silent when claims span branches with different depths', async () => {
   fixture = seed()
   fixture.write('Boards/Other.md', item({
     type: 'work-item', id: 'wi-0004', title: 'Other', status: 'doing', agent: 'codex', parent: '"[[Main]]"',
@@ -94,8 +94,22 @@ test('WI_AGENT selects the unique deepest doing claim', async () => {
   }, '## Objective\n\nDo other work.\n'))
   const result = await wi(['objective'], { WI_AGENT: 'codex' })
   assert.equal(result.code, 0, result.stderr)
-  assert.match(result.stdout, /Ship feature/)
-  assert.doesNotMatch(result.stdout, /Other \(wi-0004\)/)
+  assert.equal(result.stdout, '')
+})
+
+test('WI_AGENT selects the deepest claim in one ancestor chain', async () => {
+  fixture = seed()
+  fixture.write('Boards/Build product.md', item({
+    type: 'work-item', id: 'wi-0002', title: 'Build product', status: 'doing', agent: 'codex', parent: '"[[Main]]"',
+    created: '2026-09-21', updated: '2026-09-21',
+  }, '## Objective\n\nDeliver the product.\n'))
+  const result = await wi(['objective'], { WI_AGENT: 'codex' })
+  assert.equal(result.code, 0, result.stderr)
+  assert.equal(result.stdout,
+    'Objective chain (current card to root):\n' +
+    '1. Ship feature (wi-0003)\n   Finish the feature.\n' +
+    '2. Build product (wi-0002)\n   Deliver the product.\n' +
+    '3. Main (wi-0001)\n   Run the project.\n')
 })
 
 test('WI_AGENT stays silent when deepest claims are ambiguous', async () => {

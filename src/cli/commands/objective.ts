@@ -15,6 +15,7 @@ interface ObjectiveRow {
 interface ObjectiveChain {
   item: WorkItem
   rows: ObjectiveRow[]
+  paths: ReadonlySet<string>
   issue: string | null
 }
 
@@ -40,12 +41,14 @@ function resolveTarget(vault: Vault, env: NodeJS.ProcessEnv): WorkItem | null {
   const candidates = vault.items.filter((item) => item.status === 'doing' && item.frontmatter.get('agent') === agent)
   const ranked = candidates.map((item) => {
     const chain = buildChain(vault, item)
-    return { item, depth: chain.rows.length, issue: chain.issue }
+    return { item, depth: chain.rows.length, paths: chain.paths, issue: chain.issue }
   })
   if (ranked.length === 0 || ranked.some((candidate) => candidate.issue !== null)) return null
   const deepest = Math.max(...ranked.map((candidate) => candidate.depth))
   const winners = ranked.filter((candidate) => candidate.depth === deepest)
-  return winners.length === 1 ? winners[0]!.item : null
+  const winner = winners[0]
+  if (winners.length !== 1 || !winner) return null
+  return ranked.every((candidate) => winner.paths.has(candidate.item.relPath)) ? winner.item : null
 }
 
 function buildChain(vault: Vault, start: WorkItem): ObjectiveChain {
@@ -84,7 +87,7 @@ function buildChain(vault: Vault, start: WorkItem): ObjectiveChain {
     current = parent
   }
 
-  return { item: start, rows, issue }
+  return { item: start, rows, paths: visited, issue }
 }
 
 function extractObjective(text: string): string {
