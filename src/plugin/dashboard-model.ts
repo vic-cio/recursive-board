@@ -74,9 +74,43 @@ export interface ReviewLine {
   paths: string[]
 }
 
-/** An http or https address, such as a grill page, not a vault path. */
+/** An http or https address, not a vault path. */
 export function isWebAddress(path: string): boolean {
   return /^https?:\/\/\S+$/.test(path)
+}
+
+export type WebReviewMode = 'webviewer' | 'browser' | 'off'
+
+/** Parse the saved setting. Old or unknown values use the default Web viewer mode. */
+export function parseWebReviewMode(value: unknown): WebReviewMode {
+  return value === 'browser' || value === 'off' || value === 'webviewer' ? value : 'webviewer'
+}
+
+/** Hide web rows when disabled, and keep the card as the fallback when no rows remain. */
+export function reviewPathsForMode(paths: string[], fallbackPath: string, mode: WebReviewMode): string[] {
+  const visible = mode === 'off' ? paths.filter((path) => !isWebAddress(path)) : paths
+  return visible.length > 0 ? visible : [fallbackPath]
+}
+
+/** A web row never counts as a file review or toward a verdict. */
+export function fileReviewPaths(paths: string[]): string[] {
+  return paths.filter((path) => !isWebAddress(path))
+}
+
+export function allReviewFilesTicked(paths: string[], ticks: Record<string, boolean>): boolean {
+  const files = fileReviewPaths(paths)
+  return files.length > 0 && files.every((path) => ticks[path] === true)
+}
+
+/** True for web addresses that only work on the computer hosting the local service. */
+export function isLoopbackWebAddress(address: string): boolean {
+  if (!isWebAddress(address)) return false
+  try {
+    const hostname = new URL(address).hostname.toLowerCase()
+    return hostname === 'localhost' || hostname === '[::1]' || hostname === '0.0.0.0' || /^127(?:\.\d{1,3}){3}$/.test(hostname)
+  } catch {
+    return false
+  }
 }
 
 /**

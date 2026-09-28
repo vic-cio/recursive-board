@@ -5,8 +5,10 @@ status: accepted
 
 This amends [0040](0040-dashboard-view.md), which said the dashboard writes no work item.
 
-A tick in the review table still records only that you looked at a file, on this device. When
-every file of a card is ticked, the card's row shows two buttons:
+A tick in the review table records only that you looked at a file row, on this device. Web rows
+have no tick and do not count toward a verdict. When every file row of a card is ticked, the
+card's row shows two buttons. A card with only web rows has no verdict buttons; its agent closes
+it.
 
 - **Approve** writes the note `Approved by <you>.` and moves the card to done.
 - **Send back** asks for a comment, writes the note `Sent back by <you>: <comment>`, and removes

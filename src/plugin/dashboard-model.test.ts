@@ -2,7 +2,7 @@ import { test } from 'node:test'
 import assert from 'node:assert/strict'
 
 import {
-  agentGroups, areaOf, cardsInScope, IDLE_MS, isWebAddress, needsAttention, parseReviewLine, progress, waitsForReview, type DashItem, type DashTree,
+  agentGroups, areaOf, allReviewFilesTicked, cardsInScope, fileReviewPaths, IDLE_MS, isLoopbackWebAddress, isWebAddress, needsAttention, parseReviewLine, parseWebReviewMode, progress, reviewPathsForMode, waitsForReview, type DashItem, type DashTree,
 } from './dashboard-model.ts'
 
 interface Fake extends DashItem { parent: Fake | null; mtime: number }
@@ -79,14 +79,51 @@ test('the newest review line wins, after a wi note prefix', () => {
 })
 
 test('a review line may list a web address', () => {
-  const text = '- 2026-09-28 15:10, claude: **Review:** Grill: board layout: `http://127.0.0.1:61804/`\n'
-  assert.deepEqual(parseReviewLine(text), { what: 'Grill: board layout', paths: ['http://127.0.0.1:61804/'] })
+  const text = '- 2026-09-28 15:10, claude: **Review:** Preview: board layout: `http://127.0.0.1:61804/`\n'
+  assert.deepEqual(parseReviewLine(text), { what: 'Preview: board layout', paths: ['http://127.0.0.1:61804/'] })
 })
 
 test('isWebAddress tells a web address from a vault path', () => {
   assert.equal(isWebAddress('http://127.0.0.1:61804/'), true)
   assert.equal(isWebAddress('https://example.com/a.pdf'), true)
   assert.equal(isWebAddress('Work/35b/report.md'), false)
+})
+
+test('loopback web addresses are identified for phone display', () => {
+  for (const address of [
+    'http://localhost:61804/',
+    'https://LOCALHOST/path',
+    'http://127.0.0.1:61804/',
+    'http://127.255.2.9/',
+    'http://0.0.0.0:8080/',
+    'http://[::1]:8080/',
+  ]) assert.equal(isLoopbackWebAddress(address), true, address)
+
+  for (const address of ['https://example.com/', 'http://126.0.0.1/', 'http://128.0.0.1/', 'not a URL']) {
+    assert.equal(isLoopbackWebAddress(address), false, address)
+  }
+})
+
+test('unknown web review modes use the Web viewer default', () => {
+  assert.equal(parseWebReviewMode('webviewer'), 'webviewer')
+  assert.equal(parseWebReviewMode('browser'), 'browser')
+  assert.equal(parseWebReviewMode('off'), 'off')
+  assert.equal(parseWebReviewMode('unexpected'), 'webviewer')
+  assert.equal(parseWebReviewMode(undefined), 'webviewer')
+})
+
+test('Off removes web rows and falls back to the card when no file rows remain', () => {
+  assert.deepEqual(reviewPathsForMode(['https://example.com', 'report.md'], 'card.md', 'off'), ['report.md'])
+  assert.deepEqual(reviewPathsForMode(['https://example.com'], 'card.md', 'off'), ['card.md'])
+  assert.deepEqual(reviewPathsForMode([], 'card.md', 'off'), ['card.md'])
+})
+
+test('only file rows count toward verdict readiness', () => {
+  const mixed = ['https://example.com', 'report.md']
+  assert.deepEqual(fileReviewPaths(mixed), ['report.md'])
+  assert.equal(allReviewFilesTicked(mixed, { 'report.md': true }), true)
+  assert.equal(allReviewFilesTicked(mixed, {}), false)
+  assert.equal(allReviewFilesTicked(['https://example.com'], {}), false)
 })
 
 test('progress counts leaf cards per area, with no area last', () => {

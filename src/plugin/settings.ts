@@ -1,4 +1,5 @@
 import { PluginSettingTab, Setting, type App, type Plugin } from 'obsidian'
+import type { WebReviewMode } from './dashboard-model.ts'
 
 export const STATUS_COLOR_KEYS = ['options', 'doing', 'done', 'blocked', 'agent'] as const
 export type StatusColorKey = typeof STATUS_COLOR_KEYS[number]
@@ -44,6 +45,8 @@ export class StatusColorSettingTab extends PluginSettingTab {
   private readonly changeMaxAgents: (maxAgents: number | null) => Promise<void>
   private readonly you: () => string
   private readonly changeYou: (you: string) => Promise<void>
+  private readonly webReviewMode: () => WebReviewMode
+  private readonly changeWebReviewMode: (mode: WebReviewMode) => Promise<void>
 
   constructor(
     app: App,
@@ -54,6 +57,8 @@ export class StatusColorSettingTab extends PluginSettingTab {
     changeMaxAgents: (maxAgents: number | null) => Promise<void>,
     you: () => string,
     changeYou: (you: string) => Promise<void>,
+    webReviewMode: () => WebReviewMode,
+    changeWebReviewMode: (mode: WebReviewMode) => Promise<void>,
   ) {
     super(app, plugin)
     this.colors = colors
@@ -62,6 +67,8 @@ export class StatusColorSettingTab extends PluginSettingTab {
     this.changeMaxAgents = changeMaxAgents
     this.you = you
     this.changeYou = changeYou
+    this.webReviewMode = webReviewMode
+    this.changeWebReviewMode = changeWebReviewMode
   }
 
   override display(): void {
@@ -116,5 +123,17 @@ export class StatusColorSettingTab extends PluginSettingTab {
         .setPlaceholder('Name')
         .setValue(this.you())
         .onChange((value) => void this.changeYou(value.trim())))
+    new Setting(containerEl)
+      .setName('Web pages in For review')
+      .addDropdown((dropdown) => dropdown
+        .addOption('webviewer', 'Open in a Web viewer tab')
+        .addOption('browser', 'Open in the browser')
+        .addOption('off', 'Off')
+        .setValue(this.webReviewMode())
+        .onChange((value) => {
+          if (value === 'webviewer' || value === 'browser' || value === 'off') {
+            void this.changeWebReviewMode(value)
+          }
+        }))
   }
 }

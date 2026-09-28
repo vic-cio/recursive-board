@@ -63,6 +63,8 @@ export default class RecursiveBoardPlugin extends Plugin {
       (maxAgents) => this.updateMaxAgents(maxAgents),
       () => this.dashboard.you,
       (you) => this.saveDashboard({ you }),
+      () => this.dashboard.webReviewMode,
+      (webReviewMode) => this.saveDashboard({ webReviewMode }),
     ))
 
     this.index = new WorkItemIndex(this.app, await this.readVaultConfig())

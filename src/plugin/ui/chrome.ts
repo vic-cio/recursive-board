@@ -61,8 +61,8 @@ export function renderBreadcrumbs(
  *
  * Promote and demote change what the item *is*, and that is written to the file (docs/adr/0001-markdown-is-canonical-and-edits-preserve-unknown-keys.md).
  * Notes and Board change what this pane is showing, and that is session state which is never
- * written: a per-view preference is reconstructable from nothing, which is the hole the first
- * grill found in storing one.
+ * written: a per-view preference is reconstructable from nothing, which was the flaw found in an
+ * early design review.
  *
  * They are labelled with the words the design docs use, rather than both saying "Board", because
  * a button that reads the same as its neighbour but does something durable is a trap.

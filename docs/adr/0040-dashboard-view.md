@@ -14,9 +14,10 @@ It has three panels:
   what to check and lists each file to open as a vault-relative path in backticks. A `wi note`
   prefix before it is fine. With no such line, the row opens the card. Markdown opens in Obsidian.
   Another file opens in its own app on a desktop, and in Obsidian on a phone.
-  The line may also list a web address (`http://` or `https://`), such as the local page of a
-  grill interview. It opens in a Web viewer tab on a desktop when that core plugin is on, and in
-  the browser otherwise. A web address is not a vault file, so it has no Changed date.
+  The line may also list a web address (`http://` or `https://`). The setting "Web pages in For
+  review" controls whether those rows appear and where they open. A web row has no tick and no
+  Changed date. On a phone, a loopback address stays visible without a link because it only works
+  on the computer that runs the service. See [Web rows in For review](web-review-rows.md).
 - **Progress.** Leaf cards per project, done out of total. A board is a container, so it does not
   count.
 - **Agents.** Cards with an `agent`, per project: working, idle, and recently finished. A claim is
@@ -32,9 +33,9 @@ of every area would grow unreadable as boards are added.
 A link on the dashboard opens in a new tab, so the dashboard stays open. Its icon is `gauge`,
 because Obsidian's new-canvas button already uses `layout-dashboard`.
 
-The dashboard covers every root, or one root that a picker chooses. The name, the root, the focus
-and the ticks in the review table are the plugin's own data, not the vault's. A tick records that
-you looked at a file. It does not change the card.
+The dashboard covers every root, or one root that a picker chooses. The name, the root, the focus,
+web row setting and the ticks in the review table are the plugin's own data, not the vault's. A
+tick records that you looked at a file. It does not change the card. Web rows have no tick.
 
 ## Why
 

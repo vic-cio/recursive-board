@@ -11,8 +11,8 @@ import type { WorkItemIndex, WorkItemMeta } from '../index.ts'
 import type { Verdict } from '../../shared/review.ts'
 import { SendBackModal } from './send-back-modal.ts'
 import {
-  ago, agentGroups, areaPath, cardsInScope, groupName, groupUnder, inFocus, isWebAddress, needsAttention, parseReviewLine, progress, waitsForReview,
-  type Attention, type Claim, type DashTree, type Group,
+  ago, agentGroups, allReviewFilesTicked, areaPath, cardsInScope, fileReviewPaths, groupName, groupUnder, inFocus, isLoopbackWebAddress, isWebAddress, needsAttention, parseReviewLine, parseWebReviewMode, progress, reviewPathsForMode, waitsForReview,
+  type Attention, type Claim, type DashTree, type Group, type WebReviewMode,
 } from '../dashboard-model.ts'
 
 export const DASHBOARD_VIEW = 'recursive-board-dashboard'
@@ -28,6 +28,8 @@ export interface DashboardState {
   focus: string | null
   /** Review rows you ticked, by file path. */
   ticks: Record<string, boolean>
+  /** How web addresses in review notes are shown and opened. */
+  webReviewMode: WebReviewMode
 }
 
 export interface DashboardHost {
@@ -105,7 +107,7 @@ export class DashboardView extends ItemView {
     const root = roots.find((item) => item.file.path === state.root) ?? null
     const cards = cardsInScope(all, root, tree)
     const focus = all.find((item) => item.area && item.file.path === state.focus) ?? null
-    const reviews = await this.reviews(cards, state.you, tree, focus)
+    const reviews = await this.reviews(cards, state.you, state.webReviewMode, tree, focus)
     if (generation !== this.generation) return
 
     const el = this.contentEl
@@ -167,7 +169,7 @@ export class DashboardView extends ItemView {
   }
 
   private async reviews(
-    cards: WorkItemMeta[], you: string, tree: DashTree<WorkItemMeta>, focus: WorkItemMeta | null,
+    cards: WorkItemMeta[], you: string, webReviewMode: WebReviewMode, tree: DashTree<WorkItemMeta>, focus: WorkItemMeta | null,
   ): Promise<ReviewRow[]> {
     const rows: ReviewRow[] = []
     for (const card of cards) {
@@ -176,7 +178,7 @@ export class DashboardView extends ItemView {
       const area = groupUnder(card, focus, tree)
       const group = { area, name: groupName(area, focus) }
       const what = line?.what || 'Open the card.'
-      const paths = line?.paths.length ? line.paths : [card.file.path]
+      const paths = reviewPathsForMode(line?.paths ?? [], card.file.path, webReviewMode)
       for (const path of paths) rows.push({ card, path, what, group })
     }
     return rows.sort((a, b) =>
@@ -209,8 +211,8 @@ export class DashboardView extends ItemView {
     }
     panel.createDiv({
       cls: 'wi-dash-muted',
-      text: 'Files that wait for your review. Click a name to open it, and tick it when you have looked. ' +
-        'When every file of a card is ticked, approve the card or send it back.',
+      text: 'Files that wait for your review. Click a name to open it, and tick each file when you have looked. ' +
+        'When every file of a card is ticked, approve the card or send it back. Web pages have no tick.',
     })
     const table = panel.createEl('table', { cls: 'wi-dash-table' })
     const header = table.createEl('thead').createEl('tr')
@@ -225,9 +227,10 @@ export class DashboardView extends ItemView {
     // Approve and Send back show once every file of the card is ticked.
     const verdicts = new Map<WorkItemMeta, HTMLElement>()
     const pathsOf = (card: WorkItemMeta) => rows.filter((row) => row.card === card).map((row) => row.path)
+    const filePathsOf = (card: WorkItemMeta) => fileReviewPaths(pathsOf(card))
     const syncVerdict = (card: WorkItemMeta) => {
       const ticks = this.host.state().ticks
-      verdicts.get(card)?.toggleClass('wi-dash-hidden', !pathsOf(card).every((path) => ticks[path] === true))
+      verdicts.get(card)?.toggleClass('wi-dash-hidden', !allReviewFilesTicked(pathsOf(card), ticks))
     }
     rows.forEach((row, i) => {
       const key = groupKey(row.group)
@@ -250,25 +253,32 @@ export class DashboardView extends ItemView {
 
       const tr = body.createEl('tr')
       groupRows.get(key)?.push(tr)
-      const tick = tr.createEl('td').createEl('input', { type: 'checkbox', attr: { 'aria-label': 'Reviewed' } })
-      tick.checked = state.ticks[row.path] === true
-      tr.toggleClass('is-ticked', tick.checked)
-      tick.onchange = async () => {
+      const web = isWebAddress(row.path)
+      const tickCell = tr.createEl('td')
+      if (!web) {
+        const tick = tickCell.createEl('input', { type: 'checkbox', attr: { 'aria-label': 'Reviewed' } })
+        tick.checked = state.ticks[row.path] === true
         tr.toggleClass('is-ticked', tick.checked)
-        const ticks = { ...this.host.state().ticks }
-        if (tick.checked) ticks[row.path] = true
-        else delete ticks[row.path]
-        await this.host.save({ ticks })
-        syncVerdict(row.card)
+        tick.onchange = async () => {
+          tr.toggleClass('is-ticked', tick.checked)
+          const ticks = { ...this.host.state().ticks }
+          if (tick.checked) ticks[row.path] = true
+          else delete ticks[row.path]
+          await this.host.save({ ticks })
+          syncVerdict(row.card)
+        }
       }
 
-      const web = isWebAddress(row.path)
       const name = web ? row.path.replace(/^https?:\/\//, '').replace(/\/$/, '') : row.path.split('/').pop() ?? row.path
       const ext = web ? '' : name.includes('.') ? name.split('.').pop()!.toLowerCase() : 'md'
       const nameCell = tr.createEl('td').createSpan('wi-dash-name')
       setIcon(nameCell.createSpan('wi-dash-icon'),
         web ? 'globe-2' : ext === 'md' ? 'file-text' : ext === 'pdf' ? 'file' : 'file-spreadsheet')
-      this.link(nameCell, name, () => web ? this.openWeb(row.path) : this.openPath(row.path))
+      if (web && Platform.isMobileApp && isLoopbackWebAddress(row.path)) {
+        nameCell.createSpan({ cls: 'wi-dash-muted', text: 'Open it on the computer that runs it' })
+      } else {
+        this.link(nameCell, name, () => web ? this.openWeb(row.path, state.webReviewMode) : this.openPath(row.path))
+      }
       tr.createEl('td', { cls: 'wi-dash-muted', text: web ? 'Web page' : TYPES[ext] ?? ext.toUpperCase() })
 
       if (!previous || previous.card !== row.card) {
@@ -277,15 +287,17 @@ export class DashboardView extends ItemView {
         this.link(tr.createEl('td', { attr: { rowspan: span } }), row.card.title, () => this.openFile(row.card.file))
         const check = tr.createEl('td', { cls: 'wi-dash-muted wi-dash-check', attr: { rowspan: span } })
         check.createDiv({ text: row.what })
-        const box = check.createDiv('wi-dash-verdict')
         const { card } = row
-        box.createEl('button', { text: 'Approve', cls: 'mod-cta' }).onclick = () =>
-          void this.verdict(card, { verdict: 'approve', you: this.host.state().you }, pathsOf(card))
-        box.createEl('button', { text: 'Send back' }).onclick = () =>
-          new SendBackModal(this.app, card.title, (comment) =>
-            void this.verdict(card, { verdict: 'send back', you: this.host.state().you, comment }, pathsOf(card))).open()
-        verdicts.set(card, box)
-        syncVerdict(card)
+        if (filePathsOf(card).length > 0) {
+          const box = check.createDiv('wi-dash-verdict')
+          box.createEl('button', { text: 'Approve', cls: 'mod-cta' }).onclick = () =>
+            void this.verdict(card, { verdict: 'approve', you: this.host.state().you }, filePathsOf(card))
+          box.createEl('button', { text: 'Send back' }).onclick = () =>
+            new SendBackModal(this.app, card.title, (comment) =>
+              void this.verdict(card, { verdict: 'send back', you: this.host.state().you, comment }, filePathsOf(card))).open()
+          verdicts.set(card, box)
+          syncVerdict(card)
+        }
       }
       const file = this.app.vault.getAbstractFileByPath(row.path)
       tr.createEl('td', {
@@ -424,13 +436,17 @@ export class DashboardView extends ItemView {
   }
 
   /**
-   * A web address, such as a grill page, opens in a Web viewer tab when that core plugin is on.
+   * A web address opens in a Web viewer tab when that core plugin is on.
    * Otherwise, and on a phone, it opens in the browser.
    */
-  private async openWeb(url: string): Promise<void> {
+  private async openWeb(url: string, mode: WebReviewMode): Promise<void> {
+    if (mode === 'browser') {
+      window.open(url)
+      return
+    }
     // Obsidian's own registry, missing from its type definitions.
     const plugins = (this.app as unknown as { internalPlugins?: { getEnabledPluginById?: (id: string) => unknown } }).internalPlugins
-    if (Platform.isDesktopApp && plugins?.getEnabledPluginById?.('webviewer')) {
+    if (mode === 'webviewer' && Platform.isDesktopApp && plugins?.getEnabledPluginById?.('webviewer')) {
       await this.app.workspace.getLeaf('tab').setViewState({ type: 'webviewer', state: { url, navigate: true }, active: true })
     } else window.open(url)
   }
@@ -465,5 +481,6 @@ export function parseDashboardState(value: unknown): DashboardState {
     root: typeof record['root'] === 'string' ? record['root'] : '',
     focus: typeof record['focus'] === 'string' ? record['focus'] : null,
     ticks,
+    webReviewMode: parseWebReviewMode(record['webReviewMode']),
   }
 }
