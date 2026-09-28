@@ -55,8 +55,9 @@ person made it.
 
 ## The raw Properties panel
 
-On a work item, the plugin hides Obsidian's raw Properties panel. The meta strip says the same
-facts in words, and acts on them: a role, owner or creator opens its note, "Waits on" opens each
+On a work item, the plugin hides Obsidian's raw Properties panel. The meta strip takes its place,
+under the note's title, and says the same facts in words. The breadcrumbs stop at the parent when
+the note shows its own title. The strip acts on the facts: a role, owner or creator opens its note, "Waits on" opens each
 dependency, the id copies itself, and the breadcrumbs jump to each ancestor. The strip's
 Properties button shows the raw panel to edit a field. The choice lasts until another note opens.
 Other notes keep Obsidian's panel.
