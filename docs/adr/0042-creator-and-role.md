@@ -18,7 +18,7 @@ people notes can use them.
 
 The names are plain, not links. The first version wrote links, and every card and Knowledge note
 then drew a graph edge to its creator: the graph became one star around each person. A person or
-role note lists what it made with a Bases table instead (`creator == "Victor"`), and the strip
+role note lists what it made with a Bases table instead (`creator == "Ana"`), and the strip
 still opens the note. `agent` keeps its one job: the unique id of the worker
 that holds the claim (0038).
 

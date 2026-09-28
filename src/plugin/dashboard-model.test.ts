@@ -54,14 +54,14 @@ test('the scope holds live cards under the chosen root, not roots, areas or arch
 test('a card waits for review when it is yours, in doing, with no open child', () => {
   const { add, tree } = vault()
   const root = add('Home', null)
-  const card = add('Check the quote', root, { status: 'doing', owner: 'Victor' })
-  assert.equal(waitsForReview(card, 'victor', tree), true)
+  const card = add('Check the quote', root, { status: 'doing', owner: 'Ana' })
+  assert.equal(waitsForReview(card, 'ana', tree), true)
   assert.equal(waitsForReview(card, 'Sam', tree), false)
   assert.equal(waitsForReview(card, '', tree), false)
   const step = add('Step', card, { status: 'doing' })
-  assert.equal(waitsForReview(card, 'Victor', tree), false)
+  assert.equal(waitsForReview(card, 'Ana', tree), false)
   step.status = 'done'
-  assert.equal(waitsForReview(card, 'Victor', tree), true)
+  assert.equal(waitsForReview(card, 'Ana', tree), true)
 })
 
 test('the review line gives what to check and the files to open', () => {
@@ -149,19 +149,19 @@ test('an agent is working, idle, or finished', () => {
   const working = add('Working', area, { status: 'doing', agent: 'claude', mtime: now - 60_000 })
   const idle = add('Idle', area, { status: 'doing', agent: 'codex', mtime: now - 2 * IDLE_MS })
   const fresh = add('Fresh step', idle, { status: 'doing', mtime: now - 1000 })
-  const handed = add('Handed over', area, { status: 'doing', agent: 'claude', owner: 'Victor', mtime: now })
+  const handed = add('Handed over', area, { status: 'doing', agent: 'claude', owner: 'Ana', mtime: now })
   const stepsDone = add('Steps done', area, { status: 'doing', agent: 'claude', mtime: now - 5000 })
   add('Only step', stepsDone, { status: 'done', mtime: now - 5000 })
   const closed = add('Closed', area, { status: 'done', agent: 'claude', mtime: now - 3 * IDLE_MS })
 
-  let [group] = agentGroups(cardsInScope(items, null, tree), 'Victor', tree, now)
+  let [group] = agentGroups(cardsInScope(items, null, tree), 'Ana', tree, now)
   // The idle card's child changed a second ago, so its claim is live.
   assert.deepEqual(group!.working.map((claim) => claim.card), [idle, working])
   assert.equal(group!.working[0]!.active, fresh.mtime)
   assert.deepEqual(group!.finished.map((claim) => claim.card), [handed, stepsDone, closed])
 
   fresh.mtime = now - 2 * IDLE_MS
-  ;[group] = agentGroups(cardsInScope(items, null, tree), 'Victor', tree, now)
+  ;[group] = agentGroups(cardsInScope(items, null, tree), 'Ana', tree, now)
   assert.deepEqual(group!.idle.map((claim) => claim.card), [idle])
 })
 
@@ -181,8 +181,8 @@ test('a focus narrows to one area and groups by the next area down', () => {
   assert.deepEqual(names(null), ['Dev 1/3', 'Gym 0/1'])
   assert.deepEqual(names(dev), ['Board 1/1', 'Theme 0/1', 'Directly in Dev 0/1'])
   assert.deepEqual(names(board), ['Directly in Board 1/1'])
-  assert.deepEqual(agentGroups(cards, 'Victor', tree, 0, dev).map((group) => group.name), ['Theme'])
-  assert.deepEqual(agentGroups(cards, 'Victor', tree, 0, board), [])
+  assert.deepEqual(agentGroups(cards, 'Ana', tree, 0, dev).map((group) => group.name), ['Theme'])
+  assert.deepEqual(agentGroups(cards, 'Ana', tree, 0, board), [])
 })
 
 test('the dashboard flags a started card that still waits, and a wait on an archived card', () => {

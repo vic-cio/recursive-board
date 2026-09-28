@@ -20,7 +20,7 @@ export const LINK_FIELDS = {
 } as const
 export type LinkField = keyof typeof LINK_FIELDS
 
-/** The plain name to write. A link given by habit becomes its target: `[[Victor]]` is `Victor`. */
+/** The plain name to write. A link given by habit becomes its target: `[[Ana]]` is `Ana`. */
 export function asName(name: string): string {
   const plain = displayName(name)
   if (plain === undefined) throw new Error('a name cannot be empty.')
@@ -33,7 +33,7 @@ export function displayName(value: unknown): string | undefined {
   return parseWikilink(value) ?? value.trim()
 }
 
-/** "Checker (gpt-6-luna)", "Victor", or undefined when there is no name. */
+/** "Checker (gpt-6-luna)", "Ana", or undefined when there is no name. */
 export function authorLabel(name: string | undefined, model: string | undefined): string | undefined {
   const who = displayName(name)
   if (who === undefined) return undefined
