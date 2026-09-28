@@ -5,7 +5,7 @@ status: accepted
 
 The plugin registers one view of its own, the dashboard. A ribbon icon and the command "Open
 dashboard" open it in a tab, and a second call reuses that tab, like the graph view. It reads the
-index and card text. It writes no work item.
+index and card text. Its one write is a review verdict ([0043](0043-review-verdicts.md)).
 
 It has three panels:
 
@@ -14,6 +14,9 @@ It has three panels:
   what to check and lists each file to open as a vault-relative path in backticks. A `wi note`
   prefix before it is fine. With no such line, the row opens the card. Markdown opens in Obsidian.
   Another file opens in its own app on a desktop, and in Obsidian on a phone.
+  The line may also list a web address (`http://` or `https://`), such as the local page of a
+  grill interview. It opens in a Web viewer tab on a desktop when that core plugin is on, and in
+  the browser otherwise. A web address is not a vault file, so it has no Changed date.
 - **Progress.** Leaf cards per project, done out of total. A board is a container, so it does not
   count.
 - **Agents.** Cards with an `agent`, per project: working, idle, and recently finished. A claim is

@@ -70,8 +70,13 @@ export function waitsForReview<T extends DashItem>(item: T, you: string, tree: D
 export interface ReviewLine {
   /** What to check, with the file paths taken out. */
   what: string
-  /** Vault-relative paths written in backticks, each with an extension. */
+  /** Vault-relative paths written in backticks, each with an extension, and web addresses. */
   paths: string[]
+}
+
+/** An http or https address, such as a grill page, not a vault path. */
+export function isWebAddress(path: string): boolean {
+  return /^https?:\/\/\S+$/.test(path)
 }
 
 /**
@@ -83,7 +88,8 @@ export function parseReviewLine(text: string): ReviewLine | null {
   if (!match) return null
   const line = match[1]!
   return {
-    paths: [...line.matchAll(/`([^`]+\.[A-Za-z0-9]+)`/g)].map((found) => found[1]!),
+    paths: [...line.matchAll(/`([^`]+)`/g)].map((found) => found[1]!)
+      .filter((path) => isWebAddress(path) || /\.[A-Za-z0-9]+$/.test(path)),
     what: line.replace(/`[^`]+`/g, '').replace(/[\s:,]+([.;]?)\s*$/, '$1').trim(),
   }
 }

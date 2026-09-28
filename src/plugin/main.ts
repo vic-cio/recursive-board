@@ -70,6 +70,7 @@ export default class RecursiveBoardPlugin extends Plugin {
 
     this.registerView(DASHBOARD_VIEW, (leaf) => new DashboardView(leaf, {
       index: this.index,
+      actions: this.actions,
       state: () => this.dashboard,
       save: (patch) => this.saveDashboard(patch),
     }))

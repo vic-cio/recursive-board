@@ -20,6 +20,7 @@ import { inheritedChildFields, renderWorkItem } from '../shared/work-item.ts'
 import { areaTagFor, type AreaNode } from '../shared/area-tags.ts'
 import { dependencyEdit, dependencyPath } from '../shared/dependencies.ts'
 import { asName } from '../shared/authorship.ts'
+import { applyVerdict, type Verdict } from '../shared/review.ts'
 import type { WorkItemIndex, WorkItemMeta } from './index.ts'
 import { UndoStack } from './undo.ts'
 
@@ -95,6 +96,25 @@ export class Actions {
       if (waits.length > 0) new Notice(`${meta.title} still waits on ${waits.map((dependency) => dependency.title).join(', ')}.`)
       if (meta.blocked) new Notice(`${meta.title} is marked blocked.`)
     }
+  }
+
+  /**
+   * Approve or send back a card that waits for your review (docs/adr/0043-review-verdicts.md).
+   * The note and the frontmatter change are one write to the card. Returns true when it was written.
+   */
+  async review(meta: WorkItemMeta, verdict: Verdict): Promise<boolean> {
+    const what = verdict.verdict === 'approve' ? `approve ${meta.title}` : `send back ${meta.title}`
+    const done = await this.run(what, async () => {
+      let before = ''
+      const after = await this.app.vault.process(meta.file, (data) => {
+        before = data
+        return applyVerdict(data, verdict)
+      })
+      this.undoStack.record({ kind: 'edit', path: meta.file.path, before, after, label: what })
+      return true
+    })
+    if (done) this.undoableNotice(verdict.verdict === 'approve' ? `Approved ${meta.title}` : `Sent back ${meta.title}`)
+    return done === true
   }
 
   /** A card this one may wait on: not itself, not a root, and not one that already waits on it. */

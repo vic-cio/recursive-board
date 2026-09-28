@@ -2,7 +2,7 @@ import { test } from 'node:test'
 import assert from 'node:assert/strict'
 
 import {
-  agentGroups, areaOf, cardsInScope, IDLE_MS, needsAttention, parseReviewLine, progress, waitsForReview, type DashItem, type DashTree,
+  agentGroups, areaOf, cardsInScope, IDLE_MS, isWebAddress, needsAttention, parseReviewLine, progress, waitsForReview, type DashItem, type DashTree,
 } from './dashboard-model.ts'
 
 interface Fake extends DashItem { parent: Fake | null; mtime: number }
@@ -76,6 +76,17 @@ test('the review line gives what to check and the files to open', () => {
 test('the newest review line wins, after a wi note prefix', () => {
   const text = '- **Review:** Old: `a.pdf`\n- 2026-09-28 09:31, claude: **Review:** Check the rates: `Rates/rates.csv`\n'
   assert.deepEqual(parseReviewLine(text), { what: 'Check the rates', paths: ['Rates/rates.csv'] })
+})
+
+test('a review line may list a web address', () => {
+  const text = '- 2026-09-28 15:10, claude: **Review:** Grill: board layout: `http://127.0.0.1:61804/`\n'
+  assert.deepEqual(parseReviewLine(text), { what: 'Grill: board layout', paths: ['http://127.0.0.1:61804/'] })
+})
+
+test('isWebAddress tells a web address from a vault path', () => {
+  assert.equal(isWebAddress('http://127.0.0.1:61804/'), true)
+  assert.equal(isWebAddress('https://example.com/a.pdf'), true)
+  assert.equal(isWebAddress('Work/35b/report.md'), false)
 })
 
 test('progress counts leaf cards per area, with no area last', () => {
