@@ -61,6 +61,23 @@ test('createItem with the area template writes a backlog area by default', async
   assert.match(text, /## Objective/)
 })
 
+test('createItem wraps placeholders in brief body fields', async () => {
+  fixture = seed()
+  const created = await createItem(await reload(fixture), {
+    title: 'Stream', parent: 'wi-0001',
+    brief: {
+      objective: 'Use <port> for <topic>.',
+      context: ['See <path/to/source>.'],
+      criteria: ['The link [docs](<docs/index.md>) stays intact.'],
+    },
+  })
+
+  const body = readFileSync(created.path, 'utf8')
+  assert.match(body, /Use `<port>` for `<topic>`\./)
+  assert.match(body, /See `<path\/to\/source>`\./)
+  assert.match(body, /\[docs\]\(<docs\/index\.md>\)/)
+})
+
 test('createItem with the area template accepts an explicit status', async () => {
   fixture = seed()
   const created = await createItem(await reload(fixture), {

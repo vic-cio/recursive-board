@@ -48,3 +48,9 @@ test('notes from two writers that loaded the same vault both survive', async () 
   assert.match(textOf(fixture), /, a: From A\./)
   assert.match(textOf(fixture), /, b: From B\./)
 })
+
+test('addNote wraps placeholders in note text and preserves links', async () => {
+  fixture = seed()
+  await addNote(await loadVault(fixture.root), 'Task', 'Set <port>; see [docs](<docs/index.md>).', undefined, now)
+  assert.match(textOf(fixture), /Set `<port>`; see \[docs\]\(<docs\/index\.md>\)\./)
+})
