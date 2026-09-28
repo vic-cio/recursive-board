@@ -5,7 +5,7 @@ status: accepted
 
 The plugin registers one view of its own, the dashboard. A ribbon icon and the command "Open
 dashboard" open it in a tab, and a second call reuses that tab, like the graph view. It reads the
-index and card text. It writes no work item.
+index and card text. Its one write is a review verdict ([0043](0043-review-verdicts.md)).
 
 It has three panels:
 

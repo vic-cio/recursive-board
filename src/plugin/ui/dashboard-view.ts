@@ -1,11 +1,15 @@
 /**
  * The dashboard: one page over every board, opened from the ribbon like the graph view
  * (docs/adr/0040-dashboard-view.md). It shows what waits for your review, progress per area, and
- * what each agent works on. It writes no work item. Its own state lives in the plugin's data.
+ * what each agent works on. Its one write is a review verdict, through `Actions.review`
+ * (docs/adr/0043-review-verdicts.md). Its own state lives in the plugin's data.
  */
 import { ItemView, Notice, Platform, setIcon, TFile, type WorkspaceLeaf } from 'obsidian'
 
+import type { Actions } from '../actions.ts'
 import type { WorkItemIndex, WorkItemMeta } from '../index.ts'
+import type { Verdict } from '../../shared/review.ts'
+import { SendBackModal } from './send-back-modal.ts'
 import {
   ago, agentGroups, areaPath, cardsInScope, groupName, groupUnder, inFocus, needsAttention, parseReviewLine, progress, waitsForReview,
   type Attention, type Claim, type DashTree, type Group,
@@ -28,6 +32,7 @@ export interface DashboardState {
 
 export interface DashboardHost {
   index: WorkItemIndex
+  actions: Actions
   state(): DashboardState
   save(patch: Partial<DashboardState>): Promise<void>
 }
@@ -198,7 +203,11 @@ export class DashboardView extends ItemView {
       panel.createDiv({ cls: 'wi-dash-muted', text: 'Set your name in the Recursive Board settings. A card waits for your review when you own it, it is in doing, and it has no open child.' })
       return
     }
-    panel.createDiv({ cls: 'wi-dash-muted', text: 'Files that wait for your review. Click a name to open it.' })
+    panel.createDiv({
+      cls: 'wi-dash-muted',
+      text: 'Files that wait for your review. Click a name to open it, and tick it when you have looked. ' +
+        'When every file of a card is ticked, approve the card or send it back.',
+    })
     const table = panel.createEl('table', { cls: 'wi-dash-table' })
     const header = table.createEl('thead').createEl('tr')
     for (const title of ['', 'Name', 'Type', 'Card', 'Check', 'Changed']) header.createEl('th', { text: title })
@@ -209,6 +218,13 @@ export class DashboardView extends ItemView {
     }
 
     const groupRows = new Map<string, HTMLElement[]>()
+    // Approve and Send back show once every file of the card is ticked.
+    const verdicts = new Map<WorkItemMeta, HTMLElement>()
+    const pathsOf = (card: WorkItemMeta) => rows.filter((row) => row.card === card).map((row) => row.path)
+    const syncVerdict = (card: WorkItemMeta) => {
+      const ticks = this.host.state().ticks
+      verdicts.get(card)?.toggleClass('wi-dash-hidden', !pathsOf(card).every((path) => ticks[path] === true))
+    }
     rows.forEach((row, i) => {
       const key = groupKey(row.group)
       const previous = rows[i - 1]
@@ -239,6 +255,7 @@ export class DashboardView extends ItemView {
         if (tick.checked) ticks[row.path] = true
         else delete ticks[row.path]
         await this.host.save({ ticks })
+        syncVerdict(row.card)
       }
 
       const name = row.path.split('/').pop() ?? row.path
@@ -252,7 +269,17 @@ export class DashboardView extends ItemView {
         let span = 1
         while (rows[i + span]?.card === row.card) span++
         this.link(tr.createEl('td', { attr: { rowspan: span } }), row.card.title, () => this.openFile(row.card.file))
-        tr.createEl('td', { cls: 'wi-dash-muted wi-dash-check', text: row.what, attr: { rowspan: span } })
+        const check = tr.createEl('td', { cls: 'wi-dash-muted wi-dash-check', attr: { rowspan: span } })
+        check.createDiv({ text: row.what })
+        const box = check.createDiv('wi-dash-verdict')
+        const { card } = row
+        box.createEl('button', { text: 'Approve', cls: 'mod-cta' }).onclick = () =>
+          void this.verdict(card, { verdict: 'approve', you: this.host.state().you }, pathsOf(card))
+        box.createEl('button', { text: 'Send back' }).onclick = () =>
+          new SendBackModal(this.app, card.title, (comment) =>
+            void this.verdict(card, { verdict: 'send back', you: this.host.state().you, comment }, pathsOf(card))).open()
+        verdicts.set(card, box)
+        syncVerdict(card)
       }
       const file = this.app.vault.getAbstractFileByPath(row.path)
       tr.createEl('td', {
@@ -260,6 +287,15 @@ export class DashboardView extends ItemView {
         text: file instanceof TFile ? new Date(file.stat.mtime).toLocaleDateString(undefined, { day: 'numeric', month: 'short' }) : '',
       })
     })
+  }
+
+  /** Writes the verdict, then forgets the card's ticks: a card sent back starts its next review clean. */
+  private async verdict(card: WorkItemMeta, verdict: Verdict, paths: string[]): Promise<void> {
+    if (!(await this.host.actions.review(card, verdict))) return
+    const ticks = { ...this.host.state().ticks }
+    for (const path of paths) delete ticks[path]
+    await this.host.save({ ticks })
+    await this.render()
   }
 
   private drawProgress(panel: HTMLElement, cards: WorkItemMeta[], tree: DashTree<WorkItemMeta>, focus: WorkItemMeta | null): void {
