@@ -17,7 +17,7 @@ It has three panels:
   The line may also list a web address (`http://` or `https://`). The setting "Web pages in For
   review" controls whether those rows appear and where they open. A web row has no tick and no
   Changed date. On a phone, a loopback address stays visible without a link because it only works
-  on the computer that runs the service. See [Web rows in For review](web-review-rows.md).
+  on the computer that runs the service. See [Web rows in For review](0044-web-review-rows.md).
 - **Progress.** Leaf cards per project, done out of total. A board is a container, so it does not
   count.
 - **Agents.** Cards with an `agent`, per project: working, idle, and recently finished. A claim is
