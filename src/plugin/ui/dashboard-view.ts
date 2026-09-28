@@ -244,7 +244,15 @@ export class DashboardView extends ItemView {
     const rows = progress(cards, tree, focus)
     const done = rows.reduce((sum, row) => sum + row.done, 0)
     const total = rows.reduce((sum, row) => sum + row.total, 0)
-    this.panelHead(panel, 'bar-chart-3', 'Progress')
+    const head = this.panelHead(panel, 'bar-chart-3', 'Progress')
+    if (focus) {
+      // The trail sits at the top of the page; this is the same step up, beside the rows it changes.
+      const up = areaPath(focus, tree).at(-1) ?? null
+      const back = this.link(head, '', () => this.setFocus(up))
+      back.addClass('wi-dash-back')
+      setIcon(back.createSpan('wi-dash-icon'), 'arrow-left')
+      back.createSpan({ text: up?.title ?? 'Every area' })
+    }
     panel.createDiv({ cls: 'wi-dash-muted', text: `${done} of ${total} cards done` })
     const list = panel.createDiv('wi-dash-projects')
     for (const row of rows) {

@@ -1093,3 +1093,4 @@
 .wi-dash-project-name { display: inline-flex; align-items: center; gap: var(--size-4-1); }
 .wi-dash-project:not(.is-area) { cursor: default; }
 .wi-dash-project:not(.is-area):hover { background: none; }
+.wi-dash-back { margin-left: auto; display: inline-flex; align-items: center; gap: var(--size-4-1); font-size: var(--font-ui-small); }
