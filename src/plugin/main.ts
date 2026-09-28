@@ -298,9 +298,15 @@ export default class RecursiveBoardPlugin extends Plugin {
       if (await adapter.exists(path)) {
         const ticks = mergeTicks(personTicks(this.storedData, device.you), parsePersonTicks(await adapter.read(path)))
         this.storedData = withPersonTicks(this.storedData, device.you, ticks)
-        await adapter.remove(path)
-        if ((await adapter.list(folder)).files.length === 0) await adapter.rmdir(folder, false)
-        changed = true
+        // Save before the file goes, so a failed clean-up never loses a tick.
+        await this.saveData(this.storedData)
+        changed = false
+        try {
+          await adapter.remove(path)
+          if ((await adapter.list(folder)).files.length === 0) await adapter.rmdir(folder, false)
+        } catch (error) {
+          console.warn('Recursive Board could not remove the old person file', error)
+        }
       }
     }
     if (changed) await this.saveData(this.storedData)
