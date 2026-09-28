@@ -96,7 +96,7 @@ Set `WI_VAULT` when the agent cannot find the intended vault from its working fo
 | `WI_REFOCUS_BYTES=2600000` | Set Claude's transcript growth threshold in bytes. The default is 2,600,000 bytes. |
 | `WI_REFOCUS_NOW=1` | Request one refocus when the next user prompt arrives. Unset or change its value before you request another refocus. |
 | `WI_CARD=wi-...` | Select one work item directly. This takes priority over `WI_AGENT`. |
-| `WI_AGENT=codex` | Select the unique deepest doing claim for one agent. The hook stays silent when claims tie or have a broken chain. |
+| `WI_AGENT=codex` | Select the deepest doing claim when every claim lies on one valid ancestor chain. Claims on separate branches stay silent. |
 | `WI_VAULT=/path/to/vault` | Select the vault when normal `wi` lookup cannot find it. |
 
 `wi objective <ref>` runs without a hook. It shows missing Objectives with `[Objective missing]`. It stops and reports a missing parent or cycle. The output has a fixed limit.
