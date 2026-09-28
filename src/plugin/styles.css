@@ -1104,6 +1104,36 @@
 .wi-dash-project:not(.is-area):hover { background: none; }
 .wi-dash-back { margin-left: auto; display: inline-flex; align-items: center; gap: var(--size-4-1); font-size: var(--font-ui-small); }
 
+/* Keep each review target and its context together on phones. */
+.wi-dash-phone-card, .wi-dash-phone-check { display: none; }
+@media (max-width: 600px) {
+  .wi-dash, .wi-dash-lower, .wi-dash-column, .wi-dash-panel { min-width: 0; max-width: 100%; }
+  .wi-dash { padding: var(--size-4-3); }
+  .wi-dash-panel { overflow-x: visible; }
+  .wi-dash-table { display: block; width: 100%; }
+  .wi-dash-table thead { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
+  .wi-dash-table tbody { display: grid; gap: var(--size-4-2); min-width: 0; }
+  .wi-dash-table tr.wi-dash-review-row { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); min-width: 0; border: 1px solid var(--background-modifier-border); border-radius: var(--radius-m); background: var(--background-primary); }
+  .wi-dash-table tr.wi-dash-review-row.is-ticked td:not(:first-child) { opacity: .75; }
+  .wi-dash-table tr.wi-dash-review-row > td { display: block; min-width: 0; padding: var(--size-4-2); border: 0; }
+  .wi-dash-review-tick { grid-column: 1; grid-row: 1; }
+  .wi-dash-review-target { grid-column: 2; grid-row: 1; }
+  .wi-dash-phone-card, .wi-dash-phone-check { display: block !important; grid-column: 1 / -1; }
+  .wi-dash-phone-card { grid-row: 2; font-weight: var(--font-semibold); }
+  .wi-dash-phone-check { grid-row: 3; }
+  .wi-dash-review-type { grid-column: 1; grid-row: 4; }
+  .wi-dash-review-date { grid-column: 2; grid-row: 4; white-space: normal; }
+  .wi-dash-desktop-card, .wi-dash-desktop-check { display: none !important; }
+  .wi-dash-table td[data-label]::before { display: block; margin-bottom: var(--size-2-1); color: var(--text-faint); font-size: var(--font-ui-smaller); font-weight: var(--font-normal); }
+  .wi-dash-table td[data-label]::before { content: attr(data-label); }
+  .wi-dash-table tr.wi-dash-group { display: block; }
+  .wi-dash-table tr.wi-dash-group td { display: block; width: 100%; padding: var(--size-4-2) 0 0; border: 0; }
+  .wi-dash-name { min-width: 0; align-items: flex-start; overflow-wrap: anywhere; }
+  .wi-dash-name a, .wi-dash-phone-card a { min-width: 0; overflow-wrap: anywhere; word-break: break-word; }
+  .wi-dash-check, .wi-dash-check > div { min-width: 0; overflow-wrap: anywhere; word-break: break-word; }
+  .wi-dash-verdict button { white-space: normal; }
+}
+
 /* A card that waits on other cards (docs/adr/0041-card-dependencies.md). */
 .wi-badge-waiting {
   background: rgba(var(--wi-rgb-options), var(--wi-tint-pill));
