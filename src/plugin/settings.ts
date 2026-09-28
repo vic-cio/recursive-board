@@ -47,6 +47,7 @@ export class StatusColorSettingTab extends PluginSettingTab {
   private readonly changeYou: (you: string) => Promise<void>
   private readonly webReviewMode: () => WebReviewMode
   private readonly changeWebReviewMode: (mode: WebReviewMode) => Promise<void>
+  private readonly personNames: () => string[]
 
   constructor(
     app: App,
@@ -59,6 +60,7 @@ export class StatusColorSettingTab extends PluginSettingTab {
     changeYou: (you: string) => Promise<void>,
     webReviewMode: () => WebReviewMode,
     changeWebReviewMode: (mode: WebReviewMode) => Promise<void>,
+    personNames: () => string[],
   ) {
     super(app, plugin)
     this.colors = colors
@@ -69,6 +71,7 @@ export class StatusColorSettingTab extends PluginSettingTab {
     this.changeYou = changeYou
     this.webReviewMode = webReviewMode
     this.changeWebReviewMode = changeWebReviewMode
+    this.personNames = personNames
   }
 
   override display(): void {
@@ -119,10 +122,15 @@ export class StatusColorSettingTab extends PluginSettingTab {
     new Setting(containerEl)
       .setName('Your name')
       .setDesc('The owner name on cards that wait for your review. The dashboard lists a card in doing with this owner and no open child.')
-      .addText((text) => text
-        .setPlaceholder('Name')
-        .setValue(this.you())
-        .onChange((value) => void this.changeYou(value.trim())))
+      .addText((text) => {
+        const list = containerEl.createEl('datalist')
+        list.id = 'recursive-board-person-names'
+        for (const name of this.personNames()) list.createEl('option', { attr: { value: name } })
+        text.inputEl.setAttribute('list', list.id)
+        text.setPlaceholder('Name')
+          .setValue(this.you())
+          .onChange((value) => void this.changeYou(value.trim()))
+      })
     new Setting(containerEl)
       .setName('Web pages in For review')
       .addDropdown((dropdown) => dropdown

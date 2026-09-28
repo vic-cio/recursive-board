@@ -33,9 +33,10 @@ of every area would grow unreadable as boards are added.
 A link on the dashboard opens in a new tab, so the dashboard stays open. Its icon is `gauge`,
 because Obsidian's new-canvas button already uses `layout-dashboard`.
 
-The dashboard covers every root, or one root that a picker chooses. The name, the root, the focus,
-web row setting and the ticks in the review table are the plugin's own data, not the vault's. A
-tick records that you looked at a file. It does not change the card. Web rows have no tick.
+The dashboard covers every root, or one root that a picker chooses. The name, the root, and the
+focus are device settings. Review ticks follow the person named in the setting. See
+[Personal dashboard state](personal-dashboard-state.md). A tick records that you looked at a
+file. It does not change the card. Web rows have no tick.
 
 ## Why
 

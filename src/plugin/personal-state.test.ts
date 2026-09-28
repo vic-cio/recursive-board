@@ -22,6 +22,13 @@ test('legacy state splits into device choices and person ticks, with device valu
   })
 })
 
+test('invalid device values fall back to valid legacy choices', () => {
+  assert.deepEqual(splitLegacyDashboardState(
+    { you: 'Ana', root: 'Main', focus: 'Area', webReviewMode: 'browser' },
+    { you: 2, root: null, focus: 5, webReviewMode: 'bad' },
+  ).device, { you: 'Ana', root: 'Main', focus: 'Area', webReviewMode: 'browser' })
+})
+
 test('person tick files parse and merge true ticks without dropping synced ticks', () => {
   assert.deepEqual(parsePersonTicks('{"ticks":{"a":true,"b":false,"c":1}}'), { a: true })
   assert.deepEqual(mergeTicks({ a: true, b: true }, { a: true, c: true }), { a: true, b: true, c: true })

@@ -2,7 +2,7 @@
  * The dashboard: one page over every board, opened from the ribbon like the graph view
  * (docs/adr/0040-dashboard-view.md). It shows what waits for your review, progress per area, and
  * what each agent works on. Its one write is a review verdict, through `Actions.review`
- * (docs/adr/0043-review-verdicts.md). Its own state lives in the plugin's data.
+ * (docs/adr/0043-review-verdicts.md). Device choices and person ticks have separate storage.
  */
 import { ItemView, Notice, Platform, setIcon, TFile, type WorkspaceLeaf } from 'obsidian'
 
@@ -11,9 +11,10 @@ import type { WorkItemIndex, WorkItemMeta } from '../index.ts'
 import type { Verdict } from '../../shared/review.ts'
 import { SendBackModal } from './send-back-modal.ts'
 import {
-  ago, agentGroups, allReviewFilesTicked, areaPath, cardsInScope, fileReviewPaths, groupName, groupUnder, inFocus, isLoopbackWebAddress, isWebAddress, needsAttention, parseReviewLine, parseWebReviewMode, progress, reviewPathsForMode, waitsForReview,
+  ago, agentGroups, allReviewFilesTicked, areaPath, cardsInScope, fileReviewPaths, groupName, groupUnder, inFocus, isLoopbackWebAddress, isWebAddress, needsAttention, parseReviewLine, progress, reviewPathsForMode, waitsForReview,
   type Attention, type Claim, type DashTree, type Group, type WebReviewMode,
 } from '../dashboard-model.ts'
+import type { DashboardTicks } from '../personal-state.ts'
 
 export const DASHBOARD_VIEW = 'recursive-board-dashboard'
 /** Not `layout-dashboard`: Obsidian's new-canvas button already uses it. */
@@ -27,7 +28,7 @@ export interface DashboardState {
   /** The focused area's path, or null to show the top areas. */
   focus: string | null
   /** Review rows you ticked, by file path. */
-  ticks: Record<string, boolean>
+  ticks: DashboardTicks
   /** How web addresses in review notes are shown and opened. */
   webReviewMode: WebReviewMode
 }
@@ -37,6 +38,8 @@ export interface DashboardHost {
   actions: Actions
   state(): DashboardState
   save(patch: Partial<DashboardState>): Promise<void>
+  personNames(): string[]
+  reloadTicks(): Promise<DashboardTicks>
 }
 
 const TYPES: Readonly<Record<string, string>> = { pdf: 'PDF', xlsx: 'Spreadsheet', csv: 'Spreadsheet', docx: 'Document', md: 'Note' }
@@ -99,6 +102,7 @@ export class DashboardView extends ItemView {
 
   async render(): Promise<void> {
     const generation = ++this.generation
+    await this.host.reloadTicks()
     const state = this.host.state()
     const tree = this.tree()
     const all = this.host.index.all()
@@ -206,7 +210,8 @@ export class DashboardView extends ItemView {
   private drawReviews(panel: HTMLElement, rows: ReviewRow[], state: DashboardState): void {
     this.panelHead(panel, 'file-check', 'For review', String(rows.length))
     if (state.you.trim() === '') {
-      panel.createDiv({ cls: 'wi-dash-muted', text: 'Set your name in the Recursive Board settings. A card waits for your review when you own it, it is in doing, and it has no open child.' })
+      panel.createDiv({ cls: 'wi-dash-muted', text: 'Choose your person note or enter your name. The dashboard lists cards in doing that you own and that have no open child.' })
+      this.namePicker(panel)
       return
     }
     panel.createDiv({
@@ -304,6 +309,17 @@ export class DashboardView extends ItemView {
         cls: 'wi-dash-muted wi-dash-nowrap',
         text: file instanceof TFile ? new Date(file.stat.mtime).toLocaleDateString(undefined, { day: 'numeric', month: 'short' }) : '',
       })
+    })
+  }
+
+  private namePicker(panel: HTMLElement): void {
+    const input = panel.createEl('input', { type: 'text', attr: { placeholder: 'Your name', 'aria-label': 'Your name' } })
+    const list = panel.createEl('datalist')
+    list.id = `wi-dash-person-names-${Math.random().toString(36).slice(2)}`
+    input.setAttribute('list', list.id)
+    for (const name of this.host.personNames()) list.createEl('option', { attr: { value: name } })
+    input.addEventListener('change', () => {
+      void this.host.save({ you: input.value.trim() })
     })
   }
 
@@ -478,20 +494,4 @@ export class DashboardView extends ItemView {
 
 function groupKey(group: Group<WorkItemMeta>): string {
   return group.area?.file.path ?? ''
-}
-
-
-export function parseDashboardState(value: unknown): DashboardState {
-  const record = typeof value === 'object' && value !== null && !Array.isArray(value) ? value as Record<string, unknown> : {}
-  const ticks: Record<string, boolean> = {}
-  if (typeof record['ticks'] === 'object' && record['ticks'] !== null) {
-    for (const [path, ticked] of Object.entries(record['ticks'])) if (ticked === true) ticks[path] = true
-  }
-  return {
-    you: typeof record['you'] === 'string' ? record['you'] : '',
-    root: typeof record['root'] === 'string' ? record['root'] : '',
-    focus: typeof record['focus'] === 'string' ? record['focus'] : null,
-    ticks,
-    webReviewMode: parseWebReviewMode(record['webReviewMode']),
-  }
 }

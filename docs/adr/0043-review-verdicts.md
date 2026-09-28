@@ -5,8 +5,8 @@ status: accepted
 
 This amends [0040](0040-dashboard-view.md), which said the dashboard writes no work item.
 
-A tick in the review table records only that you looked at a file row, on this device. Web rows
-have no tick and do not count toward a verdict. When every file row of a card is ticked, the
+A tick in the review table records only that you looked at a file row. Ticks follow the selected
+person across devices. Web rows have no tick and do not count toward a verdict. When every file row of a card is ticked, the
 card's row shows two buttons. A card with only web rows has no verdict buttons; its agent closes
 it.
 
@@ -18,8 +18,8 @@ it.
 Each verdict is one write to the card's own file: the note and the frontmatter change together.
 The rule lives in `src/shared/review.ts`, so a later `wi` command applies the same edits. A
 verdict refuses a card that is not in doing. The comment is one line, because a note is one line.
-After a verdict, the dashboard forgets the card's ticks, so a card sent back starts its next
-review clean. The notice that confirms a verdict carries Undo, like a move.
+After a verdict, the dashboard removes the card's ticks from that person's tick file, so a card
+sent back starts its next review clean. The notice that confirms a verdict carries Undo, like a move.
 
 ## Why
 

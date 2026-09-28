@@ -6,7 +6,7 @@ status: accepted
 This amends [0040](0040-dashboard-view.md) and [0043](0043-review-verdicts.md).
 
 The setting "Web pages in For review" controls web addresses in a card's newest `**Review:**`
-line. It is stored with the dashboard state in plugin data. Unknown saved values use the default.
+line. It is stored on this device. Unknown saved values use the default.
 
 - **Open in a Web viewer tab** is the default. It uses Obsidian's Web viewer when enabled on
   desktop, and opens the browser otherwise.

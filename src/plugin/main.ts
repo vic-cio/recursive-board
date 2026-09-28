@@ -23,7 +23,10 @@ import { CreateBoardModal } from './ui/create-board-modal.ts'
 import { createFirstBoard } from './first-board.ts'
 import { replaceChangedSpan, stampObservedChange } from './updated.ts'
 import { parseStatusColors, StatusColorSettingTab, type StatusColorKey, type StatusColors } from './settings.ts'
-import { DASHBOARD_ICON, DASHBOARD_VIEW, DashboardView, parseDashboardState, type DashboardState } from './ui/dashboard-view.ts'
+import { DASHBOARD_ICON, DASHBOARD_VIEW, DashboardView, type DashboardState } from './ui/dashboard-view.ts'
+import { mergeTicks, parseDeviceDashboardState, parsePersonTicks, safePersonFileName, splitLegacyDashboardState, type DashboardTicks } from './personal-state.ts'
+
+const DASHBOARD_STORAGE_KEY = 'recursive-board:dashboard'
 
 export default class RecursiveBoardPlugin extends Plugin {
   private index!: WorkItemIndex
@@ -52,7 +55,7 @@ export default class RecursiveBoardPlugin extends Plugin {
       this.storedData = Object.fromEntries(Object.entries(storedData))
     }
     this.statusColors = parseStatusColors(this.storedData.statusColors)
-    this.dashboard = parseDashboardState(this.storedData.dashboard)
+    await this.loadDashboardState()
     this.applyStatusColors()
     this.addSettingTab(new StatusColorSettingTab(
       this.app,
@@ -65,6 +68,7 @@ export default class RecursiveBoardPlugin extends Plugin {
       (you) => this.saveDashboard({ you }),
       () => this.dashboard.webReviewMode,
       (webReviewMode) => this.saveDashboard({ webReviewMode }),
+      () => this.personNames(),
     ))
 
     this.index = new WorkItemIndex(this.app, await this.readVaultConfig())
@@ -75,6 +79,8 @@ export default class RecursiveBoardPlugin extends Plugin {
       actions: this.actions,
       state: () => this.dashboard,
       save: (patch) => this.saveDashboard(patch),
+      personNames: () => this.personNames(),
+      reloadTicks: () => this.loadPersonTicks(),
     }))
     this.addRibbonIcon(DASHBOARD_ICON, 'Open dashboard', () => void this.openDashboard())
     this.addCommand({
@@ -251,11 +257,82 @@ export default class RecursiveBoardPlugin extends Plugin {
   }
 
   private async saveDashboard(patch: Partial<DashboardState>): Promise<void> {
-    this.dashboard = { ...this.dashboard, ...patch }
-    this.storedData.dashboard = this.dashboard
-    await this.saveData(this.storedData)
+    const previousTicks = this.dashboard.ticks
+    this.dashboard = { ...this.dashboard, ...patch, ...('you' in patch ? { ticks: {} } : {}) }
+    if ('ticks' in patch) await this.savePersonTicks(patch.ticks ?? {}, previousTicks)
+    const { you, root, focus, webReviewMode } = this.dashboard
+    this.app.saveLocalStorage(DASHBOARD_STORAGE_KEY, { you, root, focus, webReviewMode })
     // These change what the dashboard draws or how a row opens, so it redraws at once.
     if ('you' in patch || 'webReviewMode' in patch) this.refreshDashboards()
+  }
+
+  /** Loads device state and performs the one-time split of legacy plugin data. */
+  private async loadDashboardState(): Promise<void> {
+    const local = this.app.loadLocalStorage(DASHBOARD_STORAGE_KEY)
+    const legacy = this.storedData.dashboard
+    if (legacy !== undefined) {
+      const migration = splitLegacyDashboardState(legacy, local)
+      this.dashboard = { ...migration.device, ticks: {} }
+      const path = this.personTicksPath(migration.personName)
+      if (path && Object.keys(migration.ticks).length > 0) {
+        const current = await this.readPersonTicks(path)
+        await this.writePersonTicks(path, mergeTicks(current, migration.ticks))
+      }
+      this.app.saveLocalStorage(DASHBOARD_STORAGE_KEY, migration.device)
+      delete this.storedData.dashboard
+      await this.saveData(this.storedData)
+      this.dashboard.ticks = await this.loadPersonTicks()
+      return
+    }
+    this.dashboard = { ...parseDeviceDashboardState(local), ticks: {} }
+    this.dashboard.ticks = await this.loadPersonTicks()
+  }
+
+  private async loadPersonTicks(): Promise<DashboardTicks> {
+    const path = this.personTicksPath(this.dashboard.you)
+    if (!path) {
+      this.dashboard.ticks = {}
+      return this.dashboard.ticks
+    }
+    this.dashboard.ticks = await this.readPersonTicks(path)
+    return this.dashboard.ticks
+  }
+
+  private personTicksPath(name: string): string | null {
+    const fileName = safePersonFileName(name)
+    return fileName ? normalizePath(`${this.manifest.dir}/people/${fileName}.json`) : null
+  }
+
+  private async readPersonTicks(path: string): Promise<DashboardTicks> {
+    const adapter = this.app.vault.adapter
+    if (!(await adapter.exists(path))) return {}
+    return parsePersonTicks(await adapter.read(path))
+  }
+
+  private async writePersonTicks(path: string, ticks: DashboardTicks): Promise<void> {
+    const adapter = this.app.vault.adapter
+    const folder = path.slice(0, path.lastIndexOf('/'))
+    if (!(await adapter.exists(folder))) await adapter.mkdir(folder)
+    await adapter.write(path, JSON.stringify({ ticks }, null, 2))
+  }
+
+  private async savePersonTicks(ticks: DashboardTicks, previous: DashboardTicks): Promise<void> {
+    const path = this.personTicksPath(this.dashboard.you)
+    if (!path) return
+    const merged = await this.readPersonTicks(path)
+    for (const key of new Set([...Object.keys(previous), ...Object.keys(ticks)])) {
+      if (previous[key] === ticks[key]) continue
+      if (ticks[key]) merged[key] = true
+      else delete merged[key]
+    }
+    await this.writePersonTicks(path, merged)
+  }
+
+  private personNames(): string[] {
+    return this.app.vault.getMarkdownFiles()
+      .filter((file) => this.app.metadataCache.getFileCache(file)?.frontmatter?.['type'] === 'person')
+      .map((file) => file.basename)
+      .sort((a, b) => a.localeCompare(b))
   }
 
   /** Reuses an open dashboard tab, like the graph view. */

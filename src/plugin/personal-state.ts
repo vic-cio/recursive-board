@@ -53,7 +53,12 @@ export function splitLegacyDashboardState(legacy: unknown, device: unknown): {
 } {
   const old = record(legacy)
   const saved = record(device)
-  const pick = (key: keyof DeviceDashboardState): unknown => saved[key] !== undefined ? saved[key] : old[key]
+  const pick = (key: keyof DeviceDashboardState): unknown => {
+    const value = saved[key]
+    if (key === 'you' || key === 'root') return typeof value === 'string' ? value : old[key]
+    if (key === 'focus') return value === null || typeof value === 'string' ? value : old[key]
+    return value === 'webviewer' || value === 'browser' || value === 'off' ? value : old[key]
+  }
   const next = parseDeviceDashboardState({
     you: pick('you'), root: pick('root'), focus: pick('focus'), webReviewMode: pick('webReviewMode'),
   })
