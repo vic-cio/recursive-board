@@ -35,7 +35,7 @@ because Obsidian's new-canvas button already uses `layout-dashboard`.
 
 The dashboard covers every root, or one root that a picker chooses. The name, the root, and the
 focus are device settings. Review ticks follow the person named in the setting. See
-[Personal dashboard state](personal-dashboard-state.md). A tick records that you looked at a
+[Personal dashboard state](0045-personal-dashboard-state.md). A tick records that you looked at a
 file. It does not change the card. Web rows have no tick.
 
 ## Why
