@@ -11,7 +11,7 @@ import type { WorkItemIndex, WorkItemMeta } from '../index.ts'
 import type { Verdict } from '../../shared/review.ts'
 import { SendBackModal } from './send-back-modal.ts'
 import {
-  ago, agentGroups, areaPath, cardsInScope, groupName, groupUnder, inFocus, needsAttention, parseReviewLine, progress, waitsForReview,
+  ago, agentGroups, areaPath, cardsInScope, groupName, groupUnder, inFocus, isWebAddress, needsAttention, parseReviewLine, progress, waitsForReview,
   type Attention, type Claim, type DashTree, type Group,
 } from '../dashboard-model.ts'
 
@@ -262,12 +262,14 @@ export class DashboardView extends ItemView {
         syncVerdict(row.card)
       }
 
-      const name = row.path.split('/').pop() ?? row.path
-      const ext = name.includes('.') ? name.split('.').pop()!.toLowerCase() : 'md'
+      const web = isWebAddress(row.path)
+      const name = web ? row.path.replace(/^https?:\/\//, '').replace(/\/$/, '') : row.path.split('/').pop() ?? row.path
+      const ext = web ? '' : name.includes('.') ? name.split('.').pop()!.toLowerCase() : 'md'
       const nameCell = tr.createEl('td').createSpan('wi-dash-name')
-      setIcon(nameCell.createSpan('wi-dash-icon'), ext === 'md' ? 'file-text' : ext === 'pdf' ? 'file' : 'file-spreadsheet')
-      this.link(nameCell, name, () => this.openPath(row.path))
-      tr.createEl('td', { cls: 'wi-dash-muted', text: TYPES[ext] ?? ext.toUpperCase() })
+      setIcon(nameCell.createSpan('wi-dash-icon'),
+        web ? 'globe-2' : ext === 'md' ? 'file-text' : ext === 'pdf' ? 'file' : 'file-spreadsheet')
+      this.link(nameCell, name, () => web ? this.openWeb(row.path) : this.openPath(row.path))
+      tr.createEl('td', { cls: 'wi-dash-muted', text: web ? 'Web page' : TYPES[ext] ?? ext.toUpperCase() })
 
       if (!previous || previous.card !== row.card) {
         let span = 1
@@ -419,6 +421,18 @@ export class DashboardView extends ItemView {
   /** A new tab, so the dashboard stays open behind what it opened. */
   private async openFile(file: TFile): Promise<void> {
     await this.app.workspace.getLeaf('tab').openFile(file)
+  }
+
+  /**
+   * A web address, such as a grill page, opens in a Web viewer tab when that core plugin is on.
+   * Otherwise, and on a phone, it opens in the browser.
+   */
+  private async openWeb(url: string): Promise<void> {
+    // Obsidian's own registry, missing from its type definitions.
+    const plugins = (this.app as unknown as { internalPlugins?: { getEnabledPluginById?: (id: string) => unknown } }).internalPlugins
+    if (Platform.isDesktopApp && plugins?.getEnabledPluginById?.('webviewer')) {
+      await this.app.workspace.getLeaf('tab').setViewState({ type: 'webviewer', state: { url, navigate: true }, active: true })
+    } else window.open(url)
   }
 
   /** Markdown opens in Obsidian. Other files open in their own app on a desktop, and in Obsidian on a phone. */

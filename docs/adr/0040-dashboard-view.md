@@ -14,6 +14,9 @@ It has three panels:
   what to check and lists each file to open as a vault-relative path in backticks. A `wi note`
   prefix before it is fine. With no such line, the row opens the card. Markdown opens in Obsidian.
   Another file opens in its own app on a desktop, and in Obsidian on a phone.
+  The line may also list a web address (`http://` or `https://`), such as the local page of a
+  grill interview. It opens in a Web viewer tab on a desktop when that core plugin is on, and in
+  the browser otherwise. A web address is not a vault file, so it has no Changed date.
 - **Progress.** Leaf cards per project, done out of total. A board is a container, so it does not
   count.
 - **Agents.** Cards with an `agent`, per project: working, idle, and recently finished. A claim is
