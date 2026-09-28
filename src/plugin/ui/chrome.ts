@@ -12,7 +12,7 @@
  * The checklist shortcut and the promote control sit side by side in the top bar. The checklist itself remains below
  * the note body, where the prototype review placed it.
  */
-import { setIcon } from 'obsidian'
+import { Notice, setIcon, type TFile } from 'obsidian'
 
 import { opensAsBoard, type WorkItemMeta } from '../index.ts'
 import type { RenderContext } from './context.ts'
@@ -121,9 +121,14 @@ function renderPromoteToggle(group: HTMLElement, ctx: RenderContext, meta: WorkI
   button.addEventListener('click', () => void ctx.actions.setPromoted(meta, !meta.board))
 }
 
-/** Status, priority, owner, agent and id, and the cards it waits on. A strip of facts, not a form. */
+/**
+ * The facts of a work item, in words, and the actions on them. It stands in for the raw Properties
+ * panel, which a work item hides until the Properties button shows it (docs/adr/0042-creator-and-role.md).
+ * A person, role or dependency opens its note, and the id copies itself.
+ */
 export function renderMetaStrip(host: HTMLElement, meta: WorkItemMeta, ctx?: RenderContext): void {
   const strip = host.createDiv({ cls: 'wi-meta' })
+  const openFile = (file: TFile) => void ctx?.app.workspace.getLeaf(false).openFile(file)
 
   if (meta.status !== undefined) {
     strip.createSpan({ cls: `wi-pill is-${meta.status}`, text: statusLabel(meta.status) })
@@ -137,18 +142,56 @@ export function renderMetaStrip(host: HTMLElement, meta: WorkItemMeta, ctx?: Ren
     pill.createSpan({ text: 'Waits on ' })
     waits.forEach((dependency, i) => {
       if (i > 0) pill.createSpan({ text: ', ' })
-      const link = pill.createEl('a', { text: dependency.title, href: '#' })
-      link.addEventListener('click', (event) => {
-        event.preventDefault()
-        void ctx!.actions.open(dependency)
-      })
+      linkTo(pill, dependency.title, () => openFile(dependency.file))
     })
   }
   if (meta.priority !== undefined) strip.createSpan({ cls: 'wi-pill', text: `P${meta.priority}` })
-  if (meta.owner !== undefined) strip.createSpan({ cls: 'wi-pill', text: meta.owner })
-  if (meta.agent !== undefined) strip.createSpan({ cls: 'wi-pill is-agent', text: meta.agent })
+  if (meta.role !== undefined) {
+    const pill = strip.createSpan({ cls: 'wi-pill is-role', attr: { 'aria-label': 'The role that does this work' } })
+    namePill(pill, meta.role, meta.roleFile, openFile)
+  }
+  if (meta.owner !== undefined) {
+    const pill = strip.createSpan({ cls: 'wi-pill', attr: { 'aria-label': 'Owner' } })
+    namePill(pill, meta.owner, meta.ownerFile, openFile)
+  }
+  if (meta.agent !== undefined) strip.createSpan({ cls: 'wi-pill is-agent', text: meta.agent, attr: { 'aria-label': 'Agent working on it' } })
+  if (meta.creator !== undefined) {
+    const pill = strip.createSpan({ cls: 'wi-pill is-quiet' })
+    pill.createSpan({ text: 'By ' })
+    namePill(pill, meta.creator, meta.creatorFile, openFile)
+    if (meta.creatorModel !== undefined) pill.createSpan({ text: ` · ${meta.creatorModel}` })
+  }
   if (meta.updated !== undefined) {
     strip.createSpan({ cls: 'wi-pill is-quiet', text: `Updated ${meta.updated}` })
   }
-  if (meta.id !== undefined) strip.createSpan({ cls: 'wi-pill is-quiet', text: meta.id })
+  if (meta.id !== undefined) {
+    const id = meta.id
+    const pill = strip.createEl('button', { cls: 'wi-pill is-quiet is-copy', text: id, attr: { 'aria-label': `Copy ${id}` } })
+    pill.addEventListener('click', () => void navigator.clipboard.writeText(id)
+      .then(() => new Notice(`${id} copied`))
+      .catch(() => new Notice(`Could not copy ${id}`)))
+  }
+  if (ctx) {
+    const shown = ctx.isShowingProperties(meta.file.path)
+    const toggle = strip.createEl('button', {
+      cls: 'wi-pill is-quiet is-properties',
+      text: shown ? 'Hide properties' : 'Properties',
+      attr: { 'aria-label': shown ? 'Hide the raw properties' : 'Show the raw properties to edit them' },
+    })
+    toggle.addEventListener('click', () => ctx.toggleProperties(meta.file.path))
+  }
+}
+
+function linkTo(host: HTMLElement, text: string, open: () => void): void {
+  const link = host.createEl('a', { text, href: '#' })
+  link.addEventListener('click', (event) => {
+    event.preventDefault()
+    open()
+  })
+}
+
+/** A person or role: a link when it has a note, plain text when it has none. */
+function namePill(host: HTMLElement, name: string, file: TFile | null, open: (file: TFile) => void): void {
+  if (file) linkTo(host, name, () => open(file))
+  else host.createSpan({ text: name })
 }

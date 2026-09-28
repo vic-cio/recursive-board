@@ -33,6 +33,9 @@ export const OPTIONAL_FIELDS = [
   'tags',
   'archived', // docs/adr/0007-archive-is-a-frontmatter-flag.md: a flag, not a status.
   'area', // docs/adr/0028-area-work-items.md: an ongoing space that keeps its status.
+  'creator', // docs/adr/0042-creator-and-role.md: a link to the person or role that made it.
+  'creator_model',
+  'role',
 ] as const
 
 export const WORK_ITEM_TYPE = 'work-item'

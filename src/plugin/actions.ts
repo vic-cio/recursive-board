@@ -19,6 +19,7 @@ import { fileNameFor, newId, today, type Status } from '../shared/schema.ts'
 import { inheritedChildFields, renderWorkItem } from '../shared/work-item.ts'
 import { areaTagFor, type AreaNode } from '../shared/area-tags.ts'
 import { dependencyEdit, dependencyPath } from '../shared/dependencies.ts'
+import { asLink } from '../shared/authorship.ts'
 import type { WorkItemIndex, WorkItemMeta } from './index.ts'
 import { UndoStack } from './undo.ts'
 
@@ -28,9 +29,13 @@ export class Actions {
   /** Every board write, so it can be reversed. Session only (see `undo.ts`). */
   readonly undoStack = new UndoStack()
 
-  constructor(app: App, index: WorkItemIndex) {
+  /** The name in the "Your name" setting, which the add row writes as the creator. */
+  private readonly you: () => string
+
+  constructor(app: App, index: WorkItemIndex, you: () => string = () => '') {
     this.app = app
     this.index = index
+    this.you = you
   }
 
   private async edit(file: TFile, edits: readonly Edit[], label: string): Promise<void> {
@@ -246,6 +251,8 @@ export class Actions {
       parentStem: parent.stem,
       ...inheritedChildFields(parent, status),
       ...(areaTag === null ? {} : { tags: [areaTag] }),
+      // A person typed this card on the board (docs/adr/0042-creator-and-role.md).
+      ...(this.you().trim() === '' ? {} : { creator: asLink(this.you()) }),
       created: stamp,
       updated: stamp,
     }, this.index.config.extraSections)

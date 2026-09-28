@@ -1118,3 +1118,36 @@
 .wi-dash-column { display: flex; flex-direction: column; gap: var(--size-4-3); min-width: 0; }
 .wi-dash-panel-head.is-attention .wi-dash-icon { color: var(--color-orange); }
 .wi-dash-panel-head + .wi-dash-agents { margin-top: var(--size-4-2); }
+
+/* A work item's raw Properties panel hides behind the meta strip (docs/adr/0042-creator-and-role.md). */
+/* As specific as Obsidian's own show-properties rules, plus one class, so no !important is needed. */
+.wi-properties-hidden .metadata-container,
+.wi-properties-hidden .markdown-source-view.is-live-preview.show-properties .metadata-container:not(.mod-error),
+.wi-properties-hidden .markdown-preview-view.show-properties .metadata-container:not(.mod-error),
+.wi-properties-hidden .markdown-reading-view .markdown-preview-view .metadata-container:not(.mod-error) {
+  display: none;
+}
+
+.wi-pill.is-role {
+  background: rgba(var(--wi-rgb-agent), var(--wi-tint-pill));
+  color: var(--color-purple);
+}
+
+.wi-pill a {
+  color: inherit;
+}
+
+button.wi-pill {
+  height: auto;
+  padding: 0 7px;
+  line-height: 1.6;
+  background: var(--background-modifier-hover);
+  border: none;
+  box-shadow: none;
+  font: inherit;
+  cursor: pointer;
+}
+
+button.wi-pill:hover {
+  color: var(--text-normal);
+}

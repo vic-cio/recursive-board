@@ -14,6 +14,7 @@ import { briefGaps, renderBody, requireTemplate, type Brief } from '../../shared
 import { firstChildPromotion } from '../../shared/transitions.ts'
 import { areaTagFor } from '../../shared/area-tags.ts'
 import { chainOf } from './retag.ts'
+import { asLink } from '../../shared/authorship.ts'
 import { fileNameFor, fileNameStem, isStatus, newId, today, type Status } from '../../shared/schema.ts'
 import type { Vault } from '../vault.ts'
 
@@ -24,11 +25,17 @@ export interface NewOptions {
   status?: Status
   owner?: string
   agent?: string
+  /** The person or role that makes the card, as a name or a link (docs/adr/0042-creator-and-role.md). */
+  creator?: string
+  /** The model id, when an agent makes the card. */
+  model?: string
+  /** The role that must do the work. */
+  role?: string
   priority?: number
   /** A name from the template registry. Omitted uses the default. */
   template?: string
   brief?: Brief
-  /** Refuse to create a card whose template asks for an Objective or criteria the brief lacks. */
+  /** Refuse to create a card whose template asks for an Objective or criteria the brief lacks, or that has no creator. */
   strict?: boolean
 }
 
@@ -44,6 +51,8 @@ export interface Created {
   gaps: string[]
   /** True when another item took the plain filename, so the file carries the id suffix. */
   renamed: boolean
+  /** True when the card has no creator. */
+  uncredited: boolean
 }
 
 export async function createItem(vault: Vault, options: NewOptions): Promise<Created> {
@@ -65,6 +74,10 @@ export async function createItem(vault: Vault, options: NewOptions): Promise<Cre
   const gaps = briefGaps(template, options.brief)
   if (options.strict && gaps.length > 0) {
     throw new Error(`the card has no ${gaps.join(' or ')}. Pass --objective and --criteria, or drop --strict.`)
+  }
+  const creator = options.creator?.trim() ? asLink(options.creator) : undefined
+  if (options.strict && creator === undefined) {
+    throw new Error('the card has no creator. Pass --creator, or set WI_CREATOR, or drop --strict.')
   }
   // Render the body first, so a brief the template cannot hold fails before a file exists.
   renderBody(template, vault.config.extraSections, options.brief)
@@ -95,6 +108,13 @@ export async function createItem(vault: Vault, options: NewOptions): Promise<Cre
     ? { ...common, ...inherited, area: true, status }
     : { ...common, ...inherited, status }
   if (options.priority !== undefined) fields.priority = options.priority
+  if (creator !== undefined) fields.creator = creator
+  if (creator !== undefined && options.model?.trim()) fields.creatorModel = options.model.trim()
+  if (options.role?.trim()) fields.role = asLink(options.role)
+  // An owner becomes a link when a note of that name exists; plain text stays for vaults without person notes.
+  if (fields.owner !== undefined && options.owner !== undefined && await vault.resolveNote(options.owner) !== undefined) {
+    fields.owner = asLink(options.owner)
+  }
   const areaTag = vault.config.areaTags
     ? areaTagFor([{ title, area: template.area === true }, ...chainOf(vault, parent)])
     : null
@@ -114,6 +134,7 @@ export async function createItem(vault: Vault, options: NewOptions): Promise<Cre
   return {
     id, stem, relPath, path, parentStem: parent.stem,
     promotedParent: promotion !== null, gaps, renamed: stem !== fileNameStem(title),
+    uncredited: creator === undefined,
   }
 }
 

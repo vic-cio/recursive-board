@@ -33,6 +33,8 @@ export default class RecursiveBoardPlugin extends Plugin {
   private readonly peeking = new Set<string>()
   private readonly shownTabs = new Map<string, Status>()
   private readonly shownArchived = new Set<string>()
+  /** Work items whose raw Properties panel is shown. Session only; a new note opens tidy. */
+  private readonly shownProperties = new Set<string>()
   private readonly checklistComponents = new ChecklistComponents()
   /** Last observed document per editor, used to reject no-op editor notifications. */
   private readonly editorValues = new WeakMap<Editor, string>()
@@ -64,7 +66,7 @@ export default class RecursiveBoardPlugin extends Plugin {
     ))
 
     this.index = new WorkItemIndex(this.app, await this.readVaultConfig())
-    this.actions = new Actions(this.app, this.index)
+    this.actions = new Actions(this.app, this.index, () => this.dashboard.you)
 
     this.registerView(DASHBOARD_VIEW, (leaf) => new DashboardView(leaf, {
       index: this.index,
@@ -101,6 +103,7 @@ export default class RecursiveBoardPlugin extends Plugin {
     }))
     this.registerEvent(this.app.workspace.on('file-open', () => {
       this.expandedPath = null // A new note means no card is expanded.
+      this.shownProperties.clear()
       this.rememberActiveEditor()
       this.schedule()
     }))
@@ -376,6 +379,12 @@ export default class RecursiveBoardPlugin extends Plugin {
       },
       selectedTab: (path) => this.shownTabs.get(path),
       selectTab: (path, status) => { this.shownTabs.set(path, status) },
+      isShowingProperties: (path) => this.shownProperties.has(path),
+      toggleProperties: (path) => {
+        if (this.shownProperties.has(path)) this.shownProperties.delete(path)
+        else this.shownProperties.add(path)
+        mountAll(this.app, this.context())
+      },
       isShowingArchived: (path) => this.shownArchived.has(path),
       toggleArchived: (path) => {
         if (this.shownArchived.has(path)) this.shownArchived.delete(path)

@@ -58,6 +58,8 @@ wi new "<title>" --parent <ref> --objective <text> --context <text> --criteria <
 wi status <ref> <backlog|options|doing|done>
 wi note <ref> "<result>" [--agent <name>]   # one dated line under Notes
 wi depend <ref> --on <ref>            # the card waits on another card; --off removes it
+wi new <title> --creator <role> --model <id> [--role <role>]  # who made it, which role does it
+wi set <ref> --owner <name> | --role <role>                   # change who owns it or does it
 wi area <ref>                         # mark a card as an area
 wi area <ref> --off                   # remove the area mark
 wi claim <ref> --agent <name>        # assign and move to doing in one write
@@ -117,6 +119,11 @@ the board shows what is still open.
 A worker is an agent that a dispatcher (a script or another agent) started on one card. The owner
 follows the work on the board, so the board is the live record of what each worker does now. Use
 your own agent name everywhere `<me>` appears.
+
+The dispatcher sets `WI_CREATOR` to your role and `WI_MODEL` to your model, so every card you
+make and every note you write names you. If they are unset, pass `--creator <role> --model <id>`
+to `wi new`. When the card has a `role`, read that role note: it is your procedure. In a live
+session with the owner, your role is the vault's session role note, if it has one.
 
 1. Claim the card: `wi claim <card> --agent <me>`. Read its body and its open children.
 2. Split it before you start when it holds more than one deliverable. Make each step a child with
