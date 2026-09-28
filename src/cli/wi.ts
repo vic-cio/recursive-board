@@ -30,6 +30,8 @@ import { moveItem } from './commands/move.ts'
 import { archiveItem } from './commands/archive.ts'
 import { setPromoted } from './commands/promote.ts'
 import { setArea } from './commands/area.ts'
+import { setDependency } from './commands/depend.ts'
+import { dependenciesOf, openDependencies, titleOf } from './dependencies.ts'
 import { hookStatus, installHook, uninstallHook } from './commands/hook.ts'
 import { runSetup } from './commands/setup.ts'
 import { STATUSES } from '../shared/schema.ts'
@@ -45,6 +47,7 @@ Usage
   wi status <ref> <status>
   wi note <ref> <text> [--agent <name>]
   wi area <ref> [--off]
+  wi depend <ref> --on <ref> [--off]
   wi claim <ref> --agent <name>
   wi agents
   wi release <ref> --reason <text> [--where <branch-or-path>]
@@ -101,6 +104,10 @@ Notes
   \`wi area <ref>\` marks a card as an area and keeps its status. It refuses a card with an agent.
   Use \`wi area <ref> --off\` to convert back without changing its status.
   \`wi claim\` refuses a card with blocked: true, and \`wi children\` marks one [blocked].
+  \`wi depend <ref> --on <ref>\` makes a card wait on another card; --off removes that. \`wi claim\`
+  and \`wi status <ref> doing\` refuse a card that waits on a card that is not done, and \`wi status
+  <ref> doing\` also refuses blocked: true. \`wi children\` marks a waiting card [waits on N].
+  \`wi status <ref> done\` names each card it unblocks. An archived card that is not done still blocks.
   \`wi claim\` lets an agent hold a card and its subtasks at once. It refuses a board with a child in
   doing that a different agent or a person works.
   \`wi agents\` reports the advisory limit, the number of distinct agents with a doing card, and each
@@ -122,6 +129,7 @@ async function main(argv: string[]): Promise<number> {
     options: {
       parent: { type: 'string' },
       to: { type: 'string' },
+      on: { type: 'string' },
       status: { type: 'string' },
       owner: { type: 'string' },
       agent: { type: 'string' },
@@ -162,7 +170,8 @@ async function main(argv: string[]): Promise<number> {
     throw new UsageError('--force applies only to wi hook install or wi setup.')
   }
   if (values.yes && command !== 'setup') throw new UsageError('--yes applies only to wi setup.')
-  if (values.off && command !== 'area') throw new UsageError('--off applies only to wi area.')
+  if (values.off && command !== 'area' && command !== 'depend') throw new UsageError('--off applies only to wi area and wi depend.')
+  if (values.on !== undefined && command !== 'depend') throw new UsageError('--on applies only to wi depend.')
   if ((values.objective !== undefined || values.context !== undefined || values.criteria !== undefined || values.strict) &&
     command !== 'new') {
     throw new UsageError('--objective, --context, --criteria and --strict apply only to wi new.')
@@ -191,6 +200,8 @@ async function main(argv: string[]): Promise<number> {
       return withRetagHint(vault, () => runArea(vault, rest, values, json))
     case 'note':
       return runNote(vault, rest, values, json)
+    case 'depend':
+      return runDepend(vault, rest, values, json)
     case 'claim':
       return runClaim(vault, rest, values, json)
     case 'agents':
@@ -354,6 +365,7 @@ async function runStatus(vault: Vault, rest: string[], json: boolean): Promise<n
       prev_status: change.recorded ?? null,
       changed: change.changed,
       parent_ready: change.parentReady?.id ?? null,
+      unblocked: change.unblocked.map((item) => item.id ?? item.stem),
     })
   } else if (!change.changed) {
     process.stdout.write(`${label(change.item)} is already ${change.to}. Nothing written.\n`)
@@ -361,10 +373,28 @@ async function runStatus(vault: Vault, rest: string[], json: boolean): Promise<n
     const recorded = change.recorded ? `  (prev_status: ${change.recorded})` : ''
     process.stdout.write(`${label(change.item)}  ${change.from ?? '—'} → ${change.to}${recorded}\n`)
   }
+  if (!json) {
+    for (const item of change.unblocked) process.stdout.write(`${label(item)}  waits on nothing open now. It can start.\n`)
+  }
   const ready = change.parentReady
   if (ready && !json) {
     process.stdout.write(`${label(ready)}  every child is done. If its own criteria are met, run: ` +
       `wi status ${ready.id ?? ready.stem} done\n`)
+  }
+  return 0
+}
+
+async function runDepend(vault: Vault, rest: string[], values: Values, json: boolean): Promise<number> {
+  const ref = rest.join(' ').trim()
+  const on = typeof values['on'] === 'string' ? values['on'].trim() : ''
+  if (ref === '' || on === '') throw new UsageError('wi depend needs a <ref> and --on <ref>. Add --off to remove the dependency.')
+  const change = await setDependency(vault, ref, on, values['off'] !== true)
+  if (json) {
+    print({ id: change.item.id, path: change.item.relPath, on: change.on.id ?? change.on.stem, added: change.added, changed: change.changed })
+  } else if (!change.changed) {
+    process.stdout.write(`${label(change.item)} ${change.added ? 'already waits' : 'does not wait'} on ${titleOf(change.on)}. Nothing written.\n`)
+  } else {
+    process.stdout.write(`${label(change.item)}  ${change.added ? 'waits on' : 'no longer waits on'} ${titleOf(change.on)}\n`)
   }
   return 0
 }
@@ -594,6 +624,8 @@ function runChildren(vault: Vault, rest: string[], values: Values, json: boolean
         depth: row.depth,
         archived: row.archived,
         blocked: row.item.frontmatter.get('blocked') === true,
+        waits_on: openDependencies(vault, row.item).map((item) => item.id ?? item.stem),
+        depends_on: dependenciesOf(vault, row.item).resolved.map((item) => item.id ?? item.stem),
       })),
     })
     return 0
@@ -604,16 +636,16 @@ function runChildren(vault: Vault, rest: string[], values: Values, json: boolean
   ]
   if (listing.areas.length > 0) {
     out.push(`  Areas (${listing.areas.length})`)
-    for (const row of listing.areas) out.push(`    ${'  '.repeat(row.depth)}${row3(row)}`)
+    for (const row of listing.areas) out.push(`    ${'  '.repeat(row.depth)}${row3(row, vault)}`)
   }
   if (listing.children.length === 0 && listing.areas.length === 0) {
     out.push('  no children')
   } else if (values['tree'] === true || typeof values['status'] === 'string') {
-    for (const row of listing.children) out.push(`  ${'  '.repeat(row.depth)}${row3(row)}`)
+    for (const row of listing.children) out.push(`  ${'  '.repeat(row.depth)}${row3(row, vault)}`)
   } else {
     for (const [status, rows] of listing.byStatus) {
       out.push(`  ${status} (${rows.length})`)
-      for (const row of rows) out.push(`    ${row3(row)}`)
+      for (const row of rows) out.push(`    ${row3(row, vault)}`)
     }
   }
   if (listing.cycle) out.push('  ! the parent chain loops. Run wi validate.')
@@ -759,13 +791,15 @@ function label(item: WorkItem): string {
   return `${item.id ?? '(no id)'}  ${item.title ?? item.stem}`
 }
 
-function row3(row: ChildRow): string {
+function row3(row: ChildRow, vault: Vault): string {
   const status = row.item.status ?? '—'
   const kids = row.childCount > 0 ? `  (${row.childCount})` : ''
   const board = row.item.board ? '  [board]' : ''
   const archived = row.archived ? '  [archived]' : ''
   const blocked = row.item.frontmatter.get('blocked') === true ? '  [blocked]' : ''
-  return `${row.item.id ?? '(no id)'}  ${status.padEnd(7)}  ${row.item.title ?? row.item.stem}${kids}${board}${blocked}${archived}`
+  const open = row.item.status === 'done' ? 0 : openDependencies(vault, row.item).length
+  const waits = open > 0 ? `  [waits on ${open}]` : ''
+  return `${row.item.id ?? '(no id)'}  ${status.padEnd(7)}  ${row.item.title ?? row.item.stem}${kids}${board}${blocked}${waits}${archived}`
 }
 
 function print(value: unknown): void {

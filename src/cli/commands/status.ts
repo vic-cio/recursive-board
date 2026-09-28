@@ -10,6 +10,8 @@
  * command of its own.
  */
 import { editItem } from '../write.ts'
+import { dependentsOf, openDependencies, titleOf } from '../dependencies.ts'
+import { waitingRefusal } from '../../shared/dependencies.ts'
 import { statusEdits } from '../../shared/transitions.ts'
 import { isStatus, STATUSES, type Status } from '../../shared/schema.ts'
 import type { Vault, WorkItem } from '../vault.ts'
@@ -27,6 +29,8 @@ export interface StatusChange {
    * write to the parent would break one file per operation.
    */
   parentReady: WorkItem | undefined
+  /** Cards that waited on this one and wait on nothing open now it is done. */
+  unblocked: WorkItem[]
 }
 
 export async function setStatus(vault: Vault, ref: string, status: string): Promise<StatusChange> {
@@ -44,12 +48,29 @@ export async function setStatus(vault: Vault, ref: string, status: string): Prom
   const from = item.status
   const edits = statusEdits(from, status, item.frontmatter.has('prev_status'))
   if (edits === null) {
-    return { item, from, to: status, recorded: undefined, changed: false, parentReady: undefined }
+    return { item, from, to: status, recorded: undefined, changed: false, parentReady: undefined, unblocked: [] }
   }
+  if (status === 'doing') refuseStart(vault, item)
   const recorded = status === 'done' ? from : undefined
+  const unblocked = status === 'done' ? unblockedBy(vault, item) : []
 
   await editItem(item, edits)
-  return { item, from, to: status, recorded, changed: true, parentReady: status === 'done' ? readyParent(vault, item) : undefined }
+  return { item, from, to: status, recorded, changed: true, parentReady: status === 'done' ? readyParent(vault, item) : undefined, unblocked }
+}
+
+/** The same checks as `wi claim`, so an agent cannot start a card by moving it (docs/adr/0041-card-dependencies.md). */
+function refuseStart(vault: Vault, item: WorkItem): void {
+  if (item.frontmatter.get('blocked') === true) {
+    throw new Error(`${item.relPath} is blocked. Clear its blocked flag when the block is gone, or start another card.`)
+  }
+  const waiting = openDependencies(vault, item)
+  if (waiting.length > 0) throw new Error(waitingRefusal(item.relPath, waiting.map(titleOf)))
+}
+
+function unblockedBy(vault: Vault, item: WorkItem): WorkItem[] {
+  return dependentsOf(vault, item).filter((dependent) =>
+    dependent.status !== 'done' && !vault.isArchived(dependent) &&
+    openDependencies(vault, dependent).every((open) => open === item))
 }
 
 function readyParent(vault: Vault, item: WorkItem): WorkItem | undefined {

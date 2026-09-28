@@ -1,3 +1,5 @@
+import { openDependencies, titleOf } from '../dependencies.ts'
+import { waitingRefusal } from '../../shared/dependencies.ts'
 import { editItem } from '../write.ts'
 import { claimEdits, releaseEdits } from '../../shared/transitions.ts'
 import { appendNote } from '../../shared/notes.ts'
@@ -32,6 +34,8 @@ export async function claimItem(vault: Vault, ref: string, agent: string): Promi
   if (!holding && item.frontmatter.get('blocked') === true) {
     throw new Error(`${item.relPath} is blocked. Clear its blocked flag when the block is gone, or claim another card.`)
   }
+  const waiting = holding ? [] : openDependencies(vault, item)
+  if (waiting.length > 0) throw new Error(waitingRefusal(item.relPath, waiting.map(titleOf)))
   const edits = claimEdits(
     item.status, currentAgent, agent, item.frontmatter.has('prev_status'),
     item.board && vault.childrenOf(item).some((child) =>
