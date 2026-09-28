@@ -116,3 +116,23 @@ test('an agent is working, idle, or finished', () => {
   ;[group] = agentGroups(cardsInScope(items, null, tree), 'Victor', tree, now)
   assert.deepEqual(group!.idle.map((claim) => claim.card), [idle])
 })
+
+test('a focus narrows to one area and groups by the next area down', () => {
+  const { items, add, tree } = vault()
+  const root = add('Home', null)
+  const dev = add('Dev', root, { area: true, status: 'doing' })
+  const board = add('Board', dev, { area: true, status: 'doing' })
+  const theme = add('Theme', dev, { area: true, status: 'doing' })
+  add('A', board, { status: 'done' })
+  add('B', theme, { status: 'doing', agent: 'claude' })
+  add('C', dev, { status: 'backlog' })
+  add('Gym card', add('Gym', root, { area: true, status: 'doing' }))
+  const cards = cardsInScope(items, null, tree)
+  const names = (focus: Fake | null) => progress(cards, tree, focus).map((row) => `${row.name} ${row.done}/${row.total}`)
+
+  assert.deepEqual(names(null), ['Dev 1/3', 'Gym 0/1'])
+  assert.deepEqual(names(dev), ['Board 1/1', 'Theme 0/1', 'Directly in Dev 0/1'])
+  assert.deepEqual(names(board), ['Directly in Board 1/1'])
+  assert.deepEqual(agentGroups(cards, 'Victor', tree, 0, dev).map((group) => group.name), ['Theme'])
+  assert.deepEqual(agentGroups(cards, 'Victor', tree, 0, board), [])
+})

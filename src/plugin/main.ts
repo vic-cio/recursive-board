@@ -23,7 +23,7 @@ import { CreateBoardModal } from './ui/create-board-modal.ts'
 import { createFirstBoard } from './first-board.ts'
 import { replaceChangedSpan, stampObservedChange } from './updated.ts'
 import { parseStatusColors, StatusColorSettingTab, type StatusColorKey, type StatusColors } from './settings.ts'
-import { DASHBOARD_VIEW, DashboardView, parseDashboardState, type DashboardState } from './ui/dashboard-view.ts'
+import { DASHBOARD_ICON, DASHBOARD_VIEW, DashboardView, parseDashboardState, type DashboardState } from './ui/dashboard-view.ts'
 
 export default class RecursiveBoardPlugin extends Plugin {
   private index!: WorkItemIndex
@@ -71,7 +71,7 @@ export default class RecursiveBoardPlugin extends Plugin {
       state: () => this.dashboard,
       save: (patch) => this.saveDashboard(patch),
     }))
-    this.addRibbonIcon('layout-dashboard', 'Open dashboard', () => void this.openDashboard())
+    this.addRibbonIcon(DASHBOARD_ICON, 'Open dashboard', () => void this.openDashboard())
     this.addCommand({
       id: 'open-dashboard',
       name: 'Open dashboard',

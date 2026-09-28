@@ -88,7 +88,7 @@ Enable Recursive Board in an empty vault. Use the **Create your first board** bu
 The ribbon's dashboard icon, or the command **Open dashboard**, opens one page over every board. Pick a root board to narrow it. It shows three panels:
 
 - **For review.** Cards in doing that you own and that have no open child. Set your name in the plugin settings. A note that starts with `**Review:**` lists the files to check, as vault-relative paths in backticks. A name opens the file.
-- **Progress.** Done cards out of all cards, for each area.
+- **Progress.** Done cards out of all cards, for each top area. Click an area to see the areas inside it, and to narrow the other panels to it.
 - **Agents.** Claimed cards for each area: working, idle for an hour, or recently finished.
 
 ## Install the Obsidian plugin

@@ -7,18 +7,20 @@ import { ItemView, Notice, Platform, setIcon, TFile, type WorkspaceLeaf } from '
 
 import type { WorkItemIndex, WorkItemMeta } from '../index.ts'
 import {
-  ago, agentGroups, areaOf, cardsInScope, parseReviewLine, NO_AREA, progress, waitsForReview,
+  ago, agentGroups, areaPath, cardsInScope, groupName, groupUnder, inFocus, parseReviewLine, progress, waitsForReview,
   type Claim, type DashTree, type Group,
 } from '../dashboard-model.ts'
 
 export const DASHBOARD_VIEW = 'recursive-board-dashboard'
+/** Not `layout-dashboard`: Obsidian's new-canvas button already uses it. */
+export const DASHBOARD_ICON = 'gauge'
 
 export interface DashboardState {
   /** The owner name that marks a card as yours to review. Empty until set in settings. */
   you: string
   /** The root board's path, or '' for every root. */
   root: string
-  /** The focused area's path, '' for the cards in no area, or null for none. */
+  /** The focused area's path, or null to show the top areas. */
   focus: string | null
   /** Review rows you ticked, by file path. */
   ticks: Record<string, boolean>
@@ -52,7 +54,7 @@ export class DashboardView extends ItemView {
 
   override getViewType(): string { return DASHBOARD_VIEW }
   override getDisplayText(): string { return 'Dashboard' }
-  override getIcon(): string { return 'layout-dashboard' }
+  override getIcon(): string { return DASHBOARD_ICON }
 
   override async onOpen(): Promise<void> {
     // Keep the "12 min" labels current without a redraw.
@@ -94,18 +96,37 @@ export class DashboardView extends ItemView {
       .sort((a, b) => a.title.localeCompare(b.title))
     const root = roots.find((item) => item.file.path === state.root) ?? null
     const cards = cardsInScope(all, root, tree)
-    const reviews = await this.reviews(cards, state.you, tree)
+    const focus = all.find((item) => item.area && item.file.path === state.focus) ?? null
+    const reviews = await this.reviews(cards, state.you, tree, focus)
 
     const el = this.contentEl
     el.empty()
     el.addClass('wi-dash')
     this.drawHead(el, roots, root)
+    this.drawTrail(el, focus, tree)
 
     const lower = el.createDiv('wi-dash-lower')
     this.drawReviews(lower.createDiv('wi-dash-panel'), reviews, state)
     const side = lower.createDiv('wi-dash-panel')
-    this.drawProgress(side, cards, tree, state)
-    this.drawAgents(side, cards, tree, state)
+    this.drawProgress(side, cards, tree, focus)
+    this.drawAgents(side, cards, tree, state, focus)
+  }
+
+  private async setFocus(focus: WorkItemMeta | null): Promise<void> {
+    await this.host.save({ focus: focus?.file.path ?? null })
+    await this.render()
+  }
+
+  /** Every area, then each area down to the focus. A crumb goes back up to that level. */
+  private drawTrail(el: HTMLElement, focus: WorkItemMeta | null, tree: DashTree<WorkItemMeta>): void {
+    const trail = el.createDiv('wi-dash-trail')
+    const levels = focus ? [null, ...areaPath(focus, tree), focus] : [null]
+    levels.forEach((level, i) => {
+      if (i > 0) setIcon(trail.createSpan('wi-dash-icon'), 'chevron-right')
+      const name = level?.title ?? 'Every area'
+      if (i === levels.length - 1) trail.createSpan({ cls: 'wi-dash-trail-here', text: name })
+      else this.link(trail, name, () => this.setFocus(level))
+    })
   }
 
   private drawHead(el: HTMLElement, roots: WorkItemMeta[], root: WorkItemMeta | null): void {
@@ -116,7 +137,7 @@ export class DashboardView extends ItemView {
       cls: 'wi-dash-muted',
       text: new Date().toLocaleDateString(undefined, { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' }),
     })
-    if (roots.length > 1 || root === null) {
+    {
       const select = right.createEl('select', { cls: 'dropdown', attr: { 'aria-label': 'Root board' } })
       select.createEl('option', { text: 'Every root', value: '' })
       for (const item of roots) select.createEl('option', { text: item.title, value: item.file.path })
@@ -132,13 +153,15 @@ export class DashboardView extends ItemView {
     }
   }
 
-  private async reviews(cards: WorkItemMeta[], you: string, tree: DashTree<WorkItemMeta>): Promise<ReviewRow[]> {
+  private async reviews(
+    cards: WorkItemMeta[], you: string, tree: DashTree<WorkItemMeta>, focus: WorkItemMeta | null,
+  ): Promise<ReviewRow[]> {
     const rows: ReviewRow[] = []
     for (const card of cards) {
-      if (!waitsForReview(card, you, tree)) continue
+      if (!inFocus(card, focus, tree) || !waitsForReview(card, you, tree)) continue
       const line = parseReviewLine(await this.app.vault.cachedRead(card.file))
-      const area = areaOf(card, tree)
-      const group = { area, name: area?.title ?? NO_AREA }
+      const area = groupUnder(card, focus, tree)
+      const group = { area, name: groupName(area, focus) }
       const what = line?.what || 'Open the card.'
       const paths = line?.paths.length ? line.paths : [card.file.path]
       for (const path of paths) rows.push({ card, path, what, group })
@@ -168,11 +191,10 @@ export class DashboardView extends ItemView {
       const key = groupKey(row.group)
       const previous = rows[i - 1]
       if (!previous || groupKey(previous.group) !== key) {
-        const shown = isOpen(state, row.group)
         const heading = body.createEl('tr', { cls: 'wi-dash-group' })
         const cell = heading.createEl('td', { attr: { colspan: 6 } })
         const caret = cell.createSpan('wi-dash-caret')
-        setIcon(caret, shown ? 'chevron-down' : 'chevron-right')
+        setIcon(caret, 'chevron-down')
         cell.createSpan({ cls: 'wi-dash-group-name', text: row.group.name })
         cell.createSpan({ cls: 'wi-dash-count', text: String(rows.filter((other) => groupKey(other.group) === key).length) })
         groupRows.set(key, [])
@@ -186,7 +208,6 @@ export class DashboardView extends ItemView {
 
       const tr = body.createEl('tr')
       groupRows.get(key)?.push(tr)
-      if (!isOpen(state, row.group)) tr.addClass('wi-dash-hidden')
       const tick = tr.createEl('td').createEl('input', { type: 'checkbox', attr: { 'aria-label': 'Reviewed' } })
       tick.checked = state.ticks[row.path] === true
       tr.toggleClass('is-ticked', tick.checked)
@@ -219,8 +240,8 @@ export class DashboardView extends ItemView {
     })
   }
 
-  private drawProgress(panel: HTMLElement, cards: WorkItemMeta[], tree: DashTree<WorkItemMeta>, state: DashboardState): void {
-    const rows = progress(cards, tree)
+  private drawProgress(panel: HTMLElement, cards: WorkItemMeta[], tree: DashTree<WorkItemMeta>, focus: WorkItemMeta | null): void {
+    const rows = progress(cards, tree, focus)
     const done = rows.reduce((sum, row) => sum + row.done, 0)
     const total = rows.reduce((sum, row) => sum + row.total, 0)
     this.panelHead(panel, 'bar-chart-3', 'Progress')
@@ -228,28 +249,30 @@ export class DashboardView extends ItemView {
     const list = panel.createDiv('wi-dash-projects')
     for (const row of rows) {
       const pct = row.total ? Math.round((100 * row.done) / row.total) : 0
-      const focused = state.focus === groupKey(row)
-      const item = list.createDiv({ cls: `wi-dash-project${focused ? ' is-focused' : ''}` })
-      item.onclick = async (event) => {
-        if ((event.target as HTMLElement).closest('a')) return
-        await this.host.save({ focus: focused ? null : groupKey(row) })
-        await this.render()
-      }
-      const head = item.createDiv('wi-dash-project-head')
       const area = row.area
-      if (area) this.link(head, row.name, () => this.openFile(area.file)).addClass('wi-dash-project-name')
-      else head.createSpan({ cls: 'wi-dash-project-name', text: row.name })
+      const item = list.createDiv({ cls: `wi-dash-project${area ? ' is-area' : ''}` })
+      const head = item.createDiv('wi-dash-project-head')
+      if (area) {
+        item.onclick = (event) => {
+          if (!(event.target as HTMLElement).closest('a')) void this.setFocus(area)
+        }
+        const name = head.createSpan('wi-dash-project-name')
+        this.link(name, row.name, () => this.openFile(area.file))
+        setIcon(name.createSpan({ cls: 'wi-dash-icon', attr: { 'aria-label': 'Show the areas inside' } }), 'chevron-right')
+      } else head.createSpan({ cls: 'wi-dash-project-name', text: row.name })
       head.createSpan({ cls: 'wi-dash-muted', text: `${row.done}/${row.total} done${row.doing ? `, ${row.doing} doing` : ''} · ${pct}%` })
       item.createDiv('wi-dash-bar').createDiv({ cls: 'wi-dash-bar-fill', attr: { style: `width: ${pct}%` } })
     }
     panel.createDiv({
       cls: 'wi-dash-muted wi-dash-hint',
-      text: state.focus !== null ? 'Click the focused area again to open every area.' : 'Click an area to focus the review table and the agents on it.',
+      text: 'Click an area to see the areas, reviews and agents inside it. Click its name to open its board.',
     })
   }
 
-  private drawAgents(panel: HTMLElement, cards: WorkItemMeta[], tree: DashTree<WorkItemMeta>, state: DashboardState): void {
-    const groups = agentGroups(cards, state.you, tree, Date.now())
+  private drawAgents(
+    panel: HTMLElement, cards: WorkItemMeta[], tree: DashTree<WorkItemMeta>, state: DashboardState, focus: WorkItemMeta | null,
+  ): void {
+    const groups = agentGroups(cards, state.you, tree, Date.now(), focus)
     const working = groups.reduce((sum, group) => sum + group.working.length, 0)
     const idle = groups.reduce((sum, group) => sum + group.idle.length, 0)
     const head = this.panelHead(panel, 'bot', 'Agents', `${working} working`)
@@ -261,7 +284,7 @@ export class DashboardView extends ItemView {
     }
     for (const group of groups) {
       const box = panel.createEl('details', { cls: 'wi-dash-agent-group' })
-      box.open = isOpen(state, group)
+      box.open = true
       const summary = box.createEl('summary')
       summary.createSpan({ cls: 'wi-dash-group-name', text: group.name })
       summary.createSpan({ cls: 'wi-dash-count', text: `${group.working.length} working` })
@@ -323,8 +346,9 @@ export class DashboardView extends ItemView {
     return a
   }
 
+  /** A new tab, so the dashboard stays open behind what it opened. */
   private async openFile(file: TFile): Promise<void> {
-    await this.app.workspace.getLeaf(false).openFile(file)
+    await this.app.workspace.getLeaf('tab').openFile(file)
   }
 
   /** Markdown opens in Obsidian. Other files open in their own app on a desktop, and in Obsidian on a phone. */
@@ -345,9 +369,6 @@ function groupKey(group: Group<WorkItemMeta>): string {
   return group.area?.file.path ?? ''
 }
 
-function isOpen(state: DashboardState, group: Group<WorkItemMeta>): boolean {
-  return state.focus === null || state.focus === groupKey(group)
-}
 
 export function parseDashboardState(value: unknown): DashboardState {
   const record = typeof value === 'object' && value !== null && !Array.isArray(value) ? value as Record<string, unknown> : {}

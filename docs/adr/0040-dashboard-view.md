@@ -20,8 +20,14 @@ It has three panels:
   idle when neither the card nor a child changed for an hour: its session most likely ended
   without `wi release`. A card handed to you, or with every child done, counts as finished.
 
-A project is the nearest area above a card (0028). Cards in no area group under "No area", last.
-Clicking a project focuses the review table and the agents on it.
+Areas (0028) nest, so the dashboard shows one level of them at a time. With no focus, each card
+groups under its top area, and cards in no area group under "No area", last. Clicking an area
+focuses it: every panel shows only the cards inside it, grouped under the next area down, and the
+cards directly in it group under "Directly in <area>". A trail of crumbs goes back up. A flat list
+of every area would grow unreadable as boards are added.
+
+A link on the dashboard opens in a new tab, so the dashboard stays open. Its icon is `gauge`,
+because Obsidian's new-canvas button already uses `layout-dashboard`.
 
 The dashboard covers every root, or one root that a picker chooses. The name, the root, the focus
 and the ticks in the review table are the plugin's own data, not the vault's. A tick records that

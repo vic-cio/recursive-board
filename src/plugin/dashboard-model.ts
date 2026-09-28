@@ -3,7 +3,9 @@ import type { WorkItemMeta } from './index.ts'
 /**
  * The dashboard's rules, apart from Obsidian so they can be tested (docs/adr/0040-dashboard-view.md).
  *
- * A project is the nearest area above a card. A card waits for review when it is in doing, its
+ * Areas nest, so the dashboard shows one level of them at a time. With no focus, a card groups
+ * under its top area. With a focused area, the dashboard shows only the cards inside it, grouped
+ * under the next area down. A card waits for review when it is in doing, its
  * owner is you, and it has no open child. An agent's claim is idle when nothing in the card or
  * its children changed for an hour: its session most likely ended without a release.
  */
@@ -23,6 +25,22 @@ export const FINISHED_SHOWN = 5
 
 export function rootOf<T extends DashItem>(item: T, tree: DashTree<T>): T {
   return tree.ancestorsOf(item)[0] ?? item
+}
+
+/** The areas above the item, top first. */
+export function areaPath<T extends DashItem>(item: T, tree: DashTree<T>): T[] {
+  return tree.ancestorsOf(item).filter((up) => up.area)
+}
+
+/** True when the item sits inside the focused area, or when nothing is focused. */
+export function inFocus<T extends DashItem>(item: T, focus: T | null, tree: DashTree<T>): boolean {
+  return focus === null || areaPath(item, tree).includes(focus)
+}
+
+/** The area one level below the focus that holds the item, or null when the item sits directly in the focus. */
+export function groupUnder<T extends DashItem>(item: T, focus: T | null, tree: DashTree<T>): T | null {
+  const path = areaPath(item, tree)
+  return path[focus === null ? 0 : path.indexOf(focus) + 1] ?? null
 }
 
 /** The nearest area above the item, or null when it sits in no area. */
@@ -71,12 +89,16 @@ export function parseReviewLine(text: string): ReviewLine | null {
 }
 
 export interface Group<T> {
-  /** The area, or null for the cards in no area. */
+  /** The area, or null for the cards directly in the focus (or in no area, with no focus). */
   area: T | null
   name: string
 }
 
 export const NO_AREA = 'No area'
+
+export function groupName<T extends DashItem>(area: T | null, focus: T | null): string {
+  return area?.title ?? (focus ? `Directly in ${focus.title}` : NO_AREA)
+}
 
 /** Areas by title, with the cards in no area last. */
 export function compareGroups<T extends DashItem>(a: Group<T>, b: Group<T>): number {
@@ -84,11 +106,12 @@ export function compareGroups<T extends DashItem>(a: Group<T>, b: Group<T>): num
 }
 
 function groupBy<T extends DashItem, G extends Group<T>>(
-  cards: T[], tree: DashTree<T>, make: (area: T | null, cards: T[]) => G,
+  cards: T[], tree: DashTree<T>, focus: T | null, make: (area: T | null, cards: T[]) => G,
 ): G[] {
   const byArea = new Map<T | null, T[]>()
   for (const card of cards) {
-    const area = areaOf(card, tree)
+    if (!inFocus(card, focus, tree)) continue
+    const area = groupUnder(card, focus, tree)
     byArea.set(area, [...(byArea.get(area) ?? []), card])
   }
   return [...byArea].map(([area, list]) => make(area, list)).sort(compareGroups)
@@ -101,10 +124,10 @@ export interface Progress<T> extends Group<T> {
 }
 
 /** Progress counts leaf cards. A board is a container, and its children carry the work. */
-export function progress<T extends DashItem>(cards: T[], tree: DashTree<T>): Progress<T>[] {
-  return groupBy(cards.filter((card) => !card.board), tree, (area, list) => ({
+export function progress<T extends DashItem>(cards: T[], tree: DashTree<T>, focus: T | null = null): Progress<T>[] {
+  return groupBy(cards.filter((card) => !card.board), tree, focus, (area, list) => ({
     area,
-    name: area?.title ?? NO_AREA,
+    name: groupName(area, focus),
     done: list.filter((card) => card.status === 'done').length,
     doing: list.filter((card) => card.status === 'doing').length,
     total: list.length,
@@ -129,7 +152,7 @@ export interface AgentGroup<T> extends Group<T> {
  * A card handed to you, or with every step done, has an agent that finished.
  */
 export function agentGroups<T extends DashItem>(
-  cards: T[], you: string, tree: DashTree<T>, now: number,
+  cards: T[], you: string, tree: DashTree<T>, now: number, focus: T | null = null,
 ): AgentGroup<T>[] {
   const claims: Claim<T>[] = cards
     .filter((card) => card.agent !== undefined)
@@ -140,12 +163,12 @@ export function agentGroups<T extends DashItem>(
     .sort((a, b) => b.active - a.active)
   const handedOver = (claim: Claim<T>) => sameName(claim.card.owner, you) ||
     (claim.steps.length > 0 && claim.steps.every((step) => step.status === 'done'))
-  const groups = groupBy(claims.map((claim) => claim.card), tree, (area, list) => {
+  const groups = groupBy(claims.map((claim) => claim.card), tree, focus, (area, list) => {
     const mine = claims.filter((claim) => list.includes(claim.card))
     const doing = mine.filter((claim) => claim.card.status === 'doing' && !handedOver(claim))
     return {
       area,
-      name: area?.title ?? NO_AREA,
+      name: groupName(area, focus),
       working: doing.filter((claim) => now - claim.active < IDLE_MS),
       idle: doing.filter((claim) => now - claim.active >= IDLE_MS),
       finished: mine.filter((claim) => !doing.includes(claim) &&
