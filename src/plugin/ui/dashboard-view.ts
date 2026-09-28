@@ -51,6 +51,8 @@ interface ReviewRow {
 export class DashboardView extends ItemView {
   private readonly host: DashboardHost
   private pending: number | null = null
+  /** Counts renders. A render reads files before it draws, so an older one can finish after a newer one. */
+  private generation = 0
 
   constructor(leaf: WorkspaceLeaf, host: DashboardHost) {
     super(leaf)
@@ -94,6 +96,7 @@ export class DashboardView extends ItemView {
   }
 
   async render(): Promise<void> {
+    const generation = ++this.generation
     const state = this.host.state()
     const tree = this.tree()
     const all = this.host.index.all()
@@ -103,6 +106,7 @@ export class DashboardView extends ItemView {
     const cards = cardsInScope(all, root, tree)
     const focus = all.find((item) => item.area && item.file.path === state.focus) ?? null
     const reviews = await this.reviews(cards, state.you, tree, focus)
+    if (generation !== this.generation) return
 
     const el = this.contentEl
     el.empty()
