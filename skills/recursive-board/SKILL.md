@@ -59,6 +59,7 @@ wi status <ref> <backlog|options|doing|done>
 wi note <ref> "<result>" [--agent <name>]   # one dated line under Notes
 wi depend <ref> --on <ref>            # the card waits on another card; --off removes it
 wi new <title> --creator <role> --model <id> [--role <role>]  # who made it, which role does it
+wi set <ref> --owner <name> | --role <role>                   # change who owns it or does it
 wi area <ref>                         # mark a card as an area
 wi area <ref> --off                   # remove the area mark
 wi claim <ref> --agent <name>        # assign and move to doing in one write

@@ -29,6 +29,9 @@ reasoning effort changes for each run.
   with the brief (0036).
 - `wi new --owner` writes a link when a note of that name exists, and plain text when none does,
   so a vault without person notes keeps working.
+- `wi set <ref> --owner … --role … --creator … --model …` changes an existing card, one file, one
+  write. An empty `--owner` or `--role` removes it. It writes `creator` and `creator_model` only
+  when the card has none, so a migration can credit old cards but nothing can rewrite who made one.
 - The board's add row writes `creator` from the plugin setting "Your name".
 - `wi note` names the writer as "Role (model)": `--agent` first, then `WI_CREATOR`, then the
   card's `role`, then the card's `agent`, with `WI_MODEL`.

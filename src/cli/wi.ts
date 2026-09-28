@@ -31,6 +31,7 @@ import { archiveItem } from './commands/archive.ts'
 import { setPromoted } from './commands/promote.ts'
 import { setArea } from './commands/area.ts'
 import { setDependency } from './commands/depend.ts'
+import { setPeople } from './commands/set.ts'
 import { dependenciesOf, openDependencies, titleOf } from './dependencies.ts'
 import { hookStatus, installHook, uninstallHook } from './commands/hook.ts'
 import { runSetup } from './commands/setup.ts'
@@ -48,6 +49,7 @@ Usage
   wi note <ref> <text> [--agent <name>]
   wi area <ref> [--off]
   wi depend <ref> --on <ref> [--off]
+  wi set <ref> [--owner <name>] [--role <name>] [--creator <name> [--model <id>]]
   wi claim <ref> --agent <name>
   wi agents
   wi release <ref> --reason <text> [--where <branch-or-path>]
@@ -91,6 +93,8 @@ Notes
   \`wi new\` writes creator, creator_model and role as links to person or role notes. --creator and
   --model fall back to WI_CREATOR and WI_MODEL; wi new warns when a card has no creator, and
   --strict refuses it. An --owner that names an existing note becomes a link.
+  \`wi set\` changes a card's owner or role (an empty value removes it), and writes its creator and
+  model only when it has none: a creator is set once.
   \`wi note\` appends "- <date> <time>, <writer>: <text>" under Notes. The writer is --agent, or
   "<WI_CREATOR or the card's role> (<WI_MODEL>)", or the card's agent. The write re-reads the card under a lock, so two notes at once both survive.
   \`wi status <ref> done\` says when that was the parent's last open child. It does not close the parent.
@@ -178,9 +182,12 @@ async function main(argv: string[]): Promise<number> {
   if (values.yes && command !== 'setup') throw new UsageError('--yes applies only to wi setup.')
   if (values.off && command !== 'area' && command !== 'depend') throw new UsageError('--off applies only to wi area and wi depend.')
   if (values.on !== undefined && command !== 'depend') throw new UsageError('--on applies only to wi depend.')
-  if ((values.objective !== undefined || values.context !== undefined || values.criteria !== undefined || values.strict ||
-    values.creator !== undefined || values.model !== undefined || values.role !== undefined) && command !== 'new') {
-    throw new UsageError('--objective, --context, --criteria, --creator, --model, --role and --strict apply only to wi new.')
+  if ((values.objective !== undefined || values.context !== undefined || values.criteria !== undefined || values.strict) &&
+    command !== 'new') {
+    throw new UsageError('--objective, --context, --criteria and --strict apply only to wi new.')
+  }
+  if ((values.creator !== undefined || values.model !== undefined || values.role !== undefined) && command !== 'new' && command !== 'set') {
+    throw new UsageError('--creator, --model and --role apply only to wi new and wi set.')
   }
   if (command === 'setup') {
     if (rest.length > 0) throw new UsageError('wi setup takes options only. Run wi setup --help for usage.')
@@ -208,6 +215,8 @@ async function main(argv: string[]): Promise<number> {
       return runNote(vault, rest, values, json)
     case 'depend':
       return runDepend(vault, rest, values, json)
+    case 'set':
+      return runSet(vault, rest, values, json)
     case 'claim':
       return runClaim(vault, rest, values, json)
     case 'agents':
@@ -394,6 +403,24 @@ async function runStatus(vault: Vault, rest: string[], json: boolean): Promise<n
     process.stdout.write(`${label(ready)}  every child is done. If its own criteria are met, run: ` +
       `wi status ${ready.id ?? ready.stem} done\n`)
   }
+  return 0
+}
+
+async function runSet(vault: Vault, rest: string[], values: Values, json: boolean): Promise<number> {
+  const ref = rest.join(' ').trim()
+  const pick = (key: string) => typeof values[key] === 'string' ? values[key] as string : undefined
+  const options = {
+    ...optional('owner', pick('owner')), ...optional('role', pick('role')),
+    ...optional('creator', pick('creator')), ...optional('model', pick('model')),
+  }
+  if (ref === '' || Object.keys(options).length === 0) {
+    throw new UsageError('wi set needs a <ref> and at least one of --owner, --role, --creator, --model.')
+  }
+  const change = await setPeople(vault, ref, options)
+  if (json) print({ id: change.item.id, path: change.item.relPath, changed: change.changed })
+  else process.stdout.write(change.changed.length > 0
+    ? `${label(change.item)}  set ${change.changed.join(', ')}\n`
+    : `${label(change.item)}  already so. Nothing written.\n`)
   return 0
 }
 
