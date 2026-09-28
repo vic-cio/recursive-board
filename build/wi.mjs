@@ -12,13 +12,14 @@
  * it at the top of the bundle, so this build adds no banner of its own.
  */
 import { build } from 'esbuild'
-import { chmod, mkdir } from 'node:fs/promises'
+import { chmod, copyFile, mkdir } from 'node:fs/promises'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..')
 const out = join(root, 'dist', 'wi')
 const file = join(out, 'wi.js')
+const hook = join(out, 'refocus.mjs')
 
 await mkdir(out, { recursive: true })
 
@@ -34,4 +35,6 @@ await build({
 })
 
 await chmod(file, 0o755)
+await copyFile(join(root, 'scripts', 'refocus.mjs'), hook)
+await chmod(hook, 0o755)
 console.log('built dist/wi/wi.js')

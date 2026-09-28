@@ -35,6 +35,7 @@ import { setPeople } from './commands/set.ts'
 import { dependenciesOf, openDependencies, titleOf } from './dependencies.ts'
 import { hookStatus, installHook, uninstallHook } from './commands/hook.ts'
 import { runSetup } from './commands/setup.ts'
+import { objectiveReport } from './commands/objective.ts'
 import { STATUSES } from '../shared/schema.ts'
 import { templateNames } from '../shared/templates.ts'
 
@@ -51,6 +52,7 @@ Usage
   wi depend <ref> --on <ref> [--off]
   wi set <ref> [--owner <name>] [--role <name>] [--creator <name> [--model <id>]]
   wi claim <ref> --agent <name>
+  wi objective [<ref>]
   wi agents
   wi release <ref> --reason <text> [--where <branch-or-path>]
   wi move <ref> --to <ref>
@@ -117,6 +119,7 @@ Notes
   \`wi status <ref> done\` names each card it unblocks. An archived card that is not done still blocks.
   \`wi claim\` lets an agent hold a card and its subtasks at once. It refuses a board with a child in
   doing that a different agent or a person works.
+  \`wi objective\` prints the WI_CARD objective chain, or the unambiguous deepest WI_AGENT claim.
   \`wi agents\` reports the advisory limit, the number of distinct agents with a doing card, and each
   claimed doing card. WI_MAX_AGENTS overrides
   maxAgents from .wi.json for one run. Dispatchers decide whether to wait; wi claim does not enforce it.
@@ -221,6 +224,8 @@ async function main(argv: string[]): Promise<number> {
       return runClaim(vault, rest, values, json)
     case 'agents':
       return runAgents(vault, rest, json)
+    case 'objective':
+      return runObjective(vault, rest)
     case 'release':
       return runRelease(vault, rest, values, json)
     case 'move':
@@ -275,6 +280,13 @@ async function openVault(flag: string | undefined): Promise<Vault> {
     throw new UsageError(`${root} is not a vault: it has no Boards/ folder or .wi.json.`)
   }
   return loadVault(root)
+}
+
+function runObjective(vault: Vault, rest: string[]): number {
+  if (rest.length > 1) throw new UsageError('wi objective takes at most one <ref>. Run wi --help.')
+  const report = objectiveReport(vault, rest[0])
+  if (report) process.stdout.write(report)
+  return 0
 }
 
 async function runHere(values: Values, json: boolean): Promise<number> {
