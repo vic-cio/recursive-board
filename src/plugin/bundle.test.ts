@@ -25,6 +25,7 @@ const obsidian = {
   FuzzySuggestModal: class {},
   Modal: class {},
   Component: class {},
+  ItemView: class {},
   MarkdownRenderer: class {},
 }
 

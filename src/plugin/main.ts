@@ -23,6 +23,7 @@ import { CreateBoardModal } from './ui/create-board-modal.ts'
 import { createFirstBoard } from './first-board.ts'
 import { replaceChangedSpan, stampObservedChange } from './updated.ts'
 import { parseStatusColors, StatusColorSettingTab, type StatusColorKey, type StatusColors } from './settings.ts'
+import { DASHBOARD_ICON, DASHBOARD_VIEW, DashboardView, parseDashboardState, type DashboardState } from './ui/dashboard-view.ts'
 
 export default class RecursiveBoardPlugin extends Plugin {
   private index!: WorkItemIndex
@@ -41,6 +42,7 @@ export default class RecursiveBoardPlugin extends Plugin {
   private firstBoardDismissed = false
   private storedData: Record<string, unknown> = {}
   private statusColors: StatusColors = {}
+  private dashboard!: DashboardState
 
   override async onload(): Promise<void> {
     const storedData: unknown = await this.loadData()
@@ -48,6 +50,7 @@ export default class RecursiveBoardPlugin extends Plugin {
       this.storedData = Object.fromEntries(Object.entries(storedData))
     }
     this.statusColors = parseStatusColors(this.storedData.statusColors)
+    this.dashboard = parseDashboardState(this.storedData.dashboard)
     this.applyStatusColors()
     this.addSettingTab(new StatusColorSettingTab(
       this.app,
@@ -56,10 +59,24 @@ export default class RecursiveBoardPlugin extends Plugin {
       (key, color) => this.updateStatusColor(key, color),
       () => this.index?.config.maxAgents ?? null,
       (maxAgents) => this.updateMaxAgents(maxAgents),
+      () => this.dashboard.you,
+      (you) => this.saveDashboard({ you }),
     ))
 
     this.index = new WorkItemIndex(this.app, await this.readVaultConfig())
     this.actions = new Actions(this.app, this.index)
+
+    this.registerView(DASHBOARD_VIEW, (leaf) => new DashboardView(leaf, {
+      index: this.index,
+      state: () => this.dashboard,
+      save: (patch) => this.saveDashboard(patch),
+    }))
+    this.addRibbonIcon(DASHBOARD_ICON, 'Open dashboard', () => void this.openDashboard())
+    this.addCommand({
+      id: 'open-dashboard',
+      name: 'Open dashboard',
+      callback: () => void this.openDashboard(),
+    })
 
     this.rememberActiveEditor()
     this.registerEvent(this.app.workspace.on('editor-change', (editor) => this.editorChanged(editor)))
@@ -227,6 +244,30 @@ export default class RecursiveBoardPlugin extends Plugin {
     await this.saveData(this.storedData)
   }
 
+  private async saveDashboard(patch: Partial<DashboardState>): Promise<void> {
+    this.dashboard = { ...this.dashboard, ...patch }
+    this.storedData.dashboard = this.dashboard
+    await this.saveData(this.storedData)
+    if ('you' in patch) this.refreshDashboards()
+  }
+
+  /** Reuses an open dashboard tab, like the graph view. */
+  private async openDashboard(): Promise<void> {
+    const { workspace } = this.app
+    let leaf = workspace.getLeavesOfType(DASHBOARD_VIEW)[0]
+    if (!leaf) {
+      leaf = workspace.getLeaf('tab')
+      await leaf.setViewState({ type: DASHBOARD_VIEW, active: true })
+    }
+    await workspace.revealLeaf(leaf)
+  }
+
+  private refreshDashboards(): void {
+    for (const leaf of this.app.workspace.getLeavesOfType(DASHBOARD_VIEW)) {
+      if (leaf.view instanceof DashboardView) leaf.view.refresh()
+    }
+  }
+
   private async updateMaxAgents(maxAgents: number | null): Promise<void> {
     try {
       const adapter = this.app.vault.adapter
@@ -310,6 +351,7 @@ export default class RecursiveBoardPlugin extends Plugin {
     this.pending = window.setTimeout(() => {
       this.pending = null
       mountAll(this.app, this.context())
+      this.refreshDashboards()
     }, 30)
   }
 

@@ -151,6 +151,15 @@ is.
 5. When finished, run `wi note <card> "<result, and its branch or location>"`. Leave the card in
    `doing` and stop for review. Merge, push and publish wait for the owner's verdict.
 
+To hand a card to a person for review, leave it in `doing` with `owner` set to their name. Then
+write a note that starts with `**Review:**`, says what to check, and lists each file to open as a
+vault-relative path in backticks. The plugin's dashboard lists the card under "For review" when
+it has no open child.
+
+```bash
+wi note <card> '**Review:** Check the totals: `Work/quote.xlsx`'
+```
+
 ## Outcomes
 
 `wi` prints the change it made, for example `wi-3k9p  Write the release notes  doing → done`.
