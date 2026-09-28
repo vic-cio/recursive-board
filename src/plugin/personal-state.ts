@@ -71,3 +71,30 @@ export function safePersonFileName(name: string): string | null {
   if (!trimmed) return null
   return encodeURIComponent(trimmed).replace(/\./g, '%2E')
 }
+
+/** One person's ticks in the plugin data, which Obsidian Sync carries: `people.<name>.ticks`. */
+export function personTicks(data: unknown, name: string): DashboardTicks {
+  return parsePersonTicks(record(record(record(data)['people'])[name.trim()]))
+}
+
+/** The plugin data with one person's ticks replaced. Every other key and person is kept. */
+export function withPersonTicks(data: Record<string, unknown>, name: string, ticks: DashboardTicks): Record<string, unknown> {
+  const people = { ...record(data['people']) }
+  if (Object.keys(ticks).length > 0) people[name.trim()] = { ticks }
+  else delete people[name.trim()]
+  const next = { ...data }
+  if (Object.keys(people).length > 0) next['people'] = people
+  else delete next['people']
+  return next
+}
+
+/** Applies what changed between two tick sets on this device to the stored set, keeping ticks made elsewhere. */
+export function applyTickChanges(stored: DashboardTicks, before: DashboardTicks, after: DashboardTicks): DashboardTicks {
+  const next = { ...stored }
+  for (const key of new Set([...Object.keys(before), ...Object.keys(after)])) {
+    if (before[key] === after[key]) continue
+    if (after[key]) next[key] = true
+    else delete next[key]
+  }
+  return next
+}

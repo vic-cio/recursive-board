@@ -24,7 +24,10 @@ import { createFirstBoard } from './first-board.ts'
 import { replaceChangedSpan, stampObservedChange } from './updated.ts'
 import { parseStatusColors, StatusColorSettingTab, type StatusColorKey, type StatusColors } from './settings.ts'
 import { DASHBOARD_ICON, DASHBOARD_VIEW, DashboardView, type DashboardState } from './ui/dashboard-view.ts'
-import { mergeTicks, parseDeviceDashboardState, parsePersonTicks, safePersonFileName, splitLegacyDashboardState, type DashboardTicks } from './personal-state.ts'
+import {
+  applyTickChanges, mergeTicks, parseDeviceDashboardState, parsePersonTicks, personTicks, safePersonFileName, splitLegacyDashboardState, withPersonTicks,
+  type DashboardTicks,
+} from './personal-state.ts'
 
 const DASHBOARD_STORAGE_KEY = 'recursive-board:dashboard'
 
@@ -266,66 +269,72 @@ export default class RecursiveBoardPlugin extends Plugin {
     if ('you' in patch || 'webReviewMode' in patch) this.refreshDashboards()
   }
 
-  /** Loads device state and performs the one-time split of legacy plugin data. */
+  /**
+   * Loads device state, and moves older state into place once: the `dashboard` key of the first
+   * dashboard, and the `people/<name>.json` file of the first per-person build, which Obsidian
+   * Sync did not carry. Ticks live in the plugin data, per person (docs/adr/0045-personal-dashboard-state.md).
+   */
   private async loadDashboardState(): Promise<void> {
     const local = this.app.loadLocalStorage(DASHBOARD_STORAGE_KEY)
+    let device = parseDeviceDashboardState(local)
+    let changed = false
     const legacy = this.storedData.dashboard
     if (legacy !== undefined) {
       const migration = splitLegacyDashboardState(legacy, local)
-      this.dashboard = { ...migration.device, ticks: {} }
-      const path = this.personTicksPath(migration.personName)
-      if (path && Object.keys(migration.ticks).length > 0) {
-        const current = await this.readPersonTicks(path)
-        await this.writePersonTicks(path, mergeTicks(current, migration.ticks))
+      device = migration.device
+      if (migration.personName.trim() !== '') {
+        const ticks = mergeTicks(personTicks(this.storedData, migration.personName), migration.ticks)
+        this.storedData = withPersonTicks(this.storedData, migration.personName, ticks)
       }
-      this.app.saveLocalStorage(DASHBOARD_STORAGE_KEY, migration.device)
       delete this.storedData.dashboard
-      await this.saveData(this.storedData)
-      this.dashboard.ticks = await this.loadPersonTicks()
-      return
+      this.app.saveLocalStorage(DASHBOARD_STORAGE_KEY, device)
+      changed = true
     }
-    this.dashboard = { ...parseDeviceDashboardState(local), ticks: {} }
-    this.dashboard.ticks = await this.loadPersonTicks()
+    const fileName = safePersonFileName(device.you)
+    if (fileName) {
+      const adapter = this.app.vault.adapter
+      const folder = normalizePath(`${this.manifest.dir}/people`)
+      const path = `${folder}/${fileName}.json`
+      if (await adapter.exists(path)) {
+        const ticks = mergeTicks(personTicks(this.storedData, device.you), parsePersonTicks(await adapter.read(path)))
+        this.storedData = withPersonTicks(this.storedData, device.you, ticks)
+        await adapter.remove(path)
+        if ((await adapter.list(folder)).files.length === 0) await adapter.rmdir(folder, false)
+        changed = true
+      }
+    }
+    if (changed) await this.saveData(this.storedData)
+    this.dashboard = { ...device, ticks: personTicks(this.storedData, device.you) }
+  }
+
+  /** Reads the plugin data from disk again, so ticks synced from another device are current. */
+  private async freshData(): Promise<Record<string, unknown>> {
+    const data: unknown = await this.loadData()
+    this.storedData = typeof data === 'object' && data !== null && !Array.isArray(data) ? { ...data as Record<string, unknown> } : {}
+    return this.storedData
   }
 
   private async loadPersonTicks(): Promise<DashboardTicks> {
-    const path = this.personTicksPath(this.dashboard.you)
-    if (!path) {
-      this.dashboard.ticks = {}
-      return this.dashboard.ticks
-    }
-    this.dashboard.ticks = await this.readPersonTicks(path)
+    this.dashboard.ticks = personTicks(await this.freshData(), this.dashboard.you)
     return this.dashboard.ticks
   }
 
-  private personTicksPath(name: string): string | null {
-    const fileName = safePersonFileName(name)
-    return fileName ? normalizePath(`${this.manifest.dir}/people/${fileName}.json`) : null
-  }
-
-  private async readPersonTicks(path: string): Promise<DashboardTicks> {
-    const adapter = this.app.vault.adapter
-    if (!(await adapter.exists(path))) return {}
-    return parsePersonTicks(await adapter.read(path))
-  }
-
-  private async writePersonTicks(path: string, ticks: DashboardTicks): Promise<void> {
-    const adapter = this.app.vault.adapter
-    const folder = path.slice(0, path.lastIndexOf('/'))
-    if (!(await adapter.exists(folder))) await adapter.mkdir(folder)
-    await adapter.write(path, JSON.stringify({ ticks }, null, 2))
-  }
-
+  /** Applies only this device's change to the stored ticks, so a tick made elsewhere survives. */
   private async savePersonTicks(ticks: DashboardTicks, previous: DashboardTicks): Promise<void> {
-    const path = this.personTicksPath(this.dashboard.you)
-    if (!path) return
-    const merged = await this.readPersonTicks(path)
-    for (const key of new Set([...Object.keys(previous), ...Object.keys(ticks)])) {
-      if (previous[key] === ticks[key]) continue
-      if (ticks[key]) merged[key] = true
-      else delete merged[key]
-    }
-    await this.writePersonTicks(path, merged)
+    const name = this.dashboard.you
+    if (name.trim() === '') return
+    const data = await this.freshData()
+    this.storedData = withPersonTicks(data, name, applyTickChanges(personTicks(data, name), previous, ticks))
+    await this.saveData(this.storedData)
+  }
+
+  /** Obsidian calls this when Sync changes the plugin data, for example a tick made on the phone. */
+  override async onExternalSettingsChange(): Promise<void> {
+    await this.freshData()
+    this.statusColors = parseStatusColors(this.storedData.statusColors)
+    this.applyStatusColors()
+    this.dashboard.ticks = personTicks(this.storedData, this.dashboard.you)
+    this.refreshDashboards()
   }
 
   private personNames(): string[] {
