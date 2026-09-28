@@ -32,8 +32,10 @@ focuses it: every panel shows only the cards inside it, grouped under the next a
 cards directly in it group under "Directly in <area>". A trail of crumbs goes back up. A flat list
 of every area would grow unreadable as boards are added.
 
-A link on the dashboard opens in a new tab, so the dashboard stays open. Its icon is `gauge`,
-because Obsidian's new-canvas button already uses `layout-dashboard`.
+A vault link on the dashboard opens in the same tab on mobile, including **Open board**.
+On a desktop, it opens in a new tab, so the dashboard stays open.
+Web addresses follow the configured browser or Web viewer behavior in [0044](0044-web-review-rows.md).
+The dashboard icon is `gauge`, because Obsidian's new-canvas button already uses `layout-dashboard`.
 
 The dashboard covers every root, or one root that a picker chooses. The name, the root, and the
 focus are device settings. Review ticks follow the person named in the setting. See

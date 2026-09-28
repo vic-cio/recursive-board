@@ -102,6 +102,8 @@ The ribbon's dashboard icon, or the command **Open dashboard**, opens one page o
 - **Progress.** Done cards out of all cards, for each top area. Click an area to see the areas inside it, and to narrow the other panels to it.
 - **Agents.** Claimed cards for each area: working, idle for an hour, or recently finished.
 
+Mobile dashboard links open vault files in the current tab. Desktop links open them in a new tab.
+
 ## Install the Obsidian plugin
 
 Once the plugin is listed in the Community plugins directory, open **Settings → Community plugins → Browse**, find **Recursive Board**, select **Install**, then enable it.

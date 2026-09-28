@@ -477,9 +477,10 @@ export class DashboardView extends ItemView {
     return a
   }
 
-  /** A new tab, so the dashboard stays open behind what it opened. */
+  /** Phones reuse this tab. A desktop keeps the dashboard behind the opened file. */
   private async openFile(file: TFile): Promise<void> {
-    await this.app.workspace.getLeaf('tab').openFile(file)
+    const leaf = Platform.isMobileApp ? this.leaf : this.app.workspace.getLeaf('tab')
+    await leaf.openFile(file)
   }
 
   /**
