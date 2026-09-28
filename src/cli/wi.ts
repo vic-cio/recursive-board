@@ -82,6 +82,8 @@ Options
 Notes
   \`wi new\` writes the brief: --objective once, --context and --criteria once per paragraph or
   criterion. It warns when the card has no Objective or Acceptance Criteria; --strict refuses it.
+  \`wi new\` and \`wi note\` wrap bare angle placeholders in backticks in Markdown body text. They
+  preserve code, links, autolinks, and HTML.
   A title's unsafe filename characters become hyphens. When another item has the same filename,
   the new file gets the id's suffix; wi never writes over a file.
   \`wi new\` makes a parent a board when it gives the parent its first child. Set

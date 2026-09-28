@@ -1,3 +1,4 @@
+import { wrapAnglePlaceholders } from './markdown.ts'
 import { frontmatterBody } from './frontmatter.ts'
 import { today } from './schema.ts'
 
@@ -56,7 +57,7 @@ export function appendNote(text: string, line: string): string {
  * The time is local, like every date here, and tells two lines on one day apart.
  */
 export function noteLine(text: string, agent?: string, now: Date = new Date()): string {
-  const body = text.trim()
+  const body = wrapAnglePlaceholders(text.trim())
   if (body === '') throw new Error('a note needs text.')
   if (/[\r\n]/.test(body)) throw new Error('a note must be one line.')
   const pad = (n: number) => String(n).padStart(2, '0')
