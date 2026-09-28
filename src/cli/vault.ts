@@ -46,6 +46,8 @@ export interface WorkItem {
 export interface Vault {
   root: string
   config: VaultConfig
+  /** The selected file name for configuration diagnostics. Defaults use the legacy name. */
+  configFile: typeof VAULT_CONFIG_NOTE | typeof WI_CONFIG_FILE
   items: WorkItem[]
   byId: Map<string, WorkItem>
   /** Work items whose id another work item also claims. */
@@ -319,9 +321,11 @@ export function requireAccountedTree(vault: Vault, what: string): void {
 
 export async function loadVault(root: string): Promise<Vault> {
   let config: VaultConfig
+  let configFile: Vault['configFile']
   try {
     const noteText = await readFile(join(root, VAULT_CONFIG_NOTE), 'utf8')
     config = parseVaultConfigNote(noteText)
+    configFile = VAULT_CONFIG_NOTE
   } catch (error) {
     if (!isMissingFile(error)) throw error
     let legacyText: string | null = null
@@ -331,6 +335,7 @@ export async function loadVault(root: string): Promise<Vault> {
       if (!isMissingFile(legacyError)) throw legacyError
     }
     config = parseVaultConfig(legacyText)
+    configFile = WI_CONFIG_FILE
   }
   const { markdown, unaccounted, misplaced } = await scan(root, config.workItemFolder)
 
@@ -397,6 +402,7 @@ export async function loadVault(root: string): Promise<Vault> {
   return {
     root,
     config,
+    configFile,
     items,
     byId,
     duplicateIds,
