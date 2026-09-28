@@ -6,15 +6,20 @@ status: accepted
 Three optional fields say who is behind a card:
 
 ```yaml
-role: "[[Checker]]"             # the role that must do the work
-creator: "[[Project lead]]"     # the person or role that made the card; set once
+role: Checker                   # the role that must do the work
+creator: Project lead           # the person or role that made the card; set once
 creator_model: gpt-6-luna       # the model, when an agent made it
 ```
 
-`creator`, `role` and, when it is a link, `owner` link to notes. A person note has `type: person`.
-A role note has `type: role`, and its body is the procedure for that role. The product requires
-no folder for them: a link resolves to any note in the vault, as Obsidian resolves it, so a vault
-with its own people notes can use them. `agent` keeps its one job: the unique id of the worker
+`creator`, `role` and `owner` hold the plain name of a note. A person note has `type: person`. A
+role note has `type: role`, and its body is the procedure for that role. The product requires no
+folder for them: a name finds any note of that name, as a link would, so a vault with its own
+people notes can use them.
+
+The names are plain, not links. The first version wrote links, and every card and Knowledge note
+then drew a graph edge to its creator: the graph became one star around each person. A person or
+role note lists what it made with a Bases table instead (`creator == "Victor"`), and the strip
+still opens the note. `agent` keeps its one job: the unique id of the worker
 that holds the claim (0038).
 
 A role stays the same when the model that fills it changes. That is why the model is a separate
@@ -23,12 +28,11 @@ reasoning effort changes for each run.
 
 ## Who writes it
 
-- `wi new --creator <name> --model <id> --role <name>` writes the three fields as links.
+- `wi new --creator <name> --model <id> --role <name>` writes the three fields as plain names. A
+  link given by habit becomes its name.
   `--creator` and `--model` fall back to `WI_CREATOR` and `WI_MODEL`, so a dispatcher sets them
   once for each worker. `wi new` warns when a card has no creator, and `--strict` refuses it, as
   with the brief (0036).
-- `wi new --owner` writes a link when a note of that name exists, and plain text when none does,
-  so a vault without person notes keeps working.
 - `wi set <ref> --owner … --role … --creator … --model …` changes an existing card, one file, one
   write. An empty `--owner` or `--role` removes it. It writes `creator` and `creator_model` only
   when the card has none, so a migration can credit old cards but nothing can rewrite who made one.
@@ -38,12 +42,12 @@ reasoning effort changes for each run.
 
 ## What wi validate checks
 
-- A link that does not resolve to a note is an error (`creator-unresolved`, `owner-unresolved`,
-  `role-unresolved`), like an unresolved parent.
-- A target with the wrong `type` is a warning (`creator-type`, …): `creator` takes a person or a
-  role, `owner` a person, `role` a role. Another vault may type its notes differently.
-- `creator` or `role` in plain text is a warning (`creator-not-link`, `role-not-link`). A plain-text
-  `owner` is fine.
+- A `creator` or `role` with no note of that name is a warning (`creator-unknown`, `role-unknown`).
+  An `owner` with no note is fine, because a vault need not keep person notes.
+- A note of the wrong `type` is a warning (`creator-type`, …): `creator` takes a person or a role,
+  `owner` a person, `role` a role. Another vault may type its notes differently.
+- A value written as a link is a warning (`creator-link`, …), because it draws a graph edge.
+  `wi set` rewrites it as the plain name, even for a creator.
 - `creator_model` without `creator` is a warning.
 
 A missing `creator` means the card was made before authorship was recorded. It does not mean a
@@ -59,8 +63,8 @@ Other notes keep Obsidian's panel.
 
 ## Rejected
 
-- **Plain-text names.** Spellings drift apart (`claude`, `Claude`, `claude-code`), and nothing
-  links to a person or role.
+- **Links.** They draw a graph edge from every note to its creator and role. The name check in
+  `wi validate` stops spellings drifting apart without them.
 - **A kind field (`creator_kind: agent`).** The linked note's type already says it.
 - **Product-owned `People/` and `Roles/` folders.** They would impose a structure on a vault that
   already has one.

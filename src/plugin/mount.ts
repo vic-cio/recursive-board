@@ -77,6 +77,25 @@ function clearTakeover(view: MarkdownView): void {
 
 const PROPERTIES_HIDDEN = 'wi-properties-hidden'
 
+/** Obsidian's "Show inline title" setting, on unless turned off. Not in the typed API. */
+function showsInlineTitle(ctx: RenderContext): boolean {
+  const vault = ctx.app.vault as unknown as { getConfig?: (key: string) => unknown }
+  return vault.getConfig?.('showInlineTitle') !== false
+}
+
+/**
+ * The editor pads its content by half a screen so a note can scroll past its end. The strip sits
+ * after the content, so a short note put that whole gap above it. Pull the strip up into the
+ * padding and give the same room back below it. The padding is an inline style CodeMirror sets,
+ * so it is read at each draw rather than overridden in CSS.
+ */
+function closeScrollGap(sizer: HTMLElement, bottom: HTMLElement): void {
+  const content = sizer.querySelector<HTMLElement>('.cm-content')
+  const pad = content ? Number.parseFloat(getComputedStyle(content).paddingBottom) || 0 : 0
+  bottom.style.marginTop = pad > 0 ? `${24 - pad}px` : ''
+  bottom.style.paddingBottom = pad > 0 ? `${pad}px` : ''
+}
+
 function clear(view: MarkdownView): void {
   view.contentEl.removeClass(PROPERTIES_HIDDEN)
   clearSizers(view)
@@ -140,7 +159,8 @@ export function mountLeaf(leaf: WorkspaceLeaf, ctx: RenderContext): void {
   for (const sizer of sizersOf(view)) {
     // The Objective is what you came to read, so everything else sits below the body.
     const bottom = region(sizer, BOTTOM, false)
-    renderBreadcrumbs(region(sizer, TOP, true), ctx, meta, bottom)
+    renderBreadcrumbs(region(sizer, TOP, true), ctx, meta, bottom, !showsInlineTitle(ctx))
+    closeScrollGap(sizer, bottom)
     renderMetaStrip(bottom, meta, ctx)
     renderChecklist(bottom, ctx, ctx.index.childrenOf(meta.file), {
       grouped: opensAsBoard(meta),

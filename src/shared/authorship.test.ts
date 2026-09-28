@@ -1,12 +1,12 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 
-import { asLink, authorLabel, displayName, linkTypeProblem } from './authorship.ts'
+import { asName, authorLabel, displayName, linkTypeProblem } from './authorship.ts'
 
-test('a name becomes a link, and a link stays as written', () => {
-  assert.equal(asLink(' Victor '), '[[Victor]]')
-  assert.equal(asLink('[[Session agent|agent]]'), '[[Session agent|agent]]')
-  assert.throws(() => asLink('  '), /cannot be empty/)
+test('a name is written plain, and a link becomes its target', () => {
+  assert.equal(asName(' Victor '), 'Victor')
+  assert.equal(asName('[[Session agent|agent]]'), 'Session agent')
+  assert.throws(() => asName('  '), /cannot be empty/)
 })
 
 test('the shown name is the link target or the text', () => {
@@ -26,6 +26,6 @@ test('a note line names the role and the model', () => {
 test('each field links to its own kinds of note', () => {
   assert.equal(linkTypeProblem('creator', 'Checker', 'role'), null)
   assert.equal(linkTypeProblem('creator', 'Victor', 'person'), null)
-  assert.match(linkTypeProblem('owner', 'Checker', 'role')!, /has type: role\. Give that note type: person\./)
+  assert.match(linkTypeProblem('owner', 'Checker', 'role')!, /names Checker as its owner, and that note has type: role\. Give that note type: person\./)
   assert.match(linkTypeProblem('role', 'Victor', undefined)!, /has no type\. Give that note type: role\./)
 })

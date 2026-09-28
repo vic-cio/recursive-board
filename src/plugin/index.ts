@@ -170,10 +170,10 @@ export class WorkItemIndex {
     }
   }
 
-  /** The note a link field points to, or null when it is plain text or does not resolve. */
+  /** The note a person or role name names, as a link would resolve it, or null when none has that name. */
   private linkedFile(value: unknown, from: TFile): TFile | null {
-    const target = parseWikilink(value)
-    return target === null ? null : this.app.metadataCache.getFirstLinkpathDest(target, from.path)
+    const name = displayName(value)
+    return name === undefined ? null : this.app.metadataCache.getFirstLinkpathDest(name, from.path)
   }
 
   /** The work item a file is, or null when the file is not one. */

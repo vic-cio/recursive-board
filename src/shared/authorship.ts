@@ -1,12 +1,13 @@
 /**
  * Who made a card, who owns it, and which role does its work (docs/adr/0042-creator-and-role.md).
  *
- * `creator`, `owner` and `role` name people and roles by a link to their note, so Obsidian's
- * backlinks and graph show everything a person or role made. The linked note's `type` says which
- * it is: `person` or `role`. The product needs no folder for them. `creator_model` holds an
- * agent's model id. This module imports nothing from Node.
+ * `creator`, `owner` and `role` hold the plain name of a person or role note. A plain name, not a
+ * link: a link from every note to its creator turns the graph into one star around each person.
+ * The note of that name says which it is by its `type`: `person` or `role`, and lists what it made
+ * with a Bases table. The product needs no folder for them. `creator_model` holds an agent's model
+ * id. This module imports nothing from Node.
  */
-import { formatWikilink, parseWikilink } from './schema.ts'
+import { parseWikilink } from './schema.ts'
 
 export const PERSON_TYPE = 'person'
 export const ROLE_TYPE = 'role'
@@ -19,11 +20,11 @@ export const LINK_FIELDS = {
 } as const
 export type LinkField = keyof typeof LINK_FIELDS
 
-/** A name as a link. A value that is a link already stays as written. */
-export function asLink(name: string): string {
-  const trimmed = name.trim()
-  if (trimmed === '') throw new Error('a name cannot be empty.')
-  return parseWikilink(trimmed) === null ? formatWikilink(trimmed) : trimmed
+/** The plain name to write. A link given by habit becomes its target: `[[Victor]]` is `Victor`. */
+export function asName(name: string): string {
+  const plain = displayName(name)
+  if (plain === undefined) throw new Error('a name cannot be empty.')
+  return plain
 }
 
 /** The name to show: a link's target, or the plain text. */
@@ -40,11 +41,11 @@ export function authorLabel(name: string | undefined, model: string | undefined)
   return runtime ? `${who} (${runtime})` : who
 }
 
-/** Why a link field's target is the wrong kind of note, or null when it is fine. */
+/** Why a field's note is the wrong kind of note, or null when it is fine. */
 export function linkTypeProblem(field: LinkField, target: string, type: unknown): string | null {
   const allowed: readonly string[] = LINK_FIELDS[field]
   if (typeof type === 'string' && allowed.includes(type)) return null
   const want = allowed.map((kind) => `type: ${kind}`).join(' or ')
-  return `links ${field} to [[${target}]], which has ${typeof type === 'string' ? `type: ${type}` : 'no type'}. ` +
+  return `names ${target} as its ${field}, and that note has ${typeof type === 'string' ? `type: ${type}` : 'no type'}. ` +
     `Give that note ${want}.`
 }

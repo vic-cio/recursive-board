@@ -25,6 +25,8 @@ export function renderBreadcrumbs(
   ctx: RenderContext,
   meta: WorkItemMeta,
   checklist?: HTMLElement,
+  /** False when the note's own inline title already names the item, so it is not said twice. */
+  showCurrent = true,
 ): void {
   const bar = host.createDiv({ cls: 'wi-breadcrumbs' })
   const trail = bar.createDiv({ cls: 'wi-crumb-trail' })
@@ -38,15 +40,18 @@ export function renderBreadcrumbs(
     trail.createSpan({ cls: 'wi-crumb-sep', text: '/' })
   }
 
-  for (const ancestor of ancestors) {
+  ancestors.forEach((ancestor, i) => {
+    if (i > 0) trail.createSpan({ cls: 'wi-crumb-sep', text: '/' })
     const crumb = trail.createSpan({ cls: 'wi-crumb', text: ancestor.title })
     crumb.addEventListener('click', (event) => {
       event.preventDefault()
       void ctx.actions.open(ancestor, event.metaKey || event.ctrlKey)
     })
-    trail.createSpan({ cls: 'wi-crumb-sep', text: '/' })
+  })
+  if (showCurrent) {
+    if (ancestors.length > 0) trail.createSpan({ cls: 'wi-crumb-sep', text: '/' })
+    trail.createSpan({ cls: 'wi-crumb is-current', text: meta.title })
   }
-  trail.createSpan({ cls: 'wi-crumb is-current', text: meta.title })
 
   renderControls(bar, ctx, meta, checklist)
 }

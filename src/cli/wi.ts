@@ -90,9 +90,9 @@ Notes
   area/work/website. \`wi new\` writes it. After \`wi move\` or \`wi area\`, run \`wi retag\` to fix
   the tags below. \`wi graph\` writes a colour group per area to .obsidian/graph.json and keeps
   your own groups. Close the graph view first: Obsidian may write over the file.
-  \`wi new\` writes creator, creator_model and role as links to person or role notes. --creator and
+  \`wi new\` writes creator, creator_model and role as the plain names of person or role notes. --creator and
   --model fall back to WI_CREATOR and WI_MODEL; wi new warns when a card has no creator, and
-  --strict refuses it. An --owner that names an existing note becomes a link.
+  --strict refuses it.
   \`wi set\` changes a card's owner or role (an empty value removes it), and writes its creator and
   model only when it has none: a creator is set once.
   \`wi note\` appends "- <date> <time>, <writer>: <text>" under Notes. The writer is --agent, or
