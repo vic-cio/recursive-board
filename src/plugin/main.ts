@@ -270,8 +270,8 @@ export default class RecursiveBoardPlugin extends Plugin {
     const previousTicks = this.dashboard.ticks
     this.dashboard = { ...this.dashboard, ...patch, ...('you' in patch ? { ticks: {} } : {}) }
     if ('ticks' in patch) await this.savePersonTicks(patch.ticks ?? {}, previousTicks)
-    const { you, root, focus, webReviewMode } = this.dashboard
-    this.app.saveLocalStorage(DASHBOARD_STORAGE_KEY, { you, root, focus, webReviewMode })
+    const { you, root, focus, webReviewMode, finishedOpen } = this.dashboard
+    this.app.saveLocalStorage(DASHBOARD_STORAGE_KEY, { you, root, focus, webReviewMode, finishedOpen })
     // These change what the dashboard draws or how a row opens, so it redraws at once.
     if ('you' in patch || 'webReviewMode' in patch) this.refreshDashboards()
   }
