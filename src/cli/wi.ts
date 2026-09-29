@@ -37,6 +37,7 @@ import { hookStatus, installHook, uninstallHook } from './commands/hook.ts'
 import { runSetup } from './commands/setup.ts'
 import { objectiveReport } from './commands/objective.ts'
 import { migrateVaultConfig } from './commands/config.ts'
+import { correctionTrace, renderCorrectionTrace } from './commands/trace.ts'
 import { STATUSES } from '../shared/schema.ts'
 import { templateNames } from '../shared/templates.ts'
 
@@ -55,6 +56,7 @@ Usage
   wi set <ref> [--owner <name>] [--role <name>] [--creator <name> [--model <id>]]
   wi claim <ref> --agent <name>
   wi objective [<ref>]
+  wi trace <source.md> --heading <heading> --claim <text> [--json]
   wi agents
   wi release <ref> --reason <text> [--where <branch-or-path>]
   wi move <ref> --to <ref>
@@ -154,6 +156,8 @@ async function main(argv: string[]): Promise<number> {
       agent: { type: 'string' },
       reason: { type: 'string' },
       where: { type: 'string' },
+      heading: { type: 'string' },
+      claim: { type: 'string' },
       priority: { type: 'string' },
       template: { type: 'string' },
       objective: { type: 'string' },
@@ -199,6 +203,9 @@ async function main(argv: string[]): Promise<number> {
   }
   if ((values.creator !== undefined || values.model !== undefined || values.role !== undefined) && command !== 'new' && command !== 'set') {
     throw new UsageError('--creator, --model and --role apply only to wi new and wi set.')
+  }
+  if ((values.heading !== undefined || values.claim !== undefined) && command !== 'trace') {
+    throw new UsageError('--heading and --claim apply only to wi trace.')
   }
   if (command === 'setup') {
     if (rest.length > 0) throw new UsageError('wi setup takes options only. Run wi setup --help for usage.')
@@ -246,6 +253,15 @@ async function main(argv: string[]): Promise<number> {
       return runAgents(vault, rest, json)
     case 'objective':
       return runObjective(vault, rest)
+    case 'trace': {
+      if (rest.length !== 1 || !rest[0] || !values.heading || !values.claim) {
+        throw new UsageError('wi trace needs a source file, --heading, and --claim.')
+      }
+      const report = await correctionTrace({ vault, source: rest[0], heading: values.heading, claim: values.claim })
+      if (json) print(report)
+      else process.stdout.write(renderCorrectionTrace(report))
+      return 0
+    }
     case 'release':
       return runRelease(vault, rest, values, json)
     case 'move':
