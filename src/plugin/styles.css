@@ -1092,7 +1092,10 @@
 .wi-dash-agent.is-quiet .wi-dash-icon { color: var(--color-orange); }
 .wi-dash-agent.is-finished .wi-dash-icon { color: var(--color-green); }
 .wi-dash-ago { font-size: var(--font-ui-smaller); color: var(--text-faint); flex: none; }
-.wi-dash-copy { flex: none; height: auto; margin: calc(-1 * var(--size-4-1)) 0; }
+.wi-dash-id { display: inline-flex; align-items: center; gap: var(--size-4-1); flex: none; height: auto; padding: 0 var(--size-4-1); background: none; box-shadow: none; color: var(--text-faint); font-family: var(--font-monospace); font-size: var(--font-ui-smaller); cursor: pointer; }
+.wi-dash-id:hover { color: var(--text-normal); background: var(--background-modifier-hover); }
+.wi-dash-id .wi-dash-icon svg { width: var(--icon-xs); height: var(--icon-xs); }
+.wi-dash-desktop-card .wi-dash-id, .wi-dash-phone-card .wi-dash-id { display: flex; width: fit-content; margin-top: var(--size-4-1); margin-left: calc(-1 * var(--size-4-1)); font-weight: normal; }
 .wi-dash-fold { margin-top: var(--size-4-2); }
 .wi-dash-fold .wi-dash-agents.wi-dash-hidden { display: none; }
 .wi-dash-fold-toggle { display: inline-flex; align-items: center; gap: var(--size-4-1); padding: var(--size-4-1) var(--size-4-2); height: auto; background: none; box-shadow: none; color: var(--text-muted); font-size: var(--font-ui-smaller); }
