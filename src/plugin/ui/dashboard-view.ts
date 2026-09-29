@@ -14,7 +14,7 @@ import {
   ago, agentFeed, allReviewFilesTicked, areaPath, cardsInScope, fileReviewPaths, groupName, groupUnder, inFocus, isLoopbackWebAddress, isWebAddress, needsAttention, parseReviewLine, progress, reviewPathsForMode, waitsForReview, workingBadge,
   type AgentFeed, type AgentRow, type Attention, type DashTree, type Group, type WebReviewMode,
 } from '../dashboard-model.ts'
-import type { DashboardTicks } from '../personal-state.ts'
+import { withFold, type DashboardTicks } from '../personal-state.ts'
 
 export const DASHBOARD_VIEW = 'recursive-board-dashboard'
 /** Not `layout-dashboard`: Obsidian's new-canvas button already uses it. */
@@ -33,6 +33,8 @@ export interface DashboardState {
   webReviewMode: WebReviewMode
   /** The finished fold under the Agents feed is open. */
   finishedOpen: boolean
+  /** The For review groups folded on this device, by group key. */
+  foldedGroups: string[]
 }
 
 export interface DashboardHost {
@@ -267,19 +269,21 @@ export class DashboardView extends ItemView {
         const heading = body.createEl('tr', { cls: 'wi-dash-group' })
         const cell = heading.createEl('td', { attr: { colspan: 6 } })
         const caret = cell.createSpan('wi-dash-caret')
-        setIcon(caret, 'chevron-down')
+        setIcon(caret, state.foldedGroups.includes(key) ? 'chevron-right' : 'chevron-down')
         cell.createSpan({ cls: 'wi-dash-group-name', text: row.group.name })
         cell.createSpan({ cls: 'wi-dash-count', text: String(rows.filter((other) => groupKey(other.group) === key).length) })
         groupRows.set(key, [])
+        // Saved, not redrawn: the dashboard redraws on every vault change and must keep each fold as it is.
         heading.onclick = () => {
-          const members = groupRows.get(key) ?? []
-          const hide = !members[0]?.hasClass('wi-dash-hidden')
-          members.forEach((member) => member.toggleClass('wi-dash-hidden', hide))
-          setIcon(caret, hide ? 'chevron-right' : 'chevron-down')
+          const fold = !this.host.state().foldedGroups.includes(key)
+          groupRows.get(key)?.forEach((member) => member.toggleClass('wi-dash-hidden', fold))
+          setIcon(caret, fold ? 'chevron-right' : 'chevron-down')
+          void this.host.save({ foldedGroups: withFold(this.host.state().foldedGroups, key, fold) })
         }
       }
 
       const tr = body.createEl('tr', { cls: 'wi-dash-review-row' })
+      tr.toggleClass('wi-dash-hidden', state.foldedGroups.includes(key))
       groupRows.get(key)?.push(tr)
       const web = isWebAddress(row.path)
       const tickCell = tr.createEl('td', { cls: 'wi-dash-review-tick' })

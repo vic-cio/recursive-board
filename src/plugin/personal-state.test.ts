@@ -1,16 +1,32 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
-import { applyTickChanges, mergeTicks, parseDeviceDashboardState, parsePersonTicks, personTicks, safePersonFileName, splitLegacyDashboardState, withPersonTicks } from './personal-state.ts'
+import { applyTickChanges, mergeTicks, parseDeviceDashboardState, parsePersonTicks, personTicks, safePersonFileName, splitLegacyDashboardState, withFold, withPersonTicks } from './personal-state.ts'
 
 test('device dashboard state has safe defaults and parses only known values', () => {
   assert.deepEqual(parseDeviceDashboardState({ you: ' Ana ', root: 'Boards/Main.md', focus: null, webReviewMode: 'off', ticks: { a: true } }), {
-    you: ' Ana ', root: 'Boards/Main.md', focus: null, webReviewMode: 'off', finishedOpen: false,
+    you: ' Ana ', root: 'Boards/Main.md', focus: null, webReviewMode: 'off', finishedOpen: false, foldedGroups: [],
   })
   assert.deepEqual(parseDeviceDashboardState({ you: 4, root: null, focus: 2, webReviewMode: 'unknown' }), {
-    you: '', root: '', focus: null, webReviewMode: 'webviewer', finishedOpen: false,
+    you: '', root: '', focus: null, webReviewMode: 'webviewer', finishedOpen: false, foldedGroups: [],
   })
   assert.equal(parseDeviceDashboardState({ finishedOpen: true }).finishedOpen, true)
   assert.equal(parseDeviceDashboardState({ finishedOpen: 'yes' }).finishedOpen, false)
+})
+
+test('folded review groups parse as a list of unique group keys', () => {
+  assert.deepEqual(parseDeviceDashboardState({ foldedGroups: ['Boards/Job Hunt.md', '', 'Boards/Job Hunt.md'] }).foldedGroups, ['Boards/Job Hunt.md', ''])
+  assert.deepEqual(parseDeviceDashboardState({ foldedGroups: ['a', 2, null] }).foldedGroups, ['a'])
+  assert.deepEqual(parseDeviceDashboardState({ foldedGroups: 'a' }).foldedGroups, [])
+})
+
+test('legacy state keeps the device\'s folded review groups', () => {
+  assert.deepEqual(splitLegacyDashboardState({}, { foldedGroups: ['a'] }).device.foldedGroups, ['a'])
+})
+
+test('withFold adds or removes one group key and keeps the rest', () => {
+  assert.deepEqual(withFold(['a'], 'b', true), ['a', 'b'])
+  assert.deepEqual(withFold(['a', 'b'], 'a', false), ['b'])
+  assert.deepEqual(withFold(['a'], 'a', true), ['a'])
 })
 
 test('legacy state splits into device choices and person ticks, with device values taking precedence', () => {
@@ -18,7 +34,7 @@ test('legacy state splits into device choices and person ticks, with device valu
     { you: 'Old name', root: 'old-root', focus: 'old-focus', webReviewMode: 'browser', ticks: { a: true, b: true } },
     { you: 'New name', root: '', focus: null, webReviewMode: 'off' },
   ), {
-    device: { you: 'New name', root: '', focus: null, webReviewMode: 'off', finishedOpen: false },
+    device: { you: 'New name', root: '', focus: null, webReviewMode: 'off', finishedOpen: false, foldedGroups: [] },
     personName: 'New name',
     ticks: { a: true, b: true },
   })
@@ -28,7 +44,7 @@ test('invalid device values fall back to valid legacy choices', () => {
   assert.deepEqual(splitLegacyDashboardState(
     { you: 'Ana', root: 'Main', focus: 'Area', webReviewMode: 'browser' },
     { you: 2, root: null, focus: 5, webReviewMode: 'bad' },
-  ).device, { you: 'Ana', root: 'Main', focus: 'Area', webReviewMode: 'browser', finishedOpen: false })
+  ).device, { you: 'Ana', root: 'Main', focus: 'Area', webReviewMode: 'browser', finishedOpen: false, foldedGroups: [] })
 })
 
 test('person tick files parse and merge true ticks without dropping synced ticks', () => {

@@ -7,6 +7,8 @@ export interface DeviceDashboardState {
   webReviewMode: WebReviewMode
   /** The finished fold under the Agents feed. Per device, so opening it on one device leaves another closed. */
   finishedOpen: boolean
+  /** The For review groups folded on this device, by group key (the area's path, '' for no area). */
+  foldedGroups: string[]
 }
 
 export type DashboardTicks = Record<string, true>
@@ -17,6 +19,7 @@ const EMPTY_DEVICE_STATE: DeviceDashboardState = {
   focus: null,
   webReviewMode: 'webviewer',
   finishedOpen: false,
+  foldedGroups: [],
 }
 
 function record(value: unknown): Record<string, unknown> {
@@ -31,7 +34,16 @@ export function parseDeviceDashboardState(value: unknown): DeviceDashboardState 
     focus: typeof data['focus'] === 'string' ? data['focus'] : null,
     webReviewMode: parseWebReviewMode(data['webReviewMode']),
     finishedOpen: data['finishedOpen'] === true,
+    foldedGroups: Array.isArray(data['foldedGroups'])
+      ? [...new Set(data['foldedGroups'].filter((key): key is string => typeof key === 'string'))]
+      : [],
   }
+}
+
+/** The folded group keys with one group folded or unfolded. */
+export function withFold(folded: readonly string[], key: string, fold: boolean): string[] {
+  const rest = folded.filter((other) => other !== key)
+  return fold ? [...rest, key] : rest
 }
 
 export function parsePersonTicks(value: unknown): DashboardTicks {
@@ -57,7 +69,7 @@ export function splitLegacyDashboardState(legacy: unknown, device: unknown): {
 } {
   const old = record(legacy)
   const saved = record(device)
-  const pick = (key: Exclude<keyof DeviceDashboardState, 'finishedOpen'>): unknown => {
+  const pick = (key: Exclude<keyof DeviceDashboardState, 'finishedOpen' | 'foldedGroups'>): unknown => {
     const value = saved[key]
     if (key === 'you' || key === 'root') return typeof value === 'string' ? value : old[key]
     if (key === 'focus') return value === null || typeof value === 'string' ? value : old[key]
@@ -65,7 +77,7 @@ export function splitLegacyDashboardState(legacy: unknown, device: unknown): {
   }
   const next = parseDeviceDashboardState({
     you: pick('you'), root: pick('root'), focus: pick('focus'), webReviewMode: pick('webReviewMode'),
-    finishedOpen: saved['finishedOpen'],
+    finishedOpen: saved['finishedOpen'], foldedGroups: saved['foldedGroups'],
   })
   return { device: next, personName: next.you, ticks: parsePersonTicks({ ticks: old['ticks'] }) }
 }

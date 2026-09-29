@@ -5,8 +5,9 @@ status: accepted
 
 The dashboard has choices that belong to one device and ticks that follow a person.
 
-- Store the selected name, root, focus, web row setting, and finished fold state with Obsidian's
-  per-device local storage.
+- Store the selected name, root, focus, web row setting, finished fold state, and folded For review
+  groups with Obsidian's per-device local storage. The dashboard redraws on each vault change, so a
+  fold kept only in the drawn page opens again.
 - Offer notes with `type: person` as names: a button for each in the For review picker, and
   suggestions in the settings field. Keep the name open to free text.
 - Store each person's review ticks in the plugin data, under `people.<name>.ticks`.

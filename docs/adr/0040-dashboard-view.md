@@ -51,7 +51,7 @@ The dashboard icon is `gauge`, because Obsidian's new-canvas button already uses
 
 The dashboard covers every root, or one root that a picker chooses. The picker shows only when
 the vault has more than one root. The name, the root, the focus,
-and the finished fold are device settings. Review ticks follow the person named in the setting. See
+the finished fold, and the folded For review groups are device settings. Review ticks follow the person named in the setting. See
 [Personal dashboard state](0045-personal-dashboard-state.md). A tick records that you looked at a
 file. It does not change the card. Web rows have no tick.
 
