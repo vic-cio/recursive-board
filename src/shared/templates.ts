@@ -14,6 +14,7 @@
  */
 import { formatScalar } from './frontmatter.ts'
 import { CORE_FIELDS, WORK_ITEM_TYPE, formatWikilink } from './schema.ts'
+import { wrapAnglePlaceholders } from './markdown.ts'
 
 export interface Section {
   heading: string
@@ -113,14 +114,14 @@ export function briefGaps(template: BodyTemplate, brief: Brief = {}): string[] {
 function briefContent(brief: Brief): Map<string, string> {
   const content = new Map<string, string>()
   const objective = brief.objective?.trim()
-  if (objective) content.set(BRIEF_HEADINGS.objective, objective)
+  if (objective) content.set(BRIEF_HEADINGS.objective, wrapAnglePlaceholders(objective))
   const context = (brief.context ?? []).map((c) => c.trim()).filter((c) => c !== '')
-  if (context.length > 0) content.set(BRIEF_HEADINGS.context, context.join('\n\n'))
+  if (context.length > 0) content.set(BRIEF_HEADINGS.context, wrapAnglePlaceholders(context.join('\n\n')))
   const criteria = (brief.criteria ?? []).map((c) => c.trim()).filter((c) => c !== '')
   for (const line of criteria) {
     if (/[\r\n]/.test(line)) throw new Error('each acceptance criterion must be one line.')
   }
-  if (criteria.length > 0) content.set(BRIEF_HEADINGS.criteria, criteria.map((c) => `- ${c}`).join('\n'))
+  if (criteria.length > 0) content.set(BRIEF_HEADINGS.criteria, wrapAnglePlaceholders(criteria.map((c) => `- ${c}`).join('\n')))
   return content
 }
 

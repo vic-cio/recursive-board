@@ -1,6 +1,6 @@
 ---
 name: recursive-board
-description: Read and change work items in a Recursive Board vault through the `wi` CLI. Use when asked what is on a board, backlog or agenda; to add, tick, move, archive or remove a card; to break work into child items; or to take on and work a card. Also use whenever the working directory holds a `Boards/` folder or a `.wi.json` file.
+description: Read and change work items in a Recursive Board vault through the `wi` CLI. Use when asked what is on a board, backlog or agenda; to add, tick, move, archive or remove a card; to break work into child items; or to take on and work a card. Also use whenever the working directory holds a `Boards/` folder, a `Recursive Board config.md` note, or a legacy `.wi.json` file.
 ---
 
 # recursive-board
@@ -26,7 +26,7 @@ delete, how to name cards) take priority over this page.
 ## Reaching the vault
 
 `wi` finds the vault in this order: `--vault <path>`, `$WI_VAULT`, the nearest folder above the
-working directory that holds `.wi.json` or `Boards/`, this Git repo's pointer, then
+working directory that holds `Recursive Board config.md`, `.wi.json`, or `Boards/`, this Git repo's pointer, then
 `defaultVault` in `~/.config/wi/config.json` (or `$XDG_CONFIG_HOME/wi/config.json`). To set a
 repo pointer, run `wi here --vault <path> --board <ref>` once from that repo. It is stored in
 user config outside the repo, keyed by Git's common directory, so linked worktrees share it.
@@ -34,6 +34,17 @@ Run `wi here` to print the current repo's pointer. With a pointer, `wi new` defa
 and `wi children` can omit the reference. Explicit `--parent` and `wi children <ref>` still work.
 
 `wi --help` is the full command reference. Read it for any flag this page does not name.
+
+## Vault config
+
+`Recursive Board config.md` holds the shared vault settings in a marked JSON block.
+The CLI and plugin use this note when it exists. An invalid note produces an error.
+When the note is absent, they read the legacy `.wi.json` file.
+
+Run `wi config migrate` to preview the migration from `.wi.json`.
+Run `wi config migrate --apply` to create the note after review.
+Migration keeps `.wi.json` and refuses to overwrite an existing note.
+Read the README for the block format and each setting.
 
 ## Reading
 

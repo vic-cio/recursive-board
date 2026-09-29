@@ -3,7 +3,7 @@ import assert from 'node:assert/strict'
 import { execFile } from 'node:child_process'
 import { promisify } from 'node:util'
 import { fileURLToPath } from 'node:url'
-import { readFileSync, rmSync, writeFileSync } from 'node:fs'
+import { existsSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 
 import { makeVault, item, type Fixture } from './test-helpers.ts'
@@ -83,6 +83,47 @@ test('WI_MAX_AGENTS must be a non-negative whole number', async () => {
   assert.equal(result.code, 2)
   assert.match(result.stderr, /WI_MAX_AGENTS must be a non-negative whole number/)
 })
+
+test('config migration shows the proposed note without writing it', async () => {
+  fixture = seed()
+  const legacy = '{"defaultRoot":"Main","customKey":true}\n'
+  fixture.write('.wi.json', legacy)
+  const result = await wi(['config', 'migrate'])
+  assert.equal(result.code, 0, result.stderr)
+  assert.match(result.stdout, /Proposed config note/)
+  assert.match(result.stdout, /"customKey": true/)
+  assert.equal(readFixture('Recursive Board config.md'), null)
+  assert.equal(readFixture('.wi.json'), legacy)
+})
+
+test('config migration applies only after preview and leaves the legacy file intact', async () => {
+  fixture = seed()
+  const legacy = '{"defaultRoot":"Main","customKey":true}\n'
+  fixture.write('.wi.json', legacy)
+  const result = await wi(['config', 'migrate', '--apply'])
+  assert.equal(result.code, 0, result.stderr)
+  assert.match(result.stdout, /Proposed config note/)
+  assert.match(readFixture('Recursive Board config.md') ?? '', /"defaultRoot": "Main"/)
+  assert.equal(readFixture('.wi.json'), legacy)
+})
+
+test('config migration refuses an existing note and keeps both files intact', async () => {
+  fixture = seed()
+  const legacy = '{"defaultRoot":"Main"}\n'
+  const existing = '# Hand-written note\n'
+  fixture.write('.wi.json', legacy)
+  fixture.write('Recursive Board config.md', existing)
+  const result = await wi(['config', 'migrate', '--apply'])
+  assert.equal(result.code, 2)
+  assert.match(result.stderr, /already exists/)
+  assert.equal(readFixture('Recursive Board config.md'), existing)
+  assert.equal(readFixture('.wi.json'), legacy)
+})
+
+function readFixture(path: string): string | null {
+  const fullPath = join(fixture!.root, path)
+  return existsSync(fullPath) ? readFileSync(fullPath, 'utf8') : null
+}
 
 test('wi claim remains advisory when the active agent count reaches the limit', async () => {
   fixture = seed()

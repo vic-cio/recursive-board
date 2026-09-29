@@ -17,7 +17,9 @@ It has three panels:
   The line may also list a web address (`http://` or `https://`). The setting "Web pages in For
   review" controls whether those rows appear and where they open. A web row has no tick and no
   Changed date. On a phone, a loopback address stays visible without a link because it only works
-  on the computer that runs the service. See [Web rows in For review](0044-web-review-rows.md).
+  on the computer that runs the service. See [Web rows in For review](0044-web-review-rows.md). On
+  a phone, each review row stacks the target, card, check, type, changed date, and approval controls.
+  Long names, instructions, and URLs wrap inside the row.
 - **Progress.** Leaf cards per project, done out of total. A board is a container, so it does not
   count.
 - **Agents.** Cards with an `agent`, per project: working, idle, and recently finished. A claim is
@@ -30,8 +32,10 @@ focuses it: every panel shows only the cards inside it, grouped under the next a
 cards directly in it group under "Directly in <area>". A trail of crumbs goes back up. A flat list
 of every area would grow unreadable as boards are added.
 
-A link on the dashboard opens in a new tab, so the dashboard stays open. Its icon is `gauge`,
-because Obsidian's new-canvas button already uses `layout-dashboard`.
+A vault link on the dashboard opens in the same tab on mobile, including **Open board**.
+On a desktop, it opens in a new tab, so the dashboard stays open.
+Web addresses follow the configured browser or Web viewer behavior in [0044](0044-web-review-rows.md).
+The dashboard icon is `gauge`, because Obsidian's new-canvas button already uses `layout-dashboard`.
 
 The dashboard covers every root, or one root that a picker chooses. The name, the root, and the
 focus are device settings. Review ticks follow the person named in the setting. See

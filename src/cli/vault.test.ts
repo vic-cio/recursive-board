@@ -55,6 +55,30 @@ test('loadVault reads work items from the configured folder only', async () => {
   assert.deepEqual(vault.items.map((i) => i.id), ['wi-0100'])
 })
 
+test('the Markdown config note overrides a valid legacy config file', async () => {
+  fixture = vaultWithTree()
+  fixture.write('.wi.json', '{"workItemFolder":"Boards","defaultRoot":"Legacy"}')
+  fixture.write('Recursive Board config.md', '# Settings\n\n<!-- recursive-board-config -->\n```json\n{"workItemFolder":"Projects","defaultRoot":"Launch","extraSections":["References"],"maxAgents":2,"autoPromote":false,"areaTags":true}\n```\n')
+  fixture.write('Projects/Launch.md', item({
+    type: 'work-item', id: 'wi-0100', title: 'Launch', created: '2026-09-21', updated: '2026-09-21',
+  }))
+  const vault = await loadVault(fixture.root)
+  assert.equal(vault.config.workItemFolder, 'Projects')
+  assert.equal(vault.config.defaultRoot, 'Launch')
+  assert.deepEqual(vault.config.extraSections, ['References'])
+  assert.equal(vault.config.maxAgents, 2)
+  assert.equal(vault.config.autoPromote, false)
+  assert.equal(vault.config.areaTags, true)
+  assert.deepEqual(vault.items.map((entry) => entry.id), ['wi-0100'])
+})
+
+test('an invalid Markdown config note reports an error instead of using the legacy config', async () => {
+  fixture = vaultWithTree()
+  fixture.write('.wi.json', '{"defaultRoot":"Main"}')
+  fixture.write('Recursive Board config.md', '# Settings\n\n<!-- recursive-board-config -->\n```json\n{broken}\n```\n')
+  await assert.rejects(loadVault(fixture.root), /Recursive Board config\.md.*valid JSON/)
+})
+
 test('loadVault rejects malformed config rather than indexing Boards', async () => {
   fixture = vaultWithTree()
   fixture.write('.wi.json', '{"workItemFolder":"../Elsewhere"}')

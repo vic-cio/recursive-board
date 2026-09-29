@@ -14,7 +14,7 @@ import { resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 import {
-  loadVault, findVaultRoot, getDefaultVault, getRepoPointer, setRepoPointer, maxAgentsForRun,
+  loadVault, readVaultConfig, findVaultRoot, getDefaultVault, getRepoPointer, setRepoPointer, maxAgentsForRun,
   type Vault, type WorkItem,
 } from './vault.ts'
 import { createItem } from './commands/new.ts'
@@ -35,6 +35,9 @@ import { setPeople } from './commands/set.ts'
 import { dependenciesOf, openDependencies, titleOf } from './dependencies.ts'
 import { hookStatus, installHook, uninstallHook } from './commands/hook.ts'
 import { runSetup } from './commands/setup.ts'
+import { objectiveReport } from './commands/objective.ts'
+import { migrateVaultConfig } from './commands/config.ts'
+import { correctionTrace, renderCorrectionTrace } from './commands/trace.ts'
 import { STATUSES } from '../shared/schema.ts'
 import { templateNames } from '../shared/templates.ts'
 
@@ -42,6 +45,7 @@ const HELP = `wi — the Recursive Board CLI
 
 Usage
   wi setup [--yes] [--vault <path>] [--force]
+  wi config migrate [--apply] [--vault <path>]
   wi new <title> [--parent <ref>] [--status <s>] [--template <t>] [--owner <o>] [--agent <a>]
                  [--priority <n>] [--objective <text>] [--context <text>]... [--criteria <text>]...
                  [--creator <name>] [--model <id>] [--role <name>] [--strict]
@@ -51,6 +55,8 @@ Usage
   wi depend <ref> --on <ref> [--off]
   wi set <ref> [--owner <name>] [--role <name>] [--creator <name> [--model <id>]]
   wi claim <ref> --agent <name>
+  wi objective [<ref>]
+  wi trace <source.md> --heading <heading> --claim <text> [--json]
   wi agents
   wi release <ref> --reason <text> [--where <branch-or-path>]
   wi move <ref> --to <ref>
@@ -82,11 +88,13 @@ Options
 Notes
   \`wi new\` writes the brief: --objective once, --context and --criteria once per paragraph or
   criterion. It warns when the card has no Objective or Acceptance Criteria; --strict refuses it.
+  \`wi new\` and \`wi note\` wrap bare angle placeholders in backticks in Markdown body text. They
+  preserve code, links, autolinks, and HTML.
   A title's unsafe filename characters become hyphens. When another item has the same filename,
   the new file gets the id's suffix; wi never writes over a file.
   \`wi new\` makes a parent a board when it gives the parent its first child. Set
-  "autoPromote": false in .wi.json to turn this off. A root or an area is never changed.
-  With "areaTags": true in .wi.json, each work item carries one tag naming its areas, such as
+  "autoPromote": false in Recursive Board config.md to turn this off. A root or an area is never changed.
+  With "areaTags": true in Recursive Board config.md, each work item carries one tag naming its areas, such as
   area/work/website. \`wi new\` writes it. After \`wi move\` or \`wi area\`, run \`wi retag\` to fix
   the tags below. \`wi graph\` writes a colour group per area to .obsidian/graph.json and keeps
   your own groups. Close the graph view first: Obsidian may write over the file.
@@ -117,14 +125,17 @@ Notes
   \`wi status <ref> done\` names each card it unblocks. An archived card that is not done still blocks.
   \`wi claim\` lets an agent hold a card and its subtasks at once. It refuses a board with a child in
   doing that a different agent or a person works.
+  \`wi objective\` prints the WI_CARD objective chain, or the unambiguous deepest WI_AGENT claim.
   \`wi agents\` reports the advisory limit, the number of distinct agents with a doing card, and each
   claimed doing card. WI_MAX_AGENTS overrides
-  maxAgents from .wi.json for one run. Dispatchers decide whether to wait; wi claim does not enforce it.
+  maxAgents from Recursive Board config.md for one run. Dispatchers decide whether to wait; wi claim does not enforce it.
+  Recursive Board config.md is the shared vault config. The hidden .wi.json file is a fallback.
+  \`wi config migrate\` previews a legacy migration. Run it again with --apply to create the note.
   \`wi new\` warns when such a file exists because a new id or filename may clash with it.
   \`wi here\` reads or sets this repository's vault and board pointer in your user config.
 `
 
-const VERSION = '0.3.0'
+const VERSION = '0.4.0'
 
 class UsageError extends Error {}
 
@@ -145,6 +156,8 @@ async function main(argv: string[]): Promise<number> {
       agent: { type: 'string' },
       reason: { type: 'string' },
       where: { type: 'string' },
+      heading: { type: 'string' },
+      claim: { type: 'string' },
       priority: { type: 'string' },
       template: { type: 'string' },
       objective: { type: 'string' },
@@ -162,6 +175,7 @@ async function main(argv: string[]): Promise<number> {
       json: { type: 'boolean', default: false },
       force: { type: 'boolean', default: false },
       yes: { type: 'boolean', default: false },
+      apply: { type: 'boolean', default: false },
       help: { type: 'boolean', short: 'h', default: false },
       version: { type: 'boolean', short: 'V', default: false },
     },
@@ -180,6 +194,7 @@ async function main(argv: string[]): Promise<number> {
     throw new UsageError('--force applies only to wi hook install or wi setup.')
   }
   if (values.yes && command !== 'setup') throw new UsageError('--yes applies only to wi setup.')
+  if (values.apply && command !== 'config') throw new UsageError('--apply applies only to wi config migrate.')
   if (values.off && command !== 'area' && command !== 'depend') throw new UsageError('--off applies only to wi area and wi depend.')
   if (values.on !== undefined && command !== 'depend') throw new UsageError('--on applies only to wi depend.')
   if ((values.objective !== undefined || values.context !== undefined || values.criteria !== undefined || values.strict) &&
@@ -188,6 +203,9 @@ async function main(argv: string[]): Promise<number> {
   }
   if ((values.creator !== undefined || values.model !== undefined || values.role !== undefined) && command !== 'new' && command !== 'set') {
     throw new UsageError('--creator, --model and --role apply only to wi new and wi set.')
+  }
+  if ((values.heading !== undefined || values.claim !== undefined) && command !== 'trace') {
+    throw new UsageError('--heading and --claim apply only to wi trace.')
   }
   if (command === 'setup') {
     if (rest.length > 0) throw new UsageError('wi setup takes options only. Run wi setup --help for usage.')
@@ -200,6 +218,31 @@ async function main(argv: string[]): Promise<number> {
   }
 
   if (command === 'here') return runHere(values, values.json === true)
+
+  if (command === 'config') {
+    if (rest.length !== 1 || rest[0] !== 'migrate') {
+      throw new UsageError('wi config needs the subcommand migrate. Run wi config migrate [--apply].')
+    }
+    const root = await resolveVaultRoot(values.vault)
+    if (findVaultRoot(root) !== root) {
+      throw new UsageError(`${root} is not a vault: it has no Boards/ folder or config file.`)
+    }
+    await migrateVaultConfig(root, values.apply === true)
+    return 0
+  }
+
+  if (command === 'trace') {
+      if (rest.length !== 1 || !rest[0] || !values.heading || !values.claim) {
+        throw new UsageError('wi trace needs a source file, --heading, and --claim.')
+      }
+      const root = await resolveVaultRoot(values.vault)
+      if (findVaultRoot(root) !== root) throw new UsageError(`${root} is not a vault.`)
+      const vault = { root, ...await readVaultConfig(root) }
+      const report = await correctionTrace({ vault, source: rest[0], heading: values.heading, claim: values.claim })
+      if (values.json) print(report)
+      else process.stdout.write(renderCorrectionTrace(report))
+      return 0
+  }
 
   const vault = await openVault(values.vault)
   const json = values.json
@@ -221,6 +264,8 @@ async function main(argv: string[]): Promise<number> {
       return runClaim(vault, rest, values, json)
     case 'agents':
       return runAgents(vault, rest, json)
+    case 'objective':
+      return runObjective(vault, rest)
     case 'release':
       return runRelease(vault, rest, values, json)
     case 'move':
@@ -256,6 +301,14 @@ async function main(argv: string[]): Promise<number> {
 }
 
 async function openVault(flag: string | undefined): Promise<Vault> {
+  const root = await resolveVaultRoot(flag)
+  if (findVaultRoot(root) !== root) {
+    throw new UsageError(`${root} is not a vault: it has no Boards/ folder or config file.`)
+  }
+  return loadVault(root)
+}
+
+async function resolveVaultRoot(flag: string | undefined): Promise<string> {
   const hint = flag ?? process.env['WI_VAULT']
   let root = hint ? resolve(hint) : findVaultRoot(process.cwd())
   if (root === null) {
@@ -271,10 +324,14 @@ async function openVault(flag: string | undefined): Promise<Vault> {
       'no vault found. Run wi inside a vault, pass --vault <path>, set WI_VAULT, run wi here, or configure defaultVault with wi setup.',
     )
   }
-  if (findVaultRoot(root) !== root) {
-    throw new UsageError(`${root} is not a vault: it has no Boards/ folder or .wi.json.`)
-  }
-  return loadVault(root)
+  return root
+}
+
+function runObjective(vault: Vault, rest: string[]): number {
+  if (rest.length > 1) throw new UsageError('wi objective takes at most one <ref>. Run wi --help.')
+  const report = objectiveReport(vault, rest[0])
+  if (report) process.stdout.write(report)
+  return 0
 }
 
 async function runHere(values: Values, json: boolean): Promise<number> {
@@ -316,7 +373,7 @@ async function runNew(vault: Vault, rest: string[], values: Values, json: boolea
   const explicitParent = typeof values['parent'] === 'string' ? values['parent'] : undefined
   const pointerBoard = explicitParent === undefined ? await repoBoardForVault(vault) : undefined
   const parent = explicitParent ?? pointerBoard ?? vault.config.defaultRoot
-  if (!parent) throw new UsageError('wi new needs --parent <ref>, a repo board pointer, or defaultRoot in .wi.json.')
+  if (!parent) throw new UsageError('wi new needs --parent <ref>, a repo board pointer, or defaultRoot in Recursive Board config.md.')
 
   const priority = typeof values['priority'] === 'string' ? Number(values['priority']) : undefined
   if (priority !== undefined && !Number.isFinite(priority)) {

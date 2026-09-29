@@ -155,7 +155,7 @@ function checkDefaultRoot(vault: Vault, report: Reporter): void {
   const target = vault.items.find((item) => item.stem.toLowerCase() === configured.toLowerCase())
   if (target !== undefined && target.parent === null) return
 
-  report('default-root-unresolved', 'warning', '.wi.json', target?.id,
+  report('default-root-unresolved', 'warning', vault.configFile, target?.id,
     `sets defaultRoot to "${configured}", which does not name a root work item.`)
 }
 

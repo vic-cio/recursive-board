@@ -230,12 +230,24 @@ export class DashboardView extends ItemView {
 
     const groupRows = new Map<string, HTMLElement[]>()
     // Approve and Send back show once every file of the card is ticked.
-    const verdicts = new Map<WorkItemMeta, HTMLElement>()
+    const verdicts = new Map<WorkItemMeta, HTMLElement[]>()
     const pathsOf = (card: WorkItemMeta) => rows.filter((row) => row.card === card).map((row) => row.path)
     const filePathsOf = (card: WorkItemMeta) => fileReviewPaths(pathsOf(card))
     const syncVerdict = (card: WorkItemMeta) => {
       const ticks = this.host.state().ticks
-      verdicts.get(card)?.toggleClass('wi-dash-hidden', !allReviewFilesTicked(pathsOf(card), ticks))
+      verdicts.get(card)?.forEach((verdict) =>
+        verdict.toggleClass('wi-dash-hidden', !allReviewFilesTicked(pathsOf(card), ticks)))
+    }
+    const addVerdictControls = (check: HTMLElement, card: WorkItemMeta) => {
+      if (filePathsOf(card).length === 0) return
+      const box = check.createDiv('wi-dash-verdict wi-dash-hidden')
+      box.createEl('button', { text: 'Approve', cls: 'mod-cta' }).onclick = () =>
+        void this.verdict(card, { verdict: 'approve', you: this.host.state().you }, filePathsOf(card))
+      box.createEl('button', { text: 'Send back' }).onclick = () =>
+        new SendBackModal(this.app, card.title, (comment) =>
+          void this.verdict(card, { verdict: 'send back', you: this.host.state().you, comment }, filePathsOf(card))).open()
+      verdicts.set(card, [...(verdicts.get(card) ?? []), box])
+      syncVerdict(card)
     }
     rows.forEach((row, i) => {
       const key = groupKey(row.group)
@@ -256,10 +268,11 @@ export class DashboardView extends ItemView {
         }
       }
 
-      const tr = body.createEl('tr')
+      const tr = body.createEl('tr', { cls: 'wi-dash-review-row' })
       groupRows.get(key)?.push(tr)
       const web = isWebAddress(row.path)
-      const tickCell = tr.createEl('td')
+      const tickCell = tr.createEl('td', { cls: 'wi-dash-review-tick' })
+      tickCell.dataset['label'] = 'Reviewed'
       if (!web) {
         const tick = tickCell.createEl('input', { type: 'checkbox', attr: { 'aria-label': 'Reviewed' } })
         tick.checked = state.ticks[row.path] === true
@@ -276,7 +289,8 @@ export class DashboardView extends ItemView {
 
       const name = web ? row.path.replace(/^https?:\/\//, '').replace(/\/$/, '') : row.path.split('/').pop() ?? row.path
       const ext = web ? '' : name.includes('.') ? name.split('.').pop()!.toLowerCase() : 'md'
-      const nameCell = tr.createEl('td').createSpan('wi-dash-name')
+      const nameCell = tr.createEl('td', { cls: 'wi-dash-review-target' }).createSpan('wi-dash-name')
+      nameCell.parentElement?.setAttribute('data-label', 'Target')
       setIcon(nameCell.createSpan('wi-dash-icon'),
         web ? 'globe-2' : ext === 'md' ? 'file-text' : ext === 'pdf' ? 'file' : 'file-spreadsheet')
       if (web && Platform.isMobileApp && isLoopbackWebAddress(row.path)) {
@@ -284,30 +298,40 @@ export class DashboardView extends ItemView {
       } else {
         this.link(nameCell, name, () => web ? this.openWeb(row.path, this.host.state().webReviewMode) : this.openPath(row.path))
       }
-      tr.createEl('td', { cls: 'wi-dash-muted', text: web ? 'Web page' : TYPES[ext] ?? ext.toUpperCase() })
+      tr.createEl('td', {
+        cls: 'wi-dash-muted wi-dash-review-type',
+        text: web ? 'Web page' : TYPES[ext] ?? ext.toUpperCase(),
+        attr: { 'data-label': 'Type' },
+      })
 
       if (!previous || previous.card !== row.card) {
         let span = 1
         while (rows[i + span]?.card === row.card) span++
-        this.link(tr.createEl('td', { attr: { rowspan: span } }), row.card.title, () => this.openFile(row.card.file))
-        const check = tr.createEl('td', { cls: 'wi-dash-muted wi-dash-check', attr: { rowspan: span } })
+        this.link(tr.createEl('td', {
+          cls: 'wi-dash-desktop-card', attr: { rowspan: span, 'data-label': 'Card' },
+        }), row.card.title, () => this.openFile(row.card.file))
+        const check = tr.createEl('td', {
+          cls: 'wi-dash-muted wi-dash-check wi-dash-desktop-check',
+          attr: { rowspan: span, 'data-label': 'Check' },
+        })
         check.createDiv({ text: row.what })
-        const { card } = row
-        if (filePathsOf(card).length > 0) {
-          const box = check.createDiv('wi-dash-verdict')
-          box.createEl('button', { text: 'Approve', cls: 'mod-cta' }).onclick = () =>
-            void this.verdict(card, { verdict: 'approve', you: this.host.state().you }, filePathsOf(card))
-          box.createEl('button', { text: 'Send back' }).onclick = () =>
-            new SendBackModal(this.app, card.title, (comment) =>
-              void this.verdict(card, { verdict: 'send back', you: this.host.state().you, comment }, filePathsOf(card))).open()
-          verdicts.set(card, box)
-          syncVerdict(card)
-        }
+        addVerdictControls(check, row.card)
       }
+      const phoneCard = tr.createEl('td', {
+        cls: 'wi-dash-phone-card', attr: { 'data-label': 'Card' },
+      })
+      this.link(phoneCard, row.card.title, () => this.openFile(row.card.file))
+      const phoneCheck = tr.createEl('td', {
+        cls: 'wi-dash-muted wi-dash-check wi-dash-phone-check',
+        attr: { 'data-label': 'Check' },
+      })
+      phoneCheck.createDiv({ text: row.what })
+      addVerdictControls(phoneCheck, row.card)
       const file = this.app.vault.getAbstractFileByPath(row.path)
       tr.createEl('td', {
-        cls: 'wi-dash-muted wi-dash-nowrap',
+        cls: 'wi-dash-muted wi-dash-nowrap wi-dash-review-date',
         text: file instanceof TFile ? new Date(file.stat.mtime).toLocaleDateString(undefined, { day: 'numeric', month: 'short' }) : '',
+        attr: { 'data-label': 'Changed' },
       })
     })
   }
@@ -453,9 +477,10 @@ export class DashboardView extends ItemView {
     return a
   }
 
-  /** A new tab, so the dashboard stays open behind what it opened. */
+  /** Phones reuse this tab. A desktop keeps the dashboard behind the opened file. */
   private async openFile(file: TFile): Promise<void> {
-    await this.app.workspace.getLeaf('tab').openFile(file)
+    const leaf = Platform.isMobileApp ? this.leaf : this.app.workspace.getLeaf('tab')
+    await leaf.openFile(file)
   }
 
   /**

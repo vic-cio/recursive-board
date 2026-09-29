@@ -15,7 +15,8 @@ import { homedir } from 'node:os'
 import { join, resolve as resolvePath, dirname, basename, sep, isAbsolute } from 'node:path'
 
 import { parseFrontmatter, type Frontmatter } from '../shared/frontmatter.ts'
-import { parseVaultConfig, WI_CONFIG_FILE, type VaultConfig } from '../shared/vault-config.ts'
+import { parseVaultConfig, parseVaultConfigNote, WI_CONFIG_FILE, type VaultConfig } from '../shared/vault-config.ts'
+import { VAULT_CONFIG_NOTE } from '../shared/vault-config-note.ts'
 import { archiveOwner } from '../shared/archive.ts'
 import {
   BOARDS, FOLDERS, WORK_ITEM_TYPE, isArea, isStatus, parseWikilink, type Status,
@@ -45,6 +46,8 @@ export interface WorkItem {
 export interface Vault {
   root: string
   config: VaultConfig
+  /** The selected file name for configuration diagnostics. Defaults use the legacy name. */
+  configFile: typeof VAULT_CONFIG_NOTE | typeof WI_CONFIG_FILE
   items: WorkItem[]
   byId: Map<string, WorkItem>
   /** Work items whose id another work item also claims. */
@@ -194,7 +197,7 @@ function isUnaccounted(name: string): boolean {
 export function findVaultRoot(start: string): string | null {
   let dir = resolvePath(start)
   for (;;) {
-    if (existsSync(join(dir, WI_CONFIG_FILE)) || existsSync(join(dir, BOARDS))) return dir
+    if (existsSync(join(dir, VAULT_CONFIG_NOTE)) || existsSync(join(dir, WI_CONFIG_FILE)) || existsSync(join(dir, BOARDS))) return dir
     const parent = dirname(dir)
     if (parent === dir) return null
     dir = parent
@@ -316,14 +319,30 @@ export function requireAccountedTree(vault: Vault, what: string): void {
   )
 }
 
-export async function loadVault(root: string): Promise<Vault> {
-  let configText: string | null = null
+/** Read settings without scanning or reading work item files. */
+export async function readVaultConfig(root: string): Promise<Pick<Vault, 'config' | 'configFile'>> {
+  let config: VaultConfig
+  let configFile: Vault['configFile']
   try {
-    configText = await readFile(join(root, WI_CONFIG_FILE), 'utf8')
+    const noteText = await readFile(join(root, VAULT_CONFIG_NOTE), 'utf8')
+    config = parseVaultConfigNote(noteText)
+    configFile = VAULT_CONFIG_NOTE
   } catch (error) {
     if (!isMissingFile(error)) throw error
+    let legacyText: string | null = null
+    try {
+      legacyText = await readFile(join(root, WI_CONFIG_FILE), 'utf8')
+    } catch (legacyError) {
+      if (!isMissingFile(legacyError)) throw legacyError
+    }
+    config = parseVaultConfig(legacyText)
+    configFile = WI_CONFIG_FILE
   }
-  const config = parseVaultConfig(configText)
+  return { config, configFile }
+}
+
+export async function loadVault(root: string): Promise<Vault> {
+  const { config, configFile } = await readVaultConfig(root)
   const { markdown, unaccounted, misplaced } = await scan(root, config.workItemFolder)
 
   const items: WorkItem[] = []
@@ -389,6 +408,7 @@ export async function loadVault(root: string): Promise<Vault> {
   return {
     root,
     config,
+    configFile,
     items,
     byId,
     duplicateIds,

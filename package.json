@@ -1,6 +1,6 @@
 {
   "name": "recursive-board",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "type": "module",
   "description": "wi: the CLI that owns every write into a Recursive Board vault",
   "author": "vic-cio",
@@ -20,8 +20,8 @@
     "skills/"
   ],
   "scripts": {
-    "test": "npm run typecheck && node --test 'src/**/*.test.ts' 'scripts/**/*.test.ts'",
-    "test:unit": "node --test 'src/**/*.test.ts' 'scripts/**/*.test.ts'",
+    "test": "npm run typecheck && node --test 'src/**/*.test.ts' 'scripts/**/*.test.ts' 'scripts/**/*.test.mjs'",
+    "test:unit": "node --test 'src/**/*.test.ts' 'scripts/**/*.test.ts' 'scripts/**/*.test.mjs'",
     "fixture": "node scripts/fixture.ts",
     "bench": "node scripts/bench.ts",
     "typecheck": "tsc -p tsconfig.json && tsc -p tsconfig.plugin.json",

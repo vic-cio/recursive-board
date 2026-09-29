@@ -10,7 +10,8 @@
  * Node types, and `build/forbidden-imports.mjs` fails the build.
  */
 import { MarkdownView, Notice, normalizePath, Platform, Plugin, TFile, type Editor } from 'obsidian'
-import { parseVaultConfig, WI_CONFIG_FILE } from '../shared/vault-config.ts'
+import { parseVaultConfig, parseVaultConfigNote, parseVaultConfigValues, WI_CONFIG_FILE } from '../shared/vault-config.ts'
+import { isVaultConfigEvent, parseConfigNote, parseLegacyConfig, VAULT_CONFIG_NOTE, writeConfigNote } from '../shared/vault-config-note.ts'
 import { today, type Status } from '../shared/schema.ts'
 
 import { Actions } from './actions.ts'
@@ -74,7 +75,13 @@ export default class RecursiveBoardPlugin extends Plugin {
       () => this.personNames(),
     ))
 
-    this.index = new WorkItemIndex(this.app, await this.readVaultConfig())
+    try {
+      this.index = new WorkItemIndex(this.app, await this.readVaultConfig())
+    } catch (error) {
+      const reason = error instanceof Error ? error.message : String(error)
+      new Notice(`Recursive Board could not read ${VAULT_CONFIG_NOTE}: ${reason}`)
+      throw error
+    }
     this.actions = new Actions(this.app, this.index, () => this.dashboard.you)
 
     this.registerView(DASHBOARD_VIEW, (leaf) => new DashboardView(leaf, {
@@ -100,12 +107,12 @@ export default class RecursiveBoardPlugin extends Plugin {
     this.registerEvent(this.app.metadataCache.on('resolved', () => this.stale()))
     this.registerEvent(this.app.vault.on('create', (file) => this.vaultChanged(file.path)))
     this.registerEvent(this.app.vault.on('modify', (file) => {
-      if (file.path === WI_CONFIG_FILE) void this.reloadConfig()
+      if (isVaultConfigEvent({ kind: 'modify', path: file.path })) void this.reloadConfig()
     }))
     this.registerEvent(this.app.vault.on('delete', (file) => this.vaultChanged(file.path)))
     this.registerEvent(this.app.vault.on('rename', (file, oldPath) => {
       this.vaultChanged(file.path)
-      if (oldPath === WI_CONFIG_FILE) void this.reloadConfig()
+      if (isVaultConfigEvent({ kind: 'rename', path: file.path, oldPath })) void this.reloadConfig()
     }))
 
     this.registerEvent(this.app.workspace.on('layout-change', () => this.schedule()))
@@ -370,17 +377,20 @@ export default class RecursiveBoardPlugin extends Plugin {
   private async updateMaxAgents(maxAgents: number | null): Promise<void> {
     try {
       const adapter = this.app.vault.adapter
-      const existing = await adapter.exists(WI_CONFIG_FILE) ? await adapter.read(WI_CONFIG_FILE) : '{}'
-      const parsed: unknown = JSON.parse(existing)
-      if (typeof parsed !== 'object' || parsed === null || Array.isArray(parsed)) throw new Error('expected an object')
-      const config: Record<string, unknown> = { ...parsed }
+      const noteExists = await adapter.exists(VAULT_CONFIG_NOTE)
+      const noteText = noteExists ? await adapter.read(VAULT_CONFIG_NOTE) : null
+      const legacyExists = !noteExists && await adapter.exists(WI_CONFIG_FILE)
+      const config = noteText !== null
+        ? parseConfigNote(noteText)
+        : legacyExists ? parseLegacyConfig(await adapter.read(WI_CONFIG_FILE)) : {}
+      parseVaultConfigValues(config, noteText !== null ? VAULT_CONFIG_NOTE : WI_CONFIG_FILE)
       if (maxAgents === null) delete config['maxAgents']
       else config['maxAgents'] = maxAgents
-      await adapter.write(WI_CONFIG_FILE, `${JSON.stringify(config, null, 2)}\n`)
+      await adapter.write(VAULT_CONFIG_NOTE, writeConfigNote(noteText, config))
       await this.reloadConfig()
     } catch (error) {
       const reason = error instanceof Error ? error.message : String(error)
-      new Notice(`Recursive Board could not update ${WI_CONFIG_FILE}: ${reason}`)
+      new Notice(`Recursive Board could not update ${VAULT_CONFIG_NOTE}: ${reason}`)
     }
   }
 
@@ -419,12 +429,15 @@ export default class RecursiveBoardPlugin extends Plugin {
   }
 
   private async readVaultConfig() {
-    const file = this.app.vault.getFileByPath(WI_CONFIG_FILE)
+    const file = this.app.vault.getFileByPath(VAULT_CONFIG_NOTE)
     const adapter = this.app.vault.adapter
-    const text = file
+    const noteText = file
       ? await this.app.vault.read(file)
-      : await adapter.exists(WI_CONFIG_FILE) ? await adapter.read(WI_CONFIG_FILE) : null
-    const config = parseVaultConfig(text)
+      : await adapter.exists(VAULT_CONFIG_NOTE) ? await adapter.read(VAULT_CONFIG_NOTE) : null
+    const text = noteText === null && await adapter.exists(WI_CONFIG_FILE)
+      ? await adapter.read(WI_CONFIG_FILE)
+      : null
+    const config = noteText !== null ? parseVaultConfigNote(noteText) : parseVaultConfig(text)
     return { ...config, workItemFolder: normalizePath(config.workItemFolder) }
   }
 
@@ -434,12 +447,12 @@ export default class RecursiveBoardPlugin extends Plugin {
       this.schedule()
     } catch (error) {
       const reason = error instanceof Error ? error.message : String(error)
-      new Notice(`Recursive Board could not read ${WI_CONFIG_FILE}: ${reason}`)
+      new Notice(`Recursive Board could not read ${VAULT_CONFIG_NOTE}: ${reason}`)
     }
   }
 
   private vaultChanged(path: string): void {
-    if (path === WI_CONFIG_FILE) void this.reloadConfig()
+    if (isVaultConfigEvent({ kind: 'create', path }) || isVaultConfigEvent({ kind: 'delete', path })) void this.reloadConfig()
     else this.stale()
   }
 
