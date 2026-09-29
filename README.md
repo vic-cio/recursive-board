@@ -208,3 +208,19 @@ See [`docs/adr/`](docs/adr/) for the project's decision record.
 ## License
 
 MIT. See [LICENSE](LICENSE).
+
+## Trace a corrected Knowledge claim
+
+Run the read-only trace before repairing copied claims:
+
+```sh
+wi trace "Knowledge/Source note.md" --heading "Source heading" --claim "the old claim"
+```
+
+Use `--json` for a structured report. Redirect the Markdown output to a separate review file when needed.
+The command reads Knowledge and the configured work-item folder. It never edits a source or consumer.
+It lists heading links, note-only links, and case-insensitive text candidates without a heading link.
+It supports wikilinks and relative Markdown links. Ambiguous short links and unreadable or skipped files become search gaps.
+A match is a candidate for review. A note-only link does not establish that a claim was copied.
+Text search can miss paraphrases, line wrapping, and older copies. External skills and memory require a separate search.
+The report has fields for affected files, correction evidence, unresolved copies, and additional search gaps.

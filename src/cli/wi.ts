@@ -14,7 +14,7 @@ import { resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 import {
-  loadVault, findVaultRoot, getDefaultVault, getRepoPointer, setRepoPointer, maxAgentsForRun,
+  loadVault, readVaultConfig, findVaultRoot, getDefaultVault, getRepoPointer, setRepoPointer, maxAgentsForRun,
   type Vault, type WorkItem,
 } from './vault.ts'
 import { createItem } from './commands/new.ts'
@@ -135,7 +135,7 @@ Notes
   \`wi here\` reads or sets this repository's vault and board pointer in your user config.
 `
 
-const VERSION = '0.3.0'
+const VERSION = '0.4.0'
 
 class UsageError extends Error {}
 
@@ -231,6 +231,19 @@ async function main(argv: string[]): Promise<number> {
     return 0
   }
 
+  if (command === 'trace') {
+      if (rest.length !== 1 || !rest[0] || !values.heading || !values.claim) {
+        throw new UsageError('wi trace needs a source file, --heading, and --claim.')
+      }
+      const root = await resolveVaultRoot(values.vault)
+      if (findVaultRoot(root) !== root) throw new UsageError(`${root} is not a vault.`)
+      const vault = { root, ...await readVaultConfig(root) }
+      const report = await correctionTrace({ vault, source: rest[0], heading: values.heading, claim: values.claim })
+      if (values.json) print(report)
+      else process.stdout.write(renderCorrectionTrace(report))
+      return 0
+  }
+
   const vault = await openVault(values.vault)
   const json = values.json
 
@@ -253,15 +266,6 @@ async function main(argv: string[]): Promise<number> {
       return runAgents(vault, rest, json)
     case 'objective':
       return runObjective(vault, rest)
-    case 'trace': {
-      if (rest.length !== 1 || !rest[0] || !values.heading || !values.claim) {
-        throw new UsageError('wi trace needs a source file, --heading, and --claim.')
-      }
-      const report = await correctionTrace({ vault, source: rest[0], heading: values.heading, claim: values.claim })
-      if (json) print(report)
-      else process.stdout.write(renderCorrectionTrace(report))
-      return 0
-    }
     case 'release':
       return runRelease(vault, rest, values, json)
     case 'move':

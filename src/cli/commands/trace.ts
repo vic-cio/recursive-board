@@ -1,5 +1,5 @@
 /** Read-only candidate discovery. It never decides which consumer claim is wrong. */
-import { readdir, readFile, realpath, stat } from 'node:fs/promises'
+import { readdir, readFile, realpath, stat, lstat } from 'node:fs/promises'
 import { basename, dirname, isAbsolute, join, relative, resolve, sep } from 'node:path'
 import type { Vault } from '../vault.ts'
 
@@ -16,7 +16,7 @@ export interface TraceReport {
   gaps: string[]
   record: { affectedFiles: string[]; correctionEvidence: string; unresolvedCopies: string[]; searchGaps: string[] }
 }
-interface TraceOptions { vault: Vault; source: string; heading: string; claim: string }
+interface TraceOptions { vault: Pick<Vault, 'root' | 'config'>; source: string; heading: string; claim: string }
 
 const BASE_GAPS = [
   'Text search can miss paraphrases and older copies.',
@@ -47,7 +47,16 @@ export async function correctionTrace({ vault, source, heading, claim }: TraceOp
   if (!/\.md$/i.test(canonical) || !(await stat(canonical)).isFile()) throw new Error('The source must be a Markdown file.')
   const sourcePath = portable(relative(root, canonical))
   const sourceText = await readFile(canonical, 'utf8')
+  let fence: { marker: string; length: number } | null = null
   const exists = sourceText.split(/\r?\n/).some(line => {
+    const delimiter = /^ {0,3}(`{3,}|~{3,})(.*)$/.exec(line)
+    const marker = delimiter?.[1]
+    if (marker) {
+      if (fence === null) fence = { marker: marker[0] ?? '', length: marker.length }
+      else if (marker[0] === fence.marker && marker.length >= fence.length && !delimiter?.[2]?.trim()) fence = null
+      return false
+    }
+    if (fence !== null) return false
     const found = /^ {0,3}#{1,6}\s+(.+?)\s*$/.exec(line)
     return found?.[1] !== undefined && headingKey(found[1]) === headingKey(heading)
   })
@@ -57,7 +66,14 @@ export async function correctionTrace({ vault, source, heading, claim }: TraceOp
   const documents: Document[] = []
   async function scan(folder: string): Promise<void> {
     let entries
-    try { entries = await readdir(join(root, folder), { withFileTypes: true }) } catch {
+    try {
+      const path = join(root, folder)
+      if ((await lstat(path)).isSymbolicLink() || !inside(root, await realpath(path))) {
+        gaps.push(`Skipped symbolic link ${folder}.`)
+        return
+      }
+      entries = await readdir(path, { withFileTypes: true })
+    } catch {
       gaps.push(`Could not read folder ${folder}.`)
       return
     }
@@ -66,7 +82,11 @@ export async function correctionTrace({ vault, source, heading, claim }: TraceOp
       if (entry.isSymbolicLink()) { gaps.push(`Skipped symbolic link ${path}.`); continue }
       if (entry.isDirectory()) { await scan(path); continue }
       if (!entry.isFile() || !/\.md$/i.test(entry.name)) continue
-      try { documents.push({ path, text: await readFile(join(root, path), 'utf8') }) }
+      try {
+        const canonical = await realpath(join(root, path))
+        if (!inside(root, canonical)) { gaps.push(`Skipped external file ${path}.`); continue }
+        documents.push({ path, text: await readFile(canonical, 'utf8') })
+      }
       catch { gaps.push(`Could not read file ${path}.`) }
     }
   }

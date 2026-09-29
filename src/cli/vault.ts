@@ -319,7 +319,8 @@ export function requireAccountedTree(vault: Vault, what: string): void {
   )
 }
 
-export async function loadVault(root: string): Promise<Vault> {
+/** Read settings without scanning or reading work item files. */
+export async function readVaultConfig(root: string): Promise<Pick<Vault, 'config' | 'configFile'>> {
   let config: VaultConfig
   let configFile: Vault['configFile']
   try {
@@ -337,6 +338,11 @@ export async function loadVault(root: string): Promise<Vault> {
     config = parseVaultConfig(legacyText)
     configFile = WI_CONFIG_FILE
   }
+  return { config, configFile }
+}
+
+export async function loadVault(root: string): Promise<Vault> {
+  const { config, configFile } = await readVaultConfig(root)
   const { markdown, unaccounted, misplaced } = await scan(root, config.workItemFolder)
 
   const items: WorkItem[] = []
