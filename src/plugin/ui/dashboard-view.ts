@@ -207,6 +207,7 @@ export class DashboardView extends ItemView {
       const line = body.createDiv({ cls: 'wi-dash-muted' })
       if (reason === 'quiet') {
         line.setText(`Agent went quiet: ${card.agent ?? 'an agent'} changed nothing for an hour. Release or close the card.`)
+        this.copyId(row, card)
         continue
       }
       line.createSpan({ text: reason === 'started' ? 'In doing, but still waits on ' : 'Waits on archived ' })
@@ -461,6 +462,18 @@ export class DashboardView extends ItemView {
         line.createSpan({ text: `${steps.filter((step) => step.status === 'done').length}/${steps.length} steps` })
       }
       row.createSpan({ cls: 'wi-dash-ago', text: ago(active, Date.now()), attr: { 'data-mtime': String(active) } })
+      this.copyId(row, card)
+    }
+  }
+
+  /** Copies the card's id, so it can be pasted to an agent. A card with no id gives its title. */
+  private copyId(row: HTMLElement, card: WorkItemMeta): void {
+    const code = card.id ?? card.title
+    const button = row.createEl('button', { cls: 'clickable-icon wi-dash-copy', attr: { 'aria-label': `Copy ${code}` } })
+    setIcon(button, 'copy')
+    button.onclick = async () => {
+      await navigator.clipboard.writeText(code)
+      new Notice(`Copied ${code}`)
     }
   }
 

@@ -34,6 +34,9 @@ It has four panels:
   "Agent went quiet". A claim is idle when neither the card nor a child changed for an hour: its
   session most likely ended without `wi release`. The panel shows only when it has a row.
 
+Each agent row and each quiet row has a copy button. It copies the card id, or the title when the card
+has no id, so a person can paste the card to an agent to discuss it.
+
 Areas (0028) nest, so the dashboard shows one level of them at a time. With no focus, each card
 groups under its top area, and cards in no area group under "No area", last. Clicking an area
 focuses it: every panel shows only the cards inside it, grouped under the next area down, and the
