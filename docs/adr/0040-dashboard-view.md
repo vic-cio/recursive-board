@@ -45,7 +45,8 @@ On a desktop, it opens in a new tab, so the dashboard stays open.
 Web addresses follow the configured browser or Web viewer behavior in [0044](0044-web-review-rows.md).
 The dashboard icon is `gauge`, because Obsidian's new-canvas button already uses `layout-dashboard`.
 
-The dashboard covers every root, or one root that a picker chooses. The name, the root, the focus,
+The dashboard covers every root, or one root that a picker chooses. The picker shows only when
+the vault has more than one root. The name, the root, the focus,
 and the finished fold are device settings. Review ticks follow the person named in the setting. See
 [Personal dashboard state](0045-personal-dashboard-state.md). A tick records that you looked at a
 file. It does not change the card. Web rows have no tick.

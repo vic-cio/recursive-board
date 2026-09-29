@@ -161,7 +161,8 @@ export class DashboardView extends ItemView {
       cls: 'wi-dash-muted',
       text: new Date().toLocaleDateString(undefined, { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' }),
     })
-    {
+    // With one root, "Every root" and that root show the same cards, so the picker has no choice to offer.
+    if (roots.length > 1) {
       const select = right.createEl('select', { cls: 'dropdown', attr: { 'aria-label': 'Root board' } })
       select.createEl('option', { text: 'Every root', value: '' })
       for (const item of roots) select.createEl('option', { text: item.title, value: item.file.path })
