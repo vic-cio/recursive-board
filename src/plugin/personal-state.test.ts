@@ -4,11 +4,13 @@ import { applyTickChanges, mergeTicks, parseDeviceDashboardState, parsePersonTic
 
 test('device dashboard state has safe defaults and parses only known values', () => {
   assert.deepEqual(parseDeviceDashboardState({ you: ' Ana ', root: 'Boards/Main.md', focus: null, webReviewMode: 'off', ticks: { a: true } }), {
-    you: ' Ana ', root: 'Boards/Main.md', focus: null, webReviewMode: 'off',
+    you: ' Ana ', root: 'Boards/Main.md', focus: null, webReviewMode: 'off', finishedOpen: false,
   })
   assert.deepEqual(parseDeviceDashboardState({ you: 4, root: null, focus: 2, webReviewMode: 'unknown' }), {
-    you: '', root: '', focus: null, webReviewMode: 'webviewer',
+    you: '', root: '', focus: null, webReviewMode: 'webviewer', finishedOpen: false,
   })
+  assert.equal(parseDeviceDashboardState({ finishedOpen: true }).finishedOpen, true)
+  assert.equal(parseDeviceDashboardState({ finishedOpen: 'yes' }).finishedOpen, false)
 })
 
 test('legacy state splits into device choices and person ticks, with device values taking precedence', () => {
@@ -16,7 +18,7 @@ test('legacy state splits into device choices and person ticks, with device valu
     { you: 'Old name', root: 'old-root', focus: 'old-focus', webReviewMode: 'browser', ticks: { a: true, b: true } },
     { you: 'New name', root: '', focus: null, webReviewMode: 'off' },
   ), {
-    device: { you: 'New name', root: '', focus: null, webReviewMode: 'off' },
+    device: { you: 'New name', root: '', focus: null, webReviewMode: 'off', finishedOpen: false },
     personName: 'New name',
     ticks: { a: true, b: true },
   })
@@ -26,7 +28,7 @@ test('invalid device values fall back to valid legacy choices', () => {
   assert.deepEqual(splitLegacyDashboardState(
     { you: 'Ana', root: 'Main', focus: 'Area', webReviewMode: 'browser' },
     { you: 2, root: null, focus: 5, webReviewMode: 'bad' },
-  ).device, { you: 'Ana', root: 'Main', focus: 'Area', webReviewMode: 'browser' })
+  ).device, { you: 'Ana', root: 'Main', focus: 'Area', webReviewMode: 'browser', finishedOpen: false })
 })
 
 test('person tick files parse and merge true ticks without dropping synced ticks', () => {

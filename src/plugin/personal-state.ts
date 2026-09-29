@@ -5,6 +5,8 @@ export interface DeviceDashboardState {
   root: string
   focus: string | null
   webReviewMode: WebReviewMode
+  /** The finished fold under the Agents feed. Per device, so opening it on one device leaves another closed. */
+  finishedOpen: boolean
 }
 
 export type DashboardTicks = Record<string, true>
@@ -14,6 +16,7 @@ const EMPTY_DEVICE_STATE: DeviceDashboardState = {
   root: '',
   focus: null,
   webReviewMode: 'webviewer',
+  finishedOpen: false,
 }
 
 function record(value: unknown): Record<string, unknown> {
@@ -27,6 +30,7 @@ export function parseDeviceDashboardState(value: unknown): DeviceDashboardState 
     root: typeof data['root'] === 'string' ? data['root'] : EMPTY_DEVICE_STATE.root,
     focus: typeof data['focus'] === 'string' ? data['focus'] : null,
     webReviewMode: parseWebReviewMode(data['webReviewMode']),
+    finishedOpen: data['finishedOpen'] === true,
   }
 }
 
@@ -53,7 +57,7 @@ export function splitLegacyDashboardState(legacy: unknown, device: unknown): {
 } {
   const old = record(legacy)
   const saved = record(device)
-  const pick = (key: keyof DeviceDashboardState): unknown => {
+  const pick = (key: Exclude<keyof DeviceDashboardState, 'finishedOpen'>): unknown => {
     const value = saved[key]
     if (key === 'you' || key === 'root') return typeof value === 'string' ? value : old[key]
     if (key === 'focus') return value === null || typeof value === 'string' ? value : old[key]
@@ -61,6 +65,7 @@ export function splitLegacyDashboardState(legacy: unknown, device: unknown): {
   }
   const next = parseDeviceDashboardState({
     you: pick('you'), root: pick('root'), focus: pick('focus'), webReviewMode: pick('webReviewMode'),
+    finishedOpen: saved['finishedOpen'],
   })
   return { device: next, personName: next.you, ticks: parsePersonTicks({ ticks: old['ticks'] }) }
 }

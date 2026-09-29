@@ -2,7 +2,7 @@ import { test } from 'node:test'
 import assert from 'node:assert/strict'
 
 import {
-  agentGroups, areaOf, allReviewFilesTicked, cardsInScope, fileReviewPaths, IDLE_MS, isLoopbackWebAddress, isWebAddress, needsAttention, parseReviewLine, parseWebReviewMode, progress, reviewPathsForMode, waitsForReview, type DashItem, type DashTree,
+  agentFeed, areaOf, allReviewFilesTicked, cardsInScope, fileReviewPaths, IDLE_MS, isLoopbackWebAddress, isWebAddress, FINISHED_SHOWN, FINISHED_WINDOW_MS, needsAttention, parseReviewLine, parseWebReviewMode, progress, reviewPathsForMode, waitsForReview, workingBadge, type DashItem, type DashTree,
 } from './dashboard-model.ts'
 
 interface Fake extends DashItem { parent: Fake | null; mtime: number }
@@ -154,15 +154,87 @@ test('an agent is working, idle, or finished', () => {
   add('Only step', stepsDone, { status: 'done', mtime: now - 5000 })
   const closed = add('Closed', area, { status: 'done', agent: 'claude', mtime: now - 3 * IDLE_MS })
 
-  let [group] = agentGroups(cardsInScope(items, null, tree), 'Ana', tree, now)
+  let feed = agentFeed(cardsInScope(items, null, tree), 'Ana', tree, now)
   // The idle card's child changed a second ago, so its claim is live.
-  assert.deepEqual(group!.working.map((claim) => claim.card), [idle, working])
-  assert.equal(group!.working[0]!.active, fresh.mtime)
-  assert.deepEqual(group!.finished.map((claim) => claim.card), [handed, stepsDone, closed])
+  assert.deepEqual(feed.working.map((row) => row.card), [idle, working])
+  assert.equal(feed.working[0]!.active, fresh.mtime)
+  assert.deepEqual(feed.finished.map((row) => row.card), [handed, stepsDone, closed])
+  assert.deepEqual(feed.idle, [])
 
   fresh.mtime = now - 2 * IDLE_MS
-  ;[group] = agentGroups(cardsInScope(items, null, tree), 'Ana', tree, now)
-  assert.deepEqual(group!.idle.map((claim) => claim.card), [idle])
+  feed = agentFeed(cardsInScope(items, null, tree), 'Ana', tree, now)
+  assert.deepEqual(feed.working.map((row) => row.card), [working])
+  assert.deepEqual(feed.idle.map((row) => row.card), [idle])
+})
+
+test('the feed is one list over every area, newest first, with the area one level under the focus', () => {
+  const { items, add, tree } = vault()
+  const now = 10 * IDLE_MS
+  const root = add('Home', null)
+  const dev = add('Dev', root, { area: true, status: 'doing' })
+  const board = add('Board', dev, { area: true, status: 'doing' })
+  const gym = add('Gym', root, { area: true, status: 'doing' })
+  const a = add('A', board, { status: 'doing', agent: 'claude', mtime: now - 3000 })
+  const b = add('B', gym, { status: 'doing', agent: 'codex', mtime: now - 1000 })
+  const c = add('C', dev, { status: 'doing', agent: 'claude', mtime: now - 2000 })
+  add('Loose', root, { status: 'doing', agent: 'claude', mtime: now - 4000 })
+  const cards = cardsInScope(items, null, tree)
+
+  const top = agentFeed(cards, 'Ana', tree, now)
+  assert.deepEqual(top.working.map((row) => [row.card.title, row.area?.title ?? null]),
+    [['B', 'Gym'], ['C', 'Dev'], ['A', 'Dev'], ['Loose', null]])
+
+  // In Dev, a card directly in Dev has no chip, and a card in Board names Board.
+  const inDev = agentFeed(cards, 'Ana', tree, now, dev)
+  assert.deepEqual(inDev.working.map((row) => [row.card, row.area]), [[c, null], [a, board]])
+  assert.deepEqual(agentFeed(cards, 'Ana', tree, now, gym).working.map((row) => row.card), [b])
+})
+
+test('the working badge counts from the feed, per area row, and ignores idle and finished claims', () => {
+  const { items, add, tree } = vault()
+  const now = 10 * IDLE_MS
+  const root = add('Home', null)
+  const dev = add('Dev', root, { area: true, status: 'doing' })
+  const board = add('Board', dev, { area: true, status: 'doing' })
+  const gym = add('Gym', root, { area: true, status: 'doing' })
+  add('A', board, { status: 'doing', agent: 'claude', mtime: now })
+  add('B', dev, { status: 'doing', agent: 'claude', mtime: now })
+  add('Quiet', dev, { status: 'doing', agent: 'codex', mtime: now - 2 * IDLE_MS })
+  add('Done', gym, { status: 'done', agent: 'claude', mtime: now })
+  const cards = cardsInScope(items, null, tree)
+
+  const top = agentFeed(cards, 'Ana', tree, now)
+  const badges = progress(cards, tree).map((row) => `${row.name} ${workingBadge(top, row.area)}`)
+  assert.deepEqual(badges, ['Dev 2', 'Gym 0'])
+  // Every working row is counted on exactly one area row.
+  assert.equal(progress(cards, tree).reduce((sum, row) => sum + workingBadge(top, row.area), 0), top.working.length)
+
+  const inDev = agentFeed(cards, 'Ana', tree, now, dev)
+  assert.deepEqual(progress(cards, tree, dev).map((row) => `${row.name} ${workingBadge(inDev, row.area)}`),
+    ['Board 1', 'Directly in Dev 1'])
+})
+
+test('the finished fold holds claims finished in the last 24 hours, at most ten, newest first', () => {
+  const { items, add, tree } = vault()
+  const now = 100 * FINISHED_WINDOW_MS
+  const root = add('Home', null)
+  const area = add('Work', root, { area: true, status: 'doing' })
+  for (let i = 0; i < 12; i++) add(`Done ${i}`, area, { status: 'done', agent: 'claude', mtime: now - (i + 1) * 60_000 })
+  add('Old', area, { status: 'done', agent: 'claude', mtime: now - FINISHED_WINDOW_MS - 1 })
+  add('Dropped back', area, { status: 'options', agent: 'claude', mtime: now })
+
+  const feed = agentFeed(cardsInScope(items, null, tree), 'Ana', tree, now)
+  assert.equal(FINISHED_SHOWN, 10)
+  assert.deepEqual(feed.finished.map((row) => row.card.title), Array.from({ length: 10 }, (_, i) => `Done ${i}`))
+})
+
+test('an empty area has an empty feed', () => {
+  const { items, add, tree } = vault()
+  const root = add('Home', null)
+  const quiet = add('Quiet', root, { area: true, status: 'doing' })
+  add('Card', quiet, { status: 'backlog' })
+  add('Busy', add('Busy area', root, { area: true, status: 'doing' }), { status: 'doing', agent: 'claude' })
+  assert.deepEqual(agentFeed(cardsInScope(items, null, tree), 'Ana', tree, 0, quiet), { working: [], idle: [], finished: [] })
 })
 
 test('a focus narrows to one area and groups by the next area down', () => {
@@ -181,8 +253,8 @@ test('a focus narrows to one area and groups by the next area down', () => {
   assert.deepEqual(names(null), ['Dev 1/3', 'Gym 0/1'])
   assert.deepEqual(names(dev), ['Board 1/1', 'Theme 0/1', 'Directly in Dev 0/1'])
   assert.deepEqual(names(board), ['Directly in Board 1/1'])
-  assert.deepEqual(agentGroups(cards, 'Ana', tree, 0, dev).map((group) => group.name), ['Theme'])
-  assert.deepEqual(agentGroups(cards, 'Ana', tree, 0, board), [])
+  assert.deepEqual(agentFeed(cards, 'Ana', tree, 0, dev).working.map((row) => row.area?.title), ['Theme'])
+  assert.deepEqual(agentFeed(cards, 'Ana', tree, 0, board).working, [])
 })
 
 test('the dashboard flags a started card that still waits, and a wait on an archived card', () => {
@@ -199,4 +271,18 @@ test('the dashboard flags a started card that still waits, and a wait on an arch
     'Build started Spec',
     'Later archived Dropped',
   ])
+})
+
+test('an idle claim needs attention as an agent that went quiet', () => {
+  const { items, add, tree } = vault()
+  const now = 10 * IDLE_MS
+  const root = add('Home', null)
+  const quiet = add('Quiet', root, { status: 'doing', agent: 'codex', mtime: now - 2 * IDLE_MS })
+  add('Live', root, { status: 'doing', agent: 'claude', mtime: now })
+  const cards = cardsInScope(items, null, tree)
+  const feed = agentFeed(cards, 'Ana', tree, now)
+  const found = needsAttention(cards, () => [], feed.idle.map((row) => row.card))
+  assert.deepEqual(found, [{ card: quiet, reason: 'quiet', cards: [] }])
+  assert.equal(feed.working.some((row) => row.card === quiet), false)
+  assert.equal(feed.finished.some((row) => row.card === quiet), false)
 })

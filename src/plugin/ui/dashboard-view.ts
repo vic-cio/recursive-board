@@ -1,7 +1,7 @@
 /**
  * The dashboard: one page over every board, opened from the ribbon like the graph view
  * (docs/adr/0040-dashboard-view.md). It shows what waits for your review, progress per area, and
- * what each agent works on. Its one write is a review verdict, through `Actions.review`
+ * one feed of what the agents work on. Its one write is a review verdict, through `Actions.review`
  * (docs/adr/0043-review-verdicts.md). Device choices and person ticks have separate storage.
  */
 import { ItemView, Notice, Platform, setIcon, TFile, type WorkspaceLeaf } from 'obsidian'
@@ -11,8 +11,8 @@ import type { WorkItemIndex, WorkItemMeta } from '../index.ts'
 import type { Verdict } from '../../shared/review.ts'
 import { SendBackModal } from './send-back-modal.ts'
 import {
-  ago, agentGroups, allReviewFilesTicked, areaPath, cardsInScope, fileReviewPaths, groupName, groupUnder, inFocus, isLoopbackWebAddress, isWebAddress, needsAttention, parseReviewLine, progress, reviewPathsForMode, waitsForReview,
-  type Attention, type Claim, type DashTree, type Group, type WebReviewMode,
+  ago, agentFeed, allReviewFilesTicked, areaPath, cardsInScope, fileReviewPaths, groupName, groupUnder, inFocus, isLoopbackWebAddress, isWebAddress, needsAttention, parseReviewLine, progress, reviewPathsForMode, waitsForReview, workingBadge,
+  type AgentFeed, type AgentRow, type Attention, type DashTree, type Group, type WebReviewMode,
 } from '../dashboard-model.ts'
 import type { DashboardTicks } from '../personal-state.ts'
 
@@ -31,6 +31,8 @@ export interface DashboardState {
   ticks: DashboardTicks
   /** How web addresses in review notes are shown and opened. */
   webReviewMode: WebReviewMode
+  /** The finished fold under the Agents feed is open. */
+  finishedOpen: boolean
 }
 
 export interface DashboardHost {
@@ -43,8 +45,8 @@ export interface DashboardHost {
 }
 
 const TYPES: Readonly<Record<string, string>> = { pdf: 'PDF', xlsx: 'Spreadsheet', csv: 'Spreadsheet', docx: 'Document', md: 'Note' }
-const CLAIM_ICONS = { working: 'loader', idle: 'pause-circle', finished: 'check-circle-2' } as const
-const STEP_ICONS: Readonly<Record<string, string>> = { done: 'check-circle-2', doing: 'loader' }
+const CLAIM_ICONS = { working: 'loader', finished: 'check-circle-2' } as const
+const ATTENTION_ICONS = { started: 'hourglass', archived: 'archive', quiet: 'pause-circle' } as const
 
 interface ReviewRow {
   card: WorkItemMeta
@@ -122,13 +124,16 @@ export class DashboardView extends ItemView {
 
     const lower = el.createDiv('wi-dash-lower')
     const main = lower.createDiv('wi-dash-column')
+    // The feed, the working badges and the quiet claims in Needs attention all come from this one list.
+    const feed = agentFeed(cards, state.you, tree, Date.now(), focus)
     const attention = needsAttention(cards.filter((card) => inFocus(card, focus, tree)),
-      (card) => card.dependsOn.map((file) => this.host.index.get(file)).filter((found): found is WorkItemMeta => found !== null))
+      (card) => card.dependsOn.map((file) => this.host.index.get(file)).filter((found): found is WorkItemMeta => found !== null),
+      feed.idle.map((row) => row.card))
     if (attention.length > 0) this.drawAttention(main.createDiv('wi-dash-panel'), attention)
     this.drawReviews(main.createDiv('wi-dash-panel'), reviews, state)
     const side = lower.createDiv('wi-dash-panel')
-    this.drawProgress(side, cards, tree, focus)
-    this.drawAgents(side, cards, tree, state, focus)
+    this.drawProgress(side, cards, tree, focus, feed)
+    this.drawAgents(side, feed, state)
   }
 
   private async setFocus(focus: WorkItemMeta | null): Promise<void> {
@@ -156,7 +161,8 @@ export class DashboardView extends ItemView {
       cls: 'wi-dash-muted',
       text: new Date().toLocaleDateString(undefined, { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' }),
     })
-    {
+    // With one root, "Every root" and that root show the same cards, so the picker has no choice to offer.
+    if (roots.length > 1) {
       const select = right.createEl('select', { cls: 'dropdown', attr: { 'aria-label': 'Root board' } })
       select.createEl('option', { text: 'Every root', value: '' })
       for (const item of roots) select.createEl('option', { text: item.title, value: item.file.path })
@@ -194,11 +200,15 @@ export class DashboardView extends ItemView {
     this.panelHead(panel, 'alert-triangle', 'Needs attention', String(list.length)).addClass('is-attention')
     const box = panel.createDiv('wi-dash-agents')
     for (const { card, reason, cards } of list) {
-      const row = box.createDiv('wi-dash-agent')
-      setIcon(row.createSpan('wi-dash-icon'), reason === 'started' ? 'hourglass' : 'archive')
+      const row = box.createDiv({ cls: `wi-dash-agent is-${reason}` })
+      setIcon(row.createSpan('wi-dash-icon'), ATTENTION_ICONS[reason])
       const body = row.createDiv('wi-dash-agent-body')
       this.link(body, card.title, () => this.openFile(card.file))
       const line = body.createDiv({ cls: 'wi-dash-muted' })
+      if (reason === 'quiet') {
+        line.setText(`Agent went quiet: ${card.agent ?? 'an agent'} changed nothing for an hour. Release or close the card.`)
+        continue
+      }
       line.createSpan({ text: reason === 'started' ? 'In doing, but still waits on ' : 'Waits on archived ' })
       cards.forEach((other, i) => {
         if (i > 0) line.createSpan({ text: ', ' })
@@ -363,7 +373,9 @@ export class DashboardView extends ItemView {
     await this.render()
   }
 
-  private drawProgress(panel: HTMLElement, cards: WorkItemMeta[], tree: DashTree<WorkItemMeta>, focus: WorkItemMeta | null): void {
+  private drawProgress(
+    panel: HTMLElement, cards: WorkItemMeta[], tree: DashTree<WorkItemMeta>, focus: WorkItemMeta | null, feed: AgentFeed<WorkItemMeta>,
+  ): void {
     const rows = progress(cards, tree, focus)
     const done = rows.reduce((sum, row) => sum + row.done, 0)
     const total = rows.reduce((sum, row) => sum + row.total, 0)
@@ -381,80 +393,72 @@ export class DashboardView extends ItemView {
     for (const row of rows) {
       const pct = row.total ? Math.round((100 * row.done) / row.total) : 0
       const area = row.area
+      // The whole area row drills in. Only the board icon at its right end opens the board.
       const item = list.createDiv({ cls: `wi-dash-project${area ? ' is-area' : ''}` })
-      const head = item.createDiv('wi-dash-project-head')
-      if (area) {
-        item.onclick = (event) => {
-          if (!(event.target as HTMLElement).closest('a')) void this.setFocus(area)
-        }
-        const name = head.createSpan('wi-dash-project-name')
-        this.link(name, row.name, () => this.openFile(area.file))
-        setIcon(name.createSpan({ cls: 'wi-dash-icon', attr: { 'aria-label': 'Show the areas inside' } }), 'chevron-right')
-      } else head.createSpan({ cls: 'wi-dash-project-name', text: row.name })
-      head.createSpan({ cls: 'wi-dash-muted', text: `${row.done}/${row.total} done${row.doing ? `, ${row.doing} doing` : ''} · ${pct}%` })
-      item.createDiv('wi-dash-bar').createDiv({ cls: 'wi-dash-bar-fill', attr: { style: `width: ${pct}%` } })
-    }
-    panel.createDiv({
-      cls: 'wi-dash-muted wi-dash-hint',
-      text: 'Click an area to see the areas, reviews and agents inside it. Click its name to open its board.',
-    })
-  }
-
-  private drawAgents(
-    panel: HTMLElement, cards: WorkItemMeta[], tree: DashTree<WorkItemMeta>, state: DashboardState, focus: WorkItemMeta | null,
-  ): void {
-    const groups = agentGroups(cards, state.you, tree, Date.now(), focus)
-    const working = groups.reduce((sum, group) => sum + group.working.length, 0)
-    const idle = groups.reduce((sum, group) => sum + group.idle.length, 0)
-    const head = this.panelHead(panel, 'bot', 'Agents', `${working} working`)
-    head.addClass('wi-dash-agents-head')
-    if (idle) head.createSpan({ cls: 'wi-dash-count is-idle', text: `${idle} idle` })
-    if (groups.length === 0) {
-      panel.createDiv({ cls: 'wi-dash-muted', text: 'No agent has claimed a card yet.' })
-      return
-    }
-    for (const group of groups) {
-      const box = panel.createEl('details', { cls: 'wi-dash-agent-group' })
-      box.open = true
-      const summary = box.createEl('summary')
-      summary.createSpan({ cls: 'wi-dash-group-name', text: group.name })
-      summary.createSpan({ cls: 'wi-dash-count', text: `${group.working.length} working` })
-      if (group.idle.length) summary.createSpan({ cls: 'wi-dash-count is-idle', text: `${group.idle.length} idle` })
-      this.claims(box, 'Working now', group.working, 'working')
-      if (group.idle.length) {
-        this.claims(box, 'Idle claims', group.idle, 'idle',
-          'In doing with an agent, but no change for an hour. Release or close them on the board.')
+      const main = item.createDiv('wi-dash-project-main')
+      const head = main.createDiv('wi-dash-project-head')
+      const name = head.createSpan({ cls: 'wi-dash-project-name', text: row.name })
+      const working = workingBadge(feed, area)
+      if (working > 0) {
+        const badge = name.createSpan({ cls: 'wi-dash-badge', attr: { 'aria-label': `${working} working` } })
+        setIcon(badge.createSpan('wi-dash-icon'), 'loader')
+        badge.createSpan({ text: String(working) })
       }
-      this.claims(box, 'Recently finished', group.finished, 'finished')
+      head.createSpan({ cls: 'wi-dash-muted', text: `${row.done}/${row.total} done${row.doing ? `, ${row.doing} doing` : ''} · ${pct}%` })
+      main.createDiv('wi-dash-bar').createDiv({ cls: 'wi-dash-bar-fill', attr: { style: `width: ${pct}%` } })
+      if (area) {
+        item.onclick = () => void this.setFocus(area)
+        const open = item.createEl('button', {
+          cls: 'clickable-icon wi-dash-project-open', attr: { 'aria-label': `Open the ${area.title} board` },
+        })
+        setIcon(open, 'square-kanban')
+        open.onclick = (event) => {
+          event.stopPropagation()
+          void this.openFile(area.file)
+        }
+      }
     }
   }
 
-  private claims(host: HTMLElement, label: string, list: Claim<WorkItemMeta>[], kind: keyof typeof CLAIM_ICONS, hint?: string): void {
-    host.createDiv({ cls: 'wi-dash-muted wi-dash-label', text: label })
-    if (hint) host.createDiv({ cls: 'wi-dash-muted wi-dash-hint', text: hint })
-    if (list.length === 0) {
-      host.createDiv({ cls: 'wi-dash-muted', text: 'None.' })
-      return
+  /** One flat feed, newest first. The finished claims wait behind one fold. */
+  private drawAgents(panel: HTMLElement, feed: AgentFeed<WorkItemMeta>, state: DashboardState): void {
+    this.panelHead(panel, 'bot', 'Agents', `${feed.working.length} working`).addClass('wi-dash-agents-head')
+    if (feed.working.length === 0) panel.createDiv({ cls: 'wi-dash-muted wi-dash-empty', text: 'No agent is working.' })
+    else this.agentRows(panel.createDiv('wi-dash-agents'), feed.working, 'working')
+    if (feed.finished.length === 0) return
+
+    const fold = panel.createDiv('wi-dash-fold')
+    const toggle = fold.createEl('button', { cls: 'wi-dash-fold-toggle', attr: { 'aria-expanded': String(state.finishedOpen) } })
+    toggle.createSpan({ text: `${feed.finished.length} finished in the last 24 h` })
+    const caret = toggle.createSpan('wi-dash-icon')
+    const rows = fold.createDiv('wi-dash-agents')
+    this.agentRows(rows, feed.finished, 'finished')
+    const show = (open: boolean) => {
+      rows.toggleClass('wi-dash-hidden', !open)
+      toggle.setAttribute('aria-expanded', String(open))
+      setIcon(caret, open ? 'chevron-down' : 'chevron-right')
     }
-    const box = host.createDiv('wi-dash-agents')
-    for (const { card, steps, active } of list) {
+    show(state.finishedOpen)
+    // Saved, not redrawn: the dashboard redraws on every vault change and must keep the fold as it is.
+    toggle.onclick = () => {
+      const open = !this.host.state().finishedOpen
+      show(open)
+      void this.host.save({ finishedOpen: open })
+    }
+  }
+
+  /** Line one: status, card, age. Line two: agent, the area under the focus, and steps done. */
+  private agentRows(box: HTMLElement, list: AgentRow<WorkItemMeta>[], kind: keyof typeof CLAIM_ICONS): void {
+    for (const { card, steps, active, area } of list) {
       const row = box.createDiv({ cls: `wi-dash-agent is-${kind}` })
       setIcon(row.createSpan('wi-dash-icon'), CLAIM_ICONS[kind])
       const body = row.createDiv('wi-dash-agent-body')
       this.link(body, card.title, () => this.openFile(card.file))
-      const parent = card.parent ? this.host.index.get(card.parent)?.title : undefined
-      body.createDiv({ cls: 'wi-dash-muted', text: [card.agent, parent].filter(Boolean).join(' · ') })
-      if (kind !== 'finished' && steps.length > 0) {
-        const done = steps.filter((step) => step.status === 'done').length
-        body.createDiv({ cls: 'wi-dash-muted', text: `${done}/${steps.length} steps done` })
-        if (kind === 'working') {
-          const list = body.createDiv('wi-dash-steps')
-          for (const step of steps) {
-            const item = list.createDiv({ cls: `wi-dash-step is-${step.status ?? 'backlog'}` })
-            setIcon(item.createSpan('wi-dash-icon'), STEP_ICONS[step.status ?? ''] ?? 'circle')
-            this.link(item, step.title, () => this.openFile(step.file))
-          }
-        }
+      const line = body.createDiv('wi-dash-muted wi-dash-agent-meta')
+      line.createSpan({ text: card.agent ?? '' })
+      if (area) line.createSpan({ cls: 'wi-dash-chip', text: area.title })
+      if (steps.length > 0) {
+        line.createSpan({ text: `${steps.filter((step) => step.status === 'done').length}/${steps.length} steps` })
       }
       row.createSpan({ cls: 'wi-dash-ago', text: ago(active, Date.now()), attr: { 'data-mtime': String(active) } })
     }

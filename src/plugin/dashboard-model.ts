@@ -21,7 +21,9 @@ export interface DashTree<T extends DashItem> {
 }
 
 export const IDLE_MS = 60 * 60 * 1000
-export const FINISHED_SHOWN = 5
+/** The finished fold shows claims finished in this window, at most `FINISHED_SHOWN` of them. */
+export const FINISHED_WINDOW_MS = 24 * 60 * 60 * 1000
+export const FINISHED_SHOWN = 10
 
 export function rootOf<T extends DashItem>(item: T, tree: DashTree<T>): T {
   return tree.ancestorsOf(item)[0] ?? item
@@ -181,41 +183,50 @@ export interface Claim<T> {
   steps: T[]
 }
 
-export interface AgentGroup<T> extends Group<T> {
-  working: Claim<T>[]
-  idle: Claim<T>[]
-  finished: Claim<T>[]
+export interface AgentRow<T> extends Claim<T> {
+  /** The area one level under the focus that holds the card, or null when it sits directly in the focus. */
+  area: T | null
+}
+
+/** One flat list of claims in the focus, newest first. Idle claims belong to Needs attention. */
+export interface AgentFeed<T> {
+  working: AgentRow<T>[]
+  idle: AgentRow<T>[]
+  finished: AgentRow<T>[]
 }
 
 /**
  * Agents come from the `agent` field that `wi claim` writes. It stays on the card when done.
  * A card handed to you, or with every step done, has an agent that finished.
  */
-export function agentGroups<T extends DashItem>(
+export function agentFeed<T extends DashItem>(
   cards: T[], you: string, tree: DashTree<T>, now: number, focus: T | null = null,
-): AgentGroup<T>[] {
-  const claims: Claim<T>[] = cards
-    .filter((card) => card.agent !== undefined)
+): AgentFeed<T> {
+  const rows: AgentRow<T>[] = cards
+    .filter((card) => card.agent !== undefined && inFocus(card, focus, tree))
     .map((card) => {
       const steps = tree.childrenOf(card).filter((child) => !child.effectiveArchived)
-      return { card, steps, active: Math.max(tree.mtimeOf(card), ...steps.map((step) => tree.mtimeOf(step))) }
+      return {
+        card, steps, area: groupUnder(card, focus, tree),
+        active: Math.max(tree.mtimeOf(card), ...steps.map((step) => tree.mtimeOf(step))),
+      }
     })
     .sort((a, b) => b.active - a.active)
-  const handedOver = (claim: Claim<T>) => sameName(claim.card.owner, you) ||
-    (claim.steps.length > 0 && claim.steps.every((step) => step.status === 'done'))
-  const groups = groupBy(claims.map((claim) => claim.card), tree, focus, (area, list) => {
-    const mine = claims.filter((claim) => list.includes(claim.card))
-    const doing = mine.filter((claim) => claim.card.status === 'doing' && !handedOver(claim))
-    return {
-      area,
-      name: groupName(area, focus),
-      working: doing.filter((claim) => now - claim.active < IDLE_MS),
-      idle: doing.filter((claim) => now - claim.active >= IDLE_MS),
-      finished: mine.filter((claim) => !doing.includes(claim) &&
-        (claim.card.status === 'done' || claim.card.status === 'doing')).slice(0, FINISHED_SHOWN),
-    }
-  })
-  return groups
+  const handedOver = (row: AgentRow<T>) => sameName(row.card.owner, you) ||
+    (row.steps.length > 0 && row.steps.every((step) => step.status === 'done'))
+  const doing = rows.filter((row) => row.card.status === 'doing' && !handedOver(row))
+  return {
+    working: doing.filter((row) => now - row.active < IDLE_MS),
+    idle: doing.filter((row) => now - row.active >= IDLE_MS),
+    finished: rows.filter((row) => !doing.includes(row) &&
+      (row.card.status === 'done' || row.card.status === 'doing') && now - row.active < FINISHED_WINDOW_MS)
+      .slice(0, FINISHED_SHOWN),
+  }
+}
+
+/** The working agents inside one Progress row. It counts the feed's own rows, so the two agree. */
+export function workingBadge<T>(feed: AgentFeed<T>, area: T | null): number {
+  return feed.working.filter((row) => row.area === area).length
 }
 
 export function ago(ms: number, now: number): string {
@@ -228,16 +239,20 @@ export function ago(ms: number, now: number): string {
 
 export interface Attention<T> {
   card: T
-  /** `started`: in doing while it waits on open cards. `archived`: it waits on an archived card that is not done. */
-  reason: 'started' | 'archived'
+  /**
+   * `started`: in doing while it waits on open cards. `archived`: it waits on an archived card that
+   * is not done. `quiet`: an idle claim, whose agent most likely ended without a release.
+   */
+  reason: 'started' | 'archived' | 'quiet'
   cards: T[]
 }
 
 /**
  * Dependency problems a person should look at (docs/adr/0041-card-dependencies.md). The board lets
- * a person start a waiting card, so the dashboard is where that shows afterwards.
+ * a person start a waiting card, so the dashboard is where that shows afterwards. The idle claims
+ * from `agentFeed` come last.
  */
-export function needsAttention<T extends DashItem>(cards: T[], dependenciesOf: (card: T) => T[]): Attention<T>[] {
+export function needsAttention<T extends DashItem>(cards: T[], dependenciesOf: (card: T) => T[], idle: T[] = []): Attention<T>[] {
   const found: Attention<T>[] = []
   for (const card of cards) {
     if (card.status === 'done') continue
@@ -247,5 +262,6 @@ export function needsAttention<T extends DashItem>(cards: T[], dependenciesOf: (
     const open = dependencies.filter((dependency) => dependency.status !== 'done')
     if (card.status === 'doing' && open.length > 0) found.push({ card, reason: 'started', cards: open })
   }
+  for (const card of idle) found.push({ card, reason: 'quiet', cards: [] })
   return found
 }
