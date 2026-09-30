@@ -141,6 +141,20 @@ test('progress counts leaf cards per area, with no area last', () => {
   ])
 })
 
+test('progress leaves out areas in backlog or done, and the cards in them', () => {
+  const { items, add, tree } = vault()
+  const root = add('Home', null)
+  const active = add('Active', root, { area: true, status: 'doing' })
+  add('A', active, { status: 'done' })
+  const parked = add('Parked', root, { area: true, status: 'backlog' })
+  add('B', parked, { status: 'doing' })
+  const closed = add('Closed', root, { area: true, status: 'done' })
+  add('C', closed, { status: 'done' })
+  add('Loose', root, { status: 'doing' })
+  const rows = progress(cardsInScope(items, null, tree), tree)
+  assert.deepEqual(rows.map(({ name, done, total }) => `${name} ${done}/${total}`), ['Active 1/1', 'No area 0/1'])
+})
+
 test('an agent is working, idle, or finished', () => {
   const { items, add, tree } = vault()
   const now = 10 * IDLE_MS

@@ -167,9 +167,12 @@ export interface Progress<T> extends Group<T> {
   backlog: number
 }
 
-/** Progress counts leaf cards. A board is a container, and its children carry the work. */
+/**
+ * Progress counts leaf cards. A board is a container, and its children carry the work.
+ * An area in backlog or done is not active, so its row is left out.
+ */
 export function progress<T extends DashItem>(cards: T[], tree: DashTree<T>, focus: T | null = null): Progress<T>[] {
-  return groupBy(cards.filter((card) => !card.board), tree, focus, (area, list) => ({
+  const rows = groupBy(cards.filter((card) => !card.board), tree, focus, (area, list) => ({
     area,
     name: groupName(area, focus),
     done: list.filter((card) => card.status === 'done').length,
@@ -178,6 +181,7 @@ export function progress<T extends DashItem>(cards: T[], tree: DashTree<T>, focu
     total: list.filter((card) => card.status !== 'backlog').length,
     backlog: list.filter((card) => card.status === 'backlog').length,
   }))
+  return rows.filter((row) => row.area?.status !== 'backlog' && row.area?.status !== 'done')
 }
 
 export interface Claim<T> {
