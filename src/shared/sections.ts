@@ -1,3 +1,5 @@
+import { scanMarkdown } from './markdown.ts'
+
 /**
  * Reading one `## Heading` section out of a work item body.
  *
@@ -8,25 +10,25 @@
 
 /** Text under a `## Heading`, up to the next heading of the same or a higher level. */
 export function section(body: string, heading: string): string | null {
-  const lines = body.split(/\r?\n/)
+  const lines = scanMarkdown(body).lines
   const wanted = heading.trim().toLowerCase()
   let start = -1
   let level = 0
 
   for (let i = 0; i < lines.length; i++) {
-    const match = /^(#{1,6})\s+(.*)$/.exec(lines[i]!)
+    const match = lines[i]!.heading
     if (!match) continue
     if (start === -1) {
-      if (match[2]!.trim().toLowerCase() !== wanted) continue
+      if (match.title.trim().toLowerCase() !== wanted) continue
       start = i + 1
-      level = match[1]!.length
+      level = match.level
       continue
     }
-    if (match[1]!.length <= level) {
-      return lines.slice(start, i).join('\n').trim() || null
+    if (match.level <= level) {
+      return lines.slice(start, i).map((line) => line.text).join('\n').trim() || null
     }
   }
-  return start === -1 ? null : lines.slice(start).join('\n').trim() || null
+  return start === -1 ? null : lines.slice(start).map((line) => line.text).join('\n').trim() || null
 }
 
 /** The list items under a heading, with their bullet and checkbox markers removed. */

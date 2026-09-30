@@ -1,13 +1,16 @@
 /** Wrap bare angle placeholders in Markdown prose without changing protected constructs. */
 export function wrapAnglePlaceholders(markdown: string): string {
+  const scan = scanMarkdown(markdown)
   let result = ''
   let index = 0
+  let fenceIndex = 0
 
   while (index < markdown.length) {
-    const fence = fenceAt(markdown, index)
-    if (fence !== undefined) {
+    const fence = scan.fences[fenceIndex]
+    if (fence?.start === index) {
       result += markdown.slice(index, fence.end)
       index = fence.end
+      fenceIndex += 1
       continue
     }
 
@@ -41,7 +44,7 @@ export function wrapAnglePlaceholders(markdown: string): string {
         index += runLength
         continue
       }
-      const close = findClosingBacktickRun(markdown, index + runLength, runLength)
+      const close = findClosingBacktickRun(markdown, index + runLength, runLength, scan.fences)
       if (close !== undefined) {
         result += markdown.slice(index, close + runLength)
         index = close + runLength
@@ -70,26 +73,67 @@ export function wrapAnglePlaceholders(markdown: string): string {
   return result
 }
 
-function fenceAt(markdown: string, index: number): { end: number } | undefined {
-  if (index !== 0 && markdown[index - 1] !== '\n') return undefined
-  const lineEnd = markdown.indexOf('\n', index)
-  const lineLimit = lineEnd === -1 ? markdown.length : lineEnd
-  const line = markdown.slice(index, lineLimit).replace(/\r$/, '')
-  const opening = /^ {0,3}(`{3,}|~{3,})/.exec(line)?.[1]
-  if (opening === undefined) return undefined
+export interface MarkdownHeading {
+  level: number
+  title: string
+}
 
-  const marker = opening[0]
-  const length = opening.length
-  let cursor = lineEnd === -1 ? markdown.length : lineEnd + 1
-  while (cursor < markdown.length) {
-    const closeLineEnd = markdown.indexOf('\n', cursor)
-    const closeLimit = closeLineEnd === -1 ? markdown.length : closeLineEnd
-    const closeLine = markdown.slice(cursor, closeLimit).replace(/\r$/, '')
-    const closing = new RegExp(`^ {0,3}${marker}{${length},}[ \\t]*$`).test(closeLine)
-    if (closing) return { end: closeLineEnd === -1 ? markdown.length : closeLineEnd + 1 }
-    cursor = closeLineEnd === -1 ? markdown.length : closeLineEnd + 1
+export interface MarkdownLine {
+  text: string
+  start: number
+  contentEnd: number
+  end: number
+  heading?: MarkdownHeading
+}
+
+export interface MarkdownFence {
+  start: number
+  end: number
+}
+
+export interface MarkdownScan {
+  lines: MarkdownLine[]
+  fences: MarkdownFence[]
+}
+
+/** Scan Markdown lines once and identify headings outside fenced code blocks. */
+export function scanMarkdown(markdown: string): MarkdownScan {
+  const lines: MarkdownLine[] = []
+  const fences: MarkdownFence[] = []
+  let activeFence: { marker: string; length: number; start: number } | undefined
+
+  for (const match of markdown.matchAll(/([^\r\n]*)(\r?\n|$)/g)) {
+    if (match[0] === '') continue
+    const text = match[1]!
+    const start = match.index
+    const contentEnd = start + text.length
+    const end = contentEnd + match[2]!.length
+    const line: MarkdownLine = { text, start, contentEnd, end }
+    const opener = /^ {0,3}(`{3,}|~{3,})(.*)$/.exec(text)
+
+    if (activeFence !== undefined) {
+      const close = new RegExp(`^ {0,3}${activeFence.marker}{${activeFence.length},}[ \\t]*$`).test(text)
+      if (close) {
+        fences.push({ start: activeFence.start, end })
+        activeFence = undefined
+      }
+      lines.push(line)
+      continue
+    }
+
+    if (opener !== null && (opener[1]![0] !== '`' || !opener[2]!.includes('`'))) {
+      activeFence = { marker: opener[1]![0]!, length: opener[1]!.length, start }
+      lines.push(line)
+      continue
+    }
+
+    const heading = /^[ \t]*(#{1,6})[ \t]+(.*)$/.exec(text)
+    if (heading) line.heading = { level: heading[1]!.length, title: heading[2]!.trim() }
+    lines.push(line)
   }
-  return { end: markdown.length }
+
+  if (activeFence !== undefined) fences.push({ start: activeFence.start, end: markdown.length })
+  return { lines, fences }
 }
 
 function htmlElementAt(markdown: string, index: number): number | undefined {
@@ -207,15 +251,15 @@ function backtickRunLength(text: string, index: number): number {
   return end - index
 }
 
-function findClosingBacktickRun(text: string, from: number, length: number): number | undefined {
+function findClosingBacktickRun(text: string, from: number, length: number, fences: readonly MarkdownFence[]): number | undefined {
   let cursor = from
+  let fenceIndex = fences.findIndex((fence) => fence.start >= from)
   while (cursor < text.length) {
-    if (cursor === 0 || text[cursor - 1] === '\n') {
-      const fence = fenceAt(text, cursor)
-      if (fence !== undefined) {
-        cursor = fence.end
-        continue
-      }
+    const fence = fences[fenceIndex]
+    if (fence?.start === cursor) {
+      cursor = fence.end
+      fenceIndex += 1
+      continue
     }
     if (text[cursor] !== '`') {
       cursor += 1

@@ -1,5 +1,7 @@
 /** Print the objective chain for one card without changing the vault. */
 import { parseWikilink } from '../../shared/schema.ts'
+import { bodyOf } from '../../shared/sections.ts'
+import { scanMarkdown } from '../../shared/markdown.ts'
 import type { Vault, WorkItem } from '../vault.ts'
 
 const MAX_CHAIN = 12
@@ -91,16 +93,14 @@ function buildChain(vault: Vault, start: WorkItem): ObjectiveChain {
 }
 
 function extractObjective(text: string): string {
-  const content = text.replace(/^---\r?\n[\s\S]*?\r?\n---\s*/, '')
-  const lines = content.split(/\r?\n/)
-  const heading = lines.findIndex((line) => /^#{1,6}\s+Objective\s*$/i.test(line.trim()))
-  if (heading < 0) return '[Objective missing]'
-  const body: string[] = []
-  for (const line of lines.slice(heading + 1)) {
-    if (/^#{1,6}\s+/.test(line.trim())) break
-    body.push(line)
-  }
-  const value = body.join('\n').trim()
+  const content = bodyOf(text)
+  const lines = scanMarkdown(content).lines
+  const headingIndex = lines.findIndex((line) => line.heading?.title.trim().toLowerCase() === 'objective')
+  if (headingIndex < 0) return '[Objective missing]'
+  const heading = lines[headingIndex]!.heading!
+  const next = lines.slice(headingIndex + 1).find((line) => line.heading && line.heading.level <= heading.level)
+  const end = next?.start ?? content.length
+  const value = content.slice(lines[headingIndex]!.end, end).trim()
   if (!value) return '[Objective missing]'
   if (value.length <= MAX_OBJECTIVE) return value
   return `${value.slice(0, MAX_OBJECTIVE - 15).trimEnd()} [truncated]`

@@ -49,6 +49,18 @@ test('wi objective marks a missing objective with a clear placeholder', async ()
   assert.match(result.stdout, /Build product[\s\S]*\[Objective missing\]/)
 })
 
+test('wi objective keeps nested headings and ignores fenced headings', async () => {
+  fixture = seed()
+  fixture.write('Boards/Ship feature.md', item({
+    type: 'work-item', id: 'wi-0003', title: 'Ship feature', status: 'doing', parent: '"[[Build product]]"',
+    created: '2026-09-21', updated: '2026-09-21',
+  }, '## Objective\n\nTop goal.\n\n### Detail\n\nMore detail.\n\n```md\n## Acceptance Criteria\nExample only.\n```\n\n## Context\nOutside the objective.\n'))
+  const result = await wi(['objective', 'wi-0003'])
+  assert.equal(result.code, 0, result.stderr)
+  assert.match(result.stdout, /Top goal\.\n\n### Detail\n\nMore detail\.\n\n```md\n## Acceptance Criteria\nExample only\.\n```/)
+  assert.doesNotMatch(result.stdout, /Outside the objective/)
+})
+
 test('wi objective reports a missing parent and does not guess the chain', async () => {
   fixture = seed()
   fixture.write('Boards/Build product.md', item({
