@@ -24,7 +24,9 @@ export async function writeBenchFixture(vault: string, cards = 1000): Promise<vo
   }
   const folder = join(vault, 'Boards')
   await mkdir(folder, { recursive: true })
-  await writeFile(join(vault, '.wi.json'), JSON.stringify({ defaultRoot: BENCH_ROOT }), 'utf8')
+  const pluginFolder = join(vault, '.obsidian', 'plugins', 'recursive-board')
+  await mkdir(pluginFolder, { recursive: true })
+  await writeFile(join(pluginFolder, 'data.json'), JSON.stringify({ board: { defaultRoot: BENCH_ROOT } }), 'utf8')
   await writeFile(join(folder, `${BENCH_ROOT}.md`), [
     '---', 'type: work-item', 'id: wi-broot', `title: ${BENCH_ROOT}`,
     `created: ${dateAgo(90)}`, `updated: ${dateAgo(0)}`, 'board: true', '---', '',

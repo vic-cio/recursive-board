@@ -57,6 +57,7 @@ export async function validate(vault: Vault): Promise<Report> {
   }
 
   checkDefaultRoot(vault, report)
+  checkConfigLeftovers(vault, report)
   checkRoots(vault, report)
   checkCycles(vault, report)
   checkDependencies(vault, report)
@@ -157,6 +158,14 @@ function checkDefaultRoot(vault: Vault, report: Reporter): void {
 
   report('default-root-unresolved', 'warning', vault.configFile, target?.id,
     `sets defaultRoot to "${configured}", which does not name a root work item.`)
+}
+
+/** docs/adr/0050-board-settings-in-plugin-data.md: the plugin moves an old file to the trash once it migrates it. */
+function checkConfigLeftovers(vault: Vault, report: Reporter): void {
+  for (const relPath of vault.configLeftovers) {
+    report('config-leftover', 'warning', relPath, undefined,
+      `is no longer read: the board settings live in ${vault.configFile}. Delete this file.`)
+  }
 }
 
 /** docs/adr/0003-flat-configurable-work-item-folder.md keeps work items flat. Templates/

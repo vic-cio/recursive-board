@@ -44,6 +44,10 @@ vault, and losing it is not visible until two devices conflict. The one exceptio
 [0035](docs/adr/0035-promote-a-parent-on-its-first-child.md): `wi new` sets `board: true` on a parent
 at its first child.
 
+**The plugin moves `test/.wi.json` to the trash when it loads on `test/`.** `test/.wi.json` keeps the
+old config path covered. Its migration (docs/adr/0050-board-settings-in-plugin-data.md) deletes a tracked
+file, so run `git checkout test/.wi.json` after you look at the test vault in Obsidian.
+
 ## Working here
 
 Node 26 runs the TypeScript directly, so there is no build step for the CLI. `npm test`
@@ -56,6 +60,9 @@ The plugin is not covered by tests beyond its pure logic and a bundle-loads chec
 to it by reloading Obsidian on a test vault and looking.
 
 ## Release
+
+Bump the patch number for fixes and additions. Bump the minor number only when a change breaks something for
+existing users, such as a removed command or a moved setting.
 
 Bump `version` in `manifest.json`, `package.json` and `VERSION` in `src/cli/wi.ts`, update the matching
 `versions.json` entry to the manifest's `minAppVersion`, and update `package-lock.json`.

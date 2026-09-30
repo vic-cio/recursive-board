@@ -44,8 +44,13 @@ test('send back notes the comment and hands the card back to its agent', () => {
   assert.ok(after.includes('- 2026-09-28 15:04: Sent back by Ana: Recheck the VAT.\n\n## Knowledge'))
 })
 
-test('send back needs a one-line comment', () => {
-  assert.throws(() => applyVerdict(card, { verdict: 'send back', you: 'Ana', comment: '  ' }, now), /comment/)
+test('a blank send back notes no comment and still hands the card back', () => {
+  const after = applyVerdict(card, { verdict: 'send back', you: 'Ana', comment: '  ' }, now)
+  assert.doesNotMatch(after, /^owner:/m)
+  assert.ok(after.includes('- 2026-09-28 15:04: Sent back by Ana.\n\n## Knowledge'))
+})
+
+test('a send back comment is one line', () => {
   assert.throws(() => applyVerdict(card, { verdict: 'send back', you: 'Ana', comment: 'a\nb' }, now), /one line/)
 })
 

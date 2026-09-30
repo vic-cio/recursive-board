@@ -2,7 +2,7 @@
 
 ## Canonical data
 
-Work items are Markdown files in the work-item folder set by `.wi.json`. These files are canonical.
+Work items are Markdown files in the work-item folder set in the board settings. These files are canonical.
 The plugin is a view, not a database. Do not create a second task store.
 
 ## Work-item schema

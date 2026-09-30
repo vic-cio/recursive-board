@@ -21,7 +21,8 @@ It has four panels:
   a phone, each review row stacks the target, card, check, type, changed date, and approval controls.
   Long names, instructions, and URLs wrap inside the row.
 - **Progress.** Leaf cards per area row, done out of total. A board is a container, so it does not
-  count. A click anywhere on an area row focuses that area. A board icon at the row's right end
+  count. Backlog cards are not planned yet, so they stay out of the total, and the row names their
+  count apart. When options run out, the bar fills, and that is the sign to bring cards out of the backlog. A click anywhere on an area row focuses that area. A board icon at the row's right end
   opens the area's board, with a tap area the full height of the row. A working badge on the row
   counts the agents that work inside it, and hides at zero.
 - **Agents.** One flat feed under Progress, newest first. Each agent row shows the card, its age,
@@ -34,9 +35,9 @@ It has four panels:
   "Agent went quiet". A claim is idle when neither the card nor a child changed for an hour: its
   session most likely ended without `wi release`. The panel shows only when it has a row.
 
-Each agent row, each quiet row, and each card in For review shows its card id as muted text. A click on
-the id copies it, so a person can paste the card to an agent. In For review the id sits under the card
-title. A card with no id shows no id; `wi validate` reports it.
+Each agent row and each quiet row ends with a copy icon, the same size as the board icon in Progress. A
+click copies the card id, so a person can paste the card to an agent. For review shows no id: the card
+title is enough there. A card with no id shows no icon; `wi validate` reports it.
 
 Areas (0028) nest, so the dashboard shows one level of them at a time. With no focus, each card
 groups under its top area, and cards in no area group under "No area", last. Clicking an area
