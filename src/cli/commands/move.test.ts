@@ -97,6 +97,16 @@ test('moveItem repairs an orphan by giving it a parent that resolves', async () 
   assert.equal(fm(fixture, 'Lost').get('parent'), '[[Main]]')
 })
 
+test('moveItem repairs a malformed parent link by giving it a parent that resolves', async () => {
+  fixture = seed()
+  fixture.write('Boards/Lost.md', item({
+    type: 'work-item', id: 'wi-0010', title: 'Lost', status: 'backlog', parent: 'broken link',
+    created: '2026-09-21', updated: '2026-09-21',
+  }))
+  await moveItem(await loadVault(fixture.root), 'wi-0010', 'Main')
+  assert.equal(fm(fixture, 'Lost').get('parent'), '[[Main]]')
+})
+
 test('moveItem refuses while a work-item folder file is unaccounted for', async () => {
   fixture = seed()
   fixture.write('Boards/.Hidden.md.icloud', 'bplist00')
