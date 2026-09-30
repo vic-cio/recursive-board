@@ -162,7 +162,9 @@ function groupBy<T extends DashItem, G extends Group<T>>(
 export interface Progress<T> extends Group<T> {
   done: number
   doing: number
+  /** Cards in options, doing and done. */
   total: number
+  backlog: number
 }
 
 /** Progress counts leaf cards. A board is a container, and its children carry the work. */
@@ -172,7 +174,9 @@ export function progress<T extends DashItem>(cards: T[], tree: DashTree<T>, focu
     name: groupName(area, focus),
     done: list.filter((card) => card.status === 'done').length,
     doing: list.filter((card) => card.status === 'doing').length,
-    total: list.length,
+    // Backlog cards are not planned yet, so they stay out of the total and are counted apart.
+    total: list.filter((card) => card.status !== 'backlog').length,
+    backlog: list.filter((card) => card.status === 'backlog').length,
   }))
 }
 

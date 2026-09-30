@@ -24,6 +24,7 @@ import { addNote } from './commands/note.ts'
 import { retag, staleAreaTags, writeGraphColours } from './commands/retag.ts'
 import { listChildren, type ChildRow } from './commands/children.ts'
 import { readyCards } from './commands/ready.ts'
+import { showCard } from './commands/show.ts'
 import { validate, type Problem } from './commands/validate.ts'
 import { listTemplates, writeTemplates } from './commands/template.ts'
 import { removeItem } from './commands/remove.ts'
@@ -37,8 +38,8 @@ import { dependenciesOf, openDependencies, titleOf } from './dependencies.ts'
 import { hookStatus, installHook, uninstallHook } from './commands/hook.ts'
 import { runSetup } from './commands/setup.ts'
 import { objectiveReport } from './commands/objective.ts'
-import { migrateVaultConfig } from './commands/config.ts'
 import { correctionTrace, renderCorrectionTrace } from './commands/trace.ts'
+import { PLUGIN_DATA_FILE } from '../shared/board-settings.ts'
 import { STATUSES } from '../shared/schema.ts'
 import { templateNames } from '../shared/templates.ts'
 
@@ -46,7 +47,6 @@ const HELP = `wi — the Recursive Board CLI
 
 Usage
   wi setup [--yes] [--vault <path>] [--force]
-  wi config migrate [--apply] [--vault <path>]
   wi new <title> [--parent <ref>] [--status <s>] [--template <t>] [--owner <o>] [--agent <a>]
                  [--priority <n>] [--objective <text>] [--context <text>]... [--criteria <text>]...
                  [--creator <name>] [--model <id>] [--role <name>] [--strict]
@@ -67,6 +67,7 @@ Usage
   wi rm <ref> [--recursive] [--dry-run]
   wi children [<ref>] [--status <s>] [--tree] [--archived]
   wi ready [--parent <ref>] [--agent <name>] [--json]
+  wi show <ref> [--json]
   wi validate
   wi retag [--dry-run]
   wi graph
@@ -130,9 +131,10 @@ Notes
   \`wi objective\` prints the WI_CARD objective chain, or the unambiguous deepest WI_AGENT claim.
   \`wi agents\` reports the advisory limit, the number of distinct agents with a doing card, and each
   claimed doing card. WI_MAX_AGENTS overrides
-  maxAgents from Recursive Board config.md for one run. Dispatchers decide whether to wait; wi claim does not enforce it.
-  Recursive Board config.md is the shared vault config. The hidden .wi.json file is a fallback.
-  \`wi config migrate\` previews a legacy migration. Run it again with --apply to create the note.
+  maxAgents from the board settings for one run. Dispatchers decide whether to wait; wi claim does not enforce it.
+  The board settings live in the Recursive Board plugin settings, stored in
+  .obsidian/plugins/recursive-board/data.json. wi reads them and never writes them. Until the
+  plugin migrates them, wi reads Recursive Board config.md, then .wi.json.
   \`wi new\` warns when such a file exists because a new id or filename may clash with it.
   \`wi here\` reads or sets this repository's vault and board pointer in your user config.
 `
@@ -177,7 +179,6 @@ async function main(argv: string[]): Promise<number> {
       json: { type: 'boolean', default: false },
       force: { type: 'boolean', default: false },
       yes: { type: 'boolean', default: false },
-      apply: { type: 'boolean', default: false },
       help: { type: 'boolean', short: 'h', default: false },
       version: { type: 'boolean', short: 'V', default: false },
     },
@@ -196,7 +197,6 @@ async function main(argv: string[]): Promise<number> {
     throw new UsageError('--force applies only to wi hook install or wi setup.')
   }
   if (values.yes && command !== 'setup') throw new UsageError('--yes applies only to wi setup.')
-  if (values.apply && command !== 'config') throw new UsageError('--apply applies only to wi config migrate.')
   if (values.off && command !== 'area' && command !== 'depend') throw new UsageError('--off applies only to wi area and wi depend.')
   if (values.on !== undefined && command !== 'depend') throw new UsageError('--on applies only to wi depend.')
   if ((values.objective !== undefined || values.context !== undefined || values.criteria !== undefined || values.strict) &&
@@ -221,18 +221,6 @@ async function main(argv: string[]): Promise<number> {
 
   if (command === 'here') return runHere(values, values.json === true)
 
-  if (command === 'config') {
-    if (rest.length !== 1 || rest[0] !== 'migrate') {
-      throw new UsageError('wi config needs the subcommand migrate. Run wi config migrate [--apply].')
-    }
-    const root = await resolveVaultRoot(values.vault)
-    if (findVaultRoot(root) !== root) {
-      throw new UsageError(`${root} is not a vault: it has no Boards/ folder or config file.`)
-    }
-    await migrateVaultConfig(root, values.apply === true)
-    return 0
-  }
-
   if (command === 'trace') {
       if (rest.length !== 1 || !rest[0] || !values.heading || !values.claim) {
         throw new UsageError('wi trace needs a source file, --heading, and --claim.')
@@ -240,6 +228,7 @@ async function main(argv: string[]): Promise<number> {
       const root = await resolveVaultRoot(values.vault)
       if (findVaultRoot(root) !== root) throw new UsageError(`${root} is not a vault.`)
       const vault = { root, ...await readVaultConfig(root) }
+      hintMigration(vault.configFile)
       const report = await correctionTrace({ vault, source: rest[0], heading: values.heading, claim: values.claim })
       if (values.json) print(report)
       else process.stdout.write(renderCorrectionTrace(report))
@@ -289,6 +278,8 @@ async function main(argv: string[]): Promise<number> {
         rest = [board]
       }
       return runChildren(vault, rest, values, json)
+    case 'show':
+      return runShow(vault, rest, json)
     case 'validate':
       return runValidate(vault, json)
     case 'retag':
@@ -307,9 +298,17 @@ async function main(argv: string[]): Promise<number> {
 async function openVault(flag: string | undefined): Promise<Vault> {
   const root = await resolveVaultRoot(flag)
   if (findVaultRoot(root) !== root) {
-    throw new UsageError(`${root} is not a vault: it has no Boards/ folder or config file.`)
+    throw new UsageError(`${root} is not a vault: it has no Boards/ folder or board settings.`)
   }
-  return loadVault(root)
+  const vault = await loadVault(root)
+  hintMigration(vault.configFile)
+  return vault
+}
+
+/** docs/adr/0050-board-settings-in-plugin-data.md: only the plugin migrates, so wi names the step. */
+function hintMigration(configFile: Vault['configFile']): void {
+  if (configFile === PLUGIN_DATA_FILE) return
+  process.stderr.write(`wi: read ${configFile}. Open the vault in Obsidian to move these settings into the plugin.\n`)
 }
 
 async function resolveVaultRoot(flag: string | undefined): Promise<string> {
@@ -715,6 +714,15 @@ async function runRemove(
   }
   const count = result.removed.length
   process.stdout.write(`${count} work item${count === 1 ? '' : 's'}${result.dryRun ? ', nothing written' : ''}\n`)
+  return 0
+}
+
+function runShow(vault: Vault, rest: string[], json: boolean): number {
+  const ref = rest.join(' ').trim()
+  if (ref === '') throw new UsageError('wi show needs a <ref>.')
+  const card = showCard(vault, ref)
+  if (json) print(card)
+  else process.stdout.write(`${JSON.stringify(card, null, 2)}\n`)
   return 0
 }
 

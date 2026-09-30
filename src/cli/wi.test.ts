@@ -79,6 +79,19 @@ test('wi ready --json returns dispatchable options and exclusion reasons', async
   assert.deepEqual(JSON.parse(scoped.stdout).ready, [])
 })
 
+test('wi show --json returns a complete card without changing its file', async () => {
+  fixture = seed()
+  const before = readFixture('Boards/Build server.md')
+  const result = await wi(['show', 'wi-0004', '--json'])
+  assert.equal(result.code, 0, result.stderr)
+  const card = JSON.parse(result.stdout)
+  assert.equal(card.id, 'wi-0004')
+  assert.equal(card.owner, 'sam')
+  assert.deepEqual(card.ancestry.map((entry: { id: string }) => entry.id), ['wi-0001'])
+  assert.deepEqual(card.children, { total: 0, open: 0, done: 0, items: [] })
+  assert.equal(readFixture('Boards/Build server.md'), before)
+})
+
 test('WI_MAX_AGENTS overrides the vault config for one dispatcher run', async () => {
   fixture = seed()
   fixture.write('.wi.json', '{"maxAgents":2}')
@@ -102,41 +115,37 @@ test('WI_MAX_AGENTS must be a non-negative whole number', async () => {
   assert.match(result.stderr, /WI_MAX_AGENTS must be a non-negative whole number/)
 })
 
-test('config migration shows the proposed note without writing it', async () => {
+test('wi config is no longer a command: the plugin moves the settings', async () => {
   fixture = seed()
-  const legacy = '{"defaultRoot":"Main","customKey":true}\n'
-  fixture.write('.wi.json', legacy)
   const result = await wi(['config', 'migrate'])
-  assert.equal(result.code, 0, result.stderr)
-  assert.match(result.stdout, /Proposed config note/)
-  assert.match(result.stdout, /"customKey": true/)
-  assert.equal(readFixture('Recursive Board config.md'), null)
-  assert.equal(readFixture('.wi.json'), legacy)
-})
-
-test('config migration applies only after preview and leaves the legacy file intact', async () => {
-  fixture = seed()
-  const legacy = '{"defaultRoot":"Main","customKey":true}\n'
-  fixture.write('.wi.json', legacy)
-  const result = await wi(['config', 'migrate', '--apply'])
-  assert.equal(result.code, 0, result.stderr)
-  assert.match(result.stdout, /Proposed config note/)
-  assert.match(readFixture('Recursive Board config.md') ?? '', /"defaultRoot": "Main"/)
-  assert.equal(readFixture('.wi.json'), legacy)
-})
-
-test('config migration refuses an existing note and keeps both files intact', async () => {
-  fixture = seed()
-  const legacy = '{"defaultRoot":"Main"}\n'
-  const existing = '# Hand-written note\n'
-  fixture.write('.wi.json', legacy)
-  fixture.write('Recursive Board config.md', existing)
-  const result = await wi(['config', 'migrate', '--apply'])
   assert.equal(result.code, 2)
-  assert.match(result.stderr, /already exists/)
-  assert.equal(readFixture('Recursive Board config.md'), existing)
-  assert.equal(readFixture('.wi.json'), legacy)
+  assert.match(result.stderr, /unknown command "config"/)
 })
+
+test('wi reads the board key from the plugin data file and prints no hint', async () => {
+  fixture = seed()
+  fixture.write('.obsidian/plugins/recursive-board/data.json', '{"board":{"maxAgents":3}}')
+  fixture.write('.wi.json', '{"maxAgents":1}')
+  const result = await wi(['agents'])
+  assert.equal(result.code, 0, result.stderr)
+  assert.match(result.stdout, /3/)
+  assert.doesNotMatch(result.stderr, /Open the vault in Obsidian/)
+})
+
+for (const [file, text] of [
+  ['.wi.json', '{"maxAgents":1}'],
+  ['Recursive Board config.md', '<!-- recursive-board-config -->\n```json\n{"maxAgents":1}\n```\n'],
+] as const) {
+  test(`wi prints one hint line when it reads ${file}`, async () => {
+    fixture = seed()
+    fixture.write(file, text)
+    const result = await wi(['agents'])
+    assert.equal(result.code, 0, result.stderr)
+    const hints = result.stderr.split('\n').filter((line) => line.includes('Open the vault in Obsidian'))
+    assert.equal(hints.length, 1)
+    assert.match(hints[0]!, new RegExp(file.replace('.', '\\.')))
+  })
+}
 
 function readFixture(path: string): string | null {
   const fullPath = join(fixture!.root, path)
