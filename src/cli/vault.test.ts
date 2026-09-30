@@ -174,6 +174,29 @@ test('childrenOf resolves a wikilink that carries a folder path', async () => {
   assert.ok(ids.includes('wi-0010'))
 })
 
+test('resolveLink keeps a folder-qualified target inside the configured work-item folder', async () => {
+  fixture = makeVault()
+  fixture.write('.wi.json', '{"workItemFolder":"Knowledge"}')
+  fixture.write('Knowledge/Plan.md', item({
+    type: 'work-item', id: 'wi-0101', title: 'Knowledge plan', status: 'backlog',
+  }))
+  fixture.write('Boards/Plan.md', item({
+    type: 'work-item', id: 'wi-0102', title: 'Board plan', status: 'backlog',
+  }))
+  const vault = await loadVault(fixture.root)
+  assert.equal(vault.resolveLink('Knowledge/Plan')?.id, 'wi-0101')
+})
+
+test('resolveLink does not drop a folder from a qualified target', async () => {
+  fixture = makeVault()
+  fixture.write('Boards/Plan.md', item({
+    type: 'work-item', id: 'wi-0102', title: 'Board plan', status: 'backlog',
+  }))
+  const vault = await loadVault(fixture.root)
+  assert.equal(vault.resolveLink('Knowledge/Plan'), undefined)
+  assert.equal(vault.resolveLink('Boards/Plan')?.id, 'wi-0102')
+})
+
 test('an orphan keeps its unresolved parent target and appears as nobody child', async () => {
   fixture = vaultWithTree()
   fixture.write('Boards/Orphaned research spike.md', item({
@@ -212,7 +235,7 @@ test('resolve throws with a useful message when nothing matches', async () => {
   assert.throws(() => vault.resolve('wi-nope'), /no work item/i)
 })
 
-test('resolve refuses an ambiguous title rather than guessing', async () => {
+test('resolve refuses a title that also matches another filename stem', async () => {
   fixture = vaultWithTree()
   fixture.write('Boards/Streaming--aaaa.md', item({
     type: 'work-item', id: 'wi-0020', title: 'Streaming', status: 'backlog',
@@ -220,7 +243,7 @@ test('resolve refuses an ambiguous title rather than guessing', async () => {
   }))
   const vault = await loadVault(fixture.root)
   assert.equal(vault.resolve('Streaming--aaaa').id, 'wi-0020', 'a unique stem still resolves')
-  assert.equal(vault.resolve('Streaming').id, 'wi-0005', 'a filename match beats a title match')
+  assert.throws(() => vault.resolve('Streaming'), /Boards\/Streaming\.md.*Boards\/Streaming--aaaa\.md/)
 })
 
 test('loadVault reports a duplicate id rather than dropping one of the items', async () => {
@@ -234,12 +257,40 @@ test('loadVault reports a duplicate id rather than dropping one of the items', a
   assert.deepEqual(vault.duplicateIds, ['wi-0004'])
 })
 
+test('resolve refuses a duplicate id and names both paths', async () => {
+  fixture = vaultWithTree()
+  fixture.write('Boards/Twin.md', item({
+    type: 'work-item', id: 'wi-0004', title: 'Twin', status: 'backlog',
+    parent: '"[[Main]]"', created: '2026-09-21', updated: '2026-09-21',
+  }))
+  const vault = await loadVault(fixture.root)
+  assert.throws(() => vault.resolve('wi-0004'), /Boards\/Build server\.md.*Boards\/Twin\.md/)
+})
+
+test('resolve refuses a ref shared by an id and another title', async () => {
+  fixture = vaultWithTree()
+  fixture.write('Boards/Named.md', item({
+    type: 'work-item', id: 'wi-0103', title: 'wi-0004', status: 'backlog',
+    parent: '"[[Main]]"', created: '2026-09-21', updated: '2026-09-21',
+  }))
+  const vault = await loadVault(fixture.root)
+  assert.throws(() => vault.resolve('wi-0004'), /Boards\/Build server\.md.*Boards\/Named\.md/)
+})
+
 test('loadVault records a hidden non-Markdown file in the work-item folder as unaccounted', async () => {
   fixture = vaultWithTree()
   fixture.write('Boards/.Evicted card.md.icloud', '')
   const vault = await loadVault(fixture.root)
   assert.deepEqual(vault.unaccounted, ['Boards/.Evicted card.md.icloud'])
   assert.equal(vault.items.length, 4, 'an unaccounted file is not a work item, and is not invented')
+})
+
+test('loadVault checks the configured work-item folder for hidden sync stubs', async () => {
+  fixture = makeVault()
+  fixture.write('.wi.json', '{"workItemFolder":"Projects"}')
+  fixture.write('Projects/.Evicted card.md.icloud', '')
+  const vault = await loadVault(fixture.root)
+  assert.deepEqual(vault.unaccounted, ['Projects/.Evicted card.md.icloud'])
 })
 
 test('loadVault records a hidden stray file that is not a sync stub', async () => {

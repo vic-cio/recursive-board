@@ -7,6 +7,8 @@ Each work item is a Markdown file with a stable, unique ID. Its `parent` field i
 
 A root is a work item with no `parent` field and no status. The validator reports duplicate IDs, malformed or unresolved parent links, and hierarchy cycles rather than repairing them.
 
+CLI lookup refuses an ID, filename stem, or title that matches more than one work item, and names every matching path. A folder-qualified link matches its vault-relative path exactly. An unqualified link resolves only when one work item has that filename stem. This prevents lookup from hiding duplicate IDs or selecting a same-named file in another folder.
+
 ## Considered options
 
 Using filenames alone makes duplicate titles ambiguous. Storing parent IDs would weaken native Obsidian links. The model keeps both forms, with the parent wikilink authoritative for resolution.
