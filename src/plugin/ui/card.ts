@@ -219,10 +219,10 @@ async function renderExpansion(
   const children = ctx.index.childrenOf(meta.file)
   if (children.length > 0) {
     host.createDiv({ cls: 'wi-card-section', text: 'Children' })
-    const { open, doneCount } = previewChildren(children, showingArchived(ctx, meta))
+    const { open, doneCount, archivedCount } = previewChildren(children, showingArchived(ctx, meta))
     // With every child done, the count line alone says it; "No children yet" would be wrong.
-    if (open.length > 0 || doneCount === 0) {
-      renderChecklist(host, ctx, open, { grouped: false, parent: undefined, archiveParent: meta })
+    if (open.length > 0 || doneCount === 0 || archivedCount > 0) {
+      renderChecklist(host, ctx, open, { grouped: false, parent: undefined, archiveParent: meta, archivedCount })
     }
     if (doneCount > 0) renderDoneFold(host, ctx, meta, doneCount)
   }

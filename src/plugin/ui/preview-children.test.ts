@@ -15,6 +15,6 @@ test('an expanded card lists open children and folds done ones into a count', ()
 
 test('an archived done child counts only while archived items show', () => {
   const children = [child('A', 'done'), child('B', 'done', true)]
-  assert.equal(previewChildren(children, false).doneCount, 1)
-  assert.equal(previewChildren(children, true).doneCount, 2)
+  assert.deepEqual(previewChildren(children, false), { open: [], doneCount: 1, archivedCount: 1 })
+  assert.deepEqual(previewChildren(children, true), { open: [], doneCount: 2, archivedCount: 1 })
 })

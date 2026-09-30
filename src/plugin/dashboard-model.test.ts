@@ -2,7 +2,7 @@ import { test } from 'node:test'
 import assert from 'node:assert/strict'
 
 import {
-  agentFeed, areaOf, allReviewFilesTicked, cardsInScope, fileReviewPaths, IDLE_MS, isLoopbackWebAddress, isWebAddress, FINISHED_SHOWN, FINISHED_WINDOW_MS, needsAttention, parseReviewLine, parseWebReviewMode, progress, reviewPathsForMode, waitsForReview, workingBadge, type DashItem, type DashTree,
+  agentFeed, areaOf, allReviewFilesTicked, cardsInScope, fileReviewPaths, IDLE_MS, isLoopbackWebAddress, isWebAddress, FINISHED_SHOWN, FINISHED_WINDOW_MS, needsAttention, parseReviewLine, parseWebReviewMode, progress, reviewPathsForMode, reviewPresentationForMode, reviewVerdictReadiness, waitsForReview, workingBadge, type DashItem, type DashTree,
 } from './dashboard-model.ts'
 
 interface Fake extends DashItem { parent: Fake | null; mtime: number }
@@ -124,6 +124,24 @@ test('only file rows count toward verdict readiness', () => {
   assert.equal(allReviewFilesTicked(mixed, { 'report.md': true }), true)
   assert.equal(allReviewFilesTicked(mixed, {}), false)
   assert.equal(allReviewFilesTicked(['https://example.com'], {}), false)
+})
+
+test('a shared tick updates verdict readiness for every card that lists the file', () => {
+  const first = { title: 'First' }
+  const second = { title: 'Second' }
+  const pathsByCard = new Map([[first, ['shared.md']], [second, ['shared.md', 'other.md']]])
+  const ticks: Record<string, boolean> = { 'shared.md': true }
+  assert.deepEqual([...reviewVerdictReadiness(pathsByCard, ticks).values()], [true, false])
+  ticks['other.md'] = true
+  assert.deepEqual([...reviewVerdictReadiness(pathsByCard, ticks).values()], [true, true])
+  delete ticks['shared.md']
+  assert.deepEqual([...reviewVerdictReadiness(pathsByCard, ticks).values()], [false, false])
+})
+
+test('Off mode keeps its fallback row out of verdict readiness', () => {
+  const presentation = reviewPresentationForMode(['https://example.com'], 'card.md', 'off')
+  assert.deepEqual(presentation.paths, ['card.md'])
+  assert.deepEqual(presentation.verdictPaths, [])
 })
 
 test('progress counts leaf cards per area, with no area last', () => {
@@ -313,4 +331,15 @@ test('an idle claim needs attention as an agent that went quiet', () => {
   assert.deepEqual(found, [{ card: quiet, reason: 'quiet', cards: [] }])
   assert.equal(feed.working.some((row) => row.card === quiet), false)
   assert.equal(feed.finished.some((row) => row.card === quiet), false)
+})
+
+test('an agent becomes quiet at the one-hour idle boundary', () => {
+  const { items, add, tree } = vault()
+  const root = add('Home', null)
+  const card = add('Claimed', root, { status: 'doing', agent: 'codex', mtime: 0 })
+  const cards = cardsInScope(items, null, tree)
+  const before = agentFeed(cards, '', tree, IDLE_MS - 1)
+  assert.deepEqual(needsAttention(cards, () => [], before.idle.map((row) => row.card)), [])
+  const atBoundary = agentFeed(cards, '', tree, IDLE_MS)
+  assert.deepEqual(needsAttention(cards, () => [], atBoundary.idle.map((row) => row.card)).map((row) => [row.card, row.reason]), [[card, 'quiet']])
 })
