@@ -11,13 +11,14 @@ card's row shows two buttons. A card with only web rows has no verdict buttons; 
 it.
 
 - **Approve** writes the note `Approved by <you>.` and moves the card to done.
-- **Send back** asks for a comment, writes the note `Sent back by <you>: <comment>`, and removes
+- **Send back** offers a comment, writes the note `Sent back by <you>: <comment>`, or
+  `Sent back by <you>.` when the comment is blank, and removes
   `owner`. The card stays in doing with its agent, so it leaves For review and goes back to the
   agent that did the work.
 
 Each verdict is one write to the card's own file: the note and the frontmatter change together.
 The rule lives in `src/shared/review.ts`, so a later `wi` command applies the same edits. A
-verdict refuses a card that is not in doing. The comment is one line, because a note is one line.
+verdict refuses a card that is not in doing. The comment is optional and one line, because a note is one line.
 After a verdict, the dashboard removes the card's ticks from that person's entry in the plugin data, so a card
 sent back starts its next review clean. The notice that confirms a verdict carries Undo, like a move.
 

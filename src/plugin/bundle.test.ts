@@ -27,6 +27,8 @@ const obsidian = {
   Component: class {},
   ItemView: class {},
   MarkdownRenderer: class {},
+  AbstractInputSuggest: class {},
+  TFolder: class {},
 }
 
 function loadBundle(): { default?: unknown } {

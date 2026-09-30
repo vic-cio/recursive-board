@@ -319,3 +319,38 @@ test('childrenOf sorts by priority ascending, then updated descending', async ()
     'priority first, then the most recently updated of the unprioritised',
   )
 })
+
+test('the board key in the plugin data file overrides the config note', async () => {
+  fixture = makeVault()
+  fixture.write('.obsidian/plugins/recursive-board/data.json', '{"people":{},"board":{"extraSections":["Knowledge"],"areaTags":true}}')
+  fixture.write('Recursive Board config.md', '<!-- recursive-board-config -->\n```json\n{"defaultRoot":"Launch"}\n```\n')
+  const vault = await loadVault(fixture.root)
+  assert.equal(vault.configFile, '.obsidian/plugins/recursive-board/data.json')
+  assert.deepEqual(vault.config.extraSections, ['Knowledge'])
+  assert.equal(vault.config.defaultRoot, null)
+  assert.deepEqual(vault.configLeftovers, ['Recursive Board config.md'])
+})
+
+test('plugin data without a board key falls back to the config note', async () => {
+  fixture = makeVault()
+  fixture.write('.obsidian/plugins/recursive-board/data.json', '{"people":{}}')
+  fixture.write('Recursive Board config.md', '<!-- recursive-board-config -->\n```json\n{"defaultRoot":"Launch"}\n```\n')
+  const vault = await loadVault(fixture.root)
+  assert.equal(vault.configFile, 'Recursive Board config.md')
+  assert.equal(vault.config.defaultRoot, 'Launch')
+})
+
+test('unreadable plugin data is an error, never a silent fallback', async () => {
+  fixture = makeVault()
+  fixture.write('.obsidian/plugins/recursive-board/data.json', '{"board":')
+  fixture.write('.wi.json', '{"defaultRoot":"Launch"}')
+  await assert.rejects(loadVault(fixture.root), /data\.json must contain valid JSON/)
+})
+
+test('findVaultRoot discovers a vault by its plugin data file', () => {
+  fixture = makeVault()
+  fixture.write('.obsidian/plugins/recursive-board/data.json', '{"board":{"workItemFolder":"Projects"}}')
+  fixture.write('Projects/Root.md', item({ type: 'work-item', id: 'wi-0100', title: 'Root' }))
+  rmSync(join(fixture.root, 'Boards'), { recursive: true })
+  assert.equal(findVaultRoot(join(fixture.root, 'Projects')), fixture.root)
+})
