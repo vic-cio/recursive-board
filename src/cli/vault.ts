@@ -69,7 +69,7 @@ export interface Vault {
   takenStems: Set<string>
   /** Finds the item a wikilink target names, as Obsidian would. */
   resolveLink(target: string | null): WorkItem | undefined
-  /** Finds an item by id, then by filename stem, then by title. Throws when nothing matches. */
+  /** Finds an item by id, filename stem, or title. Throws when the ref is missing or ambiguous. */
   resolve(ref: string): WorkItem
   childrenOf(item: WorkItem): WorkItem[]
   isArchived(item: WorkItem): boolean
@@ -232,7 +232,7 @@ async function scan(root: string, workItemFolder: string): Promise<ScanResult> {
       const rel = `${parent}/${entry.name}`
       if (entry.isDirectory()) continue
 
-      if (folder === BOARDS && isUnaccounted(entry.name)) {
+      if (folder === workItemFolder && isUnaccounted(entry.name)) {
         unaccounted.push(rel)
         continue
       }
@@ -294,10 +294,19 @@ function compareSiblings(a: WorkItem, b: WorkItem): number {
   )
 }
 
-/** The last path segment of a wikilink target, lowercased. Obsidian resolves by filename. */
-function linkKey(target: string): string {
-  const last = target.split('/').pop() ?? target
-  return last.replace(MARKDOWN, '').trim().toLowerCase()
+/** A vault-relative path without its extension, normalized for link lookup. */
+function pathKey(target: string): string {
+  return target.replace(MARKDOWN, '').replaceAll('\\', '/').trim().replace(/^\/+|\/+$/g, '').toLowerCase()
+}
+
+/** The unqualified filename key, normalized for link lookup. */
+function stemKey(target: string): string {
+  return pathKey(target).split('/').pop() ?? pathKey(target)
+}
+
+function ambiguity(ref: string, items: WorkItem[]): Error {
+  const options = items.map((item) => `${item.id ?? '?'} (${item.relPath})`).join(', ')
+  return new Error(`"${ref}" matches ${items.length} work items: ${options}. Use a path or unique id.`)
 }
 
 /**
@@ -366,10 +375,12 @@ export async function loadVault(root: string): Promise<Vault> {
     else byId.set(item.id, item)
   }
 
-  const byStem = new Map<string, WorkItem>()
+  const byStem = new Map<string, WorkItem[]>()
+  const byPath = new Map<string, WorkItem>()
   for (const item of items) {
-    const key = item.stem.toLowerCase()
-    if (!byStem.has(key)) byStem.set(key, item)
+    const key = stemKey(item.stem)
+    byStem.set(key, [...(byStem.get(key) ?? []), item])
+    byPath.set(pathKey(item.relPath), item)
   }
 
   const byTitle = new Map<string, WorkItem[]>()
@@ -379,30 +390,37 @@ export async function loadVault(root: string): Promise<Vault> {
     byTitle.set(key, [...(byTitle.get(key) ?? []), item])
   }
 
+  const resolveLink = (target: string | null) => {
+    if (target === null) return undefined
+    const key = pathKey(target)
+    if (key.includes('/')) return byPath.get(key)
+    const matches = byStem.get(stemKey(target)) ?? []
+    return matches.length === 1 ? matches[0] : undefined
+  }
+
   const children = new Map<string, WorkItem[]>()
   for (const item of items) {
     if (item.parent === null) continue
-    const key = linkKey(item.parent)
-    if (!byStem.has(key)) continue // An orphan is a child of nobody. Report it; never repair it.
-    children.set(key, [...(children.get(key) ?? []), item])
+    const parent = resolveLink(item.parent)
+    if (!parent) continue // An orphan is a child of nobody. Report it; never repair it.
+    children.set(parent.relPath, [...(children.get(parent.relPath) ?? []), item])
   }
   for (const siblings of children.values()) siblings.sort(compareSiblings)
 
-  const resolveLink = (target: string | null) =>
-    target === null ? undefined : byStem.get(linkKey(target))
-
   const resolve = (ref: string): WorkItem => {
     const trimmed = ref.trim()
-    const byIdHit = byId.get(trimmed)
-    if (byIdHit) return byIdHit
-    const byStemHit = byStem.get(linkKey(trimmed))
-    if (byStemHit) return byStemHit
-    const byTitleHits = byTitle.get(trimmed.toLowerCase()) ?? []
-    if (byTitleHits.length === 1) return byTitleHits[0]!
-    if (byTitleHits.length > 1) {
-      const options = byTitleHits.map((i) => `${i.id ?? '?'} (${i.relPath})`).join(', ')
-      throw new Error(`"${ref}" matches ${byTitleHits.length} work items: ${options}. Use an id.`)
+    const normalized = pathKey(trimmed)
+    if (normalized.includes('/')) {
+      const byPathHit = byPath.get(normalized)
+      if (byPathHit) return byPathHit
+      throw new Error(`no work item matches "${ref}". Try an id, a filename or a title.`)
     }
+    const hits = new Set<WorkItem>()
+    for (const item of items) if (item.id === trimmed) hits.add(item)
+    for (const item of byStem.get(stemKey(trimmed)) ?? []) hits.add(item)
+    for (const item of byTitle.get(trimmed.toLowerCase()) ?? []) hits.add(item)
+    if (hits.size === 1) return hits.values().next().value!
+    if (hits.size > 1) throw ambiguity(ref, [...hits])
     throw new Error(`no work item matches "${ref}". Try an id, a filename or a title.`)
   }
 
@@ -421,7 +439,7 @@ export async function loadVault(root: string): Promise<Vault> {
     takenStems: new Set(byStem.keys()),
     resolveLink,
     resolve,
-    childrenOf: (item) => children.get(item.stem.toLowerCase()) ?? [],
+    childrenOf: (item) => children.get(item.relPath) ?? [],
     isArchived: (item) => archiveOwner(item, (current) => resolveLink(current.parent) ?? null, (current) => current.archived) !== null,
     resolveNote: noteResolver(root),
   }
