@@ -61,8 +61,11 @@ to it by reloading Obsidian on a test vault and looking.
 
 ## Release
 
-Bump the patch number for fixes and additions. Bump the minor number only when a change breaks something for
-existing users, such as a removed command or a moved setting.
+Keep every existing workflow working. A release never removes a command, flag or setting that users have.
+Replace a retired command with one that exits 0 and names the new way. Read each old file format, and migrate it
+without a step from the user. A change that breaks a workflow needs Victor's approval before it merges.
+
+Bump the patch number for fixes and additions. Bump the minor number only for a breaking change that Victor approved.
 
 Bump `version` in `manifest.json`, `package.json` and `VERSION` in `src/cli/wi.ts`, update the matching
 `versions.json` entry to the manifest's `minAppVersion`, and update `package-lock.json`.
