@@ -1,8 +1,6 @@
 /** Shared plan for creating the first board in an empty vault. */
 import { fileNameFor, fileNameStem, newId, today } from './schema.ts'
 import { renderRootWorkItem, renderWorkItem } from './work-item.ts'
-import { createConfigNote, mergeDefaultRootNote, parseLegacyConfig, VAULT_CONFIG_MARKER } from './vault-config-note.ts'
-import { parseVaultConfigNote, parseVaultConfigValues } from './vault-config.ts'
 
 export interface FirstBoardFile {
   path: string
@@ -10,34 +8,14 @@ export interface FirstBoardFile {
 }
 
 export interface FirstBoardPlan {
+  /** The plugin sets this as `defaultRoot` in the board settings. */
   rootStem: string
   files: FirstBoardFile[]
-  configText: string
-}
-
-/** Preserve vault-specific settings while selecting this board as the default root. */
-export function mergeDefaultRoot(configText: string | null, rootStem: string): string {
-  const config = configText === null ? {} : parseLegacyConfig(configText)
-  if (configText !== null) parseVaultConfigValues(config, '.wi.json')
-  return `${JSON.stringify({ ...config, defaultRoot: rootStem }, null, 2)}\n`
-}
-
-function mergeDefaultRootInNote(configText: string | null, rootStem: string, source?: 'note' | 'legacy'): string {
-  if (configText === null) return mergeDefaultRootNote(null, rootStem)
-  if (source === 'note' || (source === undefined && configText.includes(VAULT_CONFIG_MARKER))) {
-    parseVaultConfigNote(configText)
-    return mergeDefaultRootNote(configText, rootStem)
-  }
-  const legacyConfig = parseLegacyConfig(configText)
-  parseVaultConfigValues(legacyConfig, '.wi.json')
-  return createConfigNote({ ...legacyConfig, defaultRoot: rootStem })
 }
 
 /** Render every file before the plugin starts writing, so shared content rules stay authoritative. */
 export function firstBoardPlan(options: {
   title: string
-  configText: string | null
-  configSource?: 'note' | 'legacy'
   takenIds: ReadonlySet<string>
   takenStems: ReadonlySet<string>
   extraSections?: readonly string[]
@@ -76,7 +54,6 @@ export function firstBoardPlan(options: {
         }, options.extraSections),
       },
     ],
-    configText: mergeDefaultRootInNote(options.configText, rootStem, options.configSource),
   }
 }
 

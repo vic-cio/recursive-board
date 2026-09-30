@@ -37,14 +37,12 @@ and `wi children` can omit the reference. Explicit `--parent` and `wi children <
 
 ## Vault config
 
-`Recursive Board config.md` holds the shared vault settings in a marked JSON block.
-The CLI and plugin use this note when it exists. An invalid note produces an error.
-When the note is absent, they read the legacy `.wi.json` file.
-
-Run `wi config migrate` to preview the migration from `.wi.json`.
-Run `wi config migrate --apply` to create the note after review.
-Migration keeps `.wi.json` and refuses to overwrite an existing note.
-Read the README for the block format and each setting.
+The board settings live in the Recursive Board plugin settings tab.
+The plugin stores them under the `board` key of `.obsidian/plugins/recursive-board/data.json`.
+`wi` reads them there and never writes them. Do not edit that file while Obsidian runs.
+In an older vault, `wi` reads `Recursive Board config.md`, then `.wi.json`, and prints a hint.
+The plugin moves those settings into its data file the next time Obsidian opens the vault.
+Read the README for each setting.
 
 ## Reading
 
