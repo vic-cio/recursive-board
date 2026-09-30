@@ -326,6 +326,7 @@ export class DashboardView extends ItemView {
           cls: 'wi-dash-desktop-card', attr: { rowspan: span, 'data-label': 'Card' },
         })
         this.link(cardCell, row.card.title, () => this.openFile(row.card.file))
+        this.copyId(cardCell, row.card, 'id')
         const check = tr.createEl('td', {
           cls: 'wi-dash-muted wi-dash-check wi-dash-desktop-check',
           attr: { rowspan: span, 'data-label': 'Check' },
@@ -337,6 +338,7 @@ export class DashboardView extends ItemView {
         cls: 'wi-dash-phone-card', attr: { 'data-label': 'Card' },
       })
       this.link(phoneCard, row.card.title, () => this.openFile(row.card.file))
+      this.copyId(phoneCard, row.card, 'id')
       const phoneCheck = tr.createEl('td', {
         cls: 'wi-dash-muted wi-dash-check wi-dash-phone-check',
         attr: { 'data-label': 'Check' },
@@ -475,14 +477,18 @@ export class DashboardView extends ItemView {
   }
 
   /**
-   * A copy icon that puts the card id on the clipboard, so a person can paste the card to an agent.
+   * A control that copies the card id. Review cards also show the id as text.
    * A card with no id gets no control; wi validate reports it.
    */
-  private copyId(host: HTMLElement, card: WorkItemMeta): void {
+  private copyId(host: HTMLElement, card: WorkItemMeta, display: 'icon' | 'id' = 'icon'): void {
     const id = card.id
     if (!id) return
-    const button = host.createEl('button', { cls: 'clickable-icon wi-dash-copy', attr: { 'aria-label': `Copy ${id}` } })
-    setIcon(button, 'copy')
+    const button = host.createEl('button', {
+      cls: display === 'id' ? 'wi-dash-id' : 'clickable-icon wi-dash-copy',
+      attr: { 'aria-label': `Copy ${id}` },
+    })
+    if (display === 'id') button.createSpan({ text: id })
+    setIcon(display === 'id' ? button.createSpan('wi-dash-icon') : button, 'copy')
     button.onclick = async (event) => {
       event.stopPropagation()
       await navigator.clipboard.writeText(id)
