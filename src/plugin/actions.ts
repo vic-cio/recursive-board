@@ -6,19 +6,27 @@
  *
  * `vault.process` is an atomic read-modify-write, and the edits inside it are line-wise, so a
  * toggle rewrites one line and copies every other byte. That keeps the diff to the requested field (docs/adr/0005-line-wise-frontmatter.md).
+ *
+ * An edit that depends on a current value, such as the status a `done` records or the list a
+ * dependency joins, is computed inside `vault.process` from the text it hands over, never from
+ * the metadata cache (docs/adr/0053-edits-from-the-file-at-write-time.md). The cache can be older
+ * than the file. It still decides whether a click needs a write at all.
  */
 import { normalizePath, Notice, TFile, type App } from 'obsidian'
 
-import { applyStampedEdits, type Edit } from '../shared/edits.ts'
+import { applyStampedEdits, type EditPlan } from '../shared/edits.ts'
+import { cardState } from '../shared/card-state.ts'
 import { areaEdits, type AreaTarget } from '../shared/area.ts'
 import { archiveEdits, activeDescendant } from '../shared/archive.ts'
 import {
-  boardEdits, moveEdits, moveRefusal, statusEdits, untickTarget,
+  boardEdits, moveEdits, moveRefusal, statusEdits, statusEditsIn, untickEditsIn, untickTarget,
 } from '../shared/transitions.ts'
 import { fileNameFor, newId, today, type Status } from '../shared/schema.ts'
 import { inheritedChildFields, renderWorkItem } from '../shared/work-item.ts'
 import { areaTagFor, type AreaNode } from '../shared/area-tags.ts'
-import { dependencyEdit, dependencyPath } from '../shared/dependencies.ts'
+import { dependencyEdit, dependencyEditIn, dependencyPathByKey } from '../shared/dependencies.ts'
+import { parseFrontmatter } from '../shared/frontmatter.ts'
+import { parseWikilink } from '../shared/schema.ts'
 import { asName } from '../shared/authorship.ts'
 import { applyVerdict, type Verdict } from '../shared/review.ts'
 import type { WorkItemIndex, WorkItemMeta } from './index.ts'
@@ -39,13 +47,16 @@ export class Actions {
     this.you = you
   }
 
-  private async edit(file: TFile, edits: readonly Edit[], label: string): Promise<void> {
+  /** Applies a plan to the file's current text. Returns the text written, or null when nothing changed. */
+  private async edit(file: TFile, plan: EditPlan, label: string): Promise<string | null> {
     let before = ''
     const after = await this.app.vault.process(file, (data) => {
       before = data
-      return applyStampedEdits(data, edits)
+      return applyStampedEdits(data, plan)
     })
+    if (after === before) return null
     this.undoStack.record({ kind: 'edit', path: file.path, before, after, label })
+    return after
   }
 
   /**
@@ -84,14 +95,19 @@ export class Actions {
 
   /** Moves a card between columns. One file, one write, never the parent. */
   async setStatus(meta: WorkItemMeta, to: Status): Promise<void> {
-    const edits = statusEdits(meta.status, to, meta.prevStatus !== undefined)
-    if (edits === null) return
+    if (statusEdits(meta.status, to, meta.prevStatus !== undefined) === null) return
+    await this.writeStatus(meta, (text) => statusEditsIn(text, to), to)
+  }
+
+  /** The status write. `plan` reads the status and `prev_status` from the file's text. */
+  private async writeStatus(meta: WorkItemMeta, plan: EditPlan, to: Status): Promise<void> {
+    let written: string | null = null
     const done = await this.run(`move ${meta.title}`, async () => {
-      await this.edit(meta.file, edits, `mark ${meta.title} ${to}`)
+      written = await this.edit(meta.file, plan, `mark ${meta.title} ${to}`)
       return true
     })
     // wi refuses to start such a card. A person may, so the board only says so (docs/adr/0041-card-dependencies.md).
-    if (done && to === 'doing') {
+    if (done && written !== null && cardState(written).status === 'doing') {
       const waits = this.index.openDependencies(meta)
       if (waits.length > 0) new Notice(`${meta.title} still waits on ${waits.map((dependency) => dependency.title).join(', ')}.`)
       if (meta.blocked) new Notice(`${meta.title} is marked blocked.`)
@@ -121,7 +137,8 @@ export class Actions {
   dependencyRefusal(meta: WorkItemMeta, target: WorkItemMeta): string | null {
     if (target.file === meta.file) return 'a card cannot wait on itself.'
     if (target.parentLink === null) return 'a root is never done.'
-    const path = dependencyPath(target, meta, (node) => node.dependsOn
+    // By path: the index makes new entries when it rebuilds, and `meta` may be an older one.
+    const path = dependencyPathByKey(target, meta, (node) => node.file.path, (node) => node.dependsOn
       .map((file) => this.index.get(file))
       .filter((found): found is WorkItemMeta => found !== null))
     return path ? `${target.title} already waits on ${meta.title}.` : null
@@ -134,21 +151,24 @@ export class Actions {
       new Notice(`${meta.title} cannot wait on ${target.title}: ${refusal}`)
       return
     }
-    const edit = dependencyEdit(meta.dependsOnRaw, target.stem, on,
-      (link) => this.app.metadataCache.getFirstLinkpathDest(link, meta.file.path) === target.file)
-    if (edit === null) return
+    const names = (link: string) => this.app.metadataCache.getFirstLinkpathDest(link, meta.file.path) === target.file
+    if (dependencyEdit(meta.dependsOnRaw, target.stem, on, names) === null) return
     const label = on ? `${meta.title} waits on ${target.title}` : `${meta.title} no longer waits on ${target.title}`
     const what = on ? `make ${meta.title} wait on ${target.title}` : `stop ${meta.title} waiting on ${target.title}`
-    const done = await this.run(what, async () => {
-      await this.edit(meta.file, [edit], label)
-      return true
-    })
-    if (done) this.undoableNotice(label)
+    // The list is the one in the file now, so an entry added since the cache was read survives.
+    const written = await this.run(what, () => this.edit(meta.file, (text) => {
+      const edit = dependencyEditIn(text, target.stem, on, names)
+      return edit === null ? null : [edit]
+    }, label))
+    if (written) this.undoableNotice(label)
   }
 
   /** Ticking a checklist box. Unticking restores exactly what the item was. */
   async setDone(meta: WorkItemMeta, done: boolean): Promise<void> {
-    await this.setStatus(meta, done ? 'done' : untickTarget(meta.prevStatus))
+    if (done) return this.setStatus(meta, 'done')
+    if (meta.status !== 'done') return
+    // The target is the `prev_status` in the file now; the label names the one the cache holds.
+    await this.writeStatus(meta, untickEditsIn, untickTarget(meta.prevStatus))
   }
 
   /** The promote toggle. Demotion deletes the key rather than writing `board: false`. */
@@ -156,7 +176,8 @@ export class Actions {
     if (meta.board === promoted) return
     await this.run(
       promoted ? `promote ${meta.title}` : `demote ${meta.title}`,
-      () => this.edit(meta.file, boardEdits(promoted), `${promoted ? 'promote' : 'demote'} ${meta.title}`),
+      () => this.edit(meta.file, (text) => cardState(text).board === promoted ? null : boardEdits(promoted),
+        `${promoted ? 'promote' : 'demote'} ${meta.title}`),
     )
   }
 
@@ -164,14 +185,17 @@ export class Actions {
   async convertArea(meta: WorkItemMeta, target: AreaTarget): Promise<void> {
     const label = target.kind === 'area' ? 'make area' : 'make card'
     const done = await this.run(`${label} ${meta.title}`, async () => {
-      const edits = areaEdits({
-        label: meta.file.path,
-        isRoot: meta.parentLink === null,
-        isArea: meta.area,
-        status: meta.status,
-        agent: meta.agent,
-      }, target)
-      await this.edit(meta.file, edits, `${label} ${meta.title}`)
+      // The refusal reads the agent in the file now, so a claim made since is never discarded.
+      await this.edit(meta.file, (text) => {
+        const now = cardState(text)
+        return areaEdits({
+          label: meta.file.path,
+          isRoot: meta.parentLink === null,
+          isArea: now.area,
+          status: now.status,
+          agent: now.agent,
+        }, target)
+      }, `${label} ${meta.title}`)
       return true
     })
     if (done) this.undoableNotice(`${target.kind === 'area' ? 'Made area' : 'Made card'} ${meta.title}`)
@@ -194,7 +218,8 @@ export class Actions {
       }
     }
     const verb = archived ? 'archive' : 'unarchive'
-    await this.run(`${verb} ${target.title}`, () => this.edit(target.file, edits, `${verb} ${target.title}`))
+    await this.run(`${verb} ${target.title}`, () => this.edit(target.file,
+      (text) => archiveEdits(cardState(text).archived, archived), `${verb} ${target.title}`))
   }
 
   /**
@@ -224,13 +249,11 @@ export class Actions {
       return
     }
     const current = meta.parent ? meta.parent.basename : meta.parentLink
-    const edits = moveEdits(current, target.stem)
-    if (edits === null) return
-    const done = await this.run(`move ${meta.title}`, async () => {
-      await this.edit(meta.file, edits, `move ${meta.title}`)
-      return true
-    })
-    if (done) this.undoableNotice(`Moved ${meta.title} to ${target.title}`)
+    if (moveEdits(current, target.stem) === null) return
+    // The loop check above reads the index. A move made at the same moment elsewhere is not seen.
+    const written = await this.run(`move ${meta.title}`, () => this.edit(meta.file,
+      (text) => moveEdits(parseWikilink(parseFrontmatter(text)?.get('parent')), target.stem), `move ${meta.title}`))
+    if (written) this.undoableNotice(`Moved ${meta.title} to ${target.title}`)
   }
 
   /** The item, then each ancestor up to the root, for the area tag. A loop stops where it repeats. */
