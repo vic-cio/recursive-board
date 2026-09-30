@@ -61,6 +61,24 @@ test('wi agents prints the configured agent limit and claimed doing count', asyn
     ['claude wi-0005', 'codex wi-0004', 'codex wi-0007'])
 })
 
+test('wi ready --json returns dispatchable options and exclusion reasons', async () => {
+  fixture = seed()
+  fixture.write('Boards/Ready.md', item({ type: 'work-item', id: 'wi-ready', title: 'Ready',
+    status: 'options', parent: '"[[Main]]"', priority: 1 }))
+  fixture.write('Boards/Blocked.md', item({ type: 'work-item', id: 'wi-blocked', title: 'Blocked',
+    status: 'options', parent: '"[[Main]]"', blocked: true }))
+  const result = await wi(['ready', '--json'])
+  assert.equal(result.code, 0, result.stderr)
+  const report = JSON.parse(result.stdout)
+  assert.deepEqual(report.ready.map((card: { id: string }) => card.id), ['wi-ready'])
+  assert.deepEqual(report.excluded.map((card: { id: string; reasons: string[] }) =>
+    [card.id, card.reasons]), [['wi-blocked', ['blocked']]])
+  const scoped = await wi(['ready', '--parent', 'wi-0004', '--json'])
+  assert.equal(scoped.code, 0, scoped.stderr)
+  assert.equal(JSON.parse(scoped.stdout).scope.id, 'wi-0004')
+  assert.deepEqual(JSON.parse(scoped.stdout).ready, [])
+})
+
 test('WI_MAX_AGENTS overrides the vault config for one dispatcher run', async () => {
   fixture = seed()
   fixture.write('.wi.json', '{"maxAgents":2}')

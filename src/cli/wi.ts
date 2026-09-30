@@ -23,6 +23,7 @@ import { claimItem, releaseItem } from './commands/claim-release.ts'
 import { addNote } from './commands/note.ts'
 import { retag, staleAreaTags, writeGraphColours } from './commands/retag.ts'
 import { listChildren, type ChildRow } from './commands/children.ts'
+import { readyCards } from './commands/ready.ts'
 import { validate, type Problem } from './commands/validate.ts'
 import { listTemplates, writeTemplates } from './commands/template.ts'
 import { removeItem } from './commands/remove.ts'
@@ -65,6 +66,7 @@ Usage
   wi demote <ref>
   wi rm <ref> [--recursive] [--dry-run]
   wi children [<ref>] [--status <s>] [--tree] [--archived]
+  wi ready [--parent <ref>] [--agent <name>] [--json]
   wi validate
   wi retag [--dry-run]
   wi graph
@@ -264,6 +266,8 @@ async function main(argv: string[]): Promise<number> {
       return runClaim(vault, rest, values, json)
     case 'agents':
       return runAgents(vault, rest, json)
+    case 'ready':
+      return runReady(vault, rest, values, json)
     case 'objective':
       return runObjective(vault, rest)
     case 'release':
@@ -598,6 +602,20 @@ function runAgents(vault: Vault, rest: string[], json: boolean): number {
   }
   process.stdout.write(`limit  ${maxAgents === null ? 'none' : maxAgents}\nagents with a doing card  ${activeAgents}\n`)
   for (const { agent, item } of claims) process.stdout.write(`  ${agent}  ${label(item)}\n`)
+  return 0
+}
+
+function runReady(vault: Vault, rest: string[], values: Values, json: boolean): number {
+  if (rest.length > 0) throw new UsageError('wi ready takes no card reference.')
+  const agent = values['agent'] === undefined ? undefined : singleLineOption(values, 'agent')
+  const parent = typeof values['parent'] === 'string' ? values['parent'] : undefined
+  const result = readyCards(vault, { ...(agent === undefined ? {} : { agent }), ...(parent === undefined ? {} : { parent }) })
+  if (json) print(result)
+  else {
+    process.stdout.write(`${result.counts.ready} ready card${result.counts.ready === 1 ? '' : 's'}\n`)
+    for (const card of result.ready) process.stdout.write(`  ${card.id ?? '?'}  ${card.title}\n`)
+    if (result.counts.excluded > 0) process.stdout.write(`${result.counts.excluded} option card${result.counts.excluded === 1 ? '' : 's'} excluded; use --json for reasons.\n`)
+  }
   return 0
 }
 
