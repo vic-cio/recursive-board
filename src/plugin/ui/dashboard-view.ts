@@ -394,7 +394,7 @@ export class DashboardView extends ItemView {
       setIcon(back.createSpan('wi-dash-icon'), 'arrow-left')
       back.createSpan({ text: up?.title ?? 'Every area' })
     }
-    panel.createDiv({ cls: 'wi-dash-muted', text: `${done} of ${total} cards done` })
+    panel.createDiv({ cls: 'wi-dash-muted', text: `${done} of ${total} cards done, backlog not counted` })
     const list = panel.createDiv('wi-dash-projects')
     for (const row of rows) {
       const pct = row.total ? Math.round((100 * row.done) / row.total) : 0
@@ -410,7 +410,7 @@ export class DashboardView extends ItemView {
         setIcon(badge.createSpan('wi-dash-icon'), 'loader')
         badge.createSpan({ text: String(working) })
       }
-      head.createSpan({ cls: 'wi-dash-muted', text: `${row.done}/${row.total} done${row.doing ? `, ${row.doing} doing` : ''} · ${pct}%` })
+      head.createSpan({ cls: 'wi-dash-muted', text: `${row.done}/${row.total} done${row.doing ? `, ${row.doing} doing` : ''} · ${pct}%${row.backlog ? ` · ${row.backlog} in backlog` : ''}` })
       main.createDiv('wi-dash-bar').createDiv({ cls: 'wi-dash-bar-fill', attr: { style: `width: ${pct}%` } })
       if (area) {
         item.onclick = () => void this.setFocus(area)

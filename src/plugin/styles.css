@@ -1093,7 +1093,7 @@
 .wi-dash-agent.is-working .wi-dash-icon { color: var(--interactive-accent); }
 .wi-dash-agent.is-quiet .wi-dash-icon { color: var(--color-orange); }
 .wi-dash-agent.is-finished .wi-dash-icon { color: var(--color-green); }
-.wi-dash-ago { font-size: var(--font-ui-smaller); color: var(--text-faint); flex: none; }
+.wi-dash-ago { font-size: var(--font-ui-smaller); color: var(--text-faint); flex: none; align-self: center; }
 .wi-dash-fold { margin-top: var(--size-4-2); }
 .wi-dash-fold .wi-dash-agents.wi-dash-hidden { display: none; }
 .wi-dash-fold-toggle { display: inline-flex; align-items: center; gap: var(--size-4-1); padding: var(--size-4-1) var(--size-4-2); height: auto; background: none; box-shadow: none; color: var(--text-muted); font-size: var(--font-ui-smaller); }

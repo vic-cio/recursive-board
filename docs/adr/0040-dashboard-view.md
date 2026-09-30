@@ -21,7 +21,8 @@ It has four panels:
   a phone, each review row stacks the target, card, check, type, changed date, and approval controls.
   Long names, instructions, and URLs wrap inside the row.
 - **Progress.** Leaf cards per area row, done out of total. A board is a container, so it does not
-  count. A click anywhere on an area row focuses that area. A board icon at the row's right end
+  count. Backlog cards are not planned yet, so they stay out of the total, and the row names their
+  count apart. When options run out, the bar fills, and that is the sign to bring cards out of the backlog. A click anywhere on an area row focuses that area. A board icon at the row's right end
   opens the area's board, with a tap area the full height of the row. A working badge on the row
   counts the agents that work inside it, and hides at zero.
 - **Agents.** One flat feed under Progress, newest first. Each agent row shows the card, its age,
