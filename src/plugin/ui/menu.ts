@@ -105,8 +105,9 @@ function buildMenu(ctx: RenderContext, meta: WorkItemMeta): Menu {
     }
   }
 
+  // Promote and Copy ID share a group apart from the statuses; an area has only Copy ID in it.
+  menu.addSeparator()
   if (!meta.area) {
-    menu.addSeparator()
     menu.addItem((item) => item
       .setTitle(meta.board ? 'Demote to checklist' : 'Promote to board')
       .setIcon('columns-3')
