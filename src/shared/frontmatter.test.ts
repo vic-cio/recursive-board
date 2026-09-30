@@ -1,7 +1,7 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 
-import { parseFrontmatter, setKey, removeKey, formatScalar, getList, setList } from './frontmatter.ts'
+import { parseFrontmatter, parseScalar, setKey, removeKey, formatScalar, getList, setList } from './frontmatter.ts'
 
 const ITEM = `---
 type: work-item
@@ -217,4 +217,64 @@ test('setList replaces the entry in place and copies every other byte', () => {
   assert.equal(setList(before, 'tags', []), '---\nid: wi-1\nmystery: keep\n---\nbody\n')
   const same = '---\ntags:\n  - a\n---\n'
   assert.equal(setList(same, 'tags', ['a']), same)
+})
+
+// Each case below states the value that js-yaml 4, a YAML 1.2 parser like the one Obsidian reads
+// properties with, reads from the same text. wi must read the same value and never write a line
+// that such a parser reads differently.
+
+test('setKey escapes a line break so the value stays on one line', () => {
+  const out = setKey(ITEM, 'owner', 'Ana\nSmith')
+  assert.equal(out, ITEM.replace('owner: sam', 'owner: "Ana\\nSmith"'))
+  assert.equal(parseFrontmatter(out)!.get('owner'), 'Ana\nSmith')
+  assert.equal(setKey(out, 'owner', 'Bob'), ITEM.replace('owner: sam', 'owner: Bob'))
+})
+
+test('formatScalar escapes every control character and parseScalar reads it back', () => {
+  for (const value of ['a\r\nb', 'tab\there', 'bell\u0007', 'del\u007f']) {
+    const line = formatScalar(value)
+    assert.doesNotMatch(line, /[\u0000-\u001f\u007f]/)
+    assert.equal(parseScalar(line), value)
+  }
+  assert.equal(parseScalar('"Ana\\tB \\\\ \\" \\u00e9"'), 'Ana\tB \\ " é')
+})
+
+test('formatScalar quotes a colon or a hash that follows a tab', () => {
+  assert.equal(formatScalar('Fix:\tThing'), '"Fix:\\tThing"')
+  assert.equal(formatScalar('a\t#b'), '"a\\t#b"')
+  assert.equal(parseFrontmatter(setKey(ITEM, 'title', 'Fix:\tThing'))!.get('title'), 'Fix:\tThing')
+})
+
+test('parseScalar drops a trailing comment', () => {
+  const fm = parseFrontmatter('---\nblocked: true # supplier\npriority: 2 # high\nowner: sam # lead\nnote: "x # y" # c\nplain: a#b\nsingle: \'it\'\'s\' # c\n---\n')!
+  assert.equal(fm.get('blocked'), true)
+  assert.equal(fm.get('priority'), 2)
+  assert.equal(fm.get('owner'), 'sam')
+  assert.equal(fm.get('note'), 'x # y')
+  assert.equal(fm.get('plain'), 'a#b')
+  assert.equal(fm.get('single'), "it's")
+  assert.equal(parseScalar('# only a comment'), undefined)
+})
+
+test('an indentless block list belongs to its key', () => {
+  const text = '---\nid: wi-1\ndepends_on:\n- "[[Spec]]"\n- "[[Other]]"\nstatus: doing\n---\nbody\n'
+  const fm = parseFrontmatter(text)!
+  assert.deepEqual(fm.keys(), ['id', 'depends_on', 'status'])
+  assert.equal(fm.get('status'), 'doing')
+  assert.deepEqual(getList(text, 'depends_on'), ['[[Spec]]', '[[Other]]'])
+  assert.equal(setList(text, 'depends_on', ['[[Spec]]']),
+    '---\nid: wi-1\ndepends_on:\n  - "[[Spec]]"\nstatus: doing\n---\nbody\n')
+  assert.equal(removeKey(text, 'depends_on'), '---\nid: wi-1\nstatus: doing\n---\nbody\n')
+  assert.equal(setKey(text, 'depends_on', '[[Spec]]'),
+    '---\nid: wi-1\ndepends_on: "[[Spec]]"\nstatus: doing\n---\nbody\n')
+})
+
+test('getList keeps a comma inside a quoted flow list item', () => {
+  const text = `---\ndepends_on: ["[[Spec, phase 1]]", 'it''s, ok', plain] # c\n---\n`
+  assert.deepEqual(getList(text, 'depends_on'), ['[[Spec, phase 1]]', "it's, ok", 'plain'])
+})
+
+test('getList drops a trailing comment on a block list item and a plain list', () => {
+  assert.deepEqual(getList('---\ntags:\n  - a # first\n  - b\n---\n', 'tags'), ['a', 'b'])
+  assert.deepEqual(getList('---\ntags: a, b # c\n---\n', 'tags'), ['a', 'b'])
 })
