@@ -250,11 +250,25 @@ test('a focus narrows to one area and groups by the next area down', () => {
   const cards = cardsInScope(items, null, tree)
   const names = (focus: Fake | null) => progress(cards, tree, focus).map((row) => `${row.name} ${row.done}/${row.total}`)
 
-  assert.deepEqual(names(null), ['Dev 1/3', 'Gym 0/1'])
-  assert.deepEqual(names(dev), ['Board 1/1', 'Theme 0/1', 'Directly in Dev 0/1'])
+  assert.deepEqual(names(null), ['Dev 1/2', 'Gym 0/0'])
+  assert.deepEqual(names(dev), ['Board 1/1', 'Theme 0/1', 'Directly in Dev 0/0'])
   assert.deepEqual(names(board), ['Directly in Board 1/1'])
   assert.deepEqual(agentFeed(cards, 'Ana', tree, 0, dev).working.map((row) => row.area?.title), ['Theme'])
   assert.deepEqual(agentFeed(cards, 'Ana', tree, 0, board).working, [])
+})
+
+test('progress leaves backlog cards out of the total and counts them apart', () => {
+  const { items, add, tree } = vault()
+  const root = add('Home', null)
+  const dev = add('Dev', root, { area: true, status: 'doing' })
+  add('Done', dev, { status: 'done' })
+  add('Doing', dev, { status: 'doing' })
+  add('Option', dev, { status: 'options' })
+  add('Later', dev, { status: 'backlog' })
+  add('Someday', add('Ideas', root, { area: true, status: 'doing' }), { status: 'backlog' })
+  const rows = progress(cardsInScope(items, null, tree), tree)
+  assert.deepEqual(rows.map((row) => `${row.name} ${row.done}/${row.total} backlog ${row.backlog}`),
+    ['Dev 1/3 backlog 1', 'Ideas 0/0 backlog 1'])
 })
 
 test('the dashboard flags a started card that still waits, and a wait on an archived card', () => {

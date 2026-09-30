@@ -326,7 +326,6 @@ export class DashboardView extends ItemView {
           cls: 'wi-dash-desktop-card', attr: { rowspan: span, 'data-label': 'Card' },
         })
         this.link(cardCell, row.card.title, () => this.openFile(row.card.file))
-        this.copyId(cardCell, row.card)
         const check = tr.createEl('td', {
           cls: 'wi-dash-muted wi-dash-check wi-dash-desktop-check',
           attr: { rowspan: span, 'data-label': 'Check' },
@@ -338,7 +337,6 @@ export class DashboardView extends ItemView {
         cls: 'wi-dash-phone-card', attr: { 'data-label': 'Card' },
       })
       this.link(phoneCard, row.card.title, () => this.openFile(row.card.file))
-      this.copyId(phoneCard, row.card)
       const phoneCheck = tr.createEl('td', {
         cls: 'wi-dash-muted wi-dash-check wi-dash-phone-check',
         attr: { 'data-label': 'Check' },
@@ -396,7 +394,7 @@ export class DashboardView extends ItemView {
       setIcon(back.createSpan('wi-dash-icon'), 'arrow-left')
       back.createSpan({ text: up?.title ?? 'Every area' })
     }
-    panel.createDiv({ cls: 'wi-dash-muted', text: `${done} of ${total} cards done` })
+    panel.createDiv({ cls: 'wi-dash-muted', text: `${done} of ${total} cards done, backlog not counted` })
     const list = panel.createDiv('wi-dash-projects')
     for (const row of rows) {
       const pct = row.total ? Math.round((100 * row.done) / row.total) : 0
@@ -412,7 +410,7 @@ export class DashboardView extends ItemView {
         setIcon(badge.createSpan('wi-dash-icon'), 'loader')
         badge.createSpan({ text: String(working) })
       }
-      head.createSpan({ cls: 'wi-dash-muted', text: `${row.done}/${row.total} done${row.doing ? `, ${row.doing} doing` : ''} · ${pct}%` })
+      head.createSpan({ cls: 'wi-dash-muted', text: `${row.done}/${row.total} done${row.doing ? `, ${row.doing} doing` : ''} · ${pct}%${row.backlog ? ` · ${row.backlog} in backlog` : ''}` })
       main.createDiv('wi-dash-bar').createDiv({ cls: 'wi-dash-bar-fill', attr: { style: `width: ${pct}%` } })
       if (area) {
         item.onclick = () => void this.setFocus(area)
@@ -424,6 +422,9 @@ export class DashboardView extends ItemView {
           event.stopPropagation()
           void this.openFile(area.file)
         }
+      } else {
+        // Holds the board icon's width, so every bar ends at the same place.
+        item.createSpan({ cls: 'wi-dash-project-open wi-dash-project-spacer', attr: { 'aria-hidden': 'true' } })
       }
     }
   }
@@ -473,17 +474,15 @@ export class DashboardView extends ItemView {
     }
   }
 
-  /** Copies the card's id, so it can be pasted to an agent. A card with no id gives its title. */
   /**
-   * The card id as muted text that copies itself, so a person can read it and paste it to an agent.
+   * A copy icon that puts the card id on the clipboard, so a person can paste the card to an agent.
    * A card with no id gets no control; wi validate reports it.
    */
   private copyId(host: HTMLElement, card: WorkItemMeta): void {
     const id = card.id
     if (!id) return
-    const button = host.createEl('button', { cls: 'wi-dash-id', attr: { 'aria-label': `Copy ${id}` } })
-    button.createSpan({ text: id })
-    setIcon(button.createSpan('wi-dash-icon'), 'copy')
+    const button = host.createEl('button', { cls: 'clickable-icon wi-dash-copy', attr: { 'aria-label': `Copy ${id}` } })
+    setIcon(button, 'copy')
     button.onclick = async (event) => {
       event.stopPropagation()
       await navigator.clipboard.writeText(id)
