@@ -11,7 +11,7 @@ import type { WorkItemIndex, WorkItemMeta } from '../index.ts'
 import type { Verdict } from '../../shared/review.ts'
 import { SendBackModal } from './send-back-modal.ts'
 import {
-  ago, agentFeed, allReviewFilesTicked, areaPath, cardsInScope, fileReviewPaths, groupName, groupUnder, inFocus, isLoopbackWebAddress, isWebAddress, needsAttention, parseReviewLine, progress, reviewPathsForMode, waitsForReview, workingBadge,
+  ago, agentFeed, areaPath, cardsInScope, groupName, groupUnder, inFocus, isLoopbackWebAddress, isWebAddress, needsAttention, parseReviewLine, progress, reviewPresentationForMode, reviewVerdictReadiness, waitsForReview, workingBadge,
   type AgentFeed, type AgentRow, type Attention, type DashTree, type Group, type WebReviewMode,
 } from '../dashboard-model.ts'
 import { withFold, type DashboardTicks } from '../personal-state.ts'
@@ -53,6 +53,7 @@ const ATTENTION_ICONS = { started: 'hourglass', archived: 'archive', quiet: 'pau
 interface ReviewRow {
   card: WorkItemMeta
   path: string
+  verdictPaths: string[]
   what: string
   group: Group<WorkItemMeta>
 }
@@ -78,6 +79,8 @@ export class DashboardView extends ItemView {
       this.contentEl.querySelectorAll<HTMLElement>('.wi-dash-ago[data-mtime]').forEach((el) => {
         el.textContent = ago(Number(el.dataset['mtime']), Date.now())
       })
+      // Idle claims change at an hour boundary, so refresh the attention panel with the age labels.
+      this.refresh()
     }, 60_000))
     await this.render()
   }
@@ -190,8 +193,8 @@ export class DashboardView extends ItemView {
       const area = groupUnder(card, focus, tree)
       const group = { area, name: groupName(area, focus) }
       const what = line?.what || 'Open the card.'
-      const paths = reviewPathsForMode(line?.paths ?? [], card.file.path, webReviewMode)
-      for (const path of paths) rows.push({ card, path, what, group })
+      const presentation = reviewPresentationForMode(line?.paths ?? [], card.file.path, webReviewMode)
+      for (const path of presentation.paths) rows.push({ card, path, verdictPaths: presentation.verdictPaths, what, group })
     }
     return rows.sort((a, b) =>
       Number(a.group.area === null) - Number(b.group.area === null) || a.group.name.localeCompare(b.group.name))
@@ -244,23 +247,24 @@ export class DashboardView extends ItemView {
     const groupRows = new Map<string, HTMLElement[]>()
     // Approve and Send back show once every file of the card is ticked.
     const verdicts = new Map<WorkItemMeta, HTMLElement[]>()
-    const pathsOf = (card: WorkItemMeta) => rows.filter((row) => row.card === card).map((row) => row.path)
-    const filePathsOf = (card: WorkItemMeta) => fileReviewPaths(pathsOf(card))
-    const syncVerdict = (card: WorkItemMeta) => {
-      const ticks = this.host.state().ticks
-      verdicts.get(card)?.forEach((verdict) =>
-        verdict.toggleClass('wi-dash-hidden', !allReviewFilesTicked(pathsOf(card), ticks)))
+    const pathsByCard = new Map<WorkItemMeta, string[]>()
+    for (const row of rows) pathsByCard.set(row.card, row.verdictPaths)
+    const syncVerdicts = () => {
+      const readiness = reviewVerdictReadiness(pathsByCard, this.host.state().ticks)
+      verdicts.forEach((controls, card) => controls.forEach((control) =>
+        control.toggleClass('wi-dash-hidden', !readiness.get(card))))
     }
     const addVerdictControls = (check: HTMLElement, card: WorkItemMeta) => {
-      if (filePathsOf(card).length === 0) return
+      const paths = pathsByCard.get(card) ?? []
+      if (paths.length === 0) return
       const box = check.createDiv('wi-dash-verdict wi-dash-hidden')
       box.createEl('button', { text: 'Approve', cls: 'mod-cta' }).onclick = () =>
-        void this.verdict(card, { verdict: 'approve', you: this.host.state().you }, filePathsOf(card))
+        void this.verdict(card, { verdict: 'approve', you: this.host.state().you }, paths)
       box.createEl('button', { text: 'Send back' }).onclick = () =>
         new SendBackModal(this.app, card.title, (comment) =>
-          void this.verdict(card, { verdict: 'send back', you: this.host.state().you, comment }, filePathsOf(card))).open()
+          void this.verdict(card, { verdict: 'send back', you: this.host.state().you, comment }, paths)).open()
       verdicts.set(card, [...(verdicts.get(card) ?? []), box])
-      syncVerdict(card)
+      syncVerdicts()
     }
     rows.forEach((row, i) => {
       const key = groupKey(row.group)
@@ -298,7 +302,7 @@ export class DashboardView extends ItemView {
           if (tick.checked) ticks[row.path] = true
           else delete ticks[row.path]
           await this.host.save({ ticks })
-          syncVerdict(row.card)
+          syncVerdicts()
         }
       }
 

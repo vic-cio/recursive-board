@@ -10,10 +10,11 @@ type Child = Pick<WorkItemMeta, 'status' | 'effectiveArchived'>
 export function previewChildren<T extends Child>(
   children: T[],
   showArchived: boolean,
-): { open: T[]; doneCount: number } {
+): { open: T[]; doneCount: number; archivedCount: number } {
   const done = children.filter((child) => child.status === 'done')
   return {
     open: children.filter((child) => child.status !== 'done'),
     doneCount: done.filter((child) => showArchived || !child.effectiveArchived).length,
+    archivedCount: children.filter((child) => child.effectiveArchived).length,
   }
 }

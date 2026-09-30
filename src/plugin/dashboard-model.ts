@@ -94,6 +94,13 @@ export function reviewPathsForMode(paths: string[], fallbackPath: string, mode: 
   return visible.length > 0 ? visible : [fallbackPath]
 }
 
+/** Keep the card fallback visible without treating it as file evidence for a verdict. */
+export function reviewPresentationForMode(
+  paths: string[], fallbackPath: string, mode: WebReviewMode,
+): { paths: string[]; verdictPaths: string[] } {
+  return { paths: reviewPathsForMode(paths, fallbackPath, mode), verdictPaths: fileReviewPaths(paths) }
+}
+
 /** A web row never counts as a file review or toward a verdict. */
 export function fileReviewPaths(paths: string[]): string[] {
   return paths.filter((path) => !isWebAddress(path))
@@ -102,6 +109,11 @@ export function fileReviewPaths(paths: string[]): string[] {
 export function allReviewFilesTicked(paths: string[], ticks: Record<string, boolean>): boolean {
   const files = fileReviewPaths(paths)
   return files.length > 0 && files.every((path) => ticks[path] === true)
+}
+
+/** Recompute every card after a tick, because one file can appear on several review cards. */
+export function reviewVerdictReadiness<T>(pathsByCard: Map<T, string[]>, ticks: Record<string, boolean>): Map<T, boolean> {
+  return new Map([...pathsByCard].map(([card, paths]) => [card, allReviewFilesTicked(paths, ticks)]))
 }
 
 /** True for web addresses that only work on the computer hosting the local service. */

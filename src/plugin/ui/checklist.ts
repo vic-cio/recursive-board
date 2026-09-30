@@ -32,6 +32,8 @@ export interface ChecklistOptions {
    */
   parent?: WorkItemMeta | undefined
   archiveParent?: WorkItemMeta | undefined
+  /** Archived children omitted from an expanded-card preview still need an archive toggle. */
+  archivedCount?: number | undefined
 }
 
 export function renderChecklist(
@@ -43,12 +45,13 @@ export function renderChecklist(
   const parent = options.parent
   const archiveParent = options.archiveParent ?? parent
   const showArchived = archiveParent ? showingArchived(ctx, archiveParent) : false
-  const archivedCount = children.filter((c) => c.effectiveArchived).length
+  const archivedCount = options.archivedCount ?? children.filter((c) => c.effectiveArchived).length
 
   if (!options.grouped) {
     const visible = showArchived ? children : children.filter((c) => !c.effectiveArchived)
-    if (visible.length === 0) host.createDiv({ cls: 'wi-empty', text: 'No children yet.' })
-    else renderRows(host, ctx, visible)
+    if (visible.length === 0) {
+      if (archivedCount === 0) host.createDiv({ cls: 'wi-empty', text: 'No children yet.' })
+    } else renderRows(host, ctx, visible)
     // A checklist has no columns, so a new item lands in backlog, the creation default.
     if (parent) renderAddRow(host, ctx, parent, 'backlog')
     if (archiveParent) renderArchiveNote(host, ctx, archiveParent, archivedCount)
