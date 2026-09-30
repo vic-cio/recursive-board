@@ -34,9 +34,9 @@ It has four panels:
   "Agent went quiet". A claim is idle when neither the card nor a child changed for an hour: its
   session most likely ended without `wi release`. The panel shows only when it has a row.
 
-Each agent row, each quiet row, and each card in For review shows its card id as muted text. A click on
-the id copies it, so a person can paste the card to an agent. In For review the id sits under the card
-title. A card with no id shows no id; `wi validate` reports it.
+Each agent row and each quiet row ends with a copy icon, the same size as the board icon in Progress. A
+click copies the card id, so a person can paste the card to an agent. For review shows no id: the card
+title is enough there. A card with no id shows no icon; `wi validate` reports it.
 
 Areas (0028) nest, so the dashboard shows one level of them at a time. With no focus, each card
 groups under its top area, and cards in no area group under "No area", last. Clicking an area

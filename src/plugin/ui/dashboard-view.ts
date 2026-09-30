@@ -326,7 +326,6 @@ export class DashboardView extends ItemView {
           cls: 'wi-dash-desktop-card', attr: { rowspan: span, 'data-label': 'Card' },
         })
         this.link(cardCell, row.card.title, () => this.openFile(row.card.file))
-        this.copyId(cardCell, row.card)
         const check = tr.createEl('td', {
           cls: 'wi-dash-muted wi-dash-check wi-dash-desktop-check',
           attr: { rowspan: span, 'data-label': 'Check' },
@@ -338,7 +337,6 @@ export class DashboardView extends ItemView {
         cls: 'wi-dash-phone-card', attr: { 'data-label': 'Card' },
       })
       this.link(phoneCard, row.card.title, () => this.openFile(row.card.file))
-      this.copyId(phoneCard, row.card)
       const phoneCheck = tr.createEl('td', {
         cls: 'wi-dash-muted wi-dash-check wi-dash-phone-check',
         attr: { 'data-label': 'Check' },
@@ -424,6 +422,9 @@ export class DashboardView extends ItemView {
           event.stopPropagation()
           void this.openFile(area.file)
         }
+      } else {
+        // Holds the board icon's width, so every bar ends at the same place.
+        item.createSpan({ cls: 'wi-dash-project-open wi-dash-project-spacer', attr: { 'aria-hidden': 'true' } })
       }
     }
   }
@@ -473,17 +474,15 @@ export class DashboardView extends ItemView {
     }
   }
 
-  /** Copies the card's id, so it can be pasted to an agent. A card with no id gives its title. */
   /**
-   * The card id as muted text that copies itself, so a person can read it and paste it to an agent.
+   * A copy icon that puts the card id on the clipboard, so a person can paste the card to an agent.
    * A card with no id gets no control; wi validate reports it.
    */
   private copyId(host: HTMLElement, card: WorkItemMeta): void {
     const id = card.id
     if (!id) return
-    const button = host.createEl('button', { cls: 'wi-dash-id', attr: { 'aria-label': `Copy ${id}` } })
-    button.createSpan({ text: id })
-    setIcon(button.createSpan('wi-dash-icon'), 'copy')
+    const button = host.createEl('button', { cls: 'clickable-icon wi-dash-copy', attr: { 'aria-label': `Copy ${id}` } })
+    setIcon(button, 'copy')
     button.onclick = async (event) => {
       event.stopPropagation()
       await navigator.clipboard.writeText(id)
