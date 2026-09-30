@@ -1,47 +1,27 @@
-import { wrapAnglePlaceholders } from './markdown.ts'
+import { scanMarkdown, wrapAnglePlaceholders } from './markdown.ts'
 import { frontmatterBody } from './frontmatter.ts'
 import { today } from './schema.ts'
-
-interface Heading { level: number; title: string; start: number; end: number }
-
-function headings(text: string): Heading[] {
-  const body = frontmatterBody(text)
-  const offset = text.length - body.length
-  const found: Heading[] = []
-  let fence: { marker: string; length: number } | undefined
-  for (const match of body.matchAll(/([^\r\n]*)(\r?\n|$)/g)) {
-    if (match[0] === '') continue
-    const line = match[1]!
-    const marker = /^[ \t]*(`{3,}|~{3,})/.exec(line)?.[1]
-    if (marker) {
-      if (fence === undefined) fence = { marker: marker[0]!, length: marker.length }
-      else if (marker[0] === fence.marker && marker.length >= fence.length) fence = undefined
-      continue
-    }
-    if (fence !== undefined) continue
-    const heading = /^(#{1,6})[ \t]+(.+?)[ \t]*$/.exec(line)
-    if (heading) found.push({
-      level: heading[1]!.length, title: heading[2]!.trim().toLowerCase(),
-      start: offset + match.index, end: offset + match.index + line.length,
-    })
-  }
-  return found
-}
 
 /** Add one line to Notes without changing any existing body text. */
 export function appendNote(text: string, line: string): string {
   const eol = text.includes('\r\n') ? '\r\n' : '\n'
-  const all = headings(text)
-  const noteIndex = all.findIndex((heading) => heading.level === 2 && heading.title === 'notes')
+  const body = frontmatterBody(text)
+  const offset = text.length - body.length
+  const scan = scanMarkdown(body)
+  const all = scan.lines
+    .map((line, index) => ({ line, index, heading: line.heading }))
+    .filter((entry) => entry.heading !== undefined)
+  const noteIndex = all.findIndex((entry) => entry.heading!.level === 2 && entry.heading!.title.trim().toLowerCase() === 'notes')
   const heading = all[noteIndex]
   if (!heading) {
     const gap = text.endsWith(eol + eol) ? '' : text.endsWith(eol) ? eol : eol + eol
     return `${text}${gap}## Notes${eol}${eol}${line}${eol}`
   }
 
-  const start = heading.end
-  const next = all.slice(noteIndex + 1).find((entry) => entry.level <= 2)
-  const end = next?.start ?? text.length
+  const headingLine = scan.lines[heading.index]!
+  const start = offset + headingLine.contentEnd
+  const next = all.slice(noteIndex + 1).find((entry) => entry.heading!.level <= 2)
+  const end = next ? offset + scan.lines[next.index]!.start : text.length
   const content = text.slice(start, end)
   if (content === '') return `${text.slice(0, start)}${eol}${eol}${line}${eol}${text.slice(end)}`
   const trailing = /(?:\r?\n[ \t]*)*$/.exec(content)?.[0] ?? ''

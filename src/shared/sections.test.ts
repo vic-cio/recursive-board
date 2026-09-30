@@ -57,6 +57,11 @@ test('section keeps a deeper heading inside the section', () => {
   assert.equal(section(text, 'Objective'), 'Top.\n\n### Detail\n\nMore.')
 })
 
+test('section ignores a matching heading inside a fenced example', () => {
+  const text = '## Objective\n\n```md\n## Acceptance Criteria\nExample.\n```\n\n## Acceptance Criteria\n\n- Real criterion.\n'
+  assert.equal(section(text, 'Acceptance Criteria'), '- Real criterion.')
+})
+
 test('listItems strips bullets and checkboxes', () => {
   assert.deepEqual(listItems(bodyOf(ITEM), 'Acceptance Criteria'), [
     'Sessions survive a reconnect',
