@@ -12,7 +12,7 @@ import { join } from 'node:path'
 import { editItem, writeAtomic } from '../write.ts'
 import { getList } from '../../shared/frontmatter.ts'
 import {
-  areaColourGroups, areaTagFor, hasAreaTag, isAreaColourGroup, withAreaTag, type AreaNode,
+  areaColourGroups, areaTagEditsIn, areaTagFor, hasAreaTag, isAreaColourGroup, withAreaTag, type AreaNode,
 } from '../../shared/area-tags.ts'
 import type { Vault, WorkItem } from '../vault.ts'
 
@@ -44,6 +44,8 @@ export interface Stale {
   item: WorkItem
   from: string[]
   to: string[]
+  /** The area tag the tree gives the item, or null for none. */
+  tag: string | null
 }
 
 /** Items below the root whose area tag disagrees with the tree. */
@@ -52,7 +54,7 @@ export function staleAreaTags(vault: Vault): Stale[] {
     if (!item.frontmatter.has('parent')) return []
     const tags = tagsOf(item)
     const tag = expectedAreaTag(vault, item)
-    return hasAreaTag(tags, tag) ? [] : [{ item, from: tags, to: withAreaTag(tags, tag) }]
+    return hasAreaTag(tags, tag) ? [] : [{ item, from: tags, to: withAreaTag(tags, tag), tag }]
   })
 }
 
@@ -66,7 +68,8 @@ export async function retag(vault: Vault, dryRun: boolean): Promise<Stale[]> {
   requireAreaTags(vault)
   const stale = staleAreaTags(vault)
   if (!dryRun) {
-    for (const entry of stale) await editItem(entry.item, [{ op: 'list', key: 'tags', values: entry.to }])
+    // Each tag list is rebuilt from the file under the lock, so a tag added since the load stays.
+    for (const entry of stale) await editItem(entry.item, (text) => areaTagEditsIn(text, entry.tag))
   }
   return stale
 }

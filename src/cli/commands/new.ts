@@ -5,17 +5,19 @@
  * rather than writing a plan into a chat transcript. It is also the board's add row (docs/adr/0017-inline-status-capture.md),
  * which is why a status can be given and why `owner` and `agent` are inherited.
  */
-import { existsSync } from 'node:fs'
+import { readFile } from 'node:fs/promises'
 import { join } from 'node:path'
 
-import { editItem, writeAtomic } from '../write.ts'
+import { editItem, writeNew } from '../write.ts'
+import { cardState } from '../../shared/card-state.ts'
 import { inheritedChildFields, renderWorkItem, type NewWorkItem } from '../../shared/work-item.ts'
 import { briefGaps, renderBody, requireTemplate, type Brief } from '../../shared/templates.ts'
 import { firstChildPromotion } from '../../shared/transitions.ts'
 import { areaTagFor } from '../../shared/area-tags.ts'
 import { chainOf } from './retag.ts'
 import { asName } from '../../shared/authorship.ts'
-import { fileNameFor, fileNameStem, isStatus, newId, today, type Status } from '../../shared/schema.ts'
+import { fileNameFor, fileNameStem, isStatus, newId, today, WORK_ITEM_TYPE, type Status } from '../../shared/schema.ts'
+import { parseFrontmatter } from '../../shared/frontmatter.ts'
 import type { Vault } from '../vault.ts'
 
 export interface NewOptions {
@@ -82,55 +84,82 @@ export async function createItem(vault: Vault, options: NewOptions): Promise<Cre
   // Render the body first, so a brief the template cannot hold fails before a file exists.
   renderBody(template, vault.config.extraSections, options.brief)
 
-  const id = newId(vault.takenIds)
-  const stem = fileNameFor(title, id, vault.takenStems)
-  const relPath = `${vault.config.workItemFolder}/${stem}.md`
-  const path = join(vault.root, ...vault.config.workItemFolder.split('/'), `${stem}.md`)
-  if (existsSync(path)) {
-    throw new Error(`${relPath} already exists. Refusing to overwrite it.`)
-  }
-
   const stamp = today()
-  const common = {
-    id,
-    title,
-    parentStem: parent.stem,
-    created: stamp,
-    updated: stamp,
-    template: options.template,
-    brief: options.brief,
-  }
   const inherited = inheritedChildFields({
     owner: textField(parent.frontmatter.get('owner')),
     agent: textField(parent.frontmatter.get('agent')),
   }, status, options)
-  const fields: NewWorkItem = template.area
-    ? { ...common, ...inherited, area: true, status }
-    : { ...common, ...inherited, status }
-  if (options.priority !== undefined) fields.priority = options.priority
-  if (creator !== undefined) fields.creator = creator
-  if (creator !== undefined && options.model?.trim()) fields.creatorModel = options.model.trim()
-  if (options.role?.trim()) fields.role = asName(options.role)
-  if (options.owner?.trim()) fields.owner = asName(options.owner)
   const areaTag = vault.config.areaTags
     ? areaTagFor([{ title, area: template.area === true }, ...chainOf(vault, parent)])
     : null
-  if (areaTag !== null) fields.tags = [areaTag]
+  const render = (id: string): string => {
+    const common = {
+      id,
+      title,
+      parentStem: parent.stem,
+      created: stamp,
+      updated: stamp,
+      template: options.template,
+      brief: options.brief,
+    }
+    const fields: NewWorkItem = template.area
+      ? { ...common, ...inherited, area: true, status }
+      : { ...common, ...inherited, status }
+    if (options.priority !== undefined) fields.priority = options.priority
+    if (creator !== undefined) fields.creator = creator
+    if (creator !== undefined && options.model?.trim()) fields.creatorModel = options.model.trim()
+    if (options.role?.trim()) fields.role = asName(options.role)
+    if (options.owner?.trim()) fields.owner = asName(options.owner)
+    if (areaTag !== null) fields.tags = [areaTag]
+    return renderWorkItem(fields, vault.config.extraSections)
+  }
 
-  await writeAtomic(path, renderWorkItem(fields, vault.config.extraSections))
+  // The file is created only if its path is free at the moment of writing, never renamed over
+  // one (docs/adr/0053-edits-from-the-file-at-write-time.md). A work item at the path is a card
+  // another process made since the load, so the next try takes the id-suffixed name. Any other
+  // file at the path is the owner's, and the create is refused.
+  const takenIds = new Set(vault.takenIds)
+  const takenStems = new Set(vault.takenStems)
+  let id = ''
+  let stem = ''
+  let relPath = ''
+  let path = ''
+  for (let attempt = 0; ; attempt++) {
+    id = newId(takenIds)
+    stem = fileNameFor(title, id, takenStems)
+    relPath = `${vault.config.workItemFolder}/${stem}.md`
+    path = join(vault.root, ...vault.config.workItemFolder.split('/'), `${stem}.md`)
+    try {
+      await writeNew(path, render(id))
+      break
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code !== 'EEXIST') throw error
+      const existing = await readFile(path, 'utf8').catch(() => '')
+      if (attempt >= 4 || parseFrontmatter(existing)?.get('type') !== WORK_ITEM_TYPE) {
+        throw new Error(`${relPath} already exists. Refusing to overwrite it.`)
+      }
+      takenIds.add(id)
+      takenStems.add(stem.toLowerCase())
+    }
+  }
 
   // A second file write, after the child exists: see docs/adr/0035-promote-a-parent-on-its-first-child.md.
-  const promotion = firstChildPromotion({
-    isRoot: parent.parent === null && !parent.frontmatter.has('parent'),
-    area: parent.area,
-    hasBoardKey: parent.frontmatter.has('board'),
-    childCount: vault.childrenOf(parent).length,
-  }, vault.config.autoPromote)
-  if (promotion) await editItem(parent, promotion)
+  // The board key is read under the lock; the child count comes from the loaded vault.
+  let promotedParent = false
+  await editItem(parent, (text) => {
+    const promotion = firstChildPromotion({
+      isRoot: parent.parent === null && !parent.frontmatter.has('parent'),
+      area: cardState(text).area,
+      hasBoardKey: cardState(text).hasBoardKey,
+      childCount: vault.childrenOf(parent).length,
+    }, vault.config.autoPromote)
+    promotedParent = promotion !== null
+    return promotion
+  })
 
   return {
     id, stem, relPath, path, parentStem: parent.stem,
-    promotedParent: promotion !== null, gaps, renamed: stem !== fileNameStem(title),
+    promotedParent, gaps, renamed: stem !== fileNameStem(title),
     uncredited: creator === undefined,
   }
 }

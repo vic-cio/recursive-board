@@ -9,6 +9,7 @@
  * Both writers use these rules. This module imports nothing from Node.
  */
 import type { Edit } from './edits.ts'
+import { getList, parseFrontmatter } from './frontmatter.ts'
 import { formatWikilink, parseWikilink, type Status } from './schema.ts'
 
 export const DEPENDS_ON = 'depends_on'
@@ -35,6 +36,15 @@ export function parseDependsOn(values: readonly unknown[] | undefined): ParsedDe
 export function dependsOnValues(value: unknown): unknown[] {
   if (Array.isArray(value)) return value
   return value === undefined || value === null ? [] : [value]
+}
+
+/**
+ * The raw `depends_on` entries in a card's text. One wikilink on the key line is a string, not a
+ * list to split on spaces as `tags` would be.
+ */
+export function dependsOnRaw(text: string): string[] {
+  const scalar = parseFrontmatter(text)?.get(DEPENDS_ON)
+  return typeof scalar === 'string' ? [scalar] : getList(text, DEPENDS_ON) ?? []
 }
 
 export interface Dependency {
@@ -64,19 +74,39 @@ export function dependencyEdit(
   return { op: 'list', key: DEPENDS_ON, values }
 }
 
+/** `dependencyEdit` on the list as the card's text holds it now. */
+export function dependencyEditIn(
+  text: string, target: string, on: boolean,
+  names?: (linkTarget: string) => boolean,
+): Edit | null {
+  return dependencyEdit(dependsOnRaw(text), target, on, names)
+}
+
 /** A chain of dependencies from `from` back to `from`, or null when there is none. Nodes compare by identity. */
 export function dependencyCycle<T>(from: T, dependsOn: (node: T) => readonly T[]): T[] | null {
   return dependencyPath(from, from, dependsOn)
 }
 
-/** A chain of dependencies from `from` to `to`, both included, or null when `from` does not wait on `to`. */
+/** A chain of dependencies from `from` to `to`, both included, or null when `from` does not wait on `to`. Nodes compare by identity. */
 export function dependencyPath<T>(from: T, to: T, dependsOn: (node: T) => readonly T[]): T[] | null {
-  const seen = new Set<T>([from])
+  return dependencyPathByKey(from, to, (node) => node, dependsOn)
+}
+
+/**
+ * `dependencyPath` for nodes that are rebuilt, such as the plugin's index entries: nodes compare
+ * by `key`, so a copy taken before a rebuild still matches its replacement.
+ */
+export function dependencyPathByKey<T>(
+  from: T, to: T, key: (node: T) => unknown, dependsOn: (node: T) => readonly T[],
+): T[] | null {
+  const target = key(to)
+  const seen = new Set<unknown>([key(from)])
   const walk = (node: T, path: T[]): T[] | null => {
     for (const next of dependsOn(node)) {
-      if (next === to) return [...path, next]
-      if (seen.has(next)) continue
-      seen.add(next)
+      const nextKey = key(next)
+      if (nextKey === target) return [...path, next]
+      if (seen.has(nextKey)) continue
+      seen.add(nextKey)
       const found = walk(next, [...path, next])
       if (found) return found
     }

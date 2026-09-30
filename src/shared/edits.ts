@@ -13,6 +13,18 @@ export type Edit =
   | { op: 'remove'; key: string }
   | { op: 'list'; key: string; values: readonly string[] }
 
+/**
+ * The edits to apply, or a rule that computes them from the file's text at write time
+ * (docs/adr/0053-edits-from-the-file-at-write-time.md). A writer runs a rule on the text it is
+ * about to rewrite, so an edit that depends on a current value never works from a stale copy.
+ * A rule returns null for no change, and throws to refuse.
+ */
+export type EditPlan = readonly Edit[] | ((text: string) => readonly Edit[] | null)
+
+export function editsFor(text: string, plan: EditPlan): readonly Edit[] {
+  return typeof plan === 'function' ? plan(text) ?? [] : plan
+}
+
 export function applyEdits(text: string, edits: readonly Edit[]): string {
   let out = text
   for (const edit of edits) {
@@ -30,7 +42,8 @@ export function withStamp(edits: readonly Edit[], stamp: string = today()): Edit
 }
 
 /** Stamp only when the requested edits change the file. */
-export function applyStampedEdits(text: string, edits: readonly Edit[], stamp: string = today()): string {
+export function applyStampedEdits(text: string, plan: EditPlan, stamp: string = today()): string {
+  const edits = editsFor(text, plan)
   if (applyEdits(text, edits) === text) return text
   return applyEdits(text, withStamp(edits, stamp))
 }

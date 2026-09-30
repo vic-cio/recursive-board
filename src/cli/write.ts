@@ -5,16 +5,20 @@
  * applies the same ones. This module is only the part that touches a filesystem, which is exactly
  * the part the plugin must not carry to iOS.
  */
-import { writeFile, rename, readFile, mkdir, rm, stat } from 'node:fs/promises'
+import { writeFile, rename, readFile, rm, stat, link } from 'node:fs/promises'
 import { createHash } from 'node:crypto'
 import { tmpdir } from 'node:os'
 import { dirname, join } from 'node:path'
 import { setTimeout as sleep } from 'node:timers/promises'
 
-import { applyEdits, withStamp, type Edit } from '../shared/edits.ts'
+import { applyEdits, editsFor, withStamp, type Edit, type EditPlan } from '../shared/edits.ts'
 import type { WorkItem } from './vault.ts'
 
-export { applyEdits, withStamp, type Edit }
+export { applyEdits, withStamp, type Edit, type EditPlan }
+
+function uniqueSuffix(): string {
+  return `${process.pid}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
+}
 
 /**
  * Writes through a temporary file in the same folder, then renames.
@@ -22,32 +26,107 @@ export { applyEdits, withStamp, type Edit }
  * work item. That matters more here than anywhere else: this is the canonical layer.
  */
 export async function writeAtomic(path: string, text: string): Promise<void> {
-  const temp = join(dirname(path), `.wi-${process.pid}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}.tmp`)
+  const temp = join(dirname(path), `.wi-${uniqueSuffix()}.tmp`)
   await writeFile(temp, text, 'utf8')
   await rename(temp, path)
+}
+
+/**
+ * Creates a file that must not exist yet. It fails with EEXIST, and changes nothing, when the
+ * path exists, even when another process created it a moment ago.
+ * It writes a temporary file and hard-links it into place: a link never replaces a file, and the
+ * new file appears whole. A filesystem without hard links gets an exclusive create instead.
+ */
+export async function writeNew(path: string, text: string): Promise<void> {
+  const temp = join(dirname(path), `.wi-${uniqueSuffix()}.tmp`)
+  await writeFile(temp, text, 'utf8')
+  try {
+    await link(temp, path)
+  } catch (error) {
+    const code = (error as NodeJS.ErrnoException).code
+    if (code !== 'EPERM' && code !== 'ENOTSUP' && code !== 'ENOSYS') throw error
+    await writeFile(path, text, { encoding: 'utf8', flag: 'wx' })
+  } finally {
+    await rm(temp, { force: true })
+  }
 }
 
 const LOCK_WAIT_MS = 5000
 const LOCK_STALE_MS = 30000
 
+/** The lock file for a path. The lock lives in the OS temp folder, not beside the work item. */
+export function lockPathFor(path: string): string {
+  return join(tmpdir(), `wi-lock-${createHash('sha1').update(path).digest('hex')}`)
+}
+
+/** Test seams. `afterStaleCheck` runs after a process judges a lock stale and before it takes the lock over. */
+export interface LockHooks {
+  afterStaleCheck?: () => Promise<void>
+}
+
+/**
+ * Moves the lock at `lock` aside when it is still the one judged stale (`ino`), and removes it.
+ * The rename is atomic, so only one process moves a given lock. A process that moved a fresh
+ * lock instead, because another process took the stale one over first, links it back. A link
+ * never replaces a file, so this cannot remove a third process's lock either.
+ */
+async function takeOver(lock: string, ino: number): Promise<void> {
+  const aside = `${lock}.stale-${uniqueSuffix()}`
+  try {
+    await rename(lock, aside)
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === 'ENOENT') return
+    throw error
+  }
+  const moved = await stat(aside).catch(() => undefined)
+  if (moved !== undefined && moved.ino !== ino) {
+    // A directory is a live lock from wi 0.7.0 or earlier, and a directory cannot be linked.
+    await (moved.isFile() ? link(aside, lock) : rename(aside, lock)).catch(() => undefined)
+  }
+  await rm(aside, { recursive: true, force: true })
+}
+
+/**
+ * Releases the lock only when it still holds this process's token. A lock taken over as stale
+ * belongs to its new holder, and removing it would let a third process in beside that holder.
+ */
+async function release(lock: string, token: string): Promise<void> {
+  const aside = `${lock}.release-${uniqueSuffix()}`
+  try {
+    await rename(lock, aside)
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === 'ENOENT') return
+    throw error
+  }
+  const held = await readFile(aside, 'utf8').catch(() => '')
+  if (held !== token) await link(aside, lock).catch(() => undefined)
+  await rm(aside, { recursive: true, force: true })
+}
+
 /**
  * Runs `fn` while this machine's other `wi` processes wait to write the same file.
- * The lock is a directory in the OS temp folder, because `mkdir` is atomic and a lock file in the
- * work-item folder would trip the unaccounted-file guard. It cannot stop a sync client or a
- * person's editor; it stops two agents on one machine losing each other's write.
+ * The lock is a file in the OS temp folder, created exclusively, because a lock file in the
+ * work-item folder would trip the unaccounted-file guard. It holds a token unique to this call.
+ * It cannot stop a sync client or a person's editor; it stops two agents on one machine losing
+ * each other's write. A lock older than 30 seconds is stale, and one waiting process takes it
+ * over atomically. The lock was a directory in wi 0.7.0 and earlier; an old one still excludes, and a stale
+ * one is taken over the same way.
  */
-export async function withFileLock<T>(path: string, fn: () => Promise<T>): Promise<T> {
-  const lock = join(tmpdir(), `wi-lock-${createHash('sha1').update(path).digest('hex')}`)
+export async function withFileLock<T>(path: string, fn: () => Promise<T>, hooks: LockHooks = {}): Promise<T> {
+  const lock = lockPathFor(path)
+  const token = `${uniqueSuffix()}\n`
   const deadline = Date.now() + LOCK_WAIT_MS
   for (;;) {
     try {
-      await mkdir(lock)
+      await writeFile(lock, token, { encoding: 'utf8', flag: 'wx' })
       break
     } catch (error) {
       if ((error as NodeJS.ErrnoException).code !== 'EEXIST') throw error
-      const age = await stat(lock).then((s) => Date.now() - s.mtimeMs, () => 0)
-      if (age > LOCK_STALE_MS) {
-        await rm(lock, { recursive: true, force: true })
+      const found = await stat(lock).catch(() => undefined)
+      if (found === undefined) continue
+      if (Date.now() - found.mtimeMs > LOCK_STALE_MS) {
+        await hooks.afterStaleCheck?.()
+        await takeOver(lock, found.ino)
         continue
       }
       if (Date.now() > deadline) {
@@ -59,24 +138,27 @@ export async function withFileLock<T>(path: string, fn: () => Promise<T>): Promi
   try {
     return await fn()
   } finally {
-    await rm(lock, { recursive: true, force: true })
+    await release(lock, token)
   }
 }
 
 /**
  * Applies edits to one work item on disk. Returns the new text.
- * It re-reads the file under the lock, so an edit made since the vault was loaded survives: the
- * edits name keys and the body edit appends, so both apply cleanly to the newer text.
+ * It re-reads the file under the lock and computes the edits from that text when `plan` is a
+ * rule (docs/adr/0053-edits-from-the-file-at-write-time.md), so an edit made since the vault was
+ * loaded survives. The body edit runs on the same text, after the plan.
  * Stamps `updated` only when the frontmatter edits or the body edit change the file.
  */
 export async function editItem(
   item: WorkItem,
-  edits: readonly Edit[],
+  plan: EditPlan,
   editBody: (text: string) => string = (text) => text,
 ): Promise<string> {
   return withFileLock(item.path, async () => {
     const current = await readFile(item.path, 'utf8')
-    if (editBody(applyEdits(current, edits)) === current) return current
+    const edits = editsFor(current, plan)
+    const body = editBody(applyEdits(current, edits))
+    if (body === current) return current
     const text = editBody(applyEdits(current, withStamp(edits)))
     await writeAtomic(item.path, text)
     return text

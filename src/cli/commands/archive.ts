@@ -1,6 +1,7 @@
 /** `wi archive`: one file changes; descendants inherit visibility when read. */
 import { archiveEdits, activeDescendant } from '../../shared/archive.ts'
 import { editItem } from '../write.ts'
+import { cardState } from '../../shared/card-state.ts'
 import { requireAccountedTree, type Vault, type WorkItem } from '../vault.ts'
 
 export interface ArchiveChange {
@@ -13,8 +14,7 @@ export async function archiveItem(vault: Vault, ref: string, undo: boolean): Pro
   const item = vault.resolve(ref)
   const archived = !undo
   requireAccountedTree(vault, `${archived ? 'archive' : 'unarchive'} ${item.title ?? item.stem}`)
-  const edits = archiveEdits(item.archived, archived)
-  if (edits === null) return { item, archived, changed: false }
+  if (archiveEdits(item.archived, archived) === null) return { item, archived, changed: false }
 
   if (archived) {
     const active = activeDescendant(item, (parent) => vault.childrenOf(parent), (child) => child.status)
@@ -22,6 +22,12 @@ export async function archiveItem(vault: Vault, ref: string, undo: boolean): Pro
       throw new Error(`cannot archive ${item.title ?? item.stem}: descendant ${active.title ?? active.stem} (${active.id ?? active.relPath}) is doing.`)
     }
   }
-  await editItem(item, edits)
-  return { item, archived, changed: true }
+  // The flag is read again under the lock, so a second archive of one card reports no change.
+  let changed = false
+  await editItem(item, (text) => {
+    const edits = archiveEdits(cardState(text).archived, archived)
+    changed = edits !== null
+    return edits
+  })
+  return { item, archived, changed }
 }

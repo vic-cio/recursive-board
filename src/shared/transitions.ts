@@ -9,6 +9,7 @@
  * (spec section 37), so nothing here may produce an edit to a parent.
  */
 import type { Edit } from './edits.ts'
+import { cardState } from './card-state.ts'
 import { formatWikilink, type Status } from './schema.ts'
 
 /**
@@ -31,6 +32,19 @@ export function statusEdits(
     edits.push({ op: 'remove', key: 'prev_status' })
   }
   return edits
+}
+
+/** `statusEdits` for the card as its text is now. */
+export function statusEditsIn(text: string, to: Status): Edit[] | null {
+  const state = cardState(text)
+  return statusEdits(state.status, to, state.hasPrevStatus)
+}
+
+/** Unticking the card as its text is now. A card that is no longer done is left alone. */
+export function untickEditsIn(text: string): Edit[] | null {
+  const state = cardState(text)
+  if (state.status !== 'done') return null
+  return statusEdits(state.status, untickTarget(state.prevStatus), state.hasPrevStatus)
 }
 
 /**

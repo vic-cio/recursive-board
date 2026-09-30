@@ -1,8 +1,11 @@
 import { test, afterEach } from 'node:test'
 import assert from 'node:assert/strict'
-import { readFileSync, writeFileSync } from 'node:fs'
+import { existsSync, readdirSync, readFileSync, rmSync, utimesSync, writeFileSync } from 'node:fs'
+import { join } from 'node:path'
+import { setTimeout as sleep } from 'node:timers/promises'
 
-import { applyEdits, withStamp, writeAtomic, editItem } from './write.ts'
+import { applyEdits, withStamp, writeAtomic, writeNew, editItem, withFileLock, lockPathFor } from './write.ts'
+import { parseFrontmatter } from '../shared/frontmatter.ts'
 import { loadVault } from './vault.ts'
 import { makeVault, item, type Fixture } from './test-helpers.ts'
 
@@ -123,4 +126,82 @@ test('concurrent editItem calls on one file keep every write', async () => {
     editItem(loaded, [], (text) => `${text}line ${n}\n`)))
   const after = readFileSync(path, 'utf8')
   for (let n = 0; n < 8; n++) assert.match(after, new RegExp(`^line ${n}$`, 'm'))
+})
+
+test('editItem computes a plan from the file as it is under the lock', async () => {
+  fixture = makeVault()
+  const path = fixture.write('Boards/Build server.md', TEXT)
+  const vault = await loadVault(fixture.root)
+  const loaded = vault.resolve('wi-0004')
+  writeFileSync(path, TEXT.replace('status: backlog', 'status: doing'))
+  let seen: string | undefined
+  await editItem(loaded, (text) => {
+    seen = String(parseFrontmatter(text)?.get('status'))
+    return [{ op: 'set', key: 'prev_status', value: seen }]
+  })
+  assert.equal(seen, 'doing')
+  assert.match(readFileSync(path, 'utf8'), /^prev_status: doing$/m)
+})
+
+test('editItem writes nothing when a plan returns null, and a plan that throws writes nothing', async () => {
+  fixture = makeVault()
+  const path = fixture.write('Boards/Build server.md', TEXT)
+  const loaded = (await loadVault(fixture.root)).resolve('wi-0004')
+  assert.equal(await editItem(loaded, () => null), TEXT)
+  await assert.rejects(editItem(loaded, () => { throw new Error('refused') }), /refused/)
+  assert.equal(readFileSync(path, 'utf8'), TEXT)
+  // The lock is free again after the refusal.
+  await editItem(loaded, [{ op: 'set', key: 'status', value: 'doing' }])
+})
+
+test('writeNew refuses to replace an existing file and leaves no temporary file', async () => {
+  fixture = makeVault()
+  const path = fixture.write('Boards/Tmp.md', TEXT)
+  await assert.rejects(writeNew(path, 'other\n'), (error: NodeJS.ErrnoException) => error.code === 'EEXIST')
+  assert.equal(readFileSync(path, 'utf8'), TEXT)
+  const fresh = join(fixture.root, 'Boards/Fresh.md')
+  await writeNew(fresh, 'new\n')
+  assert.equal(readFileSync(fresh, 'utf8'), 'new\n')
+  assert.deepEqual(readdirSync(join(fixture.root, 'Boards')).sort(), ['Fresh.md', 'Tmp.md'])
+})
+
+test('two processes that both find a stale lock never both hold it', async () => {
+  fixture = makeVault()
+  const target = join(fixture.root, 'Boards/Locked.md')
+  const lock = lockPathFor(target)
+  writeFileSync(lock, 'dead process\n')
+  const old = new Date(Date.now() - 60_000)
+  utimesSync(lock, old, old)
+
+  let holders = 0
+  let most = 0
+  const enter = () => { holders++; most = Math.max(most, holders) }
+  let bHolds!: () => void
+  const bHolding = new Promise<void>((resolve) => { bHolds = resolve })
+
+  // A judges the lock stale, then waits until B has taken the lock over and holds it.
+  const a = withFileLock(target, async () => { enter(); holders-- }, { afterStaleCheck: () => bHolding })
+  const b = withFileLock(target, async () => {
+    enter()
+    bHolds()
+    // A acts on its stale judgement while B holds the lock.
+    await sleep(100)
+    holders--
+  })
+  await Promise.all([a, b])
+  assert.equal(most, 1, 'the two holders never overlapped')
+  assert.equal(existsSync(lock), false, 'the lock is gone when both are done')
+})
+
+test('a holder whose lock was taken over as stale does not remove the new holder\'s lock', async () => {
+  fixture = makeVault()
+  const target = join(fixture.root, 'Boards/Locked.md')
+  const lock = lockPathFor(target)
+  await withFileLock(target, async () => {
+    // Another process judged this lock stale and took it over.
+    rmSync(lock, { force: true })
+    writeFileSync(lock, 'another holder\n')
+  })
+  assert.equal(readFileSync(lock, 'utf8'), 'another holder\n')
+  rmSync(lock, { force: true })
 })

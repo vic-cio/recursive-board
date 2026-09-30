@@ -8,6 +8,8 @@
  *
  * This module imports nothing from Node, so the plugin bundle carries it to iOS.
  */
+import type { Edit } from './edits.ts'
+import { getList } from './frontmatter.ts'
 import { labelColour, type LabelColour } from './labels.ts'
 
 export const AREA_TAG_PREFIX = 'area/'
@@ -48,6 +50,12 @@ export function withAreaTag(tags: readonly string[], tag: string | null): string
 export function hasAreaTag(tags: readonly string[], tag: string | null): boolean {
   const current = tags.filter(isAreaTag).map((t) => t.replace(/^#/, ''))
   return tag === null ? current.length === 0 : current.length === 1 && current[0] === tag
+}
+
+/** The edit that gives the card's current tags this area tag, or null when they already hold it. */
+export function areaTagEditsIn(text: string, tag: string | null): Edit[] | null {
+  const tags = getList(text, 'tags') ?? []
+  return hasAreaTag(tags, tag) ? null : [{ op: 'list', key: 'tags', values: withAreaTag(tags, tag) }]
 }
 
 export interface GraphColourGroup {

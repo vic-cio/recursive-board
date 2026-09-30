@@ -5,7 +5,8 @@
  * refuses to discard an active claim when converting a card to an area.
  */
 import { editItem } from '../write.ts'
-import { isStatus, STATUSES, type Status } from '../../shared/schema.ts'
+import { isStatus, type Status } from '../../shared/schema.ts'
+import { cardState } from '../../shared/card-state.ts'
 import { areaEdits, areaRefusal, type AreaItemState, type AreaTarget } from '../../shared/area.ts'
 import type { Vault, WorkItem } from '../vault.ts'
 
@@ -23,29 +24,29 @@ export interface AreaChange {
 
 export async function setArea(vault: Vault, ref: string, options: AreaOptions): Promise<AreaChange> {
   const item = vault.resolve(ref)
-  const agent = item.frontmatter.get('agent')
-  const state: AreaItemState = {
-    label: item.relPath,
-    isRoot: item.parent === null,
-    isArea: item.area,
-    status: item.status,
-    agent: typeof agent === 'string' ? agent : undefined,
-  }
   const direction = options.off ? 'card' : 'area'
-  const refusal = areaRefusal(state, direction)
-  if (refusal !== null) throw new Error(refusal)
-
-  if (options.off) {
-    const status = item.status
-    if (!isStatus(status)) throw new Error(`${item.relPath} has no valid status to preserve.`)
-    const target: AreaTarget = { kind: 'card' }
-    const edits = areaEdits(state, target)
-    const before = item.text
-    const after = await editItem(item, edits)
-    return { item, from: 'area', to: 'card', status, changed: before !== after }
-  }
-  const edits = areaEdits(state, { kind: 'area' })
-  const before = item.text
-  const after = await editItem(item, edits)
-  return { item, from: 'card', to: 'area', status: item.status, changed: before !== after }
+  // The refusal and the edits read the card as it is under the lock, so a claim made since the
+  // load is never discarded (docs/adr/0053-edits-from-the-file-at-write-time.md).
+  let status = item.status
+  let current = item.text
+  const after = await editItem(item, (text) => {
+    current = text
+    const now = cardState(text)
+    const state: AreaItemState = {
+      label: item.relPath,
+      isRoot: item.parent === null,
+      isArea: now.area,
+      status: now.status,
+      agent: now.agent,
+    }
+    const refusal = areaRefusal(state, direction)
+    if (refusal !== null) throw new Error(refusal)
+    if (options.off && !isStatus(now.status)) throw new Error(`${item.relPath} has no valid status to preserve.`)
+    status = now.status
+    const target: AreaTarget = { kind: direction }
+    return areaEdits(state, target)
+  })
+  return options.off
+    ? { item, from: 'area', to: 'card', status, changed: current !== after }
+    : { item, from: 'card', to: 'area', status, changed: current !== after }
 }

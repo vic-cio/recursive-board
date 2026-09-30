@@ -2,6 +2,7 @@
 import { boardEdits } from '../../shared/transitions.ts'
 import { isArea } from '../../shared/schema.ts'
 import { editItem } from '../write.ts'
+import { cardState } from '../../shared/card-state.ts'
 import type { Vault, WorkItem } from '../vault.ts'
 
 export interface PromotionChange {
@@ -16,6 +17,10 @@ export async function setPromoted(vault: Vault, ref: string, promoted: boolean):
     throw new Error(`${item.relPath} is an area and cannot be ${promoted ? 'promoted' : 'demoted'}.`)
   }
   if (item.board === promoted) return { item, promoted, changed: false }
-  await editItem(item, boardEdits(promoted))
-  return { item, promoted, changed: true }
+  let changed = false
+  await editItem(item, (text) => {
+    changed = cardState(text).board !== promoted
+    return changed ? boardEdits(promoted) : null
+  })
+  return { item, promoted, changed }
 }

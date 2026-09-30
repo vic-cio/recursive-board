@@ -13,6 +13,7 @@ import { editItem } from '../write.ts'
 import { dependentsOf, openDependencies, titleOf } from '../dependencies.ts'
 import { waitingRefusal } from '../../shared/dependencies.ts'
 import { statusEdits } from '../../shared/transitions.ts'
+import { cardState } from '../../shared/card-state.ts'
 import { isStatus, STATUSES, type Status } from '../../shared/schema.ts'
 import type { Vault, WorkItem } from '../vault.ts'
 
@@ -45,25 +46,35 @@ export async function setStatus(vault: Vault, ref: string, status: string): Prom
     )
   }
 
-  const from = item.status
-  const edits = statusEdits(from, status, item.frontmatter.has('prev_status'))
-  if (edits === null) {
+  // Decided under the lock, from the card as it is then (docs/adr/0053-edits-from-the-file-at-write-time.md).
+  let from = item.status
+  let changed = false
+  await editItem(item, (text) => {
+    const state = cardState(text)
+    from = state.status
+    const edits = statusEdits(state.status, status, state.hasPrevStatus)
+    if (edits === null) return null
+    if (status === 'doing') refuseStart(vault, item, text)
+    changed = true
+    return edits
+  })
+  if (!changed) {
     return { item, from, to: status, recorded: undefined, changed: false, parentReady: undefined, unblocked: [] }
   }
-  if (status === 'doing') refuseStart(vault, item)
-  const recorded = status === 'done' ? from : undefined
-  const unblocked = status === 'done' ? unblockedBy(vault, item) : []
-
-  await editItem(item, edits)
-  return { item, from, to: status, recorded, changed: true, parentReady: status === 'done' ? readyParent(vault, item) : undefined, unblocked }
+  const done = status === 'done'
+  return {
+    item, from, to: status, recorded: done ? from : undefined, changed: true,
+    parentReady: done ? readyParent(vault, item) : undefined,
+    unblocked: done ? unblockedBy(vault, item) : [],
+  }
 }
 
 /** The same checks as `wi claim`, so an agent cannot start a card by moving it (docs/adr/0041-card-dependencies.md). */
-function refuseStart(vault: Vault, item: WorkItem): void {
-  if (item.frontmatter.get('blocked') === true) {
+function refuseStart(vault: Vault, item: WorkItem, text: string): void {
+  if (cardState(text).blocked) {
     throw new Error(`${item.relPath} is blocked. Clear its blocked flag when the block is gone, or start another card.`)
   }
-  const waiting = openDependencies(vault, item)
+  const waiting = openDependencies(vault, item, text)
   if (waiting.length > 0) throw new Error(waitingRefusal(item.relPath, waiting.map(titleOf)))
 }
 

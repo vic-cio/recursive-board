@@ -7,6 +7,7 @@
  */
 import { editItem, type Edit } from '../write.ts'
 import { asName, displayName } from '../../shared/authorship.ts'
+import { parseFrontmatter, type Scalar } from '../../shared/frontmatter.ts'
 import type { Vault, WorkItem } from '../vault.ts'
 
 export interface SetOptions {
@@ -26,9 +27,23 @@ export interface SetChange {
 export async function setPeople(vault: Vault, ref: string, options: SetOptions): Promise<SetChange> {
   const item = vault.resolve(ref)
   if (item.parent === null) throw new Error(`${item.relPath} is a root. A root has no owner, role or creator.`)
+  let changed: string[] = []
+  // Decided under the lock, from the card as it is then, so a creator set since the load is never
+  // replaced (docs/adr/0053-edits-from-the-file-at-write-time.md).
+  await editItem(item, (text) => {
+    const fm = parseFrontmatter(text)
+    const planned = peopleEdits(item, options, (key) => fm?.get(key))
+    changed = planned.changed
+    return planned.edits
+  })
+  return { item, changed }
+}
+
+function peopleEdits(
+  item: WorkItem, options: SetOptions, current: (key: string) => Scalar | undefined,
+): { edits: Edit[]; changed: string[] } {
   const edits: Edit[] = []
   const changed: string[] = []
-  const current = (key: string) => item.frontmatter.get(key)
 
   const assign = (key: 'owner' | 'role', value: string | undefined) => {
     if (value === undefined) return
@@ -74,6 +89,5 @@ export async function setPeople(vault: Vault, ref: string, options: SetOptions):
     }
   }
 
-  if (edits.length > 0) await editItem(item, edits)
-  return { item, changed }
+  return { edits, changed }
 }

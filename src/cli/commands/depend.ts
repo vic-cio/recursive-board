@@ -4,7 +4,7 @@
  * It writes one list on one file, the card that waits. The card it waits on is never touched.
  */
 import { editItem } from '../write.ts'
-import { dependencyEdit, dependencyPath } from '../../shared/dependencies.ts'
+import { dependencyEditIn, dependencyPath } from '../../shared/dependencies.ts'
 import { dependenciesOf, titleOf } from '../dependencies.ts'
 import type { Vault, WorkItem } from '../vault.ts'
 
@@ -29,8 +29,13 @@ export async function setDependency(vault: Vault, ref: string, onRef: string, ad
         'Cards that wait on each other can never start.')
     }
   }
-  const edit = dependencyEdit(dependenciesOf(vault, item).raw, on.stem, add, (target) => vault.resolveLink(target) === on)
-  if (edit === null) return { item, on, added: add, changed: false }
-  await editItem(item, [edit])
-  return { item, on, added: add, changed: true }
+  // The list is edited as the file holds it under the lock, so an entry another process added
+  // since the load survives (docs/adr/0053-edits-from-the-file-at-write-time.md).
+  let changed = false
+  await editItem(item, (text) => {
+    const edit = dependencyEditIn(text, on.stem, add, (target) => vault.resolveLink(target) === on)
+    changed = edit !== null
+    return edit === null ? null : [edit]
+  })
+  return { item, on, added: add, changed }
 }

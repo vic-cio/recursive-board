@@ -1,6 +1,5 @@
 /** Reads the dependencies of a work item in a loaded vault (docs/adr/0041-card-dependencies.md). */
-import { DEPENDS_ON, isOpenDependency, parseDependsOn } from '../shared/dependencies.ts'
-import { getList } from '../shared/frontmatter.ts'
+import { dependsOnRaw, isOpenDependency, parseDependsOn } from '../shared/dependencies.ts'
 import type { Vault, WorkItem } from './vault.ts'
 
 export interface ItemDependencies {
@@ -12,9 +11,12 @@ export interface ItemDependencies {
 }
 
 export function dependenciesOf(vault: Vault, item: WorkItem): ItemDependencies {
-  // One wikilink on the key line is a string, not a list to split on spaces as `tags` would be.
-  const scalar = item.frontmatter.get(DEPENDS_ON)
-  const raw = typeof scalar === 'string' ? [scalar] : getList(item.text, DEPENDS_ON) ?? []
+  return dependenciesIn(vault, item.text)
+}
+
+/** The dependencies a card's text names, resolved in a loaded vault. */
+export function dependenciesIn(vault: Vault, text: string): ItemDependencies {
+  const raw = dependsOnRaw(text)
   const { targets, malformed } = parseDependsOn(raw)
   const resolved: WorkItem[] = []
   const unresolved: string[] = []
@@ -26,9 +28,9 @@ export function dependenciesOf(vault: Vault, item: WorkItem): ItemDependencies {
   return { raw, resolved, unresolved, malformed }
 }
 
-/** The cards this item still waits on. */
-export function openDependencies(vault: Vault, item: WorkItem): WorkItem[] {
-  return dependenciesOf(vault, item).resolved.filter(isOpenDependency)
+/** The cards this item still waits on. `text` is the card's text, when it is newer than the loaded copy. */
+export function openDependencies(vault: Vault, item: WorkItem, text: string = item.text): WorkItem[] {
+  return dependenciesIn(vault, text).resolved.filter(isOpenDependency)
 }
 
 /** The items whose dependencies include this one. */

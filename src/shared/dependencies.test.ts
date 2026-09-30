@@ -4,7 +4,7 @@ import assert from 'node:assert/strict'
 import { applyEdits } from './edits.ts'
 import { getList } from './frontmatter.ts'
 import {
-  dependencyCycle, dependencyEdit, dependencyPath, dependsOnValues, isOpenDependency, parseDependsOn,
+  dependencyCycle, dependencyEdit, dependencyPath, dependencyPathByKey, dependsOnValues, isOpenDependency, parseDependsOn,
 } from './dependencies.ts'
 
 test('depends_on reads wikilinks, drops repeats, and reports the rest', () => {
@@ -64,4 +64,23 @@ test('a path shows how one card already waits on another', () => {
 test('removing matches any spelling that means the card', () => {
   const edit = dependencyEdit(['[[card]]', '[[Other]]'], 'Card', false, (target) => target.toLowerCase() === 'card')
   assert.deepEqual(edit, { op: 'list', key: 'depends_on', values: ['[[Other]]'] })
+})
+
+interface Meta { path: string; dependsOn: string[] }
+
+test('dependencyPathByKey finds a cycle through objects rebuilt since the caller took its copy', () => {
+  const index = new Map<string, Meta>()
+  const rebuild = () => {
+    index.set('a.md', { path: 'a.md', dependsOn: ['b.md'] })
+    index.set('b.md', { path: 'b.md', dependsOn: ['c.md'] })
+    index.set('c.md', { path: 'c.md', dependsOn: [] })
+  }
+  rebuild()
+  const heldC = index.get('c.md')!
+  const heldA = index.get('a.md')!
+  rebuild()
+  // Would C waiting on A make a loop? A waits on B, which waits on C.
+  const path = dependencyPathByKey(heldA, heldC, (meta) => meta.path,
+    (meta) => meta.dependsOn.flatMap((key) => index.get(key) ?? []))
+  assert.deepEqual(path?.map((meta) => meta.path), ['a.md', 'b.md', 'c.md'])
 })
