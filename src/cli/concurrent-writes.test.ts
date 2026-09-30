@@ -1,5 +1,5 @@
 /**
- * Two `wi` processes that load the vault at the same time and then write (docs/adr/0053-edits-from-the-file-at-write-time.md).
+ * Two `wi` processes that load the vault at the same time and then write (docs/adr/0054-edits-from-the-file-at-write-time.md).
  *
  * Each test loads two snapshots before either write, so both writers start from the same old
  * state, then runs both writes at once. The lock serialises them, and the outcome is the same in

@@ -1,6 +1,6 @@
 /**
  * The values an edit rule reads from a card, taken from the file's text at write time
- * (docs/adr/0053-edits-from-the-file-at-write-time.md).
+ * (docs/adr/0054-edits-from-the-file-at-write-time.md).
  *
  * A writer that decides from a loaded copy can undo a change made since. Both writers read these
  * values from the text they are about to rewrite: the CLI under its lock, the plugin inside

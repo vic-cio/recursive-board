@@ -27,7 +27,7 @@ export interface MoveResult {
 
 /**
  * Moves run one at a time on this machine, under a lock for the whole vault, and the loop check
- * reads each parent from disk (docs/adr/0053-edits-from-the-file-at-write-time.md). Without both,
+ * reads each parent from disk (docs/adr/0054-edits-from-the-file-at-write-time.md). Without both,
  * `wi move A --to B` and `wi move B --to A` at once each pass the check on a loaded copy, and the
  * two writes make a loop. A move made in Obsidian or on a synced device takes no such lock.
  */

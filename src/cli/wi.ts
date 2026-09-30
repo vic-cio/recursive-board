@@ -164,6 +164,7 @@ async function main(argv: string[]): Promise<number> {
       ...(typeof values['vault'] === 'string' ? { vault: values['vault'] } : {}),
       yes: values['yes'] === true,
       force: values['force'] === true,
+      cliEntry: fileURLToPath(import.meta.url),
     })
     return 0
   }

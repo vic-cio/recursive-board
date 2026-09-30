@@ -5,7 +5,7 @@
  * applies the same ones. This module is only the part that touches a filesystem, which is exactly
  * the part the plugin must not carry to iOS.
  */
-import { writeFile, rename, readFile, rm, stat, link } from 'node:fs/promises'
+import { writeFile, rename, readFile, rm, stat, link, chmod } from 'node:fs/promises'
 import { createHash } from 'node:crypto'
 import { tmpdir } from 'node:os'
 import { dirname, join } from 'node:path'
@@ -27,7 +27,14 @@ function uniqueSuffix(): string {
  */
 export async function writeAtomic(path: string, text: string): Promise<void> {
   const temp = join(dirname(path), `.wi-${uniqueSuffix()}.tmp`)
+  let mode: number | undefined
+  try {
+    mode = (await stat(path)).mode & 0o7777
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error
+  }
   await writeFile(temp, text, 'utf8')
+  if (mode !== undefined) await chmod(temp, mode)
   await rename(temp, path)
 }
 
@@ -145,7 +152,7 @@ export async function withFileLock<T>(path: string, fn: () => Promise<T>, hooks:
 /**
  * Applies edits to one work item on disk. Returns the new text.
  * It re-reads the file under the lock and computes the edits from that text when `plan` is a
- * rule (docs/adr/0053-edits-from-the-file-at-write-time.md), so an edit made since the vault was
+ * rule (docs/adr/0054-edits-from-the-file-at-write-time.md), so an edit made since the vault was
  * loaded survives. The body edit runs on the same text, after the plan.
  * Stamps `updated` only when the frontmatter edits or the body edit change the file.
  */

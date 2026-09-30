@@ -46,7 +46,7 @@ export async function setStatus(vault: Vault, ref: string, status: string): Prom
     )
   }
 
-  // Decided under the lock, from the card as it is then (docs/adr/0053-edits-from-the-file-at-write-time.md).
+  // Decided under the lock, from the card as it is then (docs/adr/0054-edits-from-the-file-at-write-time.md).
   let from = item.status
   let changed = false
   await editItem(item, (text) => {

@@ -26,7 +26,7 @@ export async function setArea(vault: Vault, ref: string, options: AreaOptions): 
   const item = vault.resolve(ref)
   const direction = options.off ? 'card' : 'area'
   // The refusal and the edits read the card as it is under the lock, so a claim made since the
-  // load is never discarded (docs/adr/0053-edits-from-the-file-at-write-time.md).
+  // load is never discarded (docs/adr/0054-edits-from-the-file-at-write-time.md).
   let status = item.status
   let current = item.text
   const after = await editItem(item, (text) => {

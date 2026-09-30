@@ -176,6 +176,7 @@ export interface SetupOptions {
   vault?: string
   yes: boolean
   force: boolean
+  cliEntry: string
 }
 
 export async function runSetup(options: SetupOptions): Promise<void> {
@@ -216,8 +217,7 @@ export async function runSetup(options: SetupOptions): Promise<void> {
   if (!options.yes) {
     const status = await hookStatus(vault)
     if (status.gitRepo && await confirmHook()) {
-      const entry = fileURLToPath(import.meta.url)
-      const hook = await installHook(vault, entry, false)
+      const hook = await installHook(vault, options.cliEntry, false)
       stdout.write(`wi setup: installed validation hook ${hook}\n`)
     }
   }

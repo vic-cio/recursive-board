@@ -29,7 +29,7 @@ export async function setPeople(vault: Vault, ref: string, options: SetOptions):
   if (item.parent === null) throw new Error(`${item.relPath} is a root. A root has no owner, role or creator.`)
   let changed: string[] = []
   // Decided under the lock, from the card as it is then, so a creator set since the load is never
-  // replaced (docs/adr/0053-edits-from-the-file-at-write-time.md).
+  // replaced (docs/adr/0054-edits-from-the-file-at-write-time.md).
   await editItem(item, (text) => {
     const fm = parseFrontmatter(text)
     const planned = peopleEdits(item, options, (key) => fm?.get(key))

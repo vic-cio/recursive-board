@@ -15,7 +15,7 @@ export type Edit =
 
 /**
  * The edits to apply, or a rule that computes them from the file's text at write time
- * (docs/adr/0053-edits-from-the-file-at-write-time.md). A writer runs a rule on the text it is
+ * (docs/adr/0054-edits-from-the-file-at-write-time.md). A writer runs a rule on the text it is
  * about to rewrite, so an edit that depends on a current value never works from a stale copy.
  * A rule returns null for no change, and throws to refuse.
  */

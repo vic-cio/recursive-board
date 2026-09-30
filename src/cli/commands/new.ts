@@ -118,7 +118,7 @@ export async function createItem(vault: Vault, options: NewOptions): Promise<Cre
   }
 
   // The file is created only if its path is free at the moment of writing, never renamed over
-  // one (docs/adr/0053-edits-from-the-file-at-write-time.md). A work item at the path is a card
+  // one (docs/adr/0054-edits-from-the-file-at-write-time.md). A work item at the path is a card
   // another process made since the load, so the next try takes the id-suffixed name. Any other
   // file at the path is the owner's, and the create is refused.
   const takenIds = new Set(vault.takenIds)

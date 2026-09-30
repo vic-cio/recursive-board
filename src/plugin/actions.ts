@@ -9,7 +9,7 @@
  *
  * An edit that depends on a current value, such as the status a `done` records or the list a
  * dependency joins, is computed inside `vault.process` from the text it hands over, never from
- * the metadata cache (docs/adr/0053-edits-from-the-file-at-write-time.md). The cache can be older
+ * the metadata cache (docs/adr/0054-edits-from-the-file-at-write-time.md). The cache can be older
  * than the file. It still decides whether a click needs a write at all.
  */
 import { normalizePath, Notice, TFile, type App } from 'obsidian'

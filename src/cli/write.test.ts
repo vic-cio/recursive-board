@@ -1,6 +1,6 @@
 import { test, afterEach } from 'node:test'
 import assert from 'node:assert/strict'
-import { existsSync, readdirSync, readFileSync, rmSync, utimesSync, writeFileSync } from 'node:fs'
+import { chmodSync, existsSync, readdirSync, readFileSync, rmSync, statSync, utimesSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { setTimeout as sleep } from 'node:timers/promises'
 
@@ -64,6 +64,16 @@ test('writeAtomic leaves no temporary file behind', async () => {
   assert.equal(readFileSync(path, 'utf8'), 'replaced\n')
   const vault = await loadVault(fixture.root)
   assert.deepEqual(vault.misplaced, [])
+})
+
+test('writeAtomic keeps the existing file mode', async () => {
+  fixture = makeVault()
+  const path = fixture.write('Boards/Private.md', TEXT)
+  chmodSync(path, 0o600)
+
+  await writeAtomic(path, 'replaced\n')
+
+  assert.equal(statSync(path).mode & 0o777, 0o600)
 })
 
 test('editItem writes the change to disk and stamps updated', async () => {

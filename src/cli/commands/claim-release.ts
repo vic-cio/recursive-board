@@ -27,7 +27,7 @@ export interface ReleaseChange {
 
 /**
  * The claim is decided under the lock, from the card as it is then
- * (docs/adr/0053-edits-from-the-file-at-write-time.md): of two agents that claim one card at once,
+ * (docs/adr/0054-edits-from-the-file-at-write-time.md): of two agents that claim one card at once,
  * the second finds the first one's name and is refused. Other cards, such as the dependencies and
  * the children, come from the loaded vault.
  */
