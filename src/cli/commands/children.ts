@@ -67,11 +67,12 @@ export function listChildren(
   walk(parent, 0)
 
   const filtered = status === undefined ? rows : rows.filter((r) => r.item.status === status)
+  const filteredAreas = status === undefined ? areas : areas.filter((r) => r.item.status === status)
 
   const byStatus = new Map<Status, ChildRow[]>()
   for (const value of STATUSES) {
     byStatus.set(value, filtered.filter((r) => r.item.status === value))
   }
 
-  return { parent, children: filtered, areas: status === undefined ? areas : [], byStatus, cycle }
+  return { parent, children: filtered, areas: filteredAreas, byStatus, cycle }
 }

@@ -86,6 +86,28 @@ test('createItem with the area template accepts an explicit status', async () =>
   assert.equal(parseFrontmatter(readFileSync(created.path, 'utf8'))!.get('status'), 'doing')
 })
 
+test('createItem does not inherit an agent for an area', async () => {
+  fixture = seed()
+  const created = await createItem(await reload(fixture), {
+    title: 'Operations', parent: 'wi-0004', template: 'area', status: 'doing',
+  })
+  const fm = parseFrontmatter(readFileSync(created.path, 'utf8'))!
+  assert.equal(fm.get('area'), true)
+  assert.equal(fm.get('status'), 'doing')
+  assert.equal(fm.has('agent'), false)
+})
+
+test('createItem refuses an explicit agent for an area before writing', async () => {
+  fixture = seed()
+  await assert.rejects(
+    createItem(await reload(fixture), {
+      title: 'Operations', parent: 'wi-0001', template: 'area', status: 'doing', agent: 'Alpha',
+    }),
+    /areas cannot have an agent/i,
+  )
+  assert.equal(existsSync(join(fixture.root, 'Boards', 'Operations.md')), false)
+})
+
 test('createItem uses the configured folder and root when no parent is given', async () => {
   fixture = seed()
   fixture.write('.wi.json', '{"workItemFolder":"Projects","defaultRoot":"Launch"}')
