@@ -23,6 +23,7 @@ import { claimItem, releaseItem } from './commands/claim-release.ts'
 import { addNote } from './commands/note.ts'
 import { retag, staleAreaTags, writeGraphColours } from './commands/retag.ts'
 import { listChildren, type ChildRow } from './commands/children.ts'
+import { showCard } from './commands/show.ts'
 import { validate, type Problem } from './commands/validate.ts'
 import { listTemplates, writeTemplates } from './commands/template.ts'
 import { removeItem } from './commands/remove.ts'
@@ -65,6 +66,7 @@ Usage
   wi demote <ref>
   wi rm <ref> [--recursive] [--dry-run]
   wi children [<ref>] [--status <s>] [--tree] [--archived]
+  wi show <ref> [--json]
   wi validate
   wi retag [--dry-run]
   wi graph
@@ -285,6 +287,8 @@ async function main(argv: string[]): Promise<number> {
         rest = [board]
       }
       return runChildren(vault, rest, values, json)
+    case 'show':
+      return runShow(vault, rest, json)
     case 'validate':
       return runValidate(vault, json)
     case 'retag':
@@ -697,6 +701,15 @@ async function runRemove(
   }
   const count = result.removed.length
   process.stdout.write(`${count} work item${count === 1 ? '' : 's'}${result.dryRun ? ', nothing written' : ''}\n`)
+  return 0
+}
+
+function runShow(vault: Vault, rest: string[], json: boolean): number {
+  const ref = rest.join(' ').trim()
+  if (ref === '') throw new UsageError('wi show needs a <ref>.')
+  const card = showCard(vault, ref)
+  if (json) print(card)
+  else process.stdout.write(`${JSON.stringify(card, null, 2)}\n`)
   return 0
 }
 

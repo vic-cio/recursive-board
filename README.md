@@ -169,6 +169,7 @@ The pre-commit hook runs `wi validate` and stops a commit when the vault has err
 | `wi promote <ref>` / `wi demote <ref>` | Makes an item a board or a card again. Promotion sets `board: true`; demotion removes the `board` key. |
 | `wi rm <ref> [--recursive] [--dry-run]` | Moves an item to the vault's `.trash` folder. Use `--dry-run` to preview. Items with children require `--recursive`. |
 | `wi children [<ref>] [--status <status>] [--tree] [--archived]` | Lists an item's children. If the ref is omitted, uses the repo pointer's board. `--status` filters by status, `--tree` shows descendants, and `--archived` includes archived items. |
+| `wi show <ref> --json` | Reads one complete card as JSON. It includes the brief, Notes, assignment, ancestor objectives, dependencies, blocked state, and child summary. Broken links appear as issues; the command changes no files. |
 | `wi validate` | Checks work-item structure and reports errors and warnings. Exits with code 1 when it finds errors. |
 | `wi hook install\|uninstall\|status [--vault <path>]` | Installs, removes, or inspects the Git pre-commit validation hook. `install --force` replaces an unrelated hook. |
 | `wi here [--board <ref>] [--vault <path>]` | Prints this Git repo's pointer, or sets it in user config. Linked worktrees share the pointer. |

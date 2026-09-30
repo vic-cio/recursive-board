@@ -61,6 +61,19 @@ test('wi agents prints the configured agent limit and claimed doing count', asyn
     ['claude wi-0005', 'codex wi-0004', 'codex wi-0007'])
 })
 
+test('wi show --json returns a complete card without changing its file', async () => {
+  fixture = seed()
+  const before = readFixture('Boards/Build server.md')
+  const result = await wi(['show', 'wi-0004', '--json'])
+  assert.equal(result.code, 0, result.stderr)
+  const card = JSON.parse(result.stdout)
+  assert.equal(card.id, 'wi-0004')
+  assert.equal(card.owner, 'sam')
+  assert.deepEqual(card.ancestry.map((entry: { id: string }) => entry.id), ['wi-0001'])
+  assert.deepEqual(card.children, { total: 0, open: 0, done: 0, items: [] })
+  assert.equal(readFixture('Boards/Build server.md'), before)
+})
+
 test('WI_MAX_AGENTS overrides the vault config for one dispatcher run', async () => {
   fixture = seed()
   fixture.write('.wi.json', '{"maxAgents":2}')
