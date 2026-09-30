@@ -5,7 +5,7 @@
  * applies the same ones. This module is only the part that touches a filesystem, which is exactly
  * the part the plugin must not carry to iOS.
  */
-import { writeFile, rename, readFile, mkdir, rm, stat } from 'node:fs/promises'
+import { writeFile, rename, readFile, mkdir, rm, stat, chmod } from 'node:fs/promises'
 import { createHash } from 'node:crypto'
 import { tmpdir } from 'node:os'
 import { dirname, join } from 'node:path'
@@ -23,7 +23,14 @@ export { applyEdits, withStamp, type Edit }
  */
 export async function writeAtomic(path: string, text: string): Promise<void> {
   const temp = join(dirname(path), `.wi-${process.pid}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}.tmp`)
+  let mode: number | undefined
+  try {
+    mode = (await stat(path)).mode & 0o7777
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error
+  }
   await writeFile(temp, text, 'utf8')
+  if (mode !== undefined) await chmod(temp, mode)
   await rename(temp, path)
 }
 

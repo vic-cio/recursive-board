@@ -1,7 +1,7 @@
 /** Exercise the validation hook against a temporary Git repository. */
 import { test, afterEach } from 'node:test'
 import assert from 'node:assert/strict'
-import { execFile } from 'node:child_process'
+import { execFile, spawnSync } from 'node:child_process'
 import { promisify } from 'node:util'
 import { existsSync, readFileSync } from 'node:fs'
 import { join, dirname } from 'node:path'
@@ -139,6 +139,28 @@ test('bundled wi installs a hook that runs the bundled entry point', async () =>
   const commit = await attempt('git', ['commit', '-m', 'broken'], fixture.root)
   assert.notEqual(commit.code, 0)
   assert.match(commit.stdout + commit.stderr, /status-invalid/)
+})
+
+test('source wi setup installs a hook that runs wi validate', async () => {
+  fixture = await vaultRepo()
+  const home = join(fixture.root, 'setup-home')
+  const setup = spawnSync('node', [tool, 'setup', '--vault', fixture.root], {
+    cwd: repo,
+    env: { ...process.env, HOME: home, XDG_CONFIG_HOME: join(home, '.config') },
+    input: 'yes\n',
+    encoding: 'utf8',
+  })
+  assert.equal(setup.status, 0, setup.stderr)
+
+  const hook = join(fixture.root, '.git/hooks/pre-commit')
+  const body = readFileSync(hook, 'utf8')
+  breakTheVault(fixture)
+  await run('git', ['add', '-A'], { cwd: fixture.root })
+  const commit = await attempt('git', ['commit', '-m', 'broken'], fixture.root)
+  assert.notEqual(commit.code, 0)
+  assert.match(commit.stdout + commit.stderr, /status-invalid/)
+  assert.ok(body.includes(tool))
+  assert.match(body, /validate --vault/)
 })
 
 test('uninstall leaves another pre-commit hook alone', async () => {
