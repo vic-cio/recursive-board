@@ -79,7 +79,12 @@ export function splitLegacyDashboardState(legacy: unknown, device: unknown): {
     you: pick('you'), root: pick('root'), focus: pick('focus'), webReviewMode: pick('webReviewMode'),
     finishedOpen: saved['finishedOpen'], foldedGroups: saved['foldedGroups'],
   })
-  return { device: next, personName: next.you, ticks: parsePersonTicks({ ticks: old['ticks'] }) }
+  const legacyOwner = typeof old['you'] === 'string' ? old['you'] : ''
+  return {
+    device: next,
+    personName: legacyOwner.trim() === '' ? next.you : legacyOwner,
+    ticks: parsePersonTicks({ ticks: old['ticks'] }),
+  }
 }
 
 /** Encode a person name as one safe path segment, including dot-only and Unicode names. */

@@ -79,15 +79,20 @@ test('writeGraphColours replaces its own groups and keeps the owner groups and s
   const graph = join(fixture.root, '.obsidian', 'graph.json')
   writeFileSync(graph, JSON.stringify({
     scale: 0.9,
-    colorGroups: [{ query: 'tag:#area/gone', color: { a: 1, rgb: 1 } }, { query: 'path:Knowledge', color: { a: 1, rgb: 2 } }],
+    colorGroups: [
+      { query: 'tag:#area/gone', color: { a: 1, rgb: 1 } },
+      { query: 'tag:#area/custom OR path:Knowledge', color: { a: 1, rgb: 2 } },
+      { query: 'path:Knowledge', color: { a: 1, rgb: 3 } },
+    ],
   }))
   const written = await writeGraphColours(await loadVault(fixture.root))
-  assert.deepEqual(written, { path: '.obsidian/graph.json', groups: 4, kept: 1 })
+  assert.deepEqual(written, { path: '.obsidian/graph.json', groups: 4, kept: 2 })
   const after = JSON.parse(readFileSync(graph, 'utf8'))
   assert.equal(after.scale, 0.9)
   assert.deepEqual(after.colorGroups.map((g: { query: string }) => g.query), [
     'tag:#area/work/web-site ([board:true] OR [area:true])', 'tag:#area/work/web-site',
     'tag:#area/work ([board:true] OR [area:true])', 'tag:#area/work',
+    'tag:#area/custom OR path:Knowledge',
     'path:Knowledge',
   ])
 })

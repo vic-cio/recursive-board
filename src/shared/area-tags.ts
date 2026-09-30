@@ -99,5 +99,6 @@ export function areaColourGroups(tags: Iterable<string>): GraphColourGroup[] {
 /** True for a group this module wrote. Every other group is the owner's and is kept. */
 export function isAreaColourGroup(group: unknown): boolean {
   if (typeof group !== 'object' || group === null || !('query' in group)) return false
-  return typeof group.query === 'string' && group.query.startsWith(`tag:#${AREA_TAG_PREFIX}`)
+  return typeof group.query === 'string' &&
+    /^tag:#area\/[a-z0-9_-]+(?:\/[a-z0-9_-]+)*(?: \(\[board:true\] OR \[area:true\]\))?$/.test(group.query)
 }

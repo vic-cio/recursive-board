@@ -49,3 +49,8 @@ test('a file moved on disk takes its pending undo with it', () => {
   stack.rename('Boards/Old.md', 'Boards/New.md')
   assert.equal(stack.peek()?.path, 'Boards/New.md')
 })
+
+test('undo refuses to trash a created item after another item links to it', () => {
+  assert.equal(UndoStack.canTrashCreated(0), true)
+  assert.equal(UndoStack.canTrashCreated(1), false)
+})

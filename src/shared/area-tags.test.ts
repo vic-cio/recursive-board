@@ -44,3 +44,9 @@ test('areaColourGroups puts deeper areas first, boards before cards, and shares 
   assert.ok(groups.every(isAreaColourGroup))
   assert.equal(isAreaColourGroup({ query: 'path:Knowledge' }), false)
 })
+
+test('area group detection keeps custom queries that only start with the area tag prefix', () => {
+  assert.equal(isAreaColourGroup({ query: 'tag:#area/work OR path:Notes' }), false)
+  assert.equal(isAreaColourGroup({ query: 'tag:#area/work' }), true)
+  assert.equal(isAreaColourGroup({ query: 'tag:#area/work ([board:true] OR [area:true])' }), true)
+})

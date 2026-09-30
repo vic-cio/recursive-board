@@ -16,7 +16,7 @@ Obsidian Sync carries the plugin data file only when **Installed community plugi
 
 `onExternalSettingsChange` reloads the board settings, so a change synced from another device applies at once. First-board setup sets `defaultRoot` in the `board` key.
 
-The tab edits `workItemFolder` as a text field with a folder suggester and a **Rename** button. Rename moves the folder with `fileManager.renameFile`, one step whatever the card count, then points the board at it. Links name files, not folders, so they survive. When a folder with the new name exists, the board reads it and moves nothing. A button, not a blur, commits the change, so a typo never renames a folder.
+The tab edits `workItemFolder` as a text field with a folder suggester and a **Rename** button. Rename moves the folder with `fileManager.renameFile`, one step whatever the card count, then points the board at it. If the settings save fails, the plugin renames the folder back. The plugin serializes board setting writes because each save writes the whole data file. Links name files, not folders, so they survive. When a folder with the new name exists, the board reads it and moves nothing. A button, not a blur, commits the change, so a typo never renames a folder.
 
 The tab edits `extraSections` as one chip per heading, with one field and Add, and × on each chip. A heading is added or removed, never edited, so no one has to follow a separator rule. Blanks and repeats are dropped. The description names the built-in sections the headings follow. The tab labels `defaultRoot` **Default parent**, because it names a card, not a folder.
 

@@ -35,9 +35,19 @@ test('legacy state splits into device choices and person ticks, with device valu
     { you: 'New name', root: '', focus: null, webReviewMode: 'off' },
   ), {
     device: { you: 'New name', root: '', focus: null, webReviewMode: 'off', finishedOpen: false, foldedGroups: [] },
-    personName: 'New name',
+    personName: 'Old name',
     ticks: { a: true, b: true },
   })
+})
+
+test('legacy ticks stay with their owner when the device selected another person', () => {
+  const migrated = splitLegacyDashboardState(
+    { you: 'Original owner', ticks: { 'a.md': true } },
+    { you: 'Current device person' },
+  )
+  assert.equal(migrated.device.you, 'Current device person')
+  assert.equal(migrated.personName, 'Original owner')
+  assert.deepEqual(migrated.ticks, { 'a.md': true })
 })
 
 test('invalid device values fall back to valid legacy choices', () => {

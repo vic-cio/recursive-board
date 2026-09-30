@@ -62,4 +62,9 @@ export class UndoStack {
   static restore(entry: UndoEntry, current: string): string | null {
     return current === entry.after ? entry.before : null
   }
+
+  /** Created items stay when another item now depends on their path. */
+  static canTrashCreated(childCount: number): boolean {
+    return childCount === 0
+  }
 }

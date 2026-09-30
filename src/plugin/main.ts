@@ -19,6 +19,8 @@ import { today, type Status } from '../shared/schema.ts'
 
 import { Actions } from './actions.ts'
 import { WorkItemIndex } from './index.ts'
+import { renameThenSave } from './rename-transaction.ts'
+import { SerialQueue } from './serial-queue.ts'
 import { mountAll, unmountAll } from './mount.ts'
 import { ChecklistComponents } from './ui/checklist.ts'
 import type { RenderContext } from './ui/context.ts'
@@ -50,6 +52,8 @@ export default class RecursiveBoardPlugin extends Plugin {
   private readonly checklistComponents = new ChecklistComponents()
   /** Last observed document per editor, used to reject no-op editor notifications. */
   private readonly editorValues = new WeakMap<Editor, string>()
+  /** Board settings share one plugin data file, so each read-patch-write must finish first. */
+  private readonly boardWrites = new SerialQueue()
   private pending: number | null = null
   private unloaded = false
   private firstBoardNotice: Notice | null = null
@@ -396,18 +400,25 @@ export default class RecursiveBoardPlugin extends Plugin {
    * from another device survives.
    */
   private async updateBoard(patch: Partial<VaultConfig>): Promise<void> {
-    try {
-      const data = await this.freshData()
-      const stored = boardSettingsIn(data)
-      const base = stored !== null ? parseVaultConfigValues(stored, PLUGIN_DATA_FILE) : this.index.config
-      const next = parseVaultConfigValues(boardSettingsRecord({ ...base, ...patch }), PLUGIN_DATA_FILE)
-      this.storedData = withBoardSettings(data, next)
-      await this.saveData(this.storedData)
-      await this.reloadConfig()
-    } catch (error) {
-      const reason = error instanceof Error ? error.message : String(error)
-      new Notice(`Recursive Board could not save the board settings: ${reason}`)
-    }
+    await this.boardWrites.run(async () => {
+      try {
+        await this.saveBoardPatch(patch)
+      } catch (error) {
+        const reason = error instanceof Error ? error.message : String(error)
+        new Notice(`Recursive Board could not save the board settings: ${reason}`)
+      }
+    })
+  }
+
+  /** Apply one patch after the prior queued save has updated the in-memory config. */
+  private async saveBoardPatch(patch: Partial<VaultConfig>): Promise<void> {
+    const data = await this.freshData()
+    const stored = boardSettingsIn(data)
+    const base = stored !== null ? parseVaultConfigValues(stored, PLUGIN_DATA_FILE) : this.index.config
+    const next = parseVaultConfigValues(boardSettingsRecord({ ...base, ...patch }), PLUGIN_DATA_FILE)
+    this.storedData = withBoardSettings(data, next)
+    await this.saveData(this.storedData)
+    await this.reloadConfig()
   }
 
   /**
@@ -420,12 +431,26 @@ export default class RecursiveBoardPlugin extends Plugin {
       const existing = this.app.vault.getAbstractFileByPath(to)
       if (existing !== null && !(existing instanceof TFolder)) throw new Error(`${to} is a file, not a folder.`)
       const current = this.app.vault.getFolderByPath(this.index.config.workItemFolder)
-      if (existing === null && current !== null) {
-        const parent = to.includes('/') ? to.slice(0, to.lastIndexOf('/')) : ''
-        if (parent !== '' && this.app.vault.getAbstractFileByPath(parent) === null) await this.app.vault.createFolder(parent)
-        await this.app.fileManager.renameFile(current, to)
-      }
-      await this.updateBoard({ workItemFolder: to })
+      await this.boardWrites.run(async () => {
+        if (existing === null && current !== null) {
+          const parent = to.includes('/') ? to.slice(0, to.lastIndexOf('/')) : ''
+          if (parent !== '' && this.app.vault.getAbstractFileByPath(parent) === null) await this.app.vault.createFolder(parent)
+          let renamedPath = current.path
+          await renameThenSave(
+            async (path) => {
+              const folder = this.app.vault.getFolderByPath(renamedPath)
+              if (folder === null) throw new Error(`Could not find the card folder at ${path}.`)
+              await this.app.fileManager.renameFile(folder, path)
+              renamedPath = path
+            },
+            current.path,
+            to,
+            () => this.saveBoardPatch({ workItemFolder: to }),
+          )
+        } else {
+          await this.saveBoardPatch({ workItemFolder: to })
+        }
+      })
     } catch (error) {
       const reason = error instanceof Error ? error.message : String(error)
       new Notice(`Recursive Board could not rename the card folder: ${reason}`)
