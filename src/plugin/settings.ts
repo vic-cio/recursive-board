@@ -89,8 +89,6 @@ export class StatusColorSettingTab extends PluginSettingTab {
   private readonly changeWebReviewMode: (mode: WebReviewMode) => Promise<void>
   private readonly personNames: () => string[]
   private readonly board: BoardSettingsHost
-  /** Extra sections rows while the tab is open, including a new blank row not yet saved. */
-  private sectionRows: string[] | null = null
 
   constructor(
     app: App,
@@ -245,47 +243,37 @@ export class StatusColorSettingTab extends PluginSettingTab {
         .onChange((value) => void this.board.update({ areaTags: value })))
   }
 
-  /** One row per heading, so no one has to follow a separator rule. */
+  /** One chip per heading, so no one has to follow a separator rule. A heading is added or removed, never edited. */
   private displaySections(containerEl: HTMLElement, config: VaultConfig): void {
-    const rows = this.sectionRows ??= [...config.extraSections]
-    const save = () => {
-      const sections = cleanSections(rows)
-      if (sections.join('\n') !== this.board.config().extraSections.join('\n')) void this.board.update({ extraSections: sections })
+    const sections = config.extraSections
+    let draft = ''
+    const add = () => {
+      const next = cleanSections([...sections, draft])
+      if (next.length === sections.length) return
+      void this.board.update({ extraSections: next }).then(() => this.display())
     }
 
-    new Setting(containerEl)
+    const setting = new Setting(containerEl)
       .setName('Extra sections')
-      .setDesc('Headings added to every new card.')
-      .addButton((button) => button
-        .setButtonText('Add section')
-        .onClick(() => {
-          rows.push('')
-          this.display()
-          const inputs = containerEl.querySelectorAll<HTMLInputElement>('.recursive-board-section-row input')
-          inputs[inputs.length - 1]?.focus()
-        }))
-
-    rows.forEach((heading, i) => {
-      new Setting(containerEl)
-        .setClass('recursive-board-section-row')
-        .addText((text) => {
-          text.setPlaceholder('Heading').setValue(heading)
-            .onChange((value) => { rows[i] = value })
-          text.inputEl.addEventListener('blur', save)
+      .setDesc('Every card has Objective, Context, Acceptance Criteria and Notes. These headings follow them on every new card.')
+      .addText((text) => {
+        text.setPlaceholder('Heading').onChange((value) => { draft = value })
+        text.inputEl.addEventListener('keydown', (event) => {
+          if (event.key === 'Enter') {
+            event.preventDefault()
+            add()
+          }
         })
-        .addExtraButton((button) => button
-          .setIcon('trash')
-          .setTooltip('Remove')
-          .onClick(() => {
-            rows.splice(i, 1)
-            save()
-            this.display()
-          }))
-    })
-  }
+      })
+      .addButton((button) => button.setButtonText('Add').onClick(add))
 
-  override hide(): void {
-    this.sectionRows = null
-    super.hide()
+    const chips = setting.descEl.createDiv({ cls: 'wi-section-chips' })
+    for (const heading of sections) {
+      const chip = chips.createSpan({ cls: 'wi-section-chip', text: heading })
+      const remove = chip.createEl('button', { cls: 'wi-section-chip-remove', text: '×', attr: { 'aria-label': `Remove ${heading}` } })
+      remove.addEventListener('click', () => {
+        void this.board.update({ extraSections: sections.filter((section) => section !== heading) }).then(() => this.display())
+      })
+    }
   }
 }

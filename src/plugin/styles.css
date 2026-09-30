@@ -1196,3 +1196,34 @@ button.wi-pill {
 button.wi-pill:hover {
   color: var(--text-normal);
 }
+
+/* Extra sections in the settings tab: one chip per heading (docs/adr/0050-board-settings-in-plugin-data.md). */
+.wi-section-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--size-4-1);
+  margin-top: var(--size-4-2);
+}
+
+.wi-section-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--size-2-1);
+  padding: var(--size-2-1) var(--size-4-2);
+  border-radius: var(--radius-l);
+  background: var(--background-modifier-hover);
+  color: var(--text-normal);
+}
+
+.wi-section-chip-remove {
+  padding: 0 var(--size-2-1);
+  height: auto;
+  background: none;
+  box-shadow: none;
+  color: var(--text-muted);
+  cursor: pointer;
+}
+
+.wi-section-chip-remove:hover {
+  color: var(--text-error);
+}

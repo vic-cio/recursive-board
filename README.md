@@ -33,7 +33,7 @@ Every child card has a **Promote** control at the top, even before it has childr
 
 ## Vault configuration
 
-Set the board settings in **Settings → Recursive Board → Board**. The section sets the card folder, the default parent (`defaultRoot`), the extra sections (one row per heading), first-child promotion, and area tags. The agent limit is under **Dispatcher**.
+Set the board settings in **Settings → Recursive Board → Board**. The section sets the card folder, the default parent (`defaultRoot`), the extra sections (one chip per heading), first-child promotion, and area tags. The agent limit is under **Dispatcher**.
 
 The plugin stores the board settings under the `board` key of its data file, `.obsidian/plugins/recursive-board/data.json`. `wi` reads that file and never writes it:
 
