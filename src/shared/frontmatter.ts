@@ -35,6 +35,9 @@ export interface Frontmatter {
 /** A key line: no leading space, a key, a colon, then an optional value. */
 const KEY_LINE = /^([A-Za-z_][\w.-]*)\s*:(?:[ \t]+(.*))?$/
 
+/** A block list item at column 0: a dash followed by a space, a tab or the line end. */
+const INDENTLESS_ITEM = /^-(?:[ \t]|$)/
+
 interface Block {
   /** Frontmatter lines, without their terminators. */
   lines: string[]
@@ -83,10 +86,12 @@ function readEntries(lines: string[]): Entry[] {
     if (!match) continue
     const [, key, rest] = match
     const value = rest === undefined || rest.trim() === '' ? undefined : parseScalar(rest)
-    // A block entry owns every following line that is indented or blank.
+    // A block entry owns every following line that is indented or blank, and the items of a
+    // block list written at column 0, which YAML allows under a mapping key.
     let end = i + 1
     if (value === undefined) {
-      while (end < lines.length && (/^[ \t]/.test(lines[end]!) || lines[end]!.trim() === '')) end++
+      while (end < lines.length && (/^[ \t]/.test(lines[end]!) || lines[end]!.trim() === '' ||
+        INDENTLESS_ITEM.test(lines[end]!))) end++
     }
     entries.push({ key: key!, start: i, end, value })
     i = end - 1
@@ -94,16 +99,71 @@ function readEntries(lines: string[]): Entry[] {
   return entries
 }
 
+/** The escapes a double-quoted YAML scalar can hold, other than the numeric ones. */
+const ESCAPES: Record<string, string> = {
+  '0': '\0', a: '\x07', b: '\b', t: '\t', '\t': '\t', n: '\n', v: '\v', f: '\f', r: '\r', e: '\x1b',
+  ' ': ' ', '"': '"', '/': '/', '\\': '\\', N: '\x85', _: '\xa0', L: '\u2028', P: '\u2029',
+}
+
+/** The length of each numeric escape's hex digits. */
+const HEX_ESCAPES: Record<string, number> = { x: 2, u: 4, U: 8 }
+
+/**
+ * Reads a quoted scalar at the start of `text`. Returns its value and the offset one past the
+ * closing quote, or null when the quote never closes or holds an escape YAML rejects.
+ */
+function readQuoted(text: string): { value: string, end: number } | null {
+  const quote = text[0]
+  let value = ''
+  let i = 1
+  while (i < text.length) {
+    const char = text[i]!
+    if (quote === "'") {
+      if (char === "'") {
+        if (text[i + 1] === "'") { value += "'"; i += 2; continue }
+        return { value, end: i + 1 }
+      }
+      value += char
+      i++
+      continue
+    }
+    if (char === '"') return { value, end: i + 1 }
+    if (char !== '\\') { value += char; i++; continue }
+    const code = text[i + 1]
+    if (code === undefined) return null
+    const simple = ESCAPES[code]
+    if (simple !== undefined) { value += simple; i += 2; continue }
+    const digits = HEX_ESCAPES[code]
+    if (digits === undefined) return null
+    const hex = text.slice(i + 2, i + 2 + digits)
+    if (!new RegExp(`^[0-9A-Fa-f]{${digits}}$`).test(hex)) return null
+    value += String.fromCodePoint(parseInt(hex, 16))
+    i += 2 + digits
+  }
+  return null
+}
+
+/** True when `rest` is empty or only whitespace and a comment. */
+function onlyComment(rest: string): boolean {
+  return /^(?:[ \t]+#.*)?[ \t]*$/.test(rest)
+}
+
+/** A plain scalar without its trailing comment, which starts at a `#` after a space or a tab. */
+function stripComment(text: string): string {
+  if (text.startsWith('#')) return ''
+  const hash = /[ \t]#/.exec(text)
+  return (hash ? text.slice(0, hash.index) : text).trim()
+}
+
 /** Reads a single-line YAML scalar. Returns undefined for a value this module will not interpret. */
 export function parseScalar(raw: string): Scalar | undefined {
-  const text = raw.trim()
+  const trimmed = raw.trim()
+  if (trimmed.startsWith('"') || trimmed.startsWith("'")) {
+    const quoted = readQuoted(trimmed)
+    if (quoted && onlyComment(trimmed.slice(quoted.end))) return quoted.value
+  }
+  const text = stripComment(trimmed)
   if (text === '') return undefined
-  if (text.startsWith('"') && text.endsWith('"') && text.length >= 2) {
-    return text.slice(1, -1).replace(/\\(["\\])/g, '$1')
-  }
-  if (text.startsWith("'") && text.endsWith("'") && text.length >= 2) {
-    return text.slice(1, -1).replace(/''/g, "'")
-  }
   if (text === 'true') return true
   if (text === 'false') return false
   if (/^-?\d+$/.test(text)) return Number(text)
@@ -118,7 +178,9 @@ function needsQuotes(text: string): boolean {
   if (text === '') return true
   if (text !== text.trim()) return true
   if (/^[[\]{}#&*!|>'"%@`,?-]/.test(text)) return true
-  if (text.includes(': ') || text.includes(' #') || /[\r\n]/.test(text)) return true
+  if (/:[ \t]/.test(text) || /[ \t]#/.test(text)) return true
+  // A line break would end the line, and a tab or other control character is safer escaped.
+  if (/[\u0000-\u001f\u007f]/.test(text)) return true
   if (text.endsWith(':')) return true
   if (/["'\\]/.test(text)) return true
   if (/^(true|false|null|~|yes|no|on|off)$/i.test(text)) return true
@@ -126,12 +188,23 @@ function needsQuotes(text: string): boolean {
   return false
 }
 
-/** Renders a scalar for a frontmatter line, quoting only when YAML would otherwise misread it. */
+/** The escape `formatScalar` writes for each control character with a short form. */
+const SHORT_ESCAPES: Record<string, string> = { '\t': '\\t', '\n': '\\n', '\r': '\\r' }
+
+/**
+ * Renders a scalar for a frontmatter line, quoting only when YAML would otherwise misread it.
+ * A string is always one line: a line break or other control character is written as a
+ * double-quoted escape, which YAML reads back as the same character.
+ */
 export function formatScalar(value: Scalar): string {
   if (typeof value === 'boolean') return value ? 'true' : 'false'
   if (typeof value === 'number') return String(value)
   if (!needsQuotes(value)) return value
-  return `"${value.replace(/([\\"])/g, '\\$1')}"`
+  const escaped = value
+    .replace(/([\\"])/g, '\\$1')
+    .replace(/[\u0000-\u001f\u007f]/g, (char) =>
+      SHORT_ESCAPES[char] ?? `\\x${char.charCodeAt(0).toString(16).padStart(2, '0')}`)
+  return `"${escaped}"`
 }
 
 /** Reads the frontmatter of a Markdown file. Returns null when the file has none. */
@@ -217,22 +290,61 @@ export function getList(text: string, key: string): string[] | undefined {
   const entry = readEntries(block.lines).find((e) => e.key === key)
   if (!entry) return undefined
   const first = KEY_LINE.exec(block.lines[entry.start]!)?.[2]?.trim() ?? ''
-  let parts: string[]
+  let values: string[]
   if (first.startsWith('[')) {
-    parts = first.replace(/^\[|\]$/g, '').split(',')
+    values = splitFlowList(first).map(scalarText)
   } else if (first !== '') {
-    parts = first.split(/[,\s]+/)
+    values = scalarText(first).split(/[,\s]+/)
   } else {
-    parts = block.lines.slice(entry.start + 1, entry.end)
-      .map((line) => /^[ \t]*-[ \t]+(.*)$/.exec(line)?.[1] ?? '')
+    values = block.lines.slice(entry.start + 1, entry.end)
+      .map((line) => scalarText(/^[ \t]*-[ \t]+(.*)$/.exec(line)?.[1] ?? ''))
   }
+  return values.map((value) => value.trim()).filter((value) => value !== '')
+}
+
+/** A scalar read as text, or an empty string when it is not a scalar. */
+function scalarText(raw: string): string {
+  const value = parseScalar(raw)
+  return value === undefined ? '' : String(value)
+}
+
+/**
+ * Splits a one-line flow list such as `[a, "b, c"]` into its raw items. A comma inside quotes or
+ * inside a nested bracket does not split, and a comment after the closing bracket is dropped.
+ */
+function splitFlowList(text: string): string[] {
+  const parts: string[] = []
+  let depth = 0
+  let item = ''
+  let i = 0
+  while (i < text.length) {
+    const char = text[i]!
+    if ((char === '"' || char === "'") && item.trim() === '') {
+      const quoted = readQuoted(text.slice(i))
+      if (quoted) {
+        item += text.slice(i, i + quoted.end)
+        i += quoted.end
+        continue
+      }
+    }
+    if (char === '[' || char === '{') {
+      depth++
+      if (depth === 1) { i++; continue }
+    } else if (char === ']' || char === '}') {
+      depth--
+      if (depth === 0) { parts.push(item); return parts }
+    } else if (char === ',' && depth === 1) {
+      parts.push(item)
+      item = ''
+      i++
+      continue
+    }
+    item += char
+    i++
+  }
+  // The list never closed on this line: keep what was read.
+  parts.push(item)
   return parts
-    .map((part) => {
-      const value = parseScalar(part)
-      return typeof value === 'string' ? value : value === undefined ? '' : String(value)
-    })
-    .map((part) => part.trim())
-    .filter((part) => part !== '')
 }
 
 /**
