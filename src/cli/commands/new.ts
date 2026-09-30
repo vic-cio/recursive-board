@@ -71,6 +71,9 @@ export async function createItem(vault: Vault, options: NewOptions): Promise<Cre
   if (!isStatus(status)) {
     throw new Error(`"${status}" is not a status. Use backlog, options, doing or done.`)
   }
+  if (template.area && options.agent?.trim()) {
+    throw new Error('areas cannot have an agent')
+  }
 
   const parent = vault.resolve(parentRef)
   const gaps = briefGaps(template, options.brief)
@@ -87,7 +90,7 @@ export async function createItem(vault: Vault, options: NewOptions): Promise<Cre
   const stamp = today()
   const inherited = inheritedChildFields({
     owner: textField(parent.frontmatter.get('owner')),
-    agent: textField(parent.frontmatter.get('agent')),
+    agent: template.area ? undefined : textField(parent.frontmatter.get('agent')),
   }, status, options)
   const areaTag = vault.config.areaTags
     ? areaTagFor([{ title, area: template.area === true }, ...chainOf(vault, parent)])

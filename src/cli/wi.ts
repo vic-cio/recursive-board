@@ -882,11 +882,12 @@ function row3(row: ChildRow, vault: Vault): string {
   const status = row.item.status ?? '—'
   const kids = row.childCount > 0 ? `  (${row.childCount})` : ''
   const board = row.item.board ? '  [board]' : ''
+  const area = row.item.area ? '  [area]' : ''
   const archived = row.archived ? '  [archived]' : ''
   const blocked = row.item.frontmatter.get('blocked') === true ? '  [blocked]' : ''
   const open = row.item.status === 'done' ? 0 : openDependencies(vault, row.item).length
   const waits = open > 0 ? `  [waits on ${open}]` : ''
-  return `${row.item.id ?? '(no id)'}  ${status.padEnd(7)}  ${row.item.title ?? row.item.stem}${kids}${board}${blocked}${waits}${archived}`
+  return `${row.item.id ?? '(no id)'}  ${status.padEnd(7)}  ${row.item.title ?? row.item.stem}${kids}${board}${area}${blocked}${waits}${archived}`
 }
 
 function print(value: unknown): void {

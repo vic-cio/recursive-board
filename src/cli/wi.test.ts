@@ -321,6 +321,26 @@ test('wi children prints the four columns by default', async () => {
   assert.match(stdout, /\[board\]/)
 })
 
+test('wi children --status includes matching areas in text and JSON', async () => {
+  fixture = seed()
+  fixture.write('Boards/Operations.md', item({
+    type: 'work-item', id: 'wi-0090', title: 'Operations', area: true,
+    status: 'doing', parent: '"[[Main]]"', created: '2026-09-21', updated: '2026-09-21',
+  }))
+
+  const text = await wi(['children', 'Main', '--status', 'doing'])
+  assert.equal(text.code, 0, text.stderr)
+  assert.match(text.stdout, /^  Areas \(1\)$/m)
+  assert.match(text.stdout, /wi-0090  doing\s+Operations  \[area\]/)
+  assert.match(text.stdout, /wi-0004  doing\s+Build server/)
+
+  const json = await wi(['children', 'Main', '--status', 'doing', '--json'])
+  assert.equal(json.code, 0, json.stderr)
+  const listing = JSON.parse(json.stdout)
+  assert.deepEqual(listing.areas.map((row: { id: string }) => row.id), ['wi-0090'])
+  assert.deepEqual(listing.children.map((row: { id: string }) => row.id), ['wi-0004'])
+})
+
 test('wi children --tree walks the whole subtree', async () => {
   fixture = seed()
   const a = JSON.parse((await wi(['new', 'Streaming', '--parent', 'wi-0004', '--json'])).stdout)

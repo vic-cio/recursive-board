@@ -11,12 +11,12 @@
  */
 import { Menu, Notice, Platform, setIcon } from 'obsidian'
 
-import { STATUSES } from '../../shared/schema.ts'
 import type { WorkItemMeta } from '../index.ts'
 import type { RenderContext } from './context.ts'
 import { MoveModal } from './move-modal.ts'
 import { DependModal } from './depend-modal.ts'
 import { statusLabel } from './status-label.ts'
+import { menuStatuses } from './menu-status.ts'
 
 /** Opens the menu for a work item on a right click. */
 export function attachMenu(el: HTMLElement, ctx: RenderContext, meta: WorkItemMeta): void {
@@ -94,9 +94,10 @@ function buildMenu(ctx: RenderContext, meta: WorkItemMeta): Menu {
   }
 
   // A root takes no status, so it gets no status entries.
-  if (meta.parentLink !== null && !meta.area) {
+  const statuses = menuStatuses(meta)
+  if (statuses.length > 0) {
     menu.addSeparator()
-    for (const status of STATUSES) {
+    for (const status of statuses) {
       menu.addItem((item) => item
         .setTitle(statusLabel(status))
         .setChecked(meta.status === status)

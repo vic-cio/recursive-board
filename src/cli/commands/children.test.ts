@@ -78,6 +78,18 @@ test('listChildren filters to one status', async () => {
   assert.deepEqual(result.children.map((c) => c.item.id), ['wi-0006'])
 })
 
+test('listChildren includes areas in a status-filtered listing', async () => {
+  fixture = seed()
+  fixture.write('Boards/Operations.md', item({
+    type: 'work-item', id: 'wi-0090', title: 'Operations', area: true,
+    status: 'doing', parent: '"[[Main]]"', created: '2026-09-21', updated: '2026-09-21',
+  }))
+  const result = listChildren(await loadVault(fixture.root), 'Main', { status: 'doing' })
+  assert.deepEqual(result.children.map((row) => row.item.title), ['Build server'])
+  assert.deepEqual(result.areas.map((row) => row.item.title), ['Operations'])
+  assert.deepEqual(result.byStatus.get('doing')!.map((row) => row.item.title), ['Build server'])
+})
+
 test('listChildren returns an empty list for a leaf, and does not throw', async () => {
   fixture = seed()
   const vault = await loadVault(fixture.root)
