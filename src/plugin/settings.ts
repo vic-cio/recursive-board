@@ -1,18 +1,16 @@
 import { AbstractInputSuggest, PluginSettingTab, Setting, TFolder, type App, type Plugin } from 'obsidian'
 import type { WebReviewMode } from './dashboard-model.ts'
 import type { VaultConfig } from '../shared/vault-config.ts'
+import { cleanSections } from '../shared/board-settings.ts'
 
 /** What the Board section reads and writes (docs/adr/0050-board-settings-in-plugin-data.md). */
 export interface BoardSettingsHost {
   config: () => VaultConfig
   update: (patch: Partial<VaultConfig>) => Promise<void>
+  /** Renames the card folder to this path, or points at it when a folder there exists. */
+  renameFolder: (path: string) => Promise<void>
   /** Filename stems and titles of the cards that can be the default root. */
   roots: () => Array<{ stem: string; title: string }>
-}
-
-/** Parses the Extra sections field: one heading per line, blank lines dropped. */
-export function parseExtraSections(value: string): string[] {
-  return value.split(/\r?\n/).map((line) => line.trim()).filter((line) => line !== '')
 }
 
 class FolderSuggest extends AbstractInputSuggest<TFolder> {
@@ -91,6 +89,8 @@ export class StatusColorSettingTab extends PluginSettingTab {
   private readonly changeWebReviewMode: (mode: WebReviewMode) => Promise<void>
   private readonly personNames: () => string[]
   private readonly board: BoardSettingsHost
+  /** Extra sections rows while the tab is open, including a new blank row not yet saved. */
+  private sectionRows: string[] | null = null
 
   constructor(
     app: App,
@@ -196,22 +196,27 @@ export class StatusColorSettingTab extends PluginSettingTab {
     containerEl.createEl('h3', { text: 'Board' })
     const config = this.board.config()
 
+    let folderValue = config.workItemFolder
     new Setting(containerEl)
       .setName('Card folder')
-      .setDesc('The folder that holds every card. A change only points the board at another folder: it does not move cards. Move the folder first, then change this.')
+      .setDesc('The folder that holds every card. Rename moves the folder with all its cards in one step, and links keep working. If a folder with the new name exists, the board reads that folder instead.')
       .addText((text) => {
-        const commit = (value: string) => {
-          const folder = value.trim().replace(/\/+$/, '')
-          if (folder !== '' && folder !== this.board.config().workItemFolder) void this.board.update({ workItemFolder: folder })
-        }
-        text.setPlaceholder('Boards').setValue(config.workItemFolder)
-        text.inputEl.addEventListener('blur', () => commit(text.getValue()))
-        new FolderSuggest(this.app, text.inputEl, commit)
+        text.setPlaceholder('Boards').setValue(folderValue)
+          .onChange((value) => { folderValue = value })
+        new FolderSuggest(this.app, text.inputEl, (path) => { folderValue = path })
       })
+      .addButton((button) => button
+        .setButtonText('Rename')
+        .onClick(async () => {
+          const folder = folderValue.trim().replace(/\/+$/, '')
+          if (folder === '' || folder === this.board.config().workItemFolder) return
+          await this.board.renameFolder(folder)
+          this.display()
+        }))
 
     new Setting(containerEl)
-      .setName('Default root')
-      .setDesc('The card that wi new uses as the parent when you give none.')
+      .setName('Default parent')
+      .setDesc('The card that wi new puts a new card under when you give no --parent. It is a card, such as Main, not a folder.')
       .addDropdown((dropdown) => {
         dropdown.addOption('', 'None')
         const roots = this.board.roots()
@@ -223,17 +228,7 @@ export class StatusColorSettingTab extends PluginSettingTab {
           .onChange((value) => void this.board.update({ defaultRoot: value === '' ? null : value }))
       })
 
-    new Setting(containerEl)
-      .setName('Extra sections')
-      .setDesc('Headings added to every new card, one per line.')
-      .addTextArea((area) => {
-        area.setPlaceholder('Knowledge').setValue(config.extraSections.join('\n'))
-        area.inputEl.rows = 3
-        area.inputEl.addEventListener('blur', () => {
-          const sections = parseExtraSections(area.getValue())
-          if (sections.join('\n') !== this.board.config().extraSections.join('\n')) void this.board.update({ extraSections: sections })
-        })
-      })
+    this.displaySections(containerEl, config)
 
     new Setting(containerEl)
       .setName('Promote parent on first child')
@@ -248,5 +243,49 @@ export class StatusColorSettingTab extends PluginSettingTab {
       .addToggle((toggle) => toggle
         .setValue(config.areaTags)
         .onChange((value) => void this.board.update({ areaTags: value })))
+  }
+
+  /** One row per heading, so no one has to follow a separator rule. */
+  private displaySections(containerEl: HTMLElement, config: VaultConfig): void {
+    const rows = this.sectionRows ??= [...config.extraSections]
+    const save = () => {
+      const sections = cleanSections(rows)
+      if (sections.join('\n') !== this.board.config().extraSections.join('\n')) void this.board.update({ extraSections: sections })
+    }
+
+    new Setting(containerEl)
+      .setName('Extra sections')
+      .setDesc('Headings added to every new card.')
+      .addButton((button) => button
+        .setButtonText('Add section')
+        .onClick(() => {
+          rows.push('')
+          this.display()
+          const inputs = containerEl.querySelectorAll<HTMLInputElement>('.recursive-board-section-row input')
+          inputs[inputs.length - 1]?.focus()
+        }))
+
+    rows.forEach((heading, i) => {
+      new Setting(containerEl)
+        .setClass('recursive-board-section-row')
+        .addText((text) => {
+          text.setPlaceholder('Heading').setValue(heading)
+            .onChange((value) => { rows[i] = value })
+          text.inputEl.addEventListener('blur', save)
+        })
+        .addExtraButton((button) => button
+          .setIcon('trash')
+          .setTooltip('Remove')
+          .onClick(() => {
+            rows.splice(i, 1)
+            save()
+            this.display()
+          }))
+    })
+  }
+
+  override hide(): void {
+    this.sectionRows = null
+    super.hide()
   }
 }

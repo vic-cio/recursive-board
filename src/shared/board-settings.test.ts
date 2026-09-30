@@ -2,7 +2,7 @@ import { test } from 'node:test'
 import assert from 'node:assert/strict'
 
 import {
-  boardSettingsRecord, parsePluginData, PLUGIN_DATA_FILE, selectVaultConfig, withBoardSettings,
+  boardSettingsRecord, cleanSections, parsePluginData, PLUGIN_DATA_FILE, selectVaultConfig, withBoardSettings,
 } from './board-settings.ts'
 import { DEFAULT_VAULT_CONFIG } from './vault-config.ts'
 
@@ -64,4 +64,8 @@ test('withBoardSettings replaces only the board key', () => {
   assert.deepEqual(boardSettingsRecord(config), {
     workItemFolder: 'Boards', defaultRoot: null, extraSections: ['Knowledge'], maxAgents: null, autoPromote: true, areaTags: true,
   })
+})
+
+test('cleanSections trims headings, drops blank rows and repeats', () => {
+  assert.deepEqual(cleanSections([' Knowledge ', '', 'Risks', 'Knowledge', '   ']), ['Knowledge', 'Risks'])
 })

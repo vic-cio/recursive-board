@@ -9,7 +9,7 @@
  * `path`, `child_process` or `electron`. Two guards enforce that: `tsconfig.plugin.json` has no
  * Node types, and `build/forbidden-imports.mjs` fails the build.
  */
-import { MarkdownView, Notice, normalizePath, Platform, Plugin, TFile, type Editor } from 'obsidian'
+import { MarkdownView, Notice, normalizePath, Platform, Plugin, TFile, TFolder, type Editor } from 'obsidian'
 import { parseVaultConfigValues, WI_CONFIG_FILE, type VaultConfig } from '../shared/vault-config.ts'
 import { isVaultConfigEvent, VAULT_CONFIG_NOTE } from '../shared/vault-config-note.ts'
 import {
@@ -81,6 +81,7 @@ export default class RecursiveBoardPlugin extends Plugin {
       {
         config: () => this.index.config,
         update: (patch) => this.updateBoard(patch),
+        renameFolder: (path) => this.renameCardFolder(path),
         roots: () => this.index.all()
           .filter((item) => item.parentLink === null)
           .map((item) => ({ stem: item.stem, title: item.title }))
@@ -406,6 +407,28 @@ export default class RecursiveBoardPlugin extends Plugin {
     } catch (error) {
       const reason = error instanceof Error ? error.message : String(error)
       new Notice(`Recursive Board could not save the board settings: ${reason}`)
+    }
+  }
+
+  /**
+   * Renames the card folder in one step, then points the board at it. Links name files, not
+   * folders, so they keep working. A folder that already exists is read as it is.
+   */
+  private async renameCardFolder(target: string): Promise<void> {
+    try {
+      const to = normalizePath(parseVaultConfigValues({ workItemFolder: target }, 'Card folder').workItemFolder)
+      const existing = this.app.vault.getAbstractFileByPath(to)
+      if (existing !== null && !(existing instanceof TFolder)) throw new Error(`${to} is a file, not a folder.`)
+      const current = this.app.vault.getFolderByPath(this.index.config.workItemFolder)
+      if (existing === null && current !== null) {
+        const parent = to.includes('/') ? to.slice(0, to.lastIndexOf('/')) : ''
+        if (parent !== '' && this.app.vault.getAbstractFileByPath(parent) === null) await this.app.vault.createFolder(parent)
+        await this.app.fileManager.renameFile(current, to)
+      }
+      await this.updateBoard({ workItemFolder: to })
+    } catch (error) {
+      const reason = error instanceof Error ? error.message : String(error)
+      new Notice(`Recursive Board could not rename the card folder: ${reason}`)
     }
   }
 

@@ -33,7 +33,7 @@ Every child card has a **Promote** control at the top, even before it has childr
 
 ## Vault configuration
 
-Set the board settings in **Settings → Recursive Board → Board**. The section sets the card folder, the default root, the extra sections, first-child promotion, and area tags. The agent limit is under **Dispatcher**.
+Set the board settings in **Settings → Recursive Board → Board**. The section sets the card folder, the default parent (`defaultRoot`), the extra sections (one row per heading), first-child promotion, and area tags. The agent limit is under **Dispatcher**.
 
 The plugin stores the board settings under the `board` key of its data file, `.obsidian/plugins/recursive-board/data.json`. `wi` reads that file and never writes it:
 
@@ -50,7 +50,7 @@ The plugin stores the board settings under the `board` key of its data file, `.o
 }
 ```
 
-`workItemFolder` is a vault-relative folder path. It defaults to `Boards`. A change points the board and `wi` at another folder. It does not move cards: move the folder in Obsidian first, then change the setting. `defaultRoot` is a root filename stem. It defaults to `null`, so `wi new` needs an explicit `--parent`. `extraSections` lists non-empty, single-line headings. Each heading follows the built-in sections with an empty `- ` starter. These settings apply to `wi new`, `wi template write`, and plugin item creation. Invalid values stop config loading.
+`workItemFolder` is a vault-relative folder path. It defaults to `Boards`. In the settings tab, **Rename** renames the folder with all its cards in one step. Links name files, not folders, so they keep working. If a folder with the new name exists, the board reads that folder and moves nothing. `defaultRoot` is a root filename stem. It defaults to `null`, so `wi new` needs an explicit `--parent`. `extraSections` lists non-empty, single-line headings. Each heading follows the built-in sections with an empty `- ` starter. These settings apply to `wi new`, `wi template write`, and plugin item creation. Invalid values stop config loading.
 
 `maxAgents` is a non-negative whole number or `null` for no limit. `WI_MAX_AGENTS` overrides it for one CLI run. `wi agents` reports the limit and claimed cards. One agent counts once when it holds a card and its subtask. The limit is advisory. `wi claim` can exceed it.
 
@@ -89,7 +89,7 @@ Enable Recursive Board in an empty vault. Use the **Create your first board** bu
    ---
    ```
 
-2. Open the vault in Obsidian with the plugin on. In **Settings → Recursive Board → Board**, set **Default root** to `Project`.
+2. Open the vault in Obsidian with the plugin on. In **Settings → Recursive Board → Board**, set **Default parent** to `Project`.
 3. Add a card with `wi new "Write the first card"`.
 4. Open `Project` in Obsidian. The plugin shows its children as a board.
 

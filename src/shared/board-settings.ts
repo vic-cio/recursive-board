@@ -83,3 +83,13 @@ export function withBoardSettings(pluginData: Readonly<Record<string, unknown>>,
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value)
 }
+
+/** The Extra sections rows as a setting: trimmed, with blank rows and repeats dropped. */
+export function cleanSections(rows: readonly string[]): string[] {
+  const sections: string[] = []
+  for (const row of rows) {
+    const heading = row.trim()
+    if (heading !== '' && !sections.includes(heading)) sections.push(heading)
+  }
+  return sections
+}
