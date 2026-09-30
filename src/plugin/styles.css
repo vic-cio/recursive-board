@@ -1074,6 +1074,10 @@
 .wi-dash-project-open { display: flex; align-self: stretch; height: auto; min-width: 40px; justify-content: center; padding: 0 var(--size-4-2); }
 /* The same size as the board icon in Progress. */
 .wi-dash-copy { flex: none; align-self: center; }
+button.wi-dash-id.wi-dash-id { display: inline-flex; align-items: center; gap: var(--size-4-1); height: auto; padding: 0 var(--size-4-1); background: none; box-shadow: none; color: var(--text-faint); font-family: var(--font-monospace); font-size: var(--font-ui-smaller); cursor: pointer; }
+button.wi-dash-id.wi-dash-id:hover { color: var(--text-normal); background: var(--background-modifier-hover); }
+.wi-dash-id .wi-dash-icon svg { width: var(--icon-xs); height: var(--icon-xs); }
+.wi-dash-desktop-card button.wi-dash-id.wi-dash-id, .wi-dash-phone-card button.wi-dash-id.wi-dash-id { display: flex; width: fit-content; margin-top: var(--size-4-1); margin-left: calc(-1 * var(--size-4-1)); font-weight: normal; }
 .wi-dash-badge { display: inline-flex; align-items: center; gap: var(--size-2-1); margin-left: var(--size-4-1); font-weight: var(--font-normal); font-size: var(--font-ui-smaller); color: var(--interactive-accent); }
 .wi-dash-badge .wi-dash-icon { color: inherit; }
 .wi-dash-badge .wi-dash-icon svg { width: var(--icon-xs); height: var(--icon-xs); }

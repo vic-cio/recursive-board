@@ -36,8 +36,9 @@ It has four panels:
   session most likely ended without `wi release`. The panel shows only when it has a row.
 
 Each agent row and each quiet row ends with a copy icon, the same size as the board icon in Progress. A
-click copies the card id, so a person can paste the card to an agent. For review shows no id: the card
-title is enough there. A card with no id shows no icon; `wi validate` reports it.
+click copies the card id, so a person can paste the card to an agent. For review shows the card id
+under its title on desktop and phone layouts. Clicking the id copies it and shows a notice.
+A card with no id shows no copy control; `wi validate` reports it.
 
 Areas (0028) nest, so the dashboard shows one level of them at a time. With no focus, each card
 groups under its top area, and cards in no area group under "No area", last. Clicking an area
