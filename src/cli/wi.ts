@@ -490,11 +490,11 @@ async function runDepend(vault: Vault, rest: string[], values: Values, json: boo
   if (ref === '' || on === '') throw new UsageError('wi depend needs a <ref> and --on <ref>. Add --off to remove the dependency.')
   const change = await setDependency(vault, ref, on, values['off'] !== true)
   if (json) {
-    print({ id: change.item.id, path: change.item.relPath, on: change.on.id ?? change.on.stem, added: change.added, changed: change.changed })
+    print({ id: change.item.id, path: change.item.relPath, on: change.on?.id ?? change.on?.stem ?? change.onRef, added: change.added, changed: change.changed })
   } else if (!change.changed) {
-    process.stdout.write(`${label(change.item)} ${change.added ? 'already waits' : 'does not wait'} on ${titleOf(change.on)}. Nothing written.\n`)
+    process.stdout.write(`${label(change.item)} ${change.added ? 'already waits' : 'does not wait'} on ${change.on ? titleOf(change.on) : change.onRef}. Nothing written.\n`)
   } else {
-    process.stdout.write(`${label(change.item)}  ${change.added ? 'waits on' : 'no longer waits on'} ${titleOf(change.on)}\n`)
+    process.stdout.write(`${label(change.item)}  ${change.added ? 'waits on' : 'no longer waits on'} ${change.on ? titleOf(change.on) : change.onRef}\n`)
   }
   return 0
 }

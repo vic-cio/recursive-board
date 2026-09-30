@@ -559,6 +559,18 @@ test('wi move reparents, and the item then lists under the new parent', async ()
   assert.match(stdout, /Streaming/)
 })
 
+test('wi move repairs a malformed parent link', async () => {
+  fixture = seed()
+  fixture.write('Boards/Lost.md', item({
+    type: 'work-item', id: 'wi-0010', title: 'Lost', status: 'backlog', parent: 'broken link',
+    created: '2026-09-21', updated: '2026-09-21',
+  }))
+
+  const moved = await wi(['move', 'wi-0010', '--to', 'Main'])
+  assert.equal(moved.code, 0, moved.stderr)
+  assert.match(readFileSync(join(fixture.root, 'Boards/Lost.md'), 'utf8'), /parent: "\[\[Main\]\]"/)
+})
+
 test('wi move without --to exits 2 and says what it needs', async () => {
   fixture = seed()
   const { code, stderr } = await wi(['move', 'wi-0004'])

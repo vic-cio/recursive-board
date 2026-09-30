@@ -31,7 +31,7 @@ export async function moveItem(vault: Vault, ref: string, targetRef: string): Pr
   const refusal = moveRefusal({
     item: key(item),
     target: key(target),
-    isRoot: item.parent === null,
+    isRoot: item.parentRaw === undefined,
     parentOf: (k) => {
       const parent = vault.resolveLink(byKey.get(k)?.parent ?? null)
       return parent ? key(parent) : null

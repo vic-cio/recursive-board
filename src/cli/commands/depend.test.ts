@@ -59,6 +59,14 @@ test('wi depend --off removes it, and the key goes with the last one', async () 
   assert.equal(listOf(fixture, 'Build'), undefined)
 })
 
+test('wi depend --off removes an unresolved dependency using its link target', async () => {
+  fixture = seed()
+  fixture.write('Boards/Build.md', card('wi-0003', 'Build', { depends_on: '"[[Gone]]"' }))
+  const change = await setDependency(await vaultOf(fixture), 'Build', 'Gone', false)
+  assert.equal(change.changed, true)
+  assert.equal(listOf(fixture, 'Build'), undefined)
+})
+
 test('wi depend refuses a card waiting on itself, on a root, or in a cycle', async () => {
   fixture = seed()
   await assert.rejects(setDependency(await vaultOf(fixture), 'Build', 'Build', true), /cannot wait on itself/)
@@ -133,4 +141,12 @@ test('the CLI adds a dependency, marks the waiting card, and names what done unb
   await assert.rejects(wi('claim', 'Build', '--agent', 'codex'), /waits on Spec/)
   assert.match((await wi('status', 'Spec', 'done')).stdout, /wi-0003  Build  waits on nothing open now/)
   assert.match((await wi('depend', 'Build', '--on', 'Spec', '--off')).stdout, /no longer waits on Spec/)
+})
+
+test('the validator repair command removes an unresolved dependency', async () => {
+  fixture = seed()
+  fixture.write('Boards/Build.md', card('wi-0003', 'Build', { depends_on: '"[[Gone]]"' }))
+  const wi = (...args: string[]) => run('node', [CLI, ...args], { env: { ...process.env, WI_VAULT: fixture!.root } })
+  assert.match((await wi('depend', 'wi-0003', '--on', 'Gone', '--off')).stdout, /no longer waits on Gone/)
+  assert.equal(listOf(fixture, 'Build'), undefined)
 })
