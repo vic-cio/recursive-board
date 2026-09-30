@@ -671,7 +671,7 @@ test('brief flags outside wi new are refused', async () => {
   fixture = seed()
   const result = await wi(['status', 'Build server', 'done', '--objective', 'x'])
   assert.equal(result.code, 2)
-  assert.match(result.stderr, /apply only to wi new/)
+  assert.match(result.stderr, /--objective applies only to wi new/)
 })
 
 test('wi children marks a blocked card', async () => {

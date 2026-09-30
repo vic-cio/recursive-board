@@ -178,6 +178,8 @@ The pre-commit hook runs `wi validate` and stops a commit when the vault has err
 | `wi --help` or `wi help` | Prints usage, options, and notes. |
 | `wi --version` | Prints the installed CLI version. |
 
+Each command takes only the flags its row shows, plus `--vault` and `--json` where it reads a vault or prints a result. It refuses any other flag with exit code 2 and names the flag, so a flag cannot look as if it worked. `wi archive` refuses `--dry-run`: an archive changes one flag, and `--undo` reverses it.
+
 `wi new --template area` creates an area in `backlog` by default. Pass `--status` to choose its
 starting status. Areas appear in their status column. Areas in options or doing also appear in the area bar; a backlog or done area stays in its column only.
 

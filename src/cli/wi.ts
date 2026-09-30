@@ -9,7 +9,6 @@
  *
  * Exit codes: 0 fine, 1 the vault has errors, 2 the command could not run.
  */
-import { parseArgs } from 'node:util'
 import { resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
@@ -39,6 +38,7 @@ import { hookStatus, installHook, uninstallHook } from './commands/hook.ts'
 import { runSetup } from './commands/setup.ts'
 import { objectiveReport } from './commands/objective.ts'
 import { correctionTrace, renderCorrectionTrace } from './commands/trace.ts'
+import { COMMAND_FLAGS, parseCommandLine, type Values } from './flags.ts'
 import { PLUGIN_DATA_FILE } from '../shared/board-settings.ts'
 import { STATUSES } from '../shared/schema.ts'
 import { templateNames } from '../shared/templates.ts'
@@ -89,6 +89,8 @@ Options
   -V, --version    Print the version.
 
 Notes
+  Each command takes only the flags its usage line shows, plus --vault and --json where it reads a
+  vault or prints a result. It refuses any other flag with exit 2 and names the flag.
   \`wi new\` writes the brief: --objective once, --context and --criteria once per paragraph or
   criterion. It warns when the card has no Objective or Acceptance Criteria; --strict refuses it.
   \`wi new\` and \`wi note\` wrap bare angle placeholders in backticks in Markdown body text. They
@@ -144,45 +146,7 @@ const VERSION = '0.7.0'
 class UsageError extends Error {}
 
 async function main(argv: string[]): Promise<number> {
-  const { values, positionals } = parseArgs({
-    args: argv,
-    allowPositionals: true,
-    strict: true,
-    options: {
-      parent: { type: 'string' },
-      to: { type: 'string' },
-      creator: { type: 'string' },
-      model: { type: 'string' },
-      role: { type: 'string' },
-      on: { type: 'string' },
-      status: { type: 'string' },
-      owner: { type: 'string' },
-      agent: { type: 'string' },
-      reason: { type: 'string' },
-      where: { type: 'string' },
-      heading: { type: 'string' },
-      claim: { type: 'string' },
-      priority: { type: 'string' },
-      template: { type: 'string' },
-      objective: { type: 'string' },
-      context: { type: 'string', multiple: true },
-      criteria: { type: 'string', multiple: true },
-      strict: { type: 'boolean', default: false },
-      vault: { type: 'string' },
-      board: { type: 'string' },
-      tree: { type: 'boolean', default: false },
-      archived: { type: 'boolean', default: false },
-      undo: { type: 'boolean', default: false },
-      off: { type: 'boolean', default: false },
-      recursive: { type: 'boolean', short: 'r', default: false },
-      'dry-run': { type: 'boolean', default: false },
-      json: { type: 'boolean', default: false },
-      force: { type: 'boolean', default: false },
-      yes: { type: 'boolean', default: false },
-      help: { type: 'boolean', short: 'h', default: false },
-      version: { type: 'boolean', short: 'V', default: false },
-    },
-  })
+  const { values, positionals } = parseCommandLine(argv)
 
   if (values.version) {
     process.stdout.write(`${VERSION}\n`)
@@ -193,22 +157,7 @@ async function main(argv: string[]): Promise<number> {
     process.stdout.write(HELP)
     return command === undefined && !values.help ? 2 : 0
   }
-  if (values.force && !((command === 'hook' && rest[0] === 'install') || command === 'setup')) {
-    throw new UsageError('--force applies only to wi hook install or wi setup.')
-  }
-  if (values.yes && command !== 'setup') throw new UsageError('--yes applies only to wi setup.')
-  if (values.off && command !== 'area' && command !== 'depend') throw new UsageError('--off applies only to wi area and wi depend.')
-  if (values.on !== undefined && command !== 'depend') throw new UsageError('--on applies only to wi depend.')
-  if ((values.objective !== undefined || values.context !== undefined || values.criteria !== undefined || values.strict) &&
-    command !== 'new') {
-    throw new UsageError('--objective, --context, --criteria and --strict apply only to wi new.')
-  }
-  if ((values.creator !== undefined || values.model !== undefined || values.role !== undefined) && command !== 'new' && command !== 'set') {
-    throw new UsageError('--creator, --model and --role apply only to wi new and wi set.')
-  }
-  if ((values.heading !== undefined || values.claim !== undefined) && command !== 'trace') {
-    throw new UsageError('--heading and --claim apply only to wi trace.')
-  }
+  if (!(command in COMMAND_FLAGS)) throw new UsageError(`unknown command "${command}". Run wi --help.`)
   if (command === 'setup') {
     if (rest.length > 0) throw new UsageError('wi setup takes options only. Run wi setup --help for usage.')
     await runSetup({
@@ -222,21 +171,23 @@ async function main(argv: string[]): Promise<number> {
   if (command === 'here') return runHere(values, values.json === true)
 
   if (command === 'trace') {
-      if (rest.length !== 1 || !rest[0] || !values.heading || !values.claim) {
+      const heading = text(values, 'heading')
+      const claim = text(values, 'claim')
+      if (rest.length !== 1 || !rest[0] || !heading || !claim) {
         throw new UsageError('wi trace needs a source file, --heading, and --claim.')
       }
-      const root = await resolveVaultRoot(values.vault)
+      const root = await resolveVaultRoot(text(values, 'vault'))
       if (findVaultRoot(root) !== root) throw new UsageError(`${root} is not a vault.`)
       const vault = { root, ...await readVaultConfig(root) }
       hintMigration(vault.configFile)
-      const report = await correctionTrace({ vault, source: rest[0], heading: values.heading, claim: values.claim })
-      if (values.json) print(report)
+      const report = await correctionTrace({ vault, source: rest[0], heading, claim })
+      if (values.json === true) print(report)
       else process.stdout.write(renderCorrectionTrace(report))
       return 0
   }
 
-  const vault = await openVault(values.vault)
-  const json = values.json
+  const vault = await openVault(text(values, 'vault'))
+  const json = values.json === true
 
   switch (command) {
     case 'new':
@@ -293,6 +244,12 @@ async function main(argv: string[]): Promise<number> {
     default:
       throw new UsageError(`unknown command "${command}". Run wi --help.`)
   }
+}
+
+/** A string flag's value, or undefined when it was not given. */
+function text(values: Values, key: string): string | undefined {
+  const value = values[key]
+  return typeof value === 'string' ? value : undefined
 }
 
 async function openVault(flag: string | undefined): Promise<Vault> {
@@ -366,8 +323,6 @@ async function repoBoardForVault(vault: Vault): Promise<string | undefined> {
   const pointer = await getRepoPointer(process.cwd())
   return pointer && resolve(pointer.vault) === resolve(vault.root) ? pointer.board : undefined
 }
-
-type Values = Record<string, string | string[] | boolean | undefined>
 
 async function runNew(vault: Vault, rest: string[], values: Values, json: boolean): Promise<number> {
   const title = rest.join(' ').trim()
@@ -504,7 +459,6 @@ async function runArea(vault: Vault, rest: string[], values: Values, json: boole
   if (ref === '') {
     throw new UsageError('wi area needs a <ref>. Use --off to convert an area back to a card.')
   }
-  if (typeof values['status'] === 'string') throw new UsageError('--status does not apply to wi area; conversion preserves the current status.')
   const change = await setArea(vault, ref, {
     off: values['off'] === true,
   })
