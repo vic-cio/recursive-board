@@ -1,5 +1,6 @@
 import { test, afterEach } from 'node:test'
 import assert from 'node:assert/strict'
+import { readFileSync } from 'node:fs'
 
 import { readyCards } from './ready.ts'
 import { loadVault } from '../vault.ts'
@@ -58,4 +59,77 @@ test('readyCards permits a nested claim by the agent already working on its chil
   assert.deepEqual(readyCards(vault, { agent: 'codex' }).ready.map((card) => card.id), ['wi-board'])
   assert.deepEqual(readyCards(vault, { agent: 'codex', parent: 'wi-board' }).ready, [])
   assert.deepEqual(readyCards(vault, { agent: 'codex', parent: 'wi-main' }).ready.map((card) => card.id), ['wi-board'])
+})
+
+test('readyCards excludes invalid dependencies and waits for archived unfinished dependencies', async () => {
+  fixture = makeVault()
+  fixture.write('Boards/Main.md', item({ type: 'work-item', id: 'wi-main', title: 'Main' }))
+  fixture.write('Boards/Finished.md', item({ type: 'work-item', id: 'wi-finished', title: 'Finished',
+    status: 'done', parent: '"[[Main]]"', archived: true }))
+  fixture.write('Boards/Unfinished.md', item({ type: 'work-item', id: 'wi-unfinished', title: 'Unfinished',
+    status: 'backlog', parent: '"[[Main]]"', archived: true }))
+  for (const [title, dependency] of [
+    ['Resolved', '"[[Finished]]"'], ['Waiting', '"[[Unfinished]]"'],
+    ['Unresolved', '"[[Missing]]"'], ['Malformed', 'not-a-link'],
+  ] satisfies [string, string][]) {
+    fixture.write(`Boards/${title}.md`, item({ type: 'work-item', id: `wi-${title.toLowerCase()}`,
+      title, status: 'options', parent: '"[[Main]]"', depends_on: dependency }))
+  }
+  const result = readyCards(await loadVault(fixture.root))
+  assert.deepEqual(result.ready.map((card) => card.id), ['wi-resolved'])
+  assert.deepEqual(result.excluded.map((card) => [card.id, card.reasons]), [
+    ['wi-malformed', ['invalid-dependency']], ['wi-unresolved', ['invalid-dependency']],
+    ['wi-waiting', ['dependency']],
+  ])
+})
+
+test('readyCards excludes descendants of an archived parent', async () => {
+  fixture = makeVault()
+  fixture.write('Boards/Main.md', item({ type: 'work-item', id: 'wi-main', title: 'Main' }))
+  fixture.write('Boards/Archived.md', item({ type: 'work-item', id: 'wi-archived', title: 'Archived',
+    status: 'options', parent: '"[[Main]]"', archived: true, board: true }))
+  fixture.write('Boards/Child.md', item({ type: 'work-item', id: 'wi-child', title: 'Child',
+    status: 'options', parent: '"[[Archived]]"' }))
+  assert.deepEqual(readyCards(await loadVault(fixture.root)).counts, { ready: 0, excluded: 0 })
+})
+
+test('readyCards sorts equal priorities by newest update and then filename', async () => {
+  fixture = makeVault()
+  fixture.write('Boards/Main.md', item({ type: 'work-item', id: 'wi-main', title: 'Main' }))
+  for (const [title, fields] of [
+    ['Old', { priority: 2, updated: '2026-09-28' }],
+    ['Zulu', { priority: 2, updated: '2026-09-30' }],
+    ['Alpha', { priority: 2, updated: '2026-09-30' }],
+    ['Urgent', { priority: 1, updated: '2026-09-27' }],
+    ['Unranked', { updated: '2026-09-30' }],
+    ['Undated', {}],
+  ] satisfies [string, Record<string, string | number>][]) {
+    fixture.write(`Boards/${title}.md`, item({ type: 'work-item', id: `wi-${title.toLowerCase()}`,
+      title, status: 'options', parent: '"[[Main]]"', ...fields }))
+  }
+  assert.deepEqual(readyCards(await loadVault(fixture.root)).ready.map((card) => card.id),
+    ['wi-urgent', 'wi-alpha', 'wi-zulu', 'wi-old', 'wi-unranked', 'wi-undated'])
+})
+
+test('readyCards scopes descendants and exclusion reasons without changing card files', async () => {
+  fixture = makeVault()
+  fixture.write('Boards/Main.md', item({ type: 'work-item', id: 'wi-main', title: 'Main' }))
+  fixture.write('Boards/Scope.md', item({ type: 'work-item', id: 'wi-scope', title: 'Scope',
+    status: 'options', parent: '"[[Main]]"', board: true }))
+  fixture.write('Boards/Nested.md', item({ type: 'work-item', id: 'wi-nested', title: 'Nested',
+    status: 'doing', parent: '"[[Scope]]"', board: true, agent: 'codex' }))
+  fixture.write('Boards/Inside.md', item({ type: 'work-item', id: 'wi-inside', title: 'Inside',
+    status: 'options', parent: '"[[Nested]]"' }))
+  fixture.write('Boards/Blocked.md', item({ type: 'work-item', id: 'wi-blocked', title: 'Blocked',
+    status: 'options', parent: '"[[Scope]]"', blocked: true }))
+  fixture.write('Boards/Outside.md', item({ type: 'work-item', id: 'wi-outside', title: 'Outside',
+    status: 'options', parent: '"[[Main]]"', blocked: true }))
+  const vault = await loadVault(fixture.root)
+  const result = readyCards(vault, { parent: 'wi-scope' })
+  assert.equal(result.scope?.id, 'wi-scope')
+  assert.deepEqual(result.ready.map((card) => card.id), ['wi-inside'])
+  assert.deepEqual(result.excluded.map((card) => [card.id, card.reasons]), [['wi-blocked', ['blocked']]])
+  assert.deepEqual(result.counts, { ready: 1, excluded: 1 })
+  assert.throws(() => readyCards(vault, { parent: 'wi-missing' }), /no work item matches/)
+  for (const card of vault.items) assert.equal(readFileSync(card.path, 'utf8'), card.text)
 })
