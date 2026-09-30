@@ -18,7 +18,9 @@ The dashboard has choices that belong to one device and ticks that follow a pers
 
 On the first load after this change, split the old `dashboard` key in plugin data. Copy its name,
 root, focus, and web row setting to local storage only when that device has no valid value already.
-Merge its ticks into the selected person's entry. Then remove the old key and save plugin data.
+Merge its ticks into the entry for the name stored with those legacy ticks, even when local storage
+selects another person. If the old key has no usable name, use the selected person's entry. Then
+remove the old key and save plugin data.
 A later device with no local name asks for one in For review.
 
 This keeps one reviewer's settings away from teammates who share the vault. The plugin data is the

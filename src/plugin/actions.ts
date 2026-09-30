@@ -53,7 +53,7 @@ export class Actions {
    * A file changed since is left alone and its entry dropped: undo never overwrites a later edit.
    */
   async undo(): Promise<void> {
-    const entry = this.undoStack.pop()
+    const entry = this.undoStack.peek()
     if (!entry) {
       new Notice('Nothing to undo.')
       return
@@ -63,6 +63,11 @@ export class Actions {
       new Notice(`Cannot undo ${entry.label}: ${entry.path} is gone.`)
       return
     }
+    if (entry.kind === 'create' && !UndoStack.canTrashCreated(this.index.childCount(file))) {
+      new Notice(`Cannot undo ${entry.label}: another item now uses it as a parent.`)
+      return
+    }
+    this.undoStack.pop()
     const done = await this.run(`undo ${entry.label}`, async () => {
       if (entry.kind === 'create') {
         const current = await this.app.vault.read(file)

@@ -5,11 +5,12 @@
  * choice, so everything offered works. Boards and areas come first, because a board is where a card is
  * usually moved to; any work item can still be a parent.
  */
-import { FuzzySuggestModal, type App, type FuzzyMatch } from 'obsidian'
+import { FuzzySuggestModal, Notice, type App, type FuzzyMatch } from 'obsidian'
 
 import type { Actions } from '../actions.ts'
 import { opensAsBoard, type WorkItemIndex, type WorkItemMeta } from '../index.ts'
 import { compareMoveTargets } from './move-order.ts'
+import { currentTarget } from './move-target.ts'
 
 export class MoveModal extends FuzzySuggestModal<WorkItemMeta> {
   private readonly meta: WorkItemMeta
@@ -44,6 +45,11 @@ export class MoveModal extends FuzzySuggestModal<WorkItemMeta> {
   }
 
   onChooseItem(target: WorkItemMeta): void {
-    void this.actions.move(this.meta, target)
+    const fresh = currentTarget(target.file, (file) => this.index.get(file))
+    if (!fresh) {
+      new Notice(`Cannot move ${this.meta.title}: the selected target changed. Open the picker again.`)
+      return
+    }
+    void this.actions.move(this.meta, fresh)
   }
 }
