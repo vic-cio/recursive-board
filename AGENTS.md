@@ -61,6 +61,9 @@ to it by reloading Obsidian on a test vault and looking.
 
 ## Release
 
+Bump the patch number for fixes and additions. Bump the minor number only when a change breaks something for
+existing users, such as a removed command or a moved setting.
+
 Bump `version` in `manifest.json`, `package.json` and `VERSION` in `src/cli/wi.ts`, update the matching
 `versions.json` entry to the manifest's `minAppVersion`, and update `package-lock.json`.
 Commit those files, then create and push a tag that equals the version exactly (no `v` prefix).
