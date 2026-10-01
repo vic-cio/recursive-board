@@ -1,16 +1,17 @@
 /**
  * Handing a card to a person or an agent (docs/adr/0058-delegate-a-card.md).
  *
- * For an agent, `wi delegate` claims the card as `wi claim` does, starts the worker and notes where
- * it runs. For a person, it only assigns the card: their name goes in `agent` and the status stays.
+ * Delegating names the holder and changes nothing else: the status stays. For a worker, `wi
+ * delegate` also starts it and notes where it runs; the worker claims the card itself, and that
+ * claim moves it to doing. `--to agent` writes the reserved holder `agent`, which asks any agent.
  * There is no reason to give: the brief is on the card, and people explain where they talk. Either
- * way the card refuses a second holder. A person holds a card through `agent` too; `wi agents` tells a person
- * from an agent by a note with `type: person`. This module imports nothing from Node.
+ * way the card refuses a second holder. `wi agents` tells a person from an agent by a note with
+ * `type: person`. This module imports nothing from Node.
  */
 import { PERSON_TYPE } from './authorship.ts'
 import { cardState } from './card-state.ts'
 import type { Edit } from './edits.ts'
-import { setHolderEdits } from './holder.ts'
+import { ANY_AGENT, clearHolderEdits, isAnyAgent, setHolderEdits } from './holder.ts'
 
 export const HARNESSES = ['claude', 'codex', 'pi'] as const
 export type Harness = typeof HARNESSES[number]
@@ -41,15 +42,24 @@ export function peopleIn(notes: Iterable<TypedNote>): Map<string, string> {
 
 export type DelegateTarget =
   | { kind: 'agent'; harness: Harness }
+  | { kind: 'any' }
   | { kind: 'person'; name: string }
 
 /**
- * What `--to` names. A harness wins over a person note of the same name. Any other name is refused,
+ * What `--to` names. `agent` asks any agent; a person note of that name is refused, because the
+ * name is reserved. A harness wins over a person note of the same name. Any other name is refused,
  * because a claim by a name with no note would count as an agent in `wi agents`.
  */
 export function delegateTarget(to: string, people: Map<string, string>): DelegateTarget {
   const name = to.trim()
   if (name === '') throw new Error('delegating needs a person or a harness: claude, codex or pi.')
+  if (isAnyAgent(name)) {
+    const note = people.get(ANY_AGENT)
+    if (note !== undefined) {
+      throw new Error(`there is a person note called ${note}, and agent is the reserved holder that means any agent. Rename the note.`)
+    }
+    return { kind: 'any' }
+  }
   if (isHarness(name)) return { kind: 'agent', harness: name }
   const person = people.get(name.toLowerCase())
   if (person !== undefined) return { kind: 'person', name: person }
@@ -57,21 +67,36 @@ export function delegateTarget(to: string, people: Map<string, string>): Delegat
     `Make the note ${name}.md with type: ${PERSON_TYPE} for a person, or name a harness: ${HARNESSES.join(', ').replace(/, (?=[^,]*$)/, ' or ')}.`)
 }
 
-/** The agent name a worker claims under, unique per card: `codex-price-the-job`. */
-export function workerName(harness: Harness, slug: string): string {
-  return `${harness}-${slug}`
+/**
+ * A worker's name, unique per card: its model and the card slug, `gpt-6-luna-price-the-job`. With
+ * no model, the harness stands in for it: `codex-price-the-job`.
+ */
+export function workerName(harness: Harness, slug: string, model?: string): string {
+  const prefix = (model ?? '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '')
+  return `${prefix || harness}-${slug}`
 }
 
 /**
- * Assigning a card to a person: their name in `agent`, and nothing else. The status stays, because
- * a person chooses when to start. A second holder and a done card are refused. Null when the
- * person already holds the card.
+ * Delegating a card: the holder's name in `holder`, and nothing else. The status stays: the
+ * delegator moves the card if it must move, or the holder does when they start. A second holder
+ * and a done card are refused; a request for any agent gives way to any holder. Null when the
+ * card has this holder already.
  */
-export function assignEdits(text: string, person: string): Edit[] | null {
+export function assignEdits(text: string, holder: string): Edit[] | null {
   const state = cardState(text)
   if (state.status === 'done') throw new Error('a done card cannot be assigned.')
-  if (state.holder && state.holder !== person) throw new Error(`already held by ${state.holder}. Release that claim first.`)
-  return state.holder === person ? null : setHolderEdits(person)
+  if (state.holder === holder) return null
+  if (state.holder && !isAnyAgent(state.holder)) throw new Error(`already held by ${state.holder}. Release that claim first.`)
+  return setHolderEdits(holder)
+}
+
+/**
+ * Undoing a delegation whose worker did not start: the holder from before, or none. Null when the
+ * card has another holder by now, so a claim made since is kept.
+ */
+export function withdrawEdits(text: string, holder: string, previous: string | undefined): Edit[] | null {
+  if (cardState(text).holder !== holder) return null
+  return previous === undefined ? clearHolderEdits() : setHolderEdits(previous)
 }
 
 export interface Delegation {

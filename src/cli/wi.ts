@@ -483,7 +483,7 @@ async function runClaim(vault: Vault, rest: string[], values: Values, json: bool
 
 async function runDelegate(vault: Vault, rest: string[], values: Values, json: boolean): Promise<number> {
   const ref = rest.join(' ').trim()
-  if (ref === '') throw new UsageError('wi delegate needs a <ref> and --to <person|claude|codex|pi>.')
+  if (ref === '') throw new UsageError('wi delegate needs a <ref> and --to <person|agent|claude|codex|pi>.')
   const pick = (key: string) => values[key] === undefined ? undefined : singleLineOption(values, key)
   const to = singleLineOption(values, 'to')
   const maxAgents = maxAgentsForRun(vault)
@@ -499,9 +499,9 @@ async function runDelegate(vault: Vault, rest: string[], values: Values, json: b
       branch: result.branch ?? null, worktree: result.worktree ?? null, log: result.log ?? null,
       pid: result.pid ?? null, resume: result.resume ?? null })
   } else {
-    process.stdout.write(result.harness
-      ? `${label(result.item)}  doing  (delegated to ${result.holder})\n`
-      : `${label(result.item)}  ${result.item.status}  (assigned to ${result.holder})\n`)
+    const what = result.harness ? `delegated to ${result.holder}`
+      : isAnyAgent(result.holder) ? 'any agent may take it' : `assigned to ${result.holder}`
+    process.stdout.write(`${label(result.item)}  ${result.item.status}  (${what})\n`)
     if (result.harness) {
       process.stdout.write(`  ${result.harness} worker, process ${result.pid}, on ${result.branch}\n` +
         `  worktree  ${result.worktree}\n  log       ${result.log}\n  resume    ${result.resume}\n`)

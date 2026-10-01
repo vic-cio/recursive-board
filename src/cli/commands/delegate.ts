@@ -2,10 +2,12 @@
  * `wi delegate` — hand a card to a person or start a headless worker on it
  * (docs/adr/0058-delegate-a-card.md).
  *
- * For a person it claims the card for them and notes who has it and why. For an agent it also makes
- * a worktree of the current Git repository on `card/<slug>`, starts the harness with the card body
- * as the brief, and notes the log. Every check that can fail runs before the first write. The
- * process launcher is injected, so the tests never start an agent.
+ * Delegating names the holder and nothing else; the status stays. For a person it writes their
+ * name. For `agent` it writes the reserved holder that asks any agent. For a harness it names the
+ * worker as holder, makes a worktree of the current Git repository on `card/<slug>`, starts the
+ * harness with the card body as the brief, and notes the log. The worker claims the card itself.
+ * Every check that can fail runs before the first write. The process launcher is injected, so the
+ * tests never start an agent.
  */
 import { spawn, execFile } from 'node:child_process'
 import { closeSync, existsSync, mkdirSync, openSync, realpathSync, writeFileSync, writeSync } from 'node:fs'
@@ -13,21 +15,25 @@ import { readFile } from 'node:fs/promises'
 import { basename, dirname, join } from 'node:path'
 import { promisify } from 'node:util'
 
-import { claimItem, releaseItem } from './claim-release.ts'
+import { claimRule } from './claim-release.ts'
 import { ancestorRoles } from './new.ts'
 import { launchSpec, workerPrompt, type LaunchSpec } from '../harness.ts'
 import { readPeople, type Vault, type WorkItem } from '../vault.ts'
 import { editItem } from '../write.ts'
 import { appendNote, noteLine } from '../../shared/notes.ts'
 import { resolveRole } from '../../shared/authorship.ts'
+import { cardState } from '../../shared/card-state.ts'
 import { frontmatterBody } from '../../shared/frontmatter.ts'
-import { assignEdits, cardSlug, delegateTarget, delegationNote, workerName, type Harness } from '../../shared/delegate.ts'
+import { ANY_AGENT } from '../../shared/holder.ts'
+import {
+  assignEdits, cardSlug, delegateTarget, delegationNote, withdrawEdits, workerName, type Harness,
+} from '../../shared/delegate.ts'
 
 export interface DelegateOptions {
-  /** A person (a note with type: person), or a harness: claude, codex or pi. */
+  /** A person (a note with type: person), `agent` for any agent, or a harness: claude, codex or pi. */
   to: string
   model?: string | undefined
-  /** The agent name on the claim. Defaults to `<harness>-<slug>`. */
+  /** The worker's name. Defaults to `<model>-<slug>`, or `<harness>-<slug>` with no model. */
   agent?: string | undefined
   /** The harness's permission mode or sandbox. */
   permission?: string | undefined
@@ -67,14 +73,17 @@ export async function delegate(
   const note = (holder: string, harness: Harness) => (text: string) =>
     appendNote(text, noteLine(delegationNote({ holder, harness, model: options.model }), deps.author))
 
-  if (target.kind === 'person') {
+  if (target.kind !== 'agent') {
     if (options.model !== undefined || options.permission !== undefined || options.agent !== undefined) {
-      throw new Error('--model, --permission and --agent are for an agent. A person takes only --to.')
+      throw new Error(target.kind === 'any'
+        ? '--model, --permission and --agent are for a harness. --to agent starts nothing, so it takes only --to.'
+        : '--model, --permission and --agent are for an agent. A person takes only --to.')
     }
     if (item.area) throw new Error(`${item.relPath} is an area, and an area cannot be assigned.`)
     if (item.parent === null) throw new Error(`${item.relPath} is a root, and a root cannot be assigned.`)
-    await editItem(item, (text) => assignEdits(text, target.name))
-    return { item, holder: target.name }
+    const holder = target.kind === 'any' ? ANY_AGENT : target.name
+    await editItem(item, (text) => assignEdits(text, holder))
+    return { item, holder }
   }
 
   const harness = target.harness
@@ -82,7 +91,10 @@ export async function delegate(
   const title = item.title ?? item.stem
   const slug = cardSlug(title, id)
   const branch = `card/${slug}`
-  const holder = options.agent?.trim() || workerName(harness, slug)
+  const holder = options.agent?.trim() || workerName(harness, slug, options.model)
+  // The worker claims the card when it starts, so a card it could not claim is refused now.
+  const claimable = claimRule(vault, item, holder)
+  claimable(await readFile(item.path, 'utf8'))
   const repo = await mainRepository(deps)
   const folder = join(dirname(repo), `${basename(repo)}-worktrees`)
   const worktree = join(folder, slug)
@@ -97,7 +109,12 @@ export async function delegate(
   launchSpec({ ...run, prompt: '' }) // Refuses a permission the harness does not take, before any write.
   const worktreeStep = await planWorktree(deps, repo, worktree, branch)
 
-  await claimItem(vault, ref, holder, note(holder, harness))
+  let previous: string | undefined
+  await editItem(item, (text) => {
+    claimable(text)
+    previous = cardState(text).holder
+    return assignEdits(text, holder)
+  }, note(holder, harness))
   try {
     await worktreeStep()
     const body = frontmatterBody(await readFile(item.path, 'utf8'))
@@ -111,7 +128,8 @@ export async function delegate(
     await editItem(item, [], (text) => appendNote(text, noteLine(started, deps.author)))
     return { item, holder, harness, branch, worktree, log, pid, resume: spec.resume }
   } catch (error) {
-    await releaseItem(vault, ref, `wi delegate could not start the worker: ${(error as Error).message}`)
+    const reason = `wi delegate could not start ${holder}: ${(error as Error).message.replace(/\.$/, '')}.`
+    await editItem(item, (text) => withdrawEdits(text, holder, previous), (text) => appendNote(text, noteLine(reason, deps.author)))
     throw error
   }
 }

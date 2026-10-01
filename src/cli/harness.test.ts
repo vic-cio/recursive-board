@@ -83,7 +83,8 @@ test('workerPrompt names the card, the agent, the worktree and the role, then gi
   assert.match(prompt, /You are codex-price-the-job, a worker on the card wi-a1 "Price the job"/)
   assert.match(prompt, /\/wt\/price-the-job, on the branch card\/price-the-job/)
   assert.match(prompt, /Read the role note Coder/)
-  assert.match(prompt, /already claimed for you/)
+  assert.match(prompt, /You hold the card\. Run wi claim wi-a1 --agent codex-price-the-job before you start: it moves the card to doing\./)
+  assert.doesNotMatch(prompt, /already claimed/)
   assert.ok(prompt.endsWith('## Objective\n\nPrice it.\n'))
   assert.doesNotMatch(workerPrompt({
     card: 'wi-a1', title: 'Price the job', agent: 'a', vault: '/v', worktree: '/w', branch: 'card/x', body: 'B',

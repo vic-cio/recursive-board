@@ -95,8 +95,23 @@ test('a person is a note with type: person in any folder, not a note in People/'
   assert.match(card(f), /^holder: Sam$/m)
 })
 
+test('delegating to agent asks any agent: holder agent, same status, no note, no Git, no process', async () => {
+  const f = seed()
+  const launches: Launch[] = []
+  const noGit: DelegateDeps = { ...deps('/nowhere', launches), git: async () => { throw new Error('git ran') } }
+  const before = card(f)
+  const result = await delegate(await loadVault(f.root), 'wi-0004', { to: 'agent' }, noGit)
+  assert.equal(result.holder, 'agent')
+  assert.equal(result.harness, undefined)
+  assert.equal(launches.length, 0)
+  const strip = (t: string) => t.replace(/^(holder|updated): .*\n/gm, '')
+  assert.match(card(f), /^holder: agent$/m)
+  assert.equal(strip(card(f)), strip(before))
+  await assert.rejects(delegate(await loadVault(f.root), 'wi-0004', { to: 'agent', model: 'm' }, noGit), /--model/)
+})
+
 for (const harness of ['claude', 'codex', 'pi'] as const) {
-  test(`delegating to ${harness} makes the worktree, claims the card, starts the worker and notes the log`, async () => {
+  test(`delegating to ${harness} names the worker as holder, keeps the status, starts the worker and notes the log`, async () => {
     const f = seed()
     const root = repo()
     const launches: Launch[] = []
@@ -105,7 +120,7 @@ for (const harness of ['claude', 'codex', 'pi'] as const) {
 
     const worktree = join(root, '..', 'tools-worktrees', 'price-the-job')
     const log = join(root, '..', 'tools-worktrees', 'price-the-job.log')
-    assert.equal(result.holder, `${harness}-price-the-job`)
+    assert.equal(result.holder, 'm-1-price-the-job', 'the model and the card slug')
     assert.equal(result.branch, 'card/price-the-job')
     assert.equal(result.worktree, worktree)
     assert.equal(result.log, log)
@@ -117,18 +132,19 @@ for (const harness of ['claude', 'codex', 'pi'] as const) {
     assert.equal(spec.command, harness)
     assert.equal(spec.cwd, worktree)
     assert.equal(launches[0]!.log, log)
-    assert.equal(spec.env['WI_AGENT'], `${harness}-price-the-job`)
+    assert.equal(spec.env['WI_AGENT'], 'm-1-price-the-job')
     assert.equal(spec.env['WI_CARD'], 'wi-0004')
     assert.equal('WI_CREATOR' in spec.env, false)
     assert.equal(spec.env['WI_MODEL'], 'm-1')
     const prompt = spec.stdin ?? spec.args.at(-1)!
-    assert.match(prompt, /You are .*-price-the-job, a worker on the card wi-0004/)
+    assert.match(prompt, /You are m-1-price-the-job, a worker on the card wi-0004/)
+    assert.match(prompt, /wi claim wi-0004 --agent m-1-price-the-job/)
     assert.match(prompt, /The card body is your brief:\n\n## Objective\n\nPrice the job\.\n\n## Notes\n/)
 
     const text = card(f)
-    assert.match(text, new RegExp(`^holder: ${harness}-price-the-job$`, 'm'))
-    assert.match(text, /^status: doing$/m)
-    assert.match(text, new RegExp(`Delegated to ${harness}-price-the-job, a headless ${harness} worker on m-1\\.`))
+    assert.match(text, /^holder: m-1-price-the-job$/m)
+    assert.match(text, /^status: options$/m, 'the worker moves the card to doing when it claims it')
+    assert.match(text, new RegExp(`Delegated to m-1-price-the-job, a headless ${harness} worker on m-1\\.`))
     assert.ok(text.includes(`Started the worker, process 4242, on card/price-the-job in \`${worktree}\`. Log: \`${log}\`.`))
     assert.ok(text.includes(`Resume: \`${spec.resume}\``))
   })
@@ -182,15 +198,40 @@ test('a folder in the way of the worktree writes nothing', async () => {
   assert.equal(card(f), before)
 })
 
-test('when the worker cannot start, the claim is released with the reason', async () => {
+test('when the worker cannot start, the holder is cleared with the reason and the status stays', async () => {
   const f = seed()
   const root = repo()
+  writeFileSync(join(f.root, 'Boards/Price the job.md'), card(f).replace('status: options', 'status: backlog'))
   await assert.rejects(delegate(await loadVault(f.root), 'wi-0004', { to: 'codex' }, deps(root, [], 'spawn codex ENOENT')),
     /spawn codex ENOENT/)
   const text = card(f)
-  assert.match(text, /^status: options$/m)
+  assert.match(text, /^status: backlog$/m)
   assert.doesNotMatch(text, /^holder:/m)
-  assert.match(text, /Released from codex-price-the-job: wi delegate could not start the worker: spawn codex ENOENT\./)
+  assert.match(text, /wi delegate could not start codex-price-the-job: spawn codex ENOENT\./)
+})
+
+test('a request for any agent goes to the worker, and comes back when the worker cannot start', async () => {
+  const f = seed()
+  const root = repo()
+  writeFileSync(join(f.root, 'Boards/Price the job.md'), card(f).replace('status: options', 'status: options\nholder: agent'))
+  await assert.rejects(delegate(await loadVault(f.root), 'wi-0004', { to: 'pi' }, deps(root, [], 'spawn pi ENOENT')), /ENOENT/)
+  assert.match(card(f), /^holder: agent$/m)
+  const result = await delegate(await loadVault(f.root), 'wi-0004', { to: 'pi' }, deps(root, []))
+  assert.equal(result.holder, 'pi-price-the-job')
+  assert.match(card(f), /^holder: pi-price-the-job$/m)
+})
+
+test('a card the worker could not claim is refused before any write', async () => {
+  const f = seed()
+  const root = repo()
+  f.write('Boards/Spec.md', item({ type: 'work-item', id: 'wi-spec', title: 'Spec', status: 'backlog', parent: '"[[Tools]]"' }))
+  writeFileSync(join(f.root, 'Boards/Price the job.md'), card(f).replace('status: options', 'status: options\ndepends_on: "[[Spec]]"'))
+  const before = card(f)
+  const launches: Launch[] = []
+  await assert.rejects(delegate(await loadVault(f.root), 'wi-0004', { to: 'claude' }, deps(root, launches)), /waits on Spec/)
+  assert.equal(card(f), before)
+  assert.equal(launches.length, 0)
+  assert.ok(!existsSync(join(root, '..', 'tools-worktrees')))
 })
 
 test('--agent names the worker, and the repo name names the worktrees folder', async () => {
@@ -236,6 +277,14 @@ test('wi delegate --to a person needs no Git repository and prints the holder', 
   assert.doesNotMatch(card(f), /Delegated to Ana/)
 })
 
+test('wi delegate --to agent asks any agent and prints it', () => {
+  const f = seed()
+  const result = wi(['delegate', 'Price the job', '--to', 'agent'], f.root, f.root, fakeBin())
+  assert.equal(result.code, 0, result.stderr)
+  assert.match(result.stdout, /wi-0004.*options {2}\(any agent may take it\)/)
+  assert.match(card(f), /^holder: agent$/m)
+})
+
 test('wi delegate refuses --reason with exit 2: the brief belongs on the card', () => {
   const f = seed()
   const result = wi(['delegate', 'Price the job', '--to', 'Ana', '--reason', 'why'], f.root, f.root, fakeBin())
@@ -258,7 +307,7 @@ test('wi delegate --to claude starts the harness detached, with the brief on std
   const result = wi(['delegate', 'wi-0004', '--to', 'claude', '--model', 'm-1', '--json'], root, f.root, fakeBin())
   assert.equal(result.code, 0, result.stderr)
   const report = JSON.parse(result.stdout)
-  assert.equal(report.holder, 'claude-price-the-job')
+  assert.equal(report.holder, 'm-1-price-the-job')
   assert.equal(report.branch, 'card/price-the-job')
   assert.equal(typeof report.pid, 'number')
 
@@ -268,8 +317,9 @@ test('wi delegate --to claude starts the harness detached, with the brief on std
     log = existsSync(report.log) ? readFileSync(report.log, 'utf8') : ''
   }
   assert.match(log, /^=== .* claude -p --model m-1 --permission-mode auto --session-id \S+ --name wi-0004 Price the job --add-dir /m)
-  assert.match(log, /agent: claude-price-the-job card: wi-0004/)
-  assert.match(log, /You are claude-price-the-job, a worker on the card wi-0004/)
+  assert.match(log, /agent: m-1-price-the-job card: wi-0004/)
+  assert.match(log, /You are m-1-price-the-job, a worker on the card wi-0004/)
+  assert.match(card(f), /^status: options$/m)
   assert.ok(existsSync(join(dirname(report.log), 'price-the-job.prompt.md')))
   assert.match(card(f), /Started the worker, process \d+, on card\/price-the-job/)
 })

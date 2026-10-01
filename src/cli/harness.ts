@@ -20,7 +20,7 @@ export interface WorkerRun {
   sessionId: string
   /** The session's display name. */
   name: string
-  /** The agent name on the claim. */
+  /** The worker's name: its holder name and WI_AGENT. */
   agent: string
   /** The card id. */
   card: string
@@ -111,7 +111,8 @@ export function workerPrompt(context: BriefContext): string {
     `Your working directory is the worktree ${context.worktree}, on the branch ${context.branch}. Commit your work there. Do not push or merge it.`,
     'Read AGENTS.md in your working directory before you change anything.',
     'Use wi for every write to the vault. The WI_ environment variables that wi reads are set for you.',
-    `Follow "Working under a dispatcher" in the recursive-board skill, with ${context.agent} as your agent name. The card is already claimed for you.`,
+    `Follow "Working under a dispatcher" in the recursive-board skill, with ${context.agent} as your agent name.`,
+    `You hold the card. Run wi claim ${context.card} --agent ${context.agent} before you start: it moves the card to doing.`,
     ...(context.role?.trim() ? [`Read the role note ${context.role.trim()}: it is your procedure.`] : []),
     'Work until the card is done without asking questions. Nobody reads your output until you finish.',
     '',
