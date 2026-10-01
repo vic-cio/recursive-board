@@ -1,6 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { mkdtempSync, mkdirSync, rmSync, writeFileSync, appendFileSync, chmodSync } from 'node:fs'
+import { mkdtempSync, mkdirSync, rmSync, writeFileSync, appendFileSync, chmodSync, readFileSync, existsSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -8,14 +8,18 @@ import { spawnSync } from 'node:child_process'
 
 const SCRIPT = fileURLToPath(new URL('./refocus.mjs', import.meta.url))
 
-function setup(t, output = 'Objective chain\n1. Card\n   Do the work.\n') {
+function setup(t, output = JSON.stringify({
+  id: 'wi-0001', title: 'Card', objective: 'Do the work.', ancestry: [
+    { id: 'wi-0000', title: 'Main', objective: 'Run the project.' },
+  ],
+}) + '\n') {
   const root = mkdtempSync(join(tmpdir(), 'wi-refocus-'))
   const bin = join(root, 'bin')
   const state = join(root, 'state')
   mkdirSync(bin)
   mkdirSync(state)
   const wi = join(bin, 'wi')
-  writeFileSync(wi, `#!/bin/sh\n${output === null ? 'exit 1' : `printf '%s' '${output.replaceAll("'", "'\\''")}'`}\n`)
+  writeFileSync(wi, `#!/bin/sh\nprintf '%s' "$*" > "$WI_TEST_ARGS"\nprintf '%s' "$WI_CARD" > "$WI_TEST_CARD"\n${output === null ? 'exit 1' : `printf '%s' '${output.replaceAll("'", "'\\''")}'`}\n`)
   chmodSync(wi, 0o755)
   t.after(() => rmSync(root, { recursive: true, force: true }))
   return { root, bin, state, wi }
@@ -31,6 +35,8 @@ function invoke(f, payload, env = {}) {
       WI_REFOCUS_STATE_DIR: f.state,
       WI_REFOCUS_BYTES: '10',
       WI_CARD: 'wi-0001',
+      WI_TEST_ARGS: join(f.root, 'args'),
+      WI_TEST_CARD: join(f.root, 'card'),
       ...env,
     },
   })
@@ -50,8 +56,26 @@ test('Claude and Codex deliver once at compact SessionStart', (t) => {
     const output = invoke(f, { hook_event_name: 'SessionStart', source: 'compact' }, { WI_REFOCUS_RUNTIME: runtime })
     assert.match(output, /additionalContext/)
     assert.equal(JSON.parse(output).hookSpecificOutput.hookEventName, 'SessionStart')
-    assert.match(JSON.parse(output).hookSpecificOutput.additionalContext, /Do the work/)
+    assert.equal(JSON.parse(output).hookSpecificOutput.additionalContext,
+      'Objective chain (current card to root):\n' +
+      '1. Card (wi-0001)\n   Do the work.\n' +
+      '2. Main (wi-0000)\n   Run the project.\n')
   }
+})
+
+test('the hook reads wi show --json for WI_CARD and stays silent without WI_CARD', (t) => {
+  const f = setup(t)
+  const output = invoke(f, { hook_event_name: 'SessionStart', source: 'compact' }, { WI_REFOCUS_RUNTIME: 'codex' })
+  assert.match(output, /additionalContext/)
+  assert.equal(readFileSync(join(f.root, 'args'), 'utf8'), 'show wi-0001 --json')
+  assert.equal(readFileSync(join(f.root, 'card'), 'utf8'), 'wi-0001')
+
+  rmSync(join(f.root, 'args'), { force: true })
+  rmSync(join(f.root, 'card'), { force: true })
+  assert.equal(invoke(f, { hook_event_name: 'SessionStart', source: 'compact' }, {
+    WI_REFOCUS_RUNTIME: 'codex', WI_CARD: '', WI_AGENT: 'codex',
+  }), '')
+  assert.equal(existsSync(join(f.root, 'args')), false)
 })
 
 test('Claude transcript growth delivers on the next prompt only', (t) => {
@@ -90,10 +114,14 @@ test('disabled, malformed, missing transcript, and command failure cases stay si
   assert.equal(invoke(f, { hook_event_name: 'Stop', transcript_path: join(f.root, 'missing') }, { WI_REFOCUS_RUNTIME: 'claude' }), '')
   const broken = setup(t, null)
   assert.equal(invoke(broken, { hook_event_name: 'SessionStart', source: 'compact' }), '')
+  const malformed = setup(t, 'not-json')
+  assert.equal(invoke(malformed, { hook_event_name: 'SessionStart', source: 'compact' }), '')
 })
 
 test('the hook caps model-visible context', (t) => {
-  const f = setup(t, 'x'.repeat(10000))
+  const f = setup(t, JSON.stringify({
+    id: 'wi-0001', title: 'Card', objective: 'x'.repeat(10000), ancestry: [],
+  }))
   const output = invoke(f, { hook_event_name: 'SessionStart', source: 'compact' }, { WI_REFOCUS_RUNTIME: 'codex' })
   assert.match(output, /additionalContext/)
   const context = JSON.parse(output).hookSpecificOutput.additionalContext

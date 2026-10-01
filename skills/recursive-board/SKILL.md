@@ -54,6 +54,7 @@ wi children <ref> --status doing   # one column
 
 Add `--json` when you parse the result. A card's own text (objective, criteria, notes) is in
 its file in the work-item folder (`Boards/` by default). Read the file.
+`wi objective` is retired. Use `wi show <ref> --json` to read a card and its ancestor objectives.
 Before work, read the notes in the card's Knowledge section.
 
 ## Writing

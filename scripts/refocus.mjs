@@ -88,10 +88,35 @@ function threshold() {
   return Number.isSafeInteger(parsed) && parsed > 0 ? parsed : null
 }
 
-function runObjective(cwd) {
+function isRecord(value) {
+  return value !== null && typeof value === 'object' && !Array.isArray(value)
+}
+
+function formatObjectiveChain(value) {
+  if (!isRecord(value) || typeof value.id !== 'string' || typeof value.title !== 'string') return ''
+  if (!Array.isArray(value.ancestry)) return ''
+  const items = [{ id: value.id, title: value.title, objective: value.objective }, ...value.ancestry.slice().reverse()]
+  if (items.some((item) => !isRecord(item) || typeof item.id !== 'string' || typeof item.title !== 'string' ||
+    (item.objective !== null && typeof item.objective !== 'string'))) return ''
+  const rows = items.map((item, index) => {
+    const objective = typeof item.objective === 'string' && item.objective.trim() !== ''
+      ? item.objective.trim()
+      : '[Objective missing]'
+    return `${index + 1}. ${item.title} (${item.id})\n   ${objective}`
+  })
+  let report = `Objective chain (current card to root):\n${rows.join('\n')}`
+  if (typeof value.ancestryIssue === 'string' && value.ancestryIssue !== '') {
+    report += `\nChain stopped: ${value.ancestryIssue}.`
+  }
+  return `${report}\n`
+}
+
+function runShow(cwd) {
+  const card = nonEmpty(process.env['WI_CARD'])
+  if (!card) return ''
   const binary = nonEmpty(process.env['WI_BIN']) ?? 'wi'
   try {
-    const result = spawnSync(binary, ['objective'], {
+    const result = spawnSync(binary, ['show', card, '--json'], {
       cwd: cwd ?? process.cwd(),
       encoding: 'utf8',
       env: process.env,
@@ -100,7 +125,7 @@ function runObjective(cwd) {
       stdio: ['ignore', 'pipe', 'ignore'],
     })
     if (result.error || result.status !== 0 || typeof result.stdout !== 'string') return ''
-    return result.stdout.trim()
+    return formatObjectiveChain(JSON.parse(result.stdout))
   } catch {
     return ''
   }
@@ -133,7 +158,7 @@ function main(payload) {
     state.growthDue = false
     writeState(path, state)
     if (payload.source !== 'compact') return
-    const context = runObjective(nonEmpty(payload.cwd))
+    const context = runShow(nonEmpty(payload.cwd))
     if (context) writeContext(eventName, context)
     return
   }
@@ -163,7 +188,7 @@ function main(payload) {
     writeState(path, state)
     return
   }
-  const context = runObjective(nonEmpty(payload.cwd))
+  const context = runShow(nonEmpty(payload.cwd))
   if (!context) return
   if (now) state.nowToken = now
   if (runtime === 'claude' && state.growthDue) {

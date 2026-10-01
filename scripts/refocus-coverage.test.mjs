@@ -16,7 +16,7 @@ function setup(t, exitCode = 0) {
   mkdirSync(bin)
   mkdirSync(state)
   const wi = join(bin, 'wi')
-  writeFileSync(wi, `#!/bin/sh\nprintf '%s\\n' "$*" >> "$WI_FIXTURE_LOG"\nprintf '%s' 'Objective chain\\n1. Card\\n   Do the work.\\n'\nexit ${exitCode}\n`)
+  writeFileSync(wi, `#!/bin/sh\nprintf '%s\\n' "$*" >> "$WI_FIXTURE_LOG"\nprintf '%s' '{"id":"wi-demo","title":"Card","objective":"Do the work.","ancestry":[]}'\nexit ${exitCode}\n`)
   chmodSync(wi, 0o755)
   t.after(() => rmSync(root, { recursive: true, force: true }))
   return { state, log, wi }
@@ -36,6 +36,7 @@ function invoke(fixture, runtime, payload, controls = {}) {
       WI_REFOCUS_RUNTIME: runtime,
       WI_REFOCUS_STATE_DIR: fixture.state,
       WI_BIN: fixture.wi,
+      WI_CARD: 'wi-demo',
       WI_FIXTURE_LOG: fixture.log,
       ...controls,
     },
@@ -62,7 +63,7 @@ for (const runtime of ['claude', 'codex']) {
     const output = invoke(fixture, runtime, { hook_event_name: 'SessionStart', source: 'compact' })
     assert.match(output, /additionalContext/)
     assert.equal(JSON.parse(output).hookSpecificOutput.hookEventName, 'SessionStart')
-    assert.deepEqual(invocationLog(fixture), ['objective'])
+    assert.deepEqual(invocationLog(fixture), ['show wi-demo --json'])
   })
 
   test(`${runtime} disabled delivery does not invoke the fixture`, (t) => {
@@ -77,6 +78,6 @@ for (const runtime of ['claude', 'codex']) {
   test(`${runtime} failed CLI command stays silent after fixture invocation`, (t) => {
     const fixture = setup(t, 1)
     assert.equal(invoke(fixture, runtime, { hook_event_name: 'SessionStart', source: 'compact' }), '')
-    assert.deepEqual(invocationLog(fixture), ['objective'])
+    assert.deepEqual(invocationLog(fixture), ['show wi-demo --json'])
   })
 }

@@ -36,7 +36,6 @@ import { setPeople } from './commands/set.ts'
 import { dependenciesOf, openDependencies, titleOf } from './dependencies.ts'
 import { hookStatus, installHook, uninstallHook } from './commands/hook.ts'
 import { runSetup } from './commands/setup.ts'
-import { objectiveReport } from './commands/objective.ts'
 import { dashboardSummary, renderDashboard } from './commands/dashboard.ts'
 import { COMMAND_FLAGS, parseCommandLine, type Values } from './flags.ts'
 import { STATUSES } from '../shared/schema.ts'
@@ -58,7 +57,6 @@ Usage
   wi claim <ref> --agent <name>
   wi delegate <ref> --to <person|claude|codex|pi> [--model <id>] [--agent <name>]
                  [--permission <mode>]
-  wi objective [<ref>]
   wi agents
   wi dashboard [--you <name>] [--parent <ref>] [--json]
   wi release <ref> --reason <text> [--where <branch-or-path>]
@@ -131,7 +129,7 @@ Notes
   brief. The note names the log, <repo>-worktrees/<slug>.log, and the command that resumes the session.
   --permission passes the harness's own mode: claude takes --permission-mode (default auto), codex
   takes --sandbox (default workspace-write), and pi has none. The default never bypasses permissions.
-  \`wi objective\` prints the WI_CARD objective chain, or the unambiguous deepest WI_AGENT claim.
+  \`wi objective\` is retired. Use \`wi show <ref> --json\` to read a card and its ancestor objectives.
   \`wi agents\` reports the advisory limit, the number of distinct agents with a doing card, and each
   claimed doing card. A card that a person holds does not count: a person is a note with type: person. WI_MAX_AGENTS overrides
   maxAgents from the board settings for one run. Dispatchers decide whether to wait; wi claim does not enforce it.
@@ -183,6 +181,11 @@ async function main(argv: string[]): Promise<number> {
     return 0
   }
 
+  if (command === 'objective') {
+    process.stdout.write('wi objective is retired. Use wi show <ref> --json to read a card and its ancestor objectives.\n')
+    return 0
+  }
+
   if (command === 'retag' || command === 'graph') {
     process.stdout.write('wi retag and wi graph were removed in 0.8.0. The board tree shows each card\'s area.\n')
     return 0
@@ -216,8 +219,6 @@ async function main(argv: string[]): Promise<number> {
       return runDashboard(vault, rest, values, json)
     case 'ready':
       return runReady(vault, rest, values, json)
-    case 'objective':
-      return runObjective(vault, rest)
     case 'release':
       return runRelease(vault, rest, values, json)
     case 'move':
@@ -271,13 +272,6 @@ async function resolveVaultRoot(flag: string | undefined): Promise<string> {
     )
   }
   return root
-}
-
-function runObjective(vault: Vault, rest: string[]): number {
-  if (rest.length > 1) throw new UsageError('wi objective takes at most one <ref>. Run wi --help.')
-  const report = objectiveReport(vault, rest[0])
-  if (report) process.stdout.write(report)
-  return 0
 }
 
 /** wi here is retired (docs/adr/0059-find-the-vault-in-four-ways.md). It exits 0 so an old script still runs. */
