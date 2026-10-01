@@ -1,15 +1,15 @@
 /**
  * Handing a card to a person or an agent (docs/adr/0058-delegate-a-card.md).
  *
- * `wi delegate` and the plugin's card menu both claim the card for the delegate and write one note
- * that says who has it and why. The claim is the same edit as `wi claim`, so a delegated card
- * refuses a second claimant. A person holds a card through `agent` too; `wi agents` tells a person
+ * For an agent, `wi delegate` claims the card as `wi claim` does, starts the worker and notes where
+ * it runs. For a person, it only assigns the card: their name goes in `agent`, the status stays,
+ * and a note is written only with a reason, because people explain elsewhere. Either way the card
+ * refuses a second holder. A person holds a card through `agent` too; `wi agents` tells a person
  * from an agent by a note with `type: person`. This module imports nothing from Node.
  */
 import { PERSON_TYPE } from './authorship.ts'
 import { cardState } from './card-state.ts'
 import type { Edit } from './edits.ts'
-import { claimEdits } from './transitions.ts'
 
 export const HARNESSES = ['claude', 'codex', 'pi'] as const
 export type Harness = typeof HARNESSES[number]
@@ -61,10 +61,16 @@ export function workerName(harness: Harness, slug: string): string {
   return `${harness}-${slug}`
 }
 
-/** The claim, decided from the card's text at write time. Null when the holder already has it. */
-export function delegationEdits(text: string, holder: string, hasOtherDoingChild: boolean): Edit[] | null {
+/**
+ * Assigning a card to a person: their name in `agent`, and nothing else. The status stays, because
+ * a person chooses when to start. A second holder and a done card are refused. Null when the
+ * person already holds the card.
+ */
+export function assignEdits(text: string, person: string): Edit[] | null {
   const state = cardState(text)
-  return claimEdits(state.status, state.agent, holder, state.hasPrevStatus, state.board && hasOtherDoingChild)
+  if (state.status === 'done') throw new Error('a done card cannot be assigned.')
+  if (state.agent && state.agent !== person) throw new Error(`already held by ${state.agent}. Release that claim first.`)
+  return state.agent === person ? null : [{ op: 'set', key: 'agent', value: person }]
 }
 
 export interface Delegation {

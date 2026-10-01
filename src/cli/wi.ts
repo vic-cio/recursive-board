@@ -141,9 +141,9 @@ Notes
   \`wi status <ref> done\` names each card it unblocks. An archived card that is not done still blocks.
   \`wi claim\` lets an agent hold a card and its subtasks at once. It refuses a board with a child in
   doing that a different agent or a person works.
-  \`wi delegate <ref> --to <person>\` claims the card for a person (a note with type: person), and notes who
-  has it and why (--reason). \`--to claude|codex|pi\` also makes a worktree of this Git repository on
-  card/<slug> beside it, in <repo>-worktrees/, and starts that harness headless with the card body as its
+  \`wi delegate <ref> --to <person>\` assigns the card to a person (a note with type: person): it sets
+  agent and keeps the status, and notes why only with --reason. \`--to claude|codex|pi\` claims the card,
+  makes a worktree of this Git repository on card/<slug> beside it, in <repo>-worktrees/, and starts that harness headless with the card body as its
   brief. The note names the log, <repo>-worktrees/<slug>.log, and the command that resumes the session.
   --permission passes the harness's own mode: claude takes --permission-mode (default auto), codex
   takes --sandbox (default workspace-write), and pi has none. The default never bypasses permissions.

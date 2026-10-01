@@ -21,7 +21,7 @@ import { editItem } from '../write.ts'
 import { appendNote, noteLine } from '../../shared/notes.ts'
 import { roleForNewCard } from '../../shared/authorship.ts'
 import { frontmatterBody } from '../../shared/frontmatter.ts'
-import { cardSlug, delegateTarget, delegationNote, workerName, type Harness } from '../../shared/delegate.ts'
+import { assignEdits, cardSlug, delegateTarget, delegationNote, workerName, type Harness } from '../../shared/delegate.ts'
 
 export interface DelegateOptions {
   /** A person (a note with type: person), or a harness: claude, codex or pi. */
@@ -72,7 +72,9 @@ export async function delegate(
     if (options.model !== undefined || options.permission !== undefined || options.agent !== undefined) {
       throw new Error('--model, --permission and --agent are for an agent. A person takes --reason only.')
     }
-    await claimItem(vault, ref, target.name, note(target.name))
+    if (item.area) throw new Error(`${item.relPath} is an area, and an area cannot be assigned.`)
+    if (item.parent === null) throw new Error(`${item.relPath} is a root, and a root cannot be assigned.`)
+    await editItem(item, (text) => assignEdits(text, target.name), options.reason?.trim() ? note(target.name) : undefined)
     return { item, holder: target.name }
   }
 

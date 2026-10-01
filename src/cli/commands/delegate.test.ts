@@ -60,18 +60,26 @@ function deps(cwd: string, launches: Launch[], fail?: string): DelegateDeps {
 
 const card = (f: Fixture) => readFileSync(join(f.root, 'Boards/Price the job.md'), 'utf8')
 
-test('delegating to a person claims the card for them and notes why, with no Git and no process', async () => {
+test('delegating to a person only assigns the card: same status, no note, no Git, no process', async () => {
   const f = seed()
   const launches: Launch[] = []
   const noGit: DelegateDeps = { ...deps('/nowhere', launches), git: async () => { throw new Error('git ran') } }
-  const result = await delegate(await loadVault(f.root), 'wi-0004', { to: 'ana', reason: 'She knows the supplier.' }, noGit)
+  const before = card(f)
+  const result = await delegate(await loadVault(f.root), 'wi-0004', { to: 'ana' }, noGit)
   assert.equal(result.holder, 'Ana')
   assert.equal(result.harness, undefined)
   assert.equal(launches.length, 0)
   const text = card(f)
-  assert.match(text, /^status: doing$/m)
+  assert.match(text, /^status: options$/m, 'a person chooses when to start')
   assert.match(text, /^agent: Ana$/m)
-  assert.match(text, /, Session agent \(m-0\): Delegated to Ana: She knows the supplier\.$/m)
+  const strip = (t: string) => t.replace(/^(agent|updated): .*\n/gm, '')
+  assert.equal(strip(text), strip(before), 'the agent line (and the updated stamp) is the only change')
+})
+
+test('delegating to a person writes a note only when a reason is given', async () => {
+  const f = seed()
+  await delegate(await loadVault(f.root), 'wi-0004', { to: 'ana', reason: 'She knows the supplier.' }, deps('/nowhere', []))
+  assert.match(card(f), /, Session agent \(m-0\): Delegated to Ana: She knows the supplier\.$/m)
 })
 
 test('delegating to a name with no person note and no harness writes nothing', async () => {

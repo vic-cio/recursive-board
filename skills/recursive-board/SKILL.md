@@ -72,7 +72,7 @@ wi area <ref>                         # mark a card as an area
 wi area <ref> --off                   # remove the area mark
 wi tag <ref> <tag>                    # add a free tag; --off removes it
 wi claim <ref> --agent <name>        # assign and move to doing in one write
-wi delegate <ref> --to <person>      # claim for a person (a type: person note), and note why
+wi delegate <ref> --to <person>      # assign to a person (a type: person note); status stays
 wi delegate <ref> --to <claude|codex|pi> [--model <id>] --reason <text>  # start a headless worker
 wi release <ref> --reason <text> [--where <branch-or-path>]
 wi move <ref> --to <new parent ref>
@@ -113,8 +113,9 @@ In Obsidian, use **Promote** at the top of any child card to give it its own boa
 - To hand a card to a worker, run `wi delegate <card> --to <harness> --model <id> --reason <why>`.
   It makes a worktree of the current Git repository on `card/<slug>`, claims the card for the
   worker, starts the harness with the card body as the brief, and notes the log path. Run it in the
-  repository the card works on. To hand a card to a person, use `--to <name>` with a note of
-  `type: person`; that card does not count in `wi agents`.
+  repository the card works on. To assign a card to a person, use `--to <name>` with a note of
+  `type: person`. It sets only `agent`, so the person starts when they choose, and the card does
+  not count in `wi agents`.
 - A dispatcher records each event on the card (start, finish, retry, stop) with
   `wi note <card> "<event>" --agent <its name>`.
 - When a worker stops, its dispatcher runs `wi release` with a reason and, when available, the

@@ -2,7 +2,7 @@ import { test } from 'node:test'
 import assert from 'node:assert/strict'
 
 import {
-  cardSlug, delegateTarget, delegationEdits, delegationNote, isHarness, peopleIn, workerName,
+  assignEdits, cardSlug, delegateTarget, delegationNote, isHarness, peopleIn, workerName,
 } from './delegate.ts'
 
 const card = (fields: string) => `---\ntype: work-item\nid: wi-a1\ntitle: Price the job\n${fields}---\n\nBody\n`
@@ -34,14 +34,12 @@ test('workerName joins the harness and the card slug', () => {
   assert.equal(workerName('pi', 'price-the-job'), 'pi-price-the-job')
 })
 
-test('delegationEdits claims the card for the holder like wi claim', () => {
-  assert.deepEqual(delegationEdits(card('status: options\n'), 'Ana', false), [
-    { op: 'set', key: 'status', value: 'doing' },
-    { op: 'set', key: 'agent', value: 'Ana' },
-  ])
-  assert.equal(delegationEdits(card('status: doing\nagent: Ana\n'), 'Ana', false), null)
-  assert.throws(() => delegationEdits(card('status: doing\nagent: codex-x\n'), 'Ana', false), /already claimed by codex-x/)
-  assert.throws(() => delegationEdits(card('status: done\n'), 'Ana', false), /done card/)
+test('assignEdits puts the person on the card and leaves its status alone', () => {
+  assert.deepEqual(assignEdits(card('status: options\n'), 'Ana'), [{ op: 'set', key: 'agent', value: 'Ana' }])
+  assert.deepEqual(assignEdits(card('status: backlog\n'), 'Ana'), [{ op: 'set', key: 'agent', value: 'Ana' }])
+  assert.equal(assignEdits(card('status: options\nagent: Ana\n'), 'Ana'), null)
+  assert.throws(() => assignEdits(card('status: doing\nagent: codex-x\n'), 'Ana'), /already held by codex-x/)
+  assert.throws(() => assignEdits(card('status: done\n'), 'Ana'), /done card/)
 })
 
 test('delegationNote for a person says who has the card and why', () => {

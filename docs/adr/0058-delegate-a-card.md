@@ -4,17 +4,21 @@ amends: docs/adr/0034-agent-limit.md (who counts), docs/adr/0042-creator-and-rol
 ---
 # Delegate a card to a person or a headless agent
 
-`wi delegate <ref> --to <person|claude|codex|pi>` hands a card to someone. It claims the card for
-the delegate and adds a note that says who has it and why. For an agent it also makes the worktree,
-starts the worker as a headless process, and notes the log. One command does what a dispatcher
+`wi delegate <ref> --to <person|claude|codex|pi>` hands a card to someone. For an agent it claims
+the card, makes the worktree, starts the worker as a headless process, and notes who has the card
+and where the log is. For a person it only assigns the card. One command does what a dispatcher
 script did by hand. Hand-built launch lines failed in three ways: an update prompt ate the brief,
 shell word splitting broke a loop, and the sandbox needed `--add-dir`.
 
 ## A person holds a card through `agent`
 
-A delegated card carries the delegate's name in `agent`, through the same claim as `wi claim`. So
-a person's card refuses a second claimant, and `wi release` works on it. `owner` is not used: on
-the dashboard, a doing card that you own waits for your review, which is a different thing.
+A delegated card carries the delegate's name in `agent`, so it refuses a second holder, and
+`wi release` works on it. `owner` is not used: on the dashboard, a doing card that you own waits
+for your review, which is a different thing.
+
+For a person, `wi delegate` writes only the name. The status stays, because an agent starts at once
+but a person chooses when to start. It writes a note only with `--reason`: a person explains a
+hand-off on the platform they talk on, not on the card. Victor decided this at the 0.8.0 review.
 
 `wi` knows a person by a note with `type: person`, in any folder, as the plugin's people picker
 does. `wi agents` does not count a doing card whose `agent` names a person, and `wi claim` gives no
