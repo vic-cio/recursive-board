@@ -43,11 +43,25 @@ test('showCard returns the card, its brief, ancestry, dependencies, and children
   assert.equal(build.context, 'Use the spec.')
   assert.deepEqual(build.acceptanceCriteria, ['App starts', 'Tests pass'])
   assert.equal(build.notes, '- Work started.')
+  assert.deepEqual(build.knowledge, [])
   assert.deepEqual(build.children, { total: 2, open: 1, done: 1, items: [
     { id: 'wi-deploy', title: 'Deploy', status: 'options', archived: false },
     { id: 'wi-test', title: 'Test', status: 'done', archived: false },
   ] })
   assert.equal('blocked' in build, false)
+})
+
+test('showCard returns the Knowledge lines and an empty list when the section is absent', async () => {
+  fixture = makeVault()
+  fixture.write('Boards/Knowledge.md', item({ type: 'work-item', id: 'wi-knowledge', title: 'Knowledge' },
+    '## Knowledge\n\n- [[First note]]\n  Detail for the agent.\n\n- [ ] [[Second note]]\n'))
+  fixture.write('Boards/Empty.md', item({ type: 'work-item', id: 'wi-empty', title: 'Empty' }))
+
+  const vault = await loadVault(fixture.root)
+  assert.deepEqual(showCard(vault, 'wi-knowledge').knowledge, [
+    '- [[First note]]', 'Detail for the agent.', '- [ ] [[Second note]]',
+  ])
+  assert.deepEqual(showCard(vault, 'wi-empty').knowledge, [])
 })
 
 test('showCard exposes a broken parent link and unresolved dependencies', async () => {

@@ -113,9 +113,18 @@ test('wi show --json returns a complete card without changing its file', async (
   const card = JSON.parse(result.stdout)
   assert.equal(card.id, 'wi-0004')
   assert.equal(card.owner, 'sam')
+  assert.deepEqual(card.knowledge, [])
   assert.deepEqual(card.ancestry.map((entry: { id: string }) => entry.id), ['wi-0001'])
   assert.deepEqual(card.children, { total: 0, open: 0, done: 0, items: [] })
   assert.equal(readFixture('Boards/Build server.md'), before)
+})
+
+test('wi trace exits successfully with its removal notice', async () => {
+  fixture = seed()
+  const result = await wi(['trace', 'old source', '--heading', 'Old', '--claim', 'old claim'])
+  assert.equal(result.code, 0, result.stderr)
+  assert.match(result.stdout, /wi trace was removed in 0\.8\.0/)
+  assert.match(result.stdout, /wi show <ref> --json/)
 })
 
 test('WI_MAX_AGENTS overrides the vault config for one dispatcher run', async () => {

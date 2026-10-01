@@ -102,7 +102,6 @@ const INVOCATIONS: Record<string, string[]> = {
   // A person, so a missed refusal could never start an agent.
   delegate: ['delegate', 'Build server', '--to', 'sam'],
   objective: ['objective', 'Build server'],
-  trace: ['trace', 'Boards/Main.md', '--heading', 'Main', '--claim', 'x'],
   agents: ['agents'],
   dashboard: ['dashboard', '--you', 'sam'],
   release: ['release', 'Build server', '--reason', 'stop'],
@@ -124,6 +123,7 @@ const INVOCATIONS: Record<string, string[]> = {
 
 test('the table of invocations covers every command', () => {
   assert.deepEqual(Object.keys(INVOCATIONS).sort(), Object.keys(COMMAND_FLAGS).sort())
+  assert.equal('trace' in COMMAND_FLAGS, false)
 })
 
 for (const [command, args] of Object.entries(INVOCATIONS)) {

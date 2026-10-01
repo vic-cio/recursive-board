@@ -56,6 +56,7 @@ wi children                       # use the repo pointer's board
 
 Add `--json` when you parse the result. A card's own text (objective, criteria, notes) is in
 its file in the work-item folder (`Boards/` by default). Read the file.
+Before work, read the notes in the card's Knowledge section.
 
 ## Writing
 

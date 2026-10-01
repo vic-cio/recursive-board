@@ -18,6 +18,14 @@ function identity(item: WorkItem) {
   return { id: item.id ?? null, title: titleOf(item), path: item.relPath }
 }
 
+function knowledgeLines(body: string): string[] {
+  const text = section(body, 'Knowledge')
+  if (text === null) return []
+  return text.split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter((line) => line !== '' && !/^[-*+]\s*(?:\[[ xX]\]\s*)?$/.test(line))
+}
+
 /** The ancestors are root first. Broken links remain visible through ancestryIssue. */
 function ancestryOf(vault: Vault, item: WorkItem) {
   const ancestors: WorkItem[] = []
@@ -72,6 +80,7 @@ export function showCard(vault: Vault, ref: string) {
     context: section(body, 'Context'),
     acceptanceCriteria: listItems(body, 'Acceptance Criteria'),
     notes: section(body, 'Notes'),
+    knowledge: knowledgeLines(body),
     dependencies: dependencies.resolved.map((dependency) => ({
       ...identity(dependency), status: dependency.status ?? null,
       archived: vault.isArchived(dependency), satisfied: dependency.status === 'done',

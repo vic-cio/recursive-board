@@ -13,7 +13,7 @@ import { resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 import {
-  loadVault, readVaultConfig, findVaultRoot, getDefaultVault, getRepoPointer, setRepoPointer, maxAgentsForRun, readPeople,
+  loadVault, findVaultRoot, getDefaultVault, getRepoPointer, setRepoPointer, maxAgentsForRun, readPeople,
   type Vault, type WorkItem,
 } from './vault.ts'
 import { createItem } from './commands/new.ts'
@@ -39,7 +39,6 @@ import { hookStatus, installHook, uninstallHook } from './commands/hook.ts'
 import { runSetup } from './commands/setup.ts'
 import { objectiveReport } from './commands/objective.ts'
 import { dashboardSummary, renderDashboard } from './commands/dashboard.ts'
-import { correctionTrace, renderCorrectionTrace } from './commands/trace.ts'
 import { COMMAND_FLAGS, parseCommandLine, type Values } from './flags.ts'
 import { PLUGIN_DATA_FILE } from '../shared/board-settings.ts'
 import { STATUSES } from '../shared/schema.ts'
@@ -62,7 +61,6 @@ Usage
   wi delegate <ref> --to <person|claude|codex|pi> [--model <id>] [--agent <name>]
                  [--permission <mode>]
   wi objective [<ref>]
-  wi trace <source.md> --heading <heading> --claim <text> [--json]
   wi agents
   wi dashboard [--you <name>] [--parent <ref>] [--json]
   wi release <ref> --reason <text> [--where <branch-or-path>]
@@ -153,6 +151,7 @@ Notes
   plugin migrates them, wi reads Recursive Board config.md, then .wi.json.
   \`wi new\` warns when such a file exists because a new id or filename may clash with it.
   \`wi here\` reads or sets this repository's vault and board pointer in your user config.
+  \`wi trace\` was removed in 0.8.0. Use \`wi show <ref> --json\` to read a card's Knowledge links.
 `
 
 const VERSION = '0.8.0'
@@ -160,6 +159,10 @@ const VERSION = '0.8.0'
 class UsageError extends Error {}
 
 async function main(argv: string[]): Promise<number> {
+  if (argv[0] === 'trace') {
+    process.stdout.write('wi trace was removed in 0.8.0. Use wi show <ref> --json to read a card\'s Knowledge links.\n')
+    return 0
+  }
   const { values, positionals } = parseCommandLine(argv)
 
   if (values.version) {
@@ -188,22 +191,6 @@ async function main(argv: string[]): Promise<number> {
   if (command === 'template') {
     process.stdout.write('wi template is retired. Use wi new --template to choose a template when you create a work item.\n')
     return 0
-  }
-
-  if (command === 'trace') {
-      const heading = text(values, 'heading')
-      const claim = text(values, 'claim')
-      if (rest.length !== 1 || !rest[0] || !heading || !claim) {
-        throw new UsageError('wi trace needs a source file, --heading, and --claim.')
-      }
-      const root = await resolveVaultRoot(text(values, 'vault'))
-      if (findVaultRoot(root) !== root) throw new UsageError(`${root} is not a vault.`)
-      const vault = { root, ...await readVaultConfig(root) }
-      hintMigration(vault.configFile)
-      const report = await correctionTrace({ vault, source: rest[0], heading, claim })
-      if (values.json === true) print(report)
-      else process.stdout.write(renderCorrectionTrace(report))
-      return 0
   }
 
   const vault = await openVault(text(values, 'vault'))

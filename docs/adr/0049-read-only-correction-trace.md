@@ -1,5 +1,5 @@
 ---
-status: accepted
+status: superseded
 ---
 # Discover possible correction consumers without changing them
 
@@ -32,3 +32,8 @@ Fenced examples do not establish a source heading. Symbolic scan folders and ent
 Short wikilinks resolve only when the scanned notes establish one target. Ambiguity becomes a search gap.
 Relative Markdown links and encoded heading fragments are supported.
 Link and text occurrences are candidates. The caller verifies passage meaning before changing any consumer.
+
+## Superseded
+
+Victor superseded this decision on 2026-10-01. Correction tracing is not a board feature.
+`wi trace` exits successfully with a removal notice in 0.8.0. Agents read the card's Knowledge links with `wi show <ref> --json`.

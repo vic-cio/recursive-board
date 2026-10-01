@@ -168,7 +168,7 @@ The pre-commit hook runs `wi validate` and stops a commit when the vault has err
 | `wi promote <ref>` / `wi demote <ref>` | Makes an item a board or a card again. Promotion sets `board: true`; demotion removes the `board` key. |
 | `wi rm <ref> [--recursive] [--dry-run]` | Moves an item to the vault's `.trash` folder. Use `--dry-run` to preview. Items with children require `--recursive`. |
 | `wi children [<ref>] [--status <status>] [--tree] [--archived]` | Lists an item's children. If the ref is omitted, uses the repo pointer's board. `--status` filters by status, `--tree` shows descendants, and `--archived` includes archived items. |
-| `wi show <ref> --json` | Reads one complete card as JSON. It includes the brief, Notes, assignment, ancestor objectives, dependencies, and child summary. Broken links appear as issues; the command changes no files. |
+| `wi show <ref> --json` | Reads one complete card as JSON. It includes the brief, Notes, Knowledge lines, assignment, ancestor objectives, dependencies, and child summary. Broken links appear as issues; the command changes no files. |
 | `wi validate` | Checks work-item structure and reports errors and warnings. Exits with code 1 when it finds errors. |
 | `wi hook install\|uninstall\|status [--vault <path>]` | Installs, removes, or inspects the Git pre-commit validation hook. `install --force` replaces an unrelated hook. |
 | `wi here [--board <ref>] [--vault <path>]` | Prints this Git repo's pointer, or sets it in user config. Linked worktrees share the pointer. |
@@ -249,19 +249,3 @@ See [`docs/adr/`](docs/adr/) for the project's decision record.
 ## License
 
 MIT. See [LICENSE](LICENSE).
-
-## Trace a corrected Knowledge claim
-
-Run the read-only trace before repairing copied claims:
-
-```sh
-wi trace "Knowledge/Source note.md" --heading "Source heading" --claim "the old claim"
-```
-
-Use `--json` for a structured report. Redirect the Markdown output to a separate review file when needed.
-The command reads Knowledge and the configured work-item folder. It never edits a source or consumer.
-It lists heading links, note-only links, and case-insensitive text candidates without a heading link.
-It supports wikilinks and relative Markdown links. Ambiguous short links and unreadable or skipped files become search gaps.
-A match is a candidate for review. A note-only link does not establish that a claim was copied.
-Text search can miss paraphrases, line wrapping, and older copies. External skills and memory require a separate search.
-The report has fields for affected files, correction evidence, unresolved copies, and additional search gaps.
