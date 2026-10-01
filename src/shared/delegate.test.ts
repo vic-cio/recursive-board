@@ -42,17 +42,10 @@ test('assignEdits puts the person on the card and leaves its status alone', () =
   assert.throws(() => assignEdits(card('status: done\n'), 'Ana'), /done card/)
 })
 
-test('delegationNote for a person says who has the card and why', () => {
-  assert.equal(delegationNote({ holder: 'Ana', reason: 'She knows the supplier.' }),
-    'Delegated to Ana: She knows the supplier.')
-  assert.equal(delegationNote({ holder: 'Ana' }), 'Delegated to Ana.')
-})
-
 for (const harness of ['claude', 'codex', 'pi'] as const) {
   test(`delegationNote for a ${harness} worker names the harness and the model`, () => {
-    assert.equal(
-      delegationNote({ holder: `${harness}-price`, harness, model: 'm-1', reason: 'cheap model for a small task' }),
-      `Delegated to ${harness}-price, a headless ${harness} worker on m-1: cheap model for a small task.`)
+    assert.equal(delegationNote({ holder: `${harness}-price`, harness, model: 'm-1' }),
+      `Delegated to ${harness}-price, a headless ${harness} worker on m-1.`)
     assert.equal(delegationNote({ holder: `${harness}-price`, harness }),
       `Delegated to ${harness}-price, a headless ${harness} worker.`)
   })

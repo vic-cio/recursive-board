@@ -76,12 +76,6 @@ test('delegating to a person only assigns the card: same status, no note, no Git
   assert.equal(strip(text), strip(before), 'the agent line (and the updated stamp) is the only change')
 })
 
-test('delegating to a person writes a note only when a reason is given', async () => {
-  const f = seed()
-  await delegate(await loadVault(f.root), 'wi-0004', { to: 'ana', reason: 'She knows the supplier.' }, deps('/nowhere', []))
-  assert.match(card(f), /, Session agent \(m-0\): Delegated to Ana: She knows the supplier\.$/m)
-})
-
 test('delegating to a name with no person note and no harness writes nothing', async () => {
   const f = seed()
   const before = card(f)
@@ -107,7 +101,7 @@ for (const harness of ['claude', 'codex', 'pi'] as const) {
     const root = repo()
     const launches: Launch[] = []
     const result = await delegate(await loadVault(f.root), 'wi-0004',
-      { to: harness, model: 'm-1', reason: 'a small task' }, deps(join(root), launches))
+      { to: harness, model: 'm-1' }, deps(join(root), launches))
 
     const worktree = join(root, '..', 'tools-worktrees', 'price-the-job')
     const log = join(root, '..', 'tools-worktrees', 'price-the-job.log')
@@ -134,7 +128,7 @@ for (const harness of ['claude', 'codex', 'pi'] as const) {
     const text = card(f)
     assert.match(text, new RegExp(`^agent: ${harness}-price-the-job$`, 'm'))
     assert.match(text, /^status: doing$/m)
-    assert.match(text, new RegExp(`Delegated to ${harness}-price-the-job, a headless ${harness} worker on m-1: a small task\\.`))
+    assert.match(text, new RegExp(`Delegated to ${harness}-price-the-job, a headless ${harness} worker on m-1\\.`))
     assert.ok(text.includes(`Started the worker, process 4242, on card/price-the-job in \`${worktree}\`. Log: \`${log}\`.`))
     assert.ok(text.includes(`Resume: \`${spec.resume}\``))
   })
@@ -236,10 +230,17 @@ test('wi delegate --to a person needs no Git repository and prints the holder', 
   const f = seed()
   const outside = realpathSync(mkdtempSync(join(tmpdir(), 'wi-nogit-')))
   cleanups.push(() => rmSync(outside, { recursive: true, force: true }))
-  const result = wi(['delegate', 'Price the job', '--to', 'Ana', '--reason', 'she knows the supplier'], outside, f.root, fakeBin())
+  const result = wi(['delegate', 'Price the job', '--to', 'Ana'], outside, f.root, fakeBin())
   assert.equal(result.code, 0, result.stderr)
-  assert.match(result.stdout, /wi-0004.*doing {2}\(delegated to Ana\)/)
-  assert.match(card(f), /Session agent \(m-0\): Delegated to Ana: she knows the supplier\./)
+  assert.match(result.stdout, /wi-0004.*options {2}\(assigned to Ana\)/)
+  assert.doesNotMatch(card(f), /Delegated to Ana/)
+})
+
+test('wi delegate refuses --reason with exit 2: the brief belongs on the card', () => {
+  const f = seed()
+  const result = wi(['delegate', 'Price the job', '--to', 'Ana', '--reason', 'why'], f.root, f.root, fakeBin())
+  assert.equal(result.code, 2)
+  assert.match(result.stderr, /--reason/)
 })
 
 test('wi delegate refuses an unknown --to with exit 2 and writes nothing', () => {

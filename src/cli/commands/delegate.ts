@@ -27,7 +27,6 @@ export interface DelegateOptions {
   /** A person (a note with type: person), or a harness: claude, codex or pi. */
   to: string
   model?: string | undefined
-  reason?: string | undefined
   /** The agent name on the claim. Defaults to `<harness>-<slug>`. */
   agent?: string | undefined
   /** The harness's permission mode or sandbox. */
@@ -65,16 +64,16 @@ export async function delegate(
 ): Promise<DelegateResult> {
   const item = vault.resolve(ref)
   const target = delegateTarget(options.to, await readPeople(vault.root))
-  const note = (holder: string, harness?: Harness) => (text: string) =>
-    appendNote(text, noteLine(delegationNote({ holder, harness, model: options.model, reason: options.reason }), deps.author))
+  const note = (holder: string, harness: Harness) => (text: string) =>
+    appendNote(text, noteLine(delegationNote({ holder, harness, model: options.model }), deps.author))
 
   if (target.kind === 'person') {
     if (options.model !== undefined || options.permission !== undefined || options.agent !== undefined) {
-      throw new Error('--model, --permission and --agent are for an agent. A person takes --reason only.')
+      throw new Error('--model, --permission and --agent are for an agent. A person takes only --to.')
     }
     if (item.area) throw new Error(`${item.relPath} is an area, and an area cannot be assigned.`)
     if (item.parent === null) throw new Error(`${item.relPath} is a root, and a root cannot be assigned.`)
-    await editItem(item, (text) => assignEdits(text, target.name), options.reason?.trim() ? note(target.name) : undefined)
+    await editItem(item, (text) => assignEdits(text, target.name))
     return { item, holder: target.name }
   }
 

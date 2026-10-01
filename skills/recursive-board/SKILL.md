@@ -111,7 +111,7 @@ In Obsidian, use **Promote** at the top of any child card to give it its own boa
 - To report the state of the boards to a person, run `wi dashboard --you <name> --json`. It
   returns what the person's dashboard shows: review work, progress, claims and attention.
 - To hand a card to a worker, run `wi delegate <card> --to <harness> --model <id>`. The worker
-  reads the card body as its brief, so write the brief on the card, not in `--reason`.
+  reads the card body as its brief, so write the brief on the card first.
   It makes a worktree of the current Git repository on `card/<slug>`, claims the card for the
   worker, starts the harness with the card body as the brief, and notes the log path. Run it in the
   repository the card works on. To assign a card to a person, use `--to <name>` with a note of

@@ -61,7 +61,7 @@ Usage
   wi depend <ref> --on <ref> [--off]
   wi set <ref> [--owner <name>] [--role <name>] [--creator <name> [--model <id>]]
   wi claim <ref> --agent <name>
-  wi delegate <ref> --to <person|claude|codex|pi> [--model <id>] [--reason <text>] [--agent <name>]
+  wi delegate <ref> --to <person|claude|codex|pi> [--model <id>] [--agent <name>]
                  [--permission <mode>]
   wi objective [<ref>]
   wi trace <source.md> --heading <heading> --claim <text> [--json]
@@ -142,7 +142,7 @@ Notes
   \`wi claim\` lets an agent hold a card and its subtasks at once. It refuses a board with a child in
   doing that a different agent or a person works.
   \`wi delegate <ref> --to <person>\` assigns the card to a person (a note with type: person): it sets
-  agent and keeps the status, and notes why only with --reason. \`--to claude|codex|pi\` claims the card,
+  agent and keeps the status, and writes no note. \`--to claude|codex|pi\` claims the card,
   makes a worktree of this Git repository on card/<slug> beside it, in <repo>-worktrees/, and starts that harness headless with the card body as its
   brief. The note names the log, <repo>-worktrees/<slug>.log, and the command that resumes the session.
   --permission passes the harness's own mode: claude takes --permission-mode (default auto), codex
@@ -558,7 +558,7 @@ async function runDelegate(vault: Vault, rest: string[], values: Values, json: b
   const maxAgents = maxAgentsForRun(vault)
   const active = await activeAgentNames(vault)
   const result = await delegate(vault, ref, {
-    to, model: pick('model'), reason: pick('reason'), agent: pick('agent'), permission: pick('permission'),
+    to, model: pick('model'), agent: pick('agent'), permission: pick('permission'),
   }, {
     cwd: process.cwd(), git: runGit, launch: spawnWorker, uuid: () => crypto.randomUUID(),
     author: authorLabel(envText('WI_CREATOR'), envText('WI_MODEL')),
@@ -568,7 +568,9 @@ async function runDelegate(vault: Vault, rest: string[], values: Values, json: b
       branch: result.branch ?? null, worktree: result.worktree ?? null, log: result.log ?? null,
       pid: result.pid ?? null, resume: result.resume ?? null })
   } else {
-    process.stdout.write(`${label(result.item)}  doing  (delegated to ${result.holder})\n`)
+    process.stdout.write(result.harness
+      ? `${label(result.item)}  doing  (delegated to ${result.holder})\n`
+      : `${label(result.item)}  ${result.item.status}  (assigned to ${result.holder})\n`)
     if (result.harness) {
       process.stdout.write(`  ${result.harness} worker, process ${result.pid}, on ${result.branch}\n` +
         `  worktree  ${result.worktree}\n  log       ${result.log}\n  resume    ${result.resume}\n`)

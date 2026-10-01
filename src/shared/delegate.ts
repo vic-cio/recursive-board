@@ -2,9 +2,9 @@
  * Handing a card to a person or an agent (docs/adr/0058-delegate-a-card.md).
  *
  * For an agent, `wi delegate` claims the card as `wi claim` does, starts the worker and notes where
- * it runs. For a person, it only assigns the card: their name goes in `agent`, the status stays,
- * and a note is written only with a reason, because people explain elsewhere. Either way the card
- * refuses a second holder. A person holds a card through `agent` too; `wi agents` tells a person
+ * it runs. For a person, it only assigns the card: their name goes in `agent` and the status stays.
+ * There is no reason to give: the brief is on the card, and people explain where they talk. Either
+ * way the card refuses a second holder. A person holds a card through `agent` too; `wi agents` tells a person
  * from an agent by a note with `type: person`. This module imports nothing from Node.
  */
 import { PERSON_TYPE } from './authorship.ts'
@@ -74,20 +74,15 @@ export function assignEdits(text: string, person: string): Edit[] | null {
 }
 
 export interface Delegation {
-  /** The name on the claim: a person, or the worker's agent name. */
+  /** The worker's agent name. */
   holder: string
-  harness?: Harness | undefined
+  harness: Harness
   model?: string | undefined
-  reason?: string | undefined
 }
 
-/** The note text: who has the card, and why when a reason is given. */
-export function delegationNote({ holder, harness, model, reason }: Delegation): string {
-  const who = harness === undefined
-    ? holder
-    : `${holder}, a headless ${harness} worker${model?.trim() ? ` on ${model.trim()}` : ''}`
-  const why = reason?.trim().replace(/\.$/, '')
-  return why ? `Delegated to ${who}: ${why}.` : `Delegated to ${who}.`
+/** The note for a worker: who has the card, on which harness and model. */
+export function delegationNote({ holder, harness, model }: Delegation): string {
+  return `Delegated to ${holder}, a headless ${harness} worker${model?.trim() ? ` on ${model.trim()}` : ''}.`
 }
 
 /**

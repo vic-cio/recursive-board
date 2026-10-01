@@ -61,7 +61,7 @@ export const COMMAND_FLAGS: Record<string, Flag[]> = {
   depend: ['on', 'off', 'vault', 'json'],
   set: ['owner', 'role', 'creator', 'model', 'vault', 'json'],
   claim: ['agent', 'vault', 'json'],
-  delegate: ['to', 'model', 'reason', 'agent', 'permission', 'vault', 'json'],
+  delegate: ['to', 'model', 'agent', 'permission', 'vault', 'json'],
   objective: ['vault'],
   trace: ['heading', 'claim', 'vault', 'json'],
   agents: ['vault', 'json'],

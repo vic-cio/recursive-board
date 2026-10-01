@@ -17,8 +17,9 @@ A delegated card carries the delegate's name in `agent`, so it refuses a second 
 for your review, which is a different thing.
 
 For a person, `wi delegate` writes only the name. The status stays, because an agent starts at once
-but a person chooses when to start. It writes a note only with `--reason`: a person explains a
-hand-off on the platform they talk on, not on the card. Victor decided this at the 0.8.0 review.
+but a person chooses when to start. It writes no note. There is no `--reason`: a worker reads the
+card body as its brief, and a person explains a hand-off on the platform they talk on. Victor
+decided both at the 0.8.0 review.
 
 `wi` knows a person by a note with `type: person`, in any folder, as the plugin's people picker
 does. `wi agents` does not count a doing card whose `agent` names a person, and `wi claim` gives no
