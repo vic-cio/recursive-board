@@ -37,6 +37,7 @@ import { dependenciesOf, openDependencies, titleOf } from './dependencies.ts'
 import { hookStatus, installHook, uninstallHook } from './commands/hook.ts'
 import { runSetup } from './commands/setup.ts'
 import { objectiveReport } from './commands/objective.ts'
+import { dashboardSummary, renderDashboard } from './commands/dashboard.ts'
 import { correctionTrace, renderCorrectionTrace } from './commands/trace.ts'
 import { COMMAND_FLAGS, parseCommandLine, type Values } from './flags.ts'
 import { PLUGIN_DATA_FILE } from '../shared/board-settings.ts'
@@ -59,6 +60,7 @@ Usage
   wi objective [<ref>]
   wi trace <source.md> --heading <heading> --claim <text> [--json]
   wi agents
+  wi dashboard [--you <name>] [--parent <ref>] [--json]
   wi release <ref> --reason <text> [--where <branch-or-path>]
   wi move <ref> --to <ref>
   wi archive <ref> [--undo]
@@ -134,6 +136,8 @@ Notes
   \`wi agents\` reports the advisory limit, the number of distinct agents with a doing card, and each
   claimed doing card. WI_MAX_AGENTS overrides
   maxAgents from the board settings for one run. Dispatchers decide whether to wait; wi claim does not enforce it.
+  \`wi dashboard\` prints the plugin dashboard's summary: review work for --you, progress by area, claims,
+  and what needs attention. --parent names a root or an area. It writes nothing.
   The board settings live in the Recursive Board plugin settings, stored in
   .obsidian/plugins/recursive-board/data.json. wi reads them and never writes them. Until the
   plugin migrates them, wi reads Recursive Board config.md, then .wi.json.
@@ -207,6 +211,8 @@ async function main(argv: string[]): Promise<number> {
       return runClaim(vault, rest, values, json)
     case 'agents':
       return runAgents(vault, rest, json)
+    case 'dashboard':
+      return runDashboard(vault, rest, values, json)
     case 'ready':
       return runReady(vault, rest, values, json)
     case 'objective':
@@ -556,6 +562,16 @@ function runAgents(vault: Vault, rest: string[], json: boolean): number {
   }
   process.stdout.write(`limit  ${maxAgents === null ? 'none' : maxAgents}\nagents with a doing card  ${activeAgents}\n`)
   for (const { agent, item } of claims) process.stdout.write(`  ${agent}  ${label(item)}\n`)
+  return 0
+}
+
+async function runDashboard(vault: Vault, rest: string[], values: Values, json: boolean): Promise<number> {
+  if (rest.length > 0) throw new UsageError('wi dashboard takes no card reference. Use --parent <ref>.')
+  const you = values['you'] === undefined ? undefined : singleLineOption(values, 'you')
+  if (you === undefined) process.stderr.write('wi: warning: no --you <name>, so no card waits for review.\n')
+  const summary = await dashboardSummary(vault, { ...(you === undefined ? {} : { you }), ...(typeof values['parent'] === 'string' ? { parent: values['parent'] } : {}) })
+  if (json) print(summary)
+  else process.stdout.write(renderDashboard(summary))
   return 0
 }
 

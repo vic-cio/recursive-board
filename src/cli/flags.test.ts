@@ -86,6 +86,7 @@ const INVOCATIONS: Record<string, string[]> = {
   objective: ['objective', 'Build server'],
   trace: ['trace', 'Boards/Main.md', '--heading', 'Main', '--claim', 'x'],
   agents: ['agents'],
+  dashboard: ['dashboard', '--you', 'sam'],
   release: ['release', 'Build server', '--reason', 'stop'],
   move: ['move', 'Build server', '--to', 'Main'],
   archive: ['archive', 'Build server'],
