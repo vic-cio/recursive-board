@@ -37,9 +37,9 @@ function seed(): Fixture {
   card('Home', { id: 'wi-home', parent: '"[[Main]]"', status: 'doing', area: true })
   card('Garden', { id: 'wi-garden', parent: '"[[Main]]"', status: 'backlog', area: true })
 
-  card('Copy', { id: 'wi-copy', parent: '"[[Site]]"', status: 'doing', owner: '"[[Victor]]"', agent: 'Writer' },
+  card('Copy', { id: 'wi-copy', parent: '"[[Site]]"', status: 'doing', owner: '"[[Ana]]"', agent: 'Writer' },
     '## Notes\n\n- 2026-09-30 11:00, Writer: **Review:** Check the copy: `Docs/Copy.md`, `http://localhost:3000`.\n', 30)
-  card('Layout', { id: 'wi-layout', parent: '"[[Site]]"', status: 'doing', owner: 'victor', board: true })
+  card('Layout', { id: 'wi-layout', parent: '"[[Site]]"', status: 'doing', owner: 'ana', board: true })
   card('Grid', { id: 'wi-grid', parent: '"[[Layout]]"', status: 'doing', agent: 'Builder' }, '', 10)
   card('Taxes', { id: 'wi-taxes', parent: '"[[Home]]"', status: 'doing', agent: 'Clerk' }, '', 120)
   card('Shelf', { id: 'wi-shelf', parent: '"[[Home]]"', status: 'done', agent: 'Carpenter' }, '', 60)
@@ -56,8 +56,8 @@ function seed(): Fixture {
 
 test('dashboardSummary lists the cards that wait for the reviewer, with the paths from the Review line', async () => {
   fixture = seed()
-  const summary = await dashboardSummary(await loadVault(fixture.root), { you: 'Victor', now: NOW })
-  assert.equal(summary.you, 'Victor')
+  const summary = await dashboardSummary(await loadVault(fixture.root), { you: 'Ana', now: NOW })
+  assert.equal(summary.you, 'Ana')
   assert.deepEqual(summary.review, [{
     id: 'wi-copy', title: 'Copy', path: 'Boards/Copy.md', area: 'Work', agent: 'Writer',
     what: 'Check the copy.', paths: ['Docs/Copy.md', 'http://localhost:3000'],
@@ -74,7 +74,7 @@ test('dashboardSummary leaves review empty when no reviewer is given', async () 
 
 test('dashboardSummary counts leaf cards by top area and drops an inactive area', async () => {
   fixture = seed()
-  const summary = await dashboardSummary(await loadVault(fixture.root), { you: 'Victor', now: NOW })
+  const summary = await dashboardSummary(await loadVault(fixture.root), { you: 'Ana', now: NOW })
   assert.deepEqual(summary.progress, [
     { area: { id: 'wi-home', title: 'Home', path: 'Boards/Home.md' }, name: 'Home',
       done: 2, doing: 1, total: 3, backlog: 0, percent: 67, working: 0 },
@@ -86,7 +86,7 @@ test('dashboardSummary counts leaf cards by top area and drops an inactive area'
 
 test('dashboardSummary splits claims into working, idle and recently finished', async () => {
   fixture = seed()
-  const summary = await dashboardSummary(await loadVault(fixture.root), { you: 'Victor', now: NOW })
+  const summary = await dashboardSummary(await loadVault(fixture.root), { you: 'Ana', now: NOW })
   const ids = (rows: { id: string | null }[]) => rows.map((row) => row.id)
   assert.deepEqual(ids(summary.agents.working), ['wi-grid'])
   assert.deepEqual(ids(summary.agents.idle), ['wi-taxes'])
@@ -99,7 +99,7 @@ test('dashboardSummary splits claims into working, idle and recently finished', 
 
 test('dashboardSummary names each card that needs attention, and counts them by reason', async () => {
   fixture = seed()
-  const summary = await dashboardSummary(await loadVault(fixture.root), { you: 'Victor', now: NOW })
+  const summary = await dashboardSummary(await loadVault(fixture.root), { you: 'Ana', now: NOW })
   assert.deepEqual(summary.attention.map((row) => [row.reason, row.id, row.cards.map((card) => card.id)]), [
     ['started', 'wi-deploy', ['wi-approve']],
     ['archived', 'wi-launch', ['wi-old']],
@@ -114,7 +114,7 @@ test('dashboardSummary names each card that needs attention, and counts them by 
 
 test('dashboardSummary with an area as --parent groups under the next area down', async () => {
   fixture = seed()
-  const summary = await dashboardSummary(await loadVault(fixture.root), { you: 'Victor', parent: 'Work', now: NOW })
+  const summary = await dashboardSummary(await loadVault(fixture.root), { you: 'Ana', parent: 'Work', now: NOW })
   assert.deepEqual(summary.scope, { root: null, focus: { id: 'wi-work', title: 'Work', path: 'Boards/Work.md' } })
   assert.deepEqual(summary.progress.map((row) => [row.name, row.done, row.total, row.working]), [
     ['Site', 0, 2, 1],
@@ -142,11 +142,11 @@ test('dashboardSummary with a root as --parent keeps that root, and refuses a pl
 
 test('wi dashboard --json prints the summary for the reviewer named by --you', async () => {
   fixture = seed()
-  const { stdout } = await run('node', [CLI, 'dashboard', '--json', '--you', 'Victor'], {
+  const { stdout } = await run('node', [CLI, 'dashboard', '--json', '--you', 'Ana'], {
     env: { ...process.env, WI_VAULT: fixture.root },
   })
   const summary = JSON.parse(stdout)
-  assert.equal(summary.you, 'Victor')
+  assert.equal(summary.you, 'Ana')
   assert.deepEqual(summary.review.map((row: { id: string }) => row.id), ['wi-copy'])
   assert.equal(typeof summary.generated, 'string')
 })
