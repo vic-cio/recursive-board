@@ -59,7 +59,7 @@ test('generated templates append vault-configured sections', async () => {
   fixture.write('.wi.json', '{"extraSections":["References","Risks"]}')
   await writeTemplates(await loadVault(fixture.root))
   const text = readFileSync(join(fixture.root, 'Templates/work-item.md'), 'utf8')
-  assert.match(text, /## Notes\n\n## References\n\n- \n\n## Risks\n\n- \n?$/)
+  assert.match(text, /## Notes\n\n## References\n\n## Risks\n?$/)
 })
 
 test('writing twice leaves the file untouched, so it is no sync event', async () => {

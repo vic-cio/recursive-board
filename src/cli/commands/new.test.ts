@@ -193,7 +193,7 @@ test('createItem appends vault-configured sections', async () => {
   fixture.write('.wi.json', '{"extraSections":["References","Risks"]}')
   const created = await createItem(await reload(fixture), { title: 'Streaming', parent: 'wi-0004' })
   assert.match(readFileSync(created.path, 'utf8'),
-    /## Notes\n\n## References\n\n- \n\n## Risks\n\n- \n?$/)
+    /## Notes\n\n## References\n\n## Risks\n?$/)
 })
 
 test('the body carries no H1, because Obsidian already draws the filename as the title', async () => {

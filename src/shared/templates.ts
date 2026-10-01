@@ -42,7 +42,7 @@ export const TEMPLATES: readonly BodyTemplate[] = [
     sections: [
       { heading: 'Objective' },
       { heading: 'Context' },
-      { heading: 'Acceptance Criteria', starter: '- ' },
+      { heading: 'Acceptance Criteria' },
       { heading: 'Notes' },
     ],
   },
@@ -141,7 +141,7 @@ export function renderBody(
   const content = briefContent(brief)
   const sections: Section[] = [
     ...template.sections,
-    ...extraSections.map((heading) => ({ heading, starter: '- ' })),
+    ...extraSections.map((heading) => ({ heading })),
   ]
   for (const heading of content.keys()) {
     if (!sections.some((s) => s.heading === heading)) {

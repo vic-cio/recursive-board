@@ -48,14 +48,15 @@ test('renderBody writes the sections in order, with no H1', () => {
   assert.doesNotMatch(body, /^## Knowledge$/m)
 })
 
-test('renderBody appends configured headings after the built-in sections with bullet starters', () => {
+test('renderBody appends configured headings after the built-in sections, empty', () => {
   const body = renderBody(requireTemplate(), ['References', 'Risks'])
-  assert.match(body, /## Notes\n\n## References\n\n- \n\n## Risks\n\n- \n?$/)
+  assert.match(body, /## Notes\n\n## References\n\n## Risks\n?$/)
 })
 
-test('renderBody includes a section starter where one is defined', () => {
+test('renderBody leaves every work-item section empty, so no lone bullet shows', () => {
   const body = renderBody(requireTemplate())
-  assert.match(body, /## Acceptance Criteria\n\n- \n/)
+  assert.match(body, /## Acceptance Criteria\n\n## Notes\n/)
+  assert.doesNotMatch(body, /^- $/m)
 })
 
 test('the first-board card explains how to promote itself', () => {
@@ -108,7 +109,7 @@ test('renderBody fills the brief in place of the starters', () => {
     '## Context', '', 'From the site survey.', '', 'Use the 2026 rates.', '',
     '## Acceptance Criteria', '', '- Every line has a rate', '- The total matches the survey', '',
     '## Notes', '',
-    '## Knowledge', '', '- ', '',
+    '## Knowledge', '',
   ].join('\n'))
 })
 
