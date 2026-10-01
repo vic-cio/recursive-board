@@ -37,9 +37,13 @@ export class Actions {
   /** Every board write, so it can be reversed. Session only (see `undo.ts`). */
   readonly undoStack = new UndoStack()
 
-  constructor(app: App, index: WorkItemIndex) {
+  /** "Your name": who signs a write made on this device. */
+  private readonly you: () => string
+
+  constructor(app: App, index: WorkItemIndex, you: () => string = () => '') {
     this.app = app
     this.index = index
+    this.you = you
   }
 
   /** Applies a plan to the file's current text. Returns the text written, or null when nothing changed. */
