@@ -1,5 +1,5 @@
 /**
- * Who does a card's work now (docs/adr/holder-names-who-does-the-work.md).
+ * Who does a card's work now (docs/adr/0061-holder-names-who-does-the-work.md).
  *
  * A card's `holder` names a person or an agent's worker name. Cards written before the rename
  * carry the same fact in `agent`, so every reader takes `agent` when `holder` is absent, and every

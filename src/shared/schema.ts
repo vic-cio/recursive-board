@@ -25,7 +25,7 @@ export const CORE_FIELDS = [
 /** Fields a work item may carry. Anything outside both lists is an unknown key, and is preserved. */
 export const OPTIONAL_FIELDS = [
   'owner',
-  'holder', // docs/adr/holder-names-who-does-the-work.md: who does the work now.
+  'holder', // docs/adr/0061-holder-names-who-does-the-work.md: who does the work now.
   'agent', // The holder on a card written before the rename. Read, never written.
   'priority',
   'due',

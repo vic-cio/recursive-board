@@ -18,7 +18,7 @@ interface NewWorkItemFields {
   /** The parent's filename stem. The wikilink is authoritative for resolution (docs/adr/0002-work-item-identity-and-parent-links.md). */
   parentStem: string
   owner?: string | undefined
-  /** The person or agent who does the work (docs/adr/holder-names-who-does-the-work.md). */
+  /** The person or agent who does the work (docs/adr/0061-holder-names-who-does-the-work.md). */
   holder?: string | undefined
   /** Links to a person or role note (docs/adr/0042-creator-and-role.md). */
   creator?: string | undefined

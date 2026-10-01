@@ -1,12 +1,12 @@
 ---
 status: accepted
 amends: docs/adr/0034-agent-limit.md (who counts), docs/adr/0042-creator-and-role.md (the full list of person notes for delegation)
-amended_by: holder-names-who-does-the-work.md (the field is `holder`; delegating names the holder only)
+amended_by: 0061-holder-names-who-does-the-work.md (the field is `holder`; delegating names the holder only)
 ---
 # Delegate a card to a person or a headless agent
 
 `wi delegate <ref> --to <person|agent|claude|codex|pi>` hands a card to someone. Delegating names
-the holder and changes nothing else ([holder-names-who-does-the-work](holder-names-who-does-the-work.md)).
+the holder and changes nothing else ([holder-names-who-does-the-work](0061-holder-names-who-does-the-work.md)).
 For a harness it names the worker as holder, makes the worktree, starts the worker as a headless
 process, and notes who has the card and where the log is. For a person it only writes their name.
 For `agent` it writes the reserved holder `agent`, which asks any agent, and starts nothing. One

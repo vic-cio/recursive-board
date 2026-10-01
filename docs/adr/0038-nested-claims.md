@@ -1,7 +1,7 @@
 ---
 status: accepted
 amends: docs/adr/0014-agent-claims.md (the doing-child refusal), docs/adr/0034-agent-limit.md (the count)
-amended_by: holder-names-who-does-the-work.md (the field is `holder`)
+amended_by: 0061-holder-names-who-does-the-work.md (the field is `holder`)
 ---
 # Let one agent hold a card and its current subtask
 
