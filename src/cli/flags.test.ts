@@ -80,6 +80,7 @@ const INVOCATIONS: Record<string, string[]> = {
   status: ['status', 'Build server', 'doing'],
   note: ['note', 'Build server', 'A note.'],
   area: ['area', 'Build server'],
+  tag: ['tag', 'Build server', 'design'],
   depend: ['depend', 'Build server', '--on', 'Main'],
   set: ['set', 'Build server', '--owner', 'sam'],
   claim: ['claim', 'Build server', '--agent', 'codex'],

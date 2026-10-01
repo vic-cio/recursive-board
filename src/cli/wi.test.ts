@@ -224,6 +224,38 @@ test('wi area converts a card to an area and back while preserving its status', 
   assert.ok(text.endsWith('# Build server\n'))
 })
 
+test('wi tag adds and removes a free tag, and takes a title with spaces', async () => {
+  fixture = seed()
+  const path = join(fixture.root, 'Boards/Build server.md')
+  const added = await wi(['tag', 'Build', 'server', 'design'])
+  assert.equal(added.code, 0, added.stderr)
+  assert.match(added.stdout, /\+design$/m)
+  assert.match(readFileSync(path, 'utf8'), /^tags:\n {2}- design$/m)
+
+  const again = await wi(['tag', 'wi-0004', 'Design', '--json'])
+  assert.equal(again.code, 0, again.stderr)
+  assert.equal(JSON.parse(again.stdout).changed, false)
+
+  const removed = await wi(['tag', 'wi-0004', '#design', '--off'])
+  assert.equal(removed.code, 0, removed.stderr)
+  assert.doesNotMatch(readFileSync(path, 'utf8'), /^tags:/m)
+  assert.ok(readFileSync(path, 'utf8').endsWith('# Build server\n'))
+})
+
+test('wi tag refuses an area tag and a missing tag with exit 2', async () => {
+  fixture = seed()
+  const before = readFileSync(join(fixture.root, 'Boards/Build server.md'), 'utf8')
+  const area = await wi(['tag', 'wi-0004', 'area/work'])
+  assert.equal(area.code, 2)
+  assert.match(area.stderr, /wi retag/)
+  const missing = await wi(['tag', 'wi-0004'])
+  assert.equal(missing.code, 2)
+  assert.match(missing.stderr, /needs a <ref> and a <tag>/)
+  assert.equal(readFileSync(join(fixture.root, 'Boards/Build server.md'), 'utf8'), before)
+  const help = await wi(['--help'])
+  assert.match(help.stdout, /wi tag <ref> <tag> \[--off\]/)
+})
+
 test('wi validate exits 0 on a healthy vault', async () => {
   fixture = seed()
   const { code, stdout } = await wi(['validate'])

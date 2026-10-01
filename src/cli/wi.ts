@@ -20,6 +20,7 @@ import { createItem } from './commands/new.ts'
 import { setStatus } from './commands/status.ts'
 import { claimItem, releaseItem } from './commands/claim-release.ts'
 import { addNote } from './commands/note.ts'
+import { setTag } from './commands/tag.ts'
 import { retag, staleAreaTags, writeGraphColours } from './commands/retag.ts'
 import { listChildren, type ChildRow } from './commands/children.ts'
 import { readyCards } from './commands/ready.ts'
@@ -54,6 +55,7 @@ Usage
   wi status <ref> <status>
   wi note <ref> <text> [--agent <name>]
   wi area <ref> [--off]
+  wi tag <ref> <tag> [--off]
   wi depend <ref> --on <ref> [--off]
   wi set <ref> [--owner <name>] [--role <name>] [--creator <name> [--model <id>]]
   wi claim <ref> --agent <name>
@@ -109,6 +111,8 @@ Notes
   --model fall back to WI_CREATOR and WI_MODEL; wi new warns when a card has no creator, and
   --strict refuses it. Without --role, the card copies the role of its nearest ancestor that has one.
   An empty --role "" writes no role.
+  \`wi tag <ref> <tag>\` adds a free tag to a card, and --off removes it. Case and a leading # do not
+  matter. It refuses an area/ tag, because the tree sets that tag and \`wi retag\` writes it.
   \`wi set\` changes a card's owner or role (an empty value removes it), and writes its creator and
   model only when it has none: a creator is set once.
   \`wi note\` appends "- <date> <time>, <writer>: <text>" under Notes. The writer is --agent, or
@@ -204,6 +208,8 @@ async function main(argv: string[]): Promise<number> {
       return withRetagHint(vault, () => runArea(vault, rest, values, json))
     case 'note':
       return runNote(vault, rest, values, json)
+    case 'tag':
+      return runTag(vault, rest, values, json)
     case 'depend':
       return runDepend(vault, rest, values, json)
     case 'set':
@@ -458,6 +464,24 @@ async function runDepend(vault: Vault, rest: string[], values: Values, json: boo
     process.stdout.write(`${label(change.item)} ${change.added ? 'already waits' : 'does not wait'} on ${change.on ? titleOf(change.on) : change.onRef}. Nothing written.\n`)
   } else {
     process.stdout.write(`${label(change.item)}  ${change.added ? 'waits on' : 'no longer waits on'} ${change.on ? titleOf(change.on) : change.onRef}\n`)
+  }
+  return 0
+}
+
+async function runTag(vault: Vault, rest: string[], values: Values, json: boolean): Promise<number> {
+  // A tag holds no space, so the last word is the tag and the words before it are the <ref>.
+  const tag = rest.length > 1 ? rest[rest.length - 1]! : ''
+  const ref = rest.slice(0, -1).join(' ').trim()
+  if (ref === '' || tag.trim() === '') {
+    throw new UsageError('wi tag needs a <ref> and a <tag>. Try: wi tag wi-a7f3 design. Add --off to remove it.')
+  }
+  const change = await setTag(vault, ref, tag, values['off'] !== true)
+  if (json) {
+    print({ id: change.item.id, path: change.item.relPath, tag: change.tag, added: change.added, changed: change.changed })
+  } else if (!change.changed) {
+    process.stdout.write(`${label(change.item)} ${change.added ? 'already has' : 'has no'} tag ${change.tag}. Nothing written.\n`)
+  } else {
+    process.stdout.write(`${label(change.item)}  ${change.added ? '+' : '-'}${change.tag}\n`)
   }
   return 0
 }

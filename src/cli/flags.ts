@@ -56,6 +56,7 @@ export const COMMAND_FLAGS: Record<string, Flag[]> = {
   status: ['vault', 'json'],
   note: ['agent', 'vault', 'json'],
   area: ['off', 'vault', 'json'],
+  tag: ['off', 'vault', 'json'],
   depend: ['on', 'off', 'vault', 'json'],
   set: ['owner', 'role', 'creator', 'model', 'vault', 'json'],
   claim: ['agent', 'vault', 'json'],
