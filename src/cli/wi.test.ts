@@ -663,6 +663,32 @@ test('wi new writes creator, model and role as plain names, from flags or the en
   assert.match(strict.stderr, /no creator/)
 })
 
+test('wi new takes the role of the nearest ancestor that has one, and an explicit --role wins', async () => {
+  fixture = seed()
+  const base = { type: 'work-item', created: '2026-09-21', updated: '2026-09-21' }
+  fixture.write('Boards/Coding board.md', item({ ...base, id: 'wi-7001', title: 'Coding board', status: 'doing',
+    parent: '"[[Main]]"', role: '"[[Coder]]"', board: true }))
+  fixture.write('Boards/Plain step.md', item({ ...base, id: 'wi-7002', title: 'Plain step', status: 'doing',
+    parent: '"[[Coding board]]"', board: true }))
+  fixture.write('Boards/Check step.md', item({ ...base, id: 'wi-7003', title: 'Check step', status: 'doing',
+    parent: '"[[Plain step]]"', role: 'Checker', board: true }))
+  const roleOf = async (args: string[]): Promise<string | null> => {
+    const brief = args.includes('area') ? [] : ['--objective', 'x', '--criteria', 'y']
+    const result = await wi(['new', ...args, ...brief, '--json'])
+    assert.equal(result.code, 0, result.stderr)
+    const text = readFileSync(join(fixture!.root, JSON.parse(result.stdout).path), 'utf8')
+    return /^role: (.*)$/m.exec(text)?.[1] ?? null
+  }
+
+  assert.equal(await roleOf(['From the parent', '--parent', 'Coding board']), 'Coder')
+  assert.equal(await roleOf(['From the grandparent', '--parent', 'Plain step']), 'Coder')
+  assert.equal(await roleOf(['From the nearest', '--parent', 'Check step']), 'Checker')
+  assert.equal(await roleOf(['No role above', '--parent', 'Build server']), null)
+  assert.equal(await roleOf(['Explicit', '--parent', 'Check step', '--role', 'Reviewer']), 'Reviewer')
+  assert.equal(await roleOf(['Explicitly none', '--parent', 'Check step', '--role', '']), null)
+  assert.equal(await roleOf(['An area', '--parent', 'Coding board', '--template', 'area']), null)
+})
+
 test('wi validate checks creator, owner and role names against notes anywhere', async () => {
   fixture = seed()
   fixture.write('People/Ana.md', '---\ntype: person\n---\n')

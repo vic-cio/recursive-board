@@ -15,10 +15,10 @@ import { briefGaps, renderBody, requireTemplate, type Brief } from '../../shared
 import { firstChildPromotion } from '../../shared/transitions.ts'
 import { areaTagFor } from '../../shared/area-tags.ts'
 import { chainOf } from './retag.ts'
-import { asName } from '../../shared/authorship.ts'
+import { asName, roleForNewCard } from '../../shared/authorship.ts'
 import { fileNameFor, fileNameStem, isStatus, newId, today, WORK_ITEM_TYPE, type Status } from '../../shared/schema.ts'
 import { parseFrontmatter } from '../../shared/frontmatter.ts'
-import type { Vault } from '../vault.ts'
+import type { Vault, WorkItem } from '../vault.ts'
 
 export interface NewOptions {
   title: string
@@ -92,6 +92,8 @@ export async function createItem(vault: Vault, options: NewOptions): Promise<Cre
     owner: textField(parent.frontmatter.get('owner')),
     agent: template.area ? undefined : textField(parent.frontmatter.get('agent')),
   }, status, options)
+  // An area does no work, so it takes a role only when one is given (docs/adr/inherit-role-from-the-nearest-ancestor.md).
+  const role = roleForNewCard(options.role, template.area ? [] : ancestorRoles(vault, parent))
   const areaTag = vault.config.areaTags
     ? areaTagFor([{ title, area: template.area === true }, ...chainOf(vault, parent)])
     : null
@@ -111,7 +113,7 @@ export async function createItem(vault: Vault, options: NewOptions): Promise<Cre
     if (options.priority !== undefined) fields.priority = options.priority
     if (creator !== undefined) fields.creator = creator
     if (creator !== undefined && options.model?.trim()) fields.creatorModel = options.model.trim()
-    if (options.role?.trim()) fields.role = asName(options.role)
+    if (role !== undefined) fields.role = role
     if (options.owner?.trim()) fields.owner = asName(options.owner)
     if (areaTag !== null) fields.tags = [areaTag]
     return renderWorkItem(fields, vault.config.extraSections)
@@ -165,6 +167,18 @@ export async function createItem(vault: Vault, options: NewOptions): Promise<Cre
     promotedParent, gaps, renamed: stem !== fileNameStem(title),
     uncredited: creator === undefined,
   }
+}
+
+/** The `role` of the parent and each ancestor above it, nearest first. */
+function ancestorRoles(vault: Vault, parent: WorkItem): unknown[] {
+  const roles: unknown[] = []
+  const seen = new Set<string>()
+  for (let current: WorkItem | undefined = parent; current; current = vault.resolveLink(current.parent)) {
+    if (seen.has(current.relPath)) break
+    seen.add(current.relPath)
+    roles.push(current.frontmatter.get('role'))
+  }
+  return roles
 }
 
 function textField(value: string | number | boolean | null | undefined): string | undefined {
