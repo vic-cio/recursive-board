@@ -6,10 +6,53 @@
  * to the card's own file. This module imports nothing from Node.
  */
 import { applyStampedEdits, type Edit } from './edits.ts'
-import { parseFrontmatter } from './frontmatter.ts'
+import { frontmatterBody, parseFrontmatter } from './frontmatter.ts'
+import { scanMarkdown } from './markdown.ts'
 import { appendNote, noteLine } from './notes.ts'
 import { isStatus, today } from './schema.ts'
 import { statusEdits } from './transitions.ts'
+
+export interface ReviewRequestInput {
+  to: string
+  files?: string[]
+  writer?: string
+  now?: Date
+}
+
+/** Sets the reviewer and adds the request to Notes in the same card write. */
+export function applyReviewRequest(text: string, request: ReviewRequestInput): string {
+  const owner = request.to.trim()
+  if (owner === '') throw new Error('a person is required for review.')
+  const paths = (request.files ?? []).map((file) => file.trim()).filter((file) => file !== '')
+  const details = paths.length > 0 ? ` ${paths.map((file) => `\`${file}\``).join(', ')}` : ''
+  const now = request.now ?? new Date()
+  const line = noteLine(`**Review:** Please review${details}.`, request.writer, now)
+  return applyStampedEdits(appendNote(text, line), [{ op: 'set', key: 'owner', value: owner }], today(now))
+}
+
+/** True when the newest review request follows the newest verdict in the card's Notes. */
+export function awaitsReviewVerdict(text: string): boolean {
+  let latest: 'review' | 'verdict' | undefined
+  for (const line of notesText(text).split(/\r?\n/)) {
+    if (/\*\*Review:\*\*/.test(line)) latest = 'review'
+    else if (/\b(?:Approved by|Sent back by)\b/.test(line)) latest = 'verdict'
+  }
+  return latest === 'review'
+}
+
+function notesText(text: string): string {
+  const body = frontmatterBody(text)
+  const lines = scanMarkdown(body).lines
+  const headings = lines.map((line, index) => ({ line, index, heading: line.heading }))
+    .filter((entry) => entry.heading !== undefined)
+  const notesIndex = headings.findIndex((entry) => entry.heading!.level === 2 && entry.heading!.title.trim().toLowerCase() === 'notes')
+  if (notesIndex < 0) return ''
+  const heading = headings[notesIndex]!
+  const next = headings.slice(notesIndex + 1).find((entry) => entry.heading!.level <= 2)
+  const start = lines[heading.index]!.contentEnd
+  const end = next ? lines[next.index]!.start : body.length
+  return body.slice(start, end)
+}
 
 export type Verdict =
   | { verdict: 'approve'; you: string }

@@ -92,7 +92,7 @@ export async function dashboardSummary(vault: Vault, options: DashboardOptions =
   const focused = scope.filter((card) => inFocus(card, focus, tree))
   const area = (card: Card) => groupName(groupUnder(card, focus, tree), focus)
 
-  const review = focused.filter((card) => you !== null && waitsForReview(card, you, tree)).map((card) => {
+  const review = focused.filter((card) => you !== null && waitsForReview(card, you, tree, card.item.text)).map((card) => {
     const line = parseReviewLine(card.item.text)
     return { ...identity(card), area: area(card), agent: card.agent ?? null, what: line?.what || 'Open the card.', paths: line?.paths ?? [] }
   })

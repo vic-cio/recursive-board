@@ -8,7 +8,7 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 
 import { makeVault, item, type Fixture } from './test-helpers.ts'
-import { COMMAND_FLAGS } from './flags.ts'
+import { COMMAND_FLAGS, parseCommandLine } from './flags.ts'
 
 const run = promisify(execFile)
 const CLI = fileURLToPath(new URL('./wi.ts', import.meta.url))
@@ -96,6 +96,7 @@ const INVOCATIONS: Record<string, string[]> = {
   note: ['note', 'Build server', 'A note.'],
   area: ['area', 'Build server'],
   tag: ['tag', 'Build server', 'design'],
+  review: ['review', 'Build server', '--to', 'sam'],
   depend: ['depend', 'Build server', '--on', 'Main'],
   set: ['set', 'Build server', '--owner', 'sam'],
   claim: ['claim', 'Build server', '--agent', 'codex'],
@@ -124,6 +125,30 @@ const INVOCATIONS: Record<string, string[]> = {
 test('the table of invocations covers every command', () => {
   assert.deepEqual(Object.keys(INVOCATIONS).sort(), Object.keys(COMMAND_FLAGS).sort())
   assert.equal('trace' in COMMAND_FLAGS, false)
+})
+
+test('wi review accepts repeated --files values', () => {
+  assert.deepEqual(COMMAND_FLAGS['review'], ['to', 'files', 'vault', 'json'])
+  assert.deepEqual(parseCommandLine(['review', 'Task', '--to', 'Ana', '--files', 'a.pdf', '--files', 'b.md']).values['files'], ['a.pdf', 'b.md'])
+})
+
+test('wi review writes owner and a Review note, and returns the files as JSON', async () => {
+  const vault = seed()
+  vault.write('People/sam.md', '---\ntype: person\n---\n')
+  const home = mkdtempSync(join(tmpdir(), 'wi-home-'))
+  try {
+    const result = await wi(['review', 'Build server', '--to', 'Sam', '--files', 'a.pdf', '--files', 'b.md', '--json'], vault, home)
+    assert.equal(result.code, 0, result.stderr)
+    assert.deepEqual(JSON.parse(result.stdout), {
+      id: 'wi-0004', path: 'Boards/Build server.md', owner: 'sam', files: ['a.pdf', 'b.md'],
+    })
+    const text = readFileSync(join(vault.root, 'Boards/Build server.md'), 'utf8')
+    assert.match(text, /^owner: sam$/m)
+    assert.match(text, /\*\*Review:\*\* Please review `a\.pdf`, `b\.md`\./)
+  } finally {
+    vault.cleanup()
+    rmSync(home, { recursive: true, force: true })
+  }
 })
 
 for (const [command, args] of Object.entries(INVOCATIONS)) {

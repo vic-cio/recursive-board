@@ -519,6 +519,8 @@ export default class RecursiveBoardPlugin extends Plugin {
       component: this,
       index: this.index,
       actions: this.actions,
+      personNames: () => this.personNames(),
+      yourName: () => this.dashboard.you,
       checklistComponents: this.checklistComponents,
       mobile: Platform.isMobile,
       expandedPath: this.expandedPath,

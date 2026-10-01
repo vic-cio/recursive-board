@@ -72,6 +72,21 @@ test('dashboardSummary leaves review empty when no reviewer is given', async () 
   assert.equal(summary.counts.review, 0)
 })
 
+test('For review lists sent cards, removes verdicts, and lists a card sent again', async () => {
+  fixture = makeVault()
+  fixture.write('Boards/Main.md', item({ type: 'work-item', id: 'wi-main', title: 'Main' }))
+  const card = (name: string, body: string, status = 'doing') => fixture!.write(`Boards/${name}.md`, item({
+    type: 'work-item', id: `wi-${name.toLowerCase()}`, title: name, status, parent: '"[[Main]]"', owner: 'Ana',
+  }, `## Notes\n\n${body}\n`))
+  card('Sent', '- **Review:** Check it.\n')
+  card('Approved', '- **Review:** Check it.\n- Approved by Ana.\n', 'done')
+  card('Returned', '- **Review:** Check it.\n- Sent back by Ana.\n')
+  card('Resent', '- **Review:** First.\n- Sent back by Ana.\n- **Review:** Again.\n', 'options')
+  card('Unsent', '', 'doing')
+  const summary = await dashboardSummary(await loadVault(fixture.root), { you: 'Ana', now: NOW })
+  assert.deepEqual(summary.review.map((row) => row.title), ['Resent', 'Sent'])
+})
+
 test('dashboardSummary counts leaf cards by top area and drops an inactive area', async () => {
   fixture = seed()
   const summary = await dashboardSummary(await loadVault(fixture.root), { you: 'Ana', now: NOW })

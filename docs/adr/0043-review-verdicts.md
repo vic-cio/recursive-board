@@ -29,7 +29,9 @@ agent. Approving is the common case and is one click. Sending back needs words, 
 them, and the Notes line carries them to the agent that picks the card up.
 
 A card with no file to check still needs a verdict from the dashboard. Its own row gives the
-reviewer one place to record that they looked.
+reviewer one place to record that they looked. A card enters For review only after a send-for-review
+request. That one write sets `owner` and appends a `**Review:**` note. The newest request must follow
+the last `Approved by` or `Sent back by` note. Send back removes `owner` and writes its verdict note.
+Both edits hand the card back and close the current request.
 
-Removing `owner` is enough to hand the card back: `owner` is what puts it in For review, and the
-agent's `agent` field is still on the card. No new field records the verdict; the Notes line does.
+No new field records the verdict; the Notes line does. The agent's `agent` field stays on the card.

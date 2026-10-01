@@ -1,4 +1,5 @@
 import type { Status } from './schema.ts'
+import { awaitsReviewVerdict } from './review.ts'
 
 /**
  * The dashboard's rules, apart from Obsidian so they can be tested (docs/adr/0040-dashboard-view.md).
@@ -6,8 +7,9 @@ import type { Status } from './schema.ts'
  *
  * Areas nest, so the dashboard shows one level of them at a time. With no focus, a card groups
  * under its top area. With a focused area, the dashboard shows only the cards inside it, grouped
- * under the next area down. A card waits for review when it is in doing, its
- * owner is you, and it has no open child. An agent's claim is idle when nothing in the card or
+ * under the next area down. A card waits when its owner is you, its newest review request follows
+ * its last verdict, and it has no open child. Status does not decide review.
+ * An agent's claim is idle when nothing in the card or
  * its children changed for an hour: its session most likely ended without a release.
  */
 
@@ -79,8 +81,8 @@ function hasOpenChild<T extends DashItem>(item: T, tree: DashTree<T>): boolean {
   return tree.childrenOf(item).some((child) => child.status !== 'done' && !child.effectiveArchived)
 }
 
-export function waitsForReview<T extends DashItem>(item: T, you: string, tree: DashTree<T>): boolean {
-  return item.status === 'doing' && sameName(item.owner, you) && !hasOpenChild(item, tree)
+export function waitsForReview<T extends DashItem>(item: T, you: string, tree: DashTree<T>, text: string): boolean {
+  return sameName(item.owner, you) && awaitsReviewVerdict(text) && !hasOpenChild(item, tree)
 }
 
 export interface ReviewLine {

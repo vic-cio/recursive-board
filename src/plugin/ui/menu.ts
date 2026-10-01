@@ -16,6 +16,7 @@ import type { RenderContext } from './context.ts'
 import { MoveModal } from './move-modal.ts'
 import { DependModal } from './depend-modal.ts'
 import { TagModal } from './tag-modal.ts'
+import { SendForReviewModal } from './send-for-review-modal.ts'
 import { statusLabel } from './status-label.ts'
 import { menuStatuses } from './menu-status.ts'
 
@@ -67,6 +68,13 @@ function buildMenu(ctx: RenderContext, meta: WorkItemMeta): Menu {
     .setTitle('Tags…')
     .setIcon('tags')
     .onClick(() => new TagModal(ctx.app, ctx.index, ctx.actions, meta).open()))
+  if (meta.parentLink !== null) {
+    menu.addItem((item) => item
+      .setTitle('Send for review…')
+      .setIcon('send')
+      .onClick(() => new SendForReviewModal(ctx.app, meta.title, ctx.personNames(), ctx.yourName(),
+        (to, files) => void ctx.actions.sendForReview(meta, to, files)).open()))
+  }
 
   // Dependencies (docs/adr/0041-card-dependencies.md). An area is ongoing and waits on nothing.
   if (meta.parentLink !== null && !meta.area) {

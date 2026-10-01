@@ -51,17 +51,25 @@ test('the scope holds live cards under the chosen root, not roots, areas or arch
   assert.deepEqual(cardsInScope(items, null, tree), [card, elsewhere])
 })
 
-test('a card waits for review when it is yours, in doing, with no open child', () => {
+test('a card waits for review only after a send, while it is yours and has no open child', () => {
   const { add, tree } = vault()
   const root = add('Home', null)
   const card = add('Check the quote', root, { status: 'doing', owner: 'Ana' })
-  assert.equal(waitsForReview(card, 'ana', tree), true)
-  assert.equal(waitsForReview(card, 'Sam', tree), false)
-  assert.equal(waitsForReview(card, '', tree), false)
+  const sent = '## Notes\n\n- **Review:** Check the quote.\n'
+  assert.equal(waitsForReview(card, 'ana', tree, sent), true)
+  assert.equal(waitsForReview(card, 'Sam', tree, sent), false)
+  assert.equal(waitsForReview(card, '', tree, sent), false)
+  assert.equal(waitsForReview(card, 'Ana', tree, ''), false)
+  card.status = 'backlog'
+  assert.equal(waitsForReview(card, 'Ana', tree, sent), true, 'status does not decide review')
+  card.status = 'doing'
   const step = add('Step', card, { status: 'doing' })
-  assert.equal(waitsForReview(card, 'Ana', tree), false)
+  assert.equal(waitsForReview(card, 'Ana', tree, sent), false)
   step.status = 'done'
-  assert.equal(waitsForReview(card, 'Ana', tree), true)
+  assert.equal(waitsForReview(card, 'Ana', tree, sent), true)
+  assert.equal(waitsForReview(card, 'Ana', tree, `${sent}- Approved by Ana.\n`), false)
+  assert.equal(waitsForReview(card, 'Ana', tree, `${sent}- Sent back by Ana.\n`), false)
+  assert.equal(waitsForReview(card, 'Ana', tree, `${sent}- Sent back by Ana.\n- **Review:** Again.\n`), true)
 })
 
 test('the review line gives what to check and the files to open', () => {

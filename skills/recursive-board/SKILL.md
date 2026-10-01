@@ -73,6 +73,7 @@ wi area <ref>                         # mark a card as an area
 wi area <ref> --off                   # remove the area mark
 wi tag <ref> <tag>                    # add a free tag; --off removes it
 wi claim <ref> --agent <name>        # assign and move to doing in one write
+wi review <ref> --to <person> [--files <path>]...  # send the card to a person for review
 wi delegate <ref> --to <person>      # assign to a person (a type: person note); status stays
 wi delegate <ref> --to <claude|codex|pi> [--model <id>]  # start a headless worker on the card's brief
 wi release <ref> --reason <text> [--where <branch-or-path>]
@@ -190,15 +191,12 @@ is.
 5. When finished, run `wi note <card> "<result, and its branch or location>"`. Leave the card in
    `doing` and stop for review. Merge, push and publish wait for the owner's verdict.
 
-To hand a card to a person for review, leave it in `doing` with `owner` set to their name. Then
-write a note that starts with `**Review:**`, says what to check, and lists each file to open as a
-vault-relative path in backticks. The plugin's dashboard lists the card under "For review" when
-it has no open child. When the note lists no file, or only web addresses, the card's own row
-carries the tick for the verdict.
-
-```bash
-wi note <card> '**Review:** Check the totals: `Work/quote.xlsx`'
-```
+To send a card for review, use **Send for review…** in its card menu, or run `wi review <ref> --to
+<person> [--files <path>]...`. Choose a person note. Add one file path per menu line, or repeat
+`--files` in the CLI. Both writers set `owner` and append a `**Review:**` note in one write. The
+dashboard lists the card under "For review" when its newest review note follows its last verdict
+note and it has no open child. Status does not decide this. When the note lists no file, or only
+web addresses, the card's own row carries the tick for the verdict.
 
 ## Outcomes
 

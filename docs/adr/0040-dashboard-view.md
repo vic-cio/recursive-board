@@ -5,12 +5,14 @@ status: accepted
 
 The plugin registers one view of its own, the dashboard. A ribbon icon and the command "Open
 dashboard" open it in a tab, and a second call reuses that tab, like the graph view. It reads the
-index and card text. Its one write is a review verdict ([0043](0043-review-verdicts.md)).
+index and card text. Its writes are review requests from card menus and verdicts from the dashboard
+([0043](0043-review-verdicts.md)).
 
-It has four panels:
+Its card-menu action can send a card for review. The dashboard can then record a verdict. It has four panels:
 
-- **For review.** A card waits for your review when it is in doing, its `owner` equals the name
-  in the setting "Your name", and it has no open child. The card's newest `**Review:**` line says
+- **For review.** A card waits when its `owner` matches the name in the setting "Your name".
+  Its newest `**Review:**` line must follow its last verdict note. The card must have no open child.
+  Status does not decide this. The newest `**Review:**` line says
   what to check and lists each file to open as a vault-relative path in backticks. A `wi note`
   prefix before it is fine. When the line lists no file, a row for the card itself opens it and carries the tick. Markdown opens in Obsidian.
   Another file opens in its own app on a desktop, and in Obsidian on a phone.

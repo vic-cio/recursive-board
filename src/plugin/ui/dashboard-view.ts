@@ -188,8 +188,10 @@ export class DashboardView extends ItemView {
   ): Promise<ReviewRow[]> {
     const rows: ReviewRow[] = []
     for (const card of cards) {
-      if (!inFocus(card, focus, tree) || !waitsForReview(card, you, tree)) continue
-      const line = parseReviewLine(await this.app.vault.cachedRead(card.file))
+      if (!inFocus(card, focus, tree)) continue
+      const text = await this.app.vault.cachedRead(card.file)
+      if (!waitsForReview(card, you, tree, text)) continue
+      const line = parseReviewLine(text)
       const area = groupUnder(card, focus, tree)
       const group = { area, name: groupName(area, focus) }
       const what = line?.what || 'Open the card.'

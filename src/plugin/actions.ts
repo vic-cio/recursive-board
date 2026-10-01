@@ -27,7 +27,7 @@ import { dependencyEdit, dependencyEditIn, dependencyPathByKey } from '../shared
 import { freeTagEditsIn } from '../shared/tags.ts'
 import { parseFrontmatter } from '../shared/frontmatter.ts'
 import { parseWikilink } from '../shared/schema.ts'
-import { applyVerdict, type Verdict } from '../shared/review.ts'
+import { applyReviewRequest, applyVerdict, type Verdict } from '../shared/review.ts'
 import type { WorkItemIndex, WorkItemMeta } from './index.ts'
 import { UndoStack } from './undo.ts'
 
@@ -146,6 +146,21 @@ export class Actions {
       return true
     })
     if (done) this.undoableNotice(verdict.verdict === 'approve' ? `Approved ${meta.title}` : `Sent back ${meta.title}`)
+    return done === true
+  }
+
+  /** Sends the card for review through the same shared edit as `wi review`. */
+  async sendForReview(meta: WorkItemMeta, to: string, files: string[]): Promise<boolean> {
+    const done = await this.run(`send ${meta.title} for review`, async () => {
+      let before = ''
+      const after = await this.app.vault.process(meta.file, (data) => {
+        before = data
+        return applyReviewRequest(data, { to, files, writer: this.you() })
+      })
+      this.undoStack.record({ kind: 'edit', path: meta.file.path, before, after, label: `send ${meta.title} for review` })
+      return true
+    })
+    if (done) this.undoableNotice(`Sent ${meta.title} for review`)
     return done === true
   }
 

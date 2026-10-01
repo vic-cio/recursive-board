@@ -37,6 +37,7 @@ import { dependenciesOf, openDependencies, titleOf } from './dependencies.ts'
 import { hookStatus, installHook, uninstallHook } from './commands/hook.ts'
 import { runSetup } from './commands/setup.ts'
 import { dashboardSummary, renderDashboard } from './commands/dashboard.ts'
+import { sendForReview } from './commands/review.ts'
 import { COMMAND_FLAGS, parseCommandLine, type Values } from './flags.ts'
 import { STATUSES } from '../shared/schema.ts'
 import { authorLabel } from '../shared/authorship.ts'
@@ -57,6 +58,7 @@ Usage
   wi claim <ref> --agent <name>
   wi delegate <ref> --to <person|claude|codex|pi> [--model <id>] [--agent <name>]
                  [--permission <mode>]
+  wi review <ref> --to <name> [--files <path>]...
   wi agents
   wi dashboard [--you <name>] [--parent <ref>] [--json]
   wi release <ref> --reason <text> [--where <branch-or-path>]
@@ -133,6 +135,8 @@ Notes
   maxAgents from the board settings for one run. Dispatchers decide whether to wait; wi claim does not enforce it.
   \`wi dashboard\` prints the plugin dashboard's summary: review work for --you, progress by area, claims,
   and what needs attention. --parent names a root or an area. It writes nothing.
+  \`wi review <ref> --to <name> [--files <path>]...\` sends a card to a person note for review. Each --files
+  adds one vault-relative path. The command sets owner and appends a Review note in one write.
   The board settings live in the Recursive Board plugin settings, stored in
   .obsidian/plugins/recursive-board/data.json. wi reads them and never writes them.
   \`wi new\` warns when a hidden file sits in the work-item folder, because a new id or filename may clash with it.
@@ -211,6 +215,8 @@ async function main(argv: string[]): Promise<number> {
       return runClaim(vault, rest, values, json)
     case 'delegate':
       return runDelegate(vault, rest, values, json)
+    case 'review':
+      return runReview(vault, rest, values, json)
     case 'agents':
       return runAgents(vault, rest, json)
     case 'dashboard':
@@ -503,6 +509,24 @@ async function runDelegate(vault: Vault, rest: string[], values: Values, json: b
   if (result.harness && maxAgents !== null && !active.has(result.holder) && active.size + 1 > maxAgents) {
     process.stderr.write(`wi: warning: agent limit is ${maxAgents}; ${active.size + 1} agents now have a doing card.\n`)
   }
+  return 0
+}
+
+async function runReview(vault: Vault, rest: string[], values: Values, json: boolean): Promise<number> {
+  const ref = rest.join(' ').trim()
+  if (ref === '') throw new UsageError('wi review needs a <ref> and --to <name>.')
+  const to = singleLineOption(values, 'to')
+  const rawFiles = values['files']
+  const files: string[] = typeof rawFiles === 'string'
+    ? [rawFiles]
+    : Array.isArray(rawFiles) ? rawFiles.filter((file): file is string => typeof file === 'string') : []
+  if (files.some((file) => file.trim() === '' || /[\r\n]/.test(file))) {
+    throw new UsageError('--files needs a non-empty, one-line path.')
+  }
+  const result = await sendForReview(vault, ref, to, files, authorLabel(envText('WI_AGENT'), envText('WI_MODEL')))
+  if (json) print({ id: result.item.id ?? null, path: result.item.relPath, owner: result.to, files: result.files })
+  else process.stdout.write(`${label(result.item)}  sent to ${result.to} for review` +
+    `${result.files.length ? `  (${result.files.join(', ')})` : ''}\n`)
   return 0
 }
 
