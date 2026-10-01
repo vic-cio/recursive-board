@@ -229,7 +229,7 @@ export class StatusColorSettingTab extends PluginSettingTab {
 
     new Setting(containerEl)
       .setName('Promote parent on first child')
-      .setDesc('wi new turns a card into a board when it gives the card its first child.')
+      .setDesc('The first child turns a card into a board in wi new and the board add row.')
       .addToggle((toggle) => toggle
         .setValue(config.autoPromote)
         .onChange((value) => void this.board.update({ autoPromote: value })))

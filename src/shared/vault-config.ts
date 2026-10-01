@@ -13,7 +13,7 @@ export interface VaultConfig {
   extraSections: string[]
   /** Advisory maximum number of claimed doing cards for dispatchers. */
   maxAgents: number | null
-  /** `wi new` promotes a parent to a board when it gives the parent its first child. */
+  /** Both writers promote a parent to a board when it gets its first child. */
   autoPromote: boolean
   /** Work items carry an `area/...` tag for their areas, which `wi graph` colours. */
   areaTags: boolean

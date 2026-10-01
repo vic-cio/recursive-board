@@ -19,7 +19,7 @@ import { cardState } from '../shared/card-state.ts'
 import { areaEdits, type AreaTarget } from '../shared/area.ts'
 import { archiveEdits, activeDescendant } from '../shared/archive.ts'
 import {
-  boardEdits, moveEdits, moveRefusal, statusEdits, statusEditsIn, untickEditsIn, untickTarget,
+  boardEdits, firstChildPromotion, moveEdits, moveRefusal, statusEdits, statusEditsIn, untickEditsIn, untickTarget,
 } from '../shared/transitions.ts'
 import { fileNameFor, newId, today, type Status } from '../shared/schema.ts'
 import { inheritedChildFields, renderWorkItem } from '../shared/work-item.ts'
@@ -79,12 +79,29 @@ export class Actions {
       new Notice(`Cannot undo ${entry.label}: another item now uses it as a parent.`)
       return
     }
+    const parentFile = entry.parentEdit ? this.app.vault.getFileByPath(entry.parentEdit.path) : null
+    if (entry.parentEdit && !parentFile) {
+      new Notice(`Cannot undo ${entry.label}: ${entry.parentEdit.path} is gone.`)
+      return
+    }
+    const restore = entry.kind === 'create'
+      ? UndoStack.restoreCreate(entry, await this.app.vault.read(file),
+        parentFile ? await this.app.vault.read(parentFile) : '')
+      : null
+    if (entry.kind === 'create' && restore === null) {
+      new Notice(`Cannot undo ${entry.label}: a file has changed since.`)
+      return
+    }
     this.undoStack.pop()
     const done = await this.run(`undo ${entry.label}`, async () => {
       if (entry.kind === 'create') {
-        const current = await this.app.vault.read(file)
-        if (UndoStack.restore(entry, current) === null) {
-          throw new Error('the file has changed since.')
+        if (entry.parentEdit && parentFile && restore?.parentBefore !== undefined) {
+          await this.app.vault.process(parentFile, (current) => {
+            if (UndoStack.restore(entry.parentEdit!, current) === null) {
+              throw new Error('the parent has changed since.')
+            }
+            return restore.parentBefore!
+          })
         }
         await this.app.fileManager.trashFile(file)
       } else {
@@ -301,6 +318,7 @@ export class Actions {
 
     const stamp = today()
     const chain = this.chainOf(parent)
+    const childCount = this.index.childrenOf(parent.file).length
     const areaTag = this.index.config.areaTags ? areaTagFor([{ title, area: false }, ...chain]) : null
     // The same rule as wi new (docs/adr/0056-inherit-role-from-the-nearest-ancestor.md).
     const role = roleForNewCard(undefined, chain.map((item) => item.role))
@@ -318,8 +336,31 @@ export class Actions {
       updated: stamp,
     }, this.index.config.extraSections)
 
-    const created = await this.run(`create ${title}`, () => this.app.vault.create(path, text))
-    if (created) this.undoStack.record({ kind: 'create', path, before: '', after: text, label: `add ${title}` })
+    const created = await this.run(`create ${title}`, async () => {
+      const child = await this.app.vault.create(path, text)
+      let parentEdit: { path: string; before: string; after: string } | undefined
+      try {
+        let before = ''
+        const after = await this.app.vault.process(parent.file, (current) => {
+          before = current
+          const state = cardState(current)
+          const edits = firstChildPromotion({
+            isRoot: parent.parentLink === null,
+            area: state.area,
+            hasBoardKey: state.hasBoardKey,
+            childCount,
+          }, this.index.config.autoPromote)
+          return edits === null ? current : applyStampedEdits(current, edits)
+        })
+        if (after !== before) parentEdit = { path: parent.file.path, before, after }
+      } catch (error) {
+        this.undoStack.record({ kind: 'create', path, before: '', after: text, label: `add ${title}` })
+        throw error
+      }
+      this.undoStack.record({ kind: 'create', path, before: '', after: text, label: `add ${title}`,
+        ...(parentEdit === undefined ? {} : { parentEdit }) })
+      return child
+    })
     return created
   }
 

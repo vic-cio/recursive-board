@@ -37,6 +37,18 @@ test('restoring refuses when the file changed since, so undo never loses a later
   assert.equal(UndoStack.restore(entry, 'after, then edited on the phone'), null)
 })
 
+test('undoing an add can restore its promoted parent in the same action', () => {
+  const entry = {
+    kind: 'create', path: 'Boards/Child.md', before: '', after: 'child', label: 'add Child',
+    parentEdit: { path: 'Boards/Parent.md', before: 'parent', after: 'promoted parent' },
+  } as const
+  assert.deepEqual(UndoStack.restoreCreate(entry, 'child', 'promoted parent'), {
+    childBefore: '', parentBefore: 'parent',
+  })
+  assert.equal(UndoStack.restoreCreate(entry, 'changed child', 'promoted parent'), null)
+  assert.equal(UndoStack.restoreCreate(entry, 'child', 'changed parent'), null)
+})
+
 test('a write that changed nothing is not recorded, so undo never looks like a no-op', () => {
   const stack = new UndoStack()
   stack.record(edit('a.md', 'same', 'same'))

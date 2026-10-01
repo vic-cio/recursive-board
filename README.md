@@ -56,7 +56,7 @@ The plugin stores the board settings under the `board` key of its data file, `.o
 
 Obsidian Sync carries the plugin data file only when **Installed community plugins** sync is on for the device. Turn it on for each device. A device without the `board` key uses the defaults and shows a notice once. [Read the Obsidian Sync settings](https://obsidian.md/help/sync/settings).
 
-`autoPromote` is `true` or `false`. It defaults to `true`. When `wi new` gives a card its first child, it also sets `board: true` on that card, so the children show as a board. It never changes a root, an area, a card that already has children, or a card that has a `board` key. Items added in Obsidian are not promoted: a person who adds to a checklist chose a checklist.
+`autoPromote` is `true` or `false`. It defaults to `true`. When `wi new` or the board's add row gives a card its first child, it also sets `board: true` on that card, so the children show as a board. It never changes a root, an area, a card that already has children, or a card that has a `board` key. Undoing an add in Obsidian also restores the parent when the add promoted it.
 
 `areaTags` is `true` or `false`. It defaults to `false`. When it is `true`, each work item under an area carries one tag that names its areas from the top down, such as `area/work/web-site`. `wi new` and the board's add row write it, `wi validate` warns when one is stale, and `wi retag` fixes them. `wi graph` turns the tags into graph colours. The board hides `area/` chips.
 
