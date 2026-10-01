@@ -1152,6 +1152,9 @@ button.wi-dash-id.wi-dash-id:hover { color: var(--text-normal); background: var(
 .wi-dash-column { display: flex; flex-direction: column; gap: var(--size-4-3); min-width: 0; }
 .wi-dash-panel-head.is-attention .wi-dash-icon { color: var(--color-orange); }
 .wi-dash-panel-head + .wi-dash-agents { margin-top: var(--size-4-2); }
+.wi-dash-people-fold { margin-top: var(--size-4-2); }
+.wi-dash-people-fold > summary { cursor: pointer; color: var(--text-muted); font-size: var(--font-ui-smaller); }
+.wi-dash-person h3 { margin: var(--size-4-3) 0 var(--size-4-1); font-size: var(--font-ui-small); }
 
 /* A work item's raw Properties panel hides behind the meta strip (docs/adr/0042-creator-and-role.md). */
 /* As specific as Obsidian's own show-properties rules, plus one class, so no !important is needed. */

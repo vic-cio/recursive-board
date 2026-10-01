@@ -230,6 +230,40 @@ export interface AgentRow<T> extends Claim<T> {
   area: T | null
 }
 
+export interface PersonRow<T> {
+  person: string
+  cards: { card: T; status: Status }[]
+}
+
+/** Open cards held by known people. A person appears only when they hold an open card. */
+export function peopleFeed<T extends DashItem>(cards: T[], people: string[]): PersonRow<T>[] {
+  const rows = new Map<string, PersonRow<T>>()
+  for (const person of people) rows.set(person.trim().toLowerCase(), { person, cards: [] })
+  for (const card of cards) {
+    if (card.holder === undefined || card.status === undefined || card.status === 'done') continue
+    const row = rows.get(card.holder.trim().toLowerCase())
+    if (row) row.cards.push({ card, status: card.status })
+  }
+  return [...rows.values()].filter((row) => row.cards.length > 0)
+    .sort((a, b) => a.person.localeCompare(b.person))
+}
+
+/** Requests for an agent remain visible in Agents until a worker claims them. */
+export function agentRequests<T extends DashItem>(cards: T[]): T[] {
+  return cards.filter((card) => card.status !== undefined && card.status !== 'done' && isAnyAgent(card.holder))
+}
+
+/** Distinct agent holders with an open or finished doing card, excluding people and requests. */
+export function activeAgentCount<T extends DashItem>(cards: T[], people: string[]): number {
+  const personNames = new Set(people.map((name) => name.trim().toLowerCase()))
+  const active = new Set<string>()
+  for (const card of cards) {
+    const holder = card.holder?.trim().toLowerCase()
+    if (card.status === 'doing' && holder && !isAnyAgent(holder) && !personNames.has(holder)) active.add(holder)
+  }
+  return active.size
+}
+
 /** One flat list of claims in the focus, newest first. Idle claims belong to Needs attention. */
 export interface AgentFeed<T> {
   working: AgentRow<T>[]
@@ -243,10 +277,12 @@ export interface AgentFeed<T> {
  * agent (`holder: agent`) has no agent on it yet.
  */
 export function agentFeed<T extends DashItem>(
-  cards: T[], you: string, tree: DashTree<T>, now: number, focus: T | null = null,
+  cards: T[], you: string, tree: DashTree<T>, now: number, focus: T | null = null, people: string[] = [],
 ): AgentFeed<T> {
+  const personNames = new Set(people.map((name) => name.trim().toLowerCase()))
   const rows: AgentRow<T>[] = cards
-    .filter((card) => card.holder !== undefined && !isAnyAgent(card.holder) && inFocus(card, focus, tree))
+    .filter((card) => card.holder !== undefined && !isAnyAgent(card.holder) &&
+      !personNames.has(card.holder.trim().toLowerCase()) && inFocus(card, focus, tree))
     .map((card) => {
       const steps = tree.childrenOf(card).filter((child) => !child.effectiveArchived)
       return {

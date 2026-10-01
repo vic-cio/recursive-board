@@ -5,7 +5,7 @@ status: accepted
 # Set an advisory concurrent agent limit per vault
 
 The vault config may contain `maxAgents`, a non-negative whole number or `null`. The
-Recursive Board settings tab writes this setting, and `wi agents` reports it with the number of
+Recursive Board settings tab writes this setting, and the dashboard Agents panel reports it with the number of
 distinct agents that hold a work-item card in `doing` (amended by [0038](0038-nested-claims.md)). `WI_MAX_AGENTS` overrides the file for
 one CLI run.
 

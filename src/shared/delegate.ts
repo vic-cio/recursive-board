@@ -5,7 +5,7 @@
  * delegate` also starts it and notes where it runs; the worker claims the card itself, and that
  * claim moves it to doing. `--to agent` writes the reserved holder `agent`, which asks any agent.
  * There is no reason to give: the brief is on the card, and people explain where they talk. Either
- * way the card refuses a second holder. `wi agents` tells a person from an agent by a note with
+ * way the card refuses a second holder. The dashboard tells a person from an agent by a note with
  * `type: person`. This module imports nothing from Node.
  */
 import { PERSON_TYPE } from './authorship.ts'
@@ -48,7 +48,7 @@ export type DelegateTarget =
 /**
  * What `--to` names. `agent` asks any agent; a person note of that name is refused, because the
  * name is reserved. A harness wins over a person note of the same name. Any other name is refused,
- * because a claim by a name with no note would count as an agent in `wi agents`.
+ * because a claim by a name with no note would count as an agent in the dashboard.
  */
 export function delegateTarget(to: string, people: Map<string, string>): DelegateTarget {
   const name = to.trim()

@@ -17,18 +17,18 @@ An old card's `agent` is read as its holder, so the vault needs no bulk edit. A 
 uses `holder`. Every write that sets or clears the holder also removes `agent` in the same write,
 so a card moves to the new key the first time its holder changes. One rule in
 `src/shared/holder.ts` does both, and every reader calls it: the CLI, the plugin, the dashboard,
-`wi ready`, `wi show` and `wi agents`. `agent` stays in the schema as a known field.
+`wi ready`, `wi show` and `wi dashboard`. `agent` stays in the schema as a known field.
 
 The flags keep their names. `wi claim --agent <name>` and `wi new --agent <name>` take the name of
 the agent (or person) that holds the card, so no script breaks. JSON output names the field
-`holder`: `wi claim`, `wi release`, `wi show`, `wi ready`, `wi delegate` and `wi dashboard`.
-`wi agents --json` keeps `agent` on each claim, because it lists agents.
+`holder`: `wi claim`, `wi release`, `wi show`, `wi ready`, `wi delegate` and the dashboard Agents panel.
+`wi agents` exits successfully and names `wi dashboard --panel agents`.
 
 ## `holder: agent` asks for any agent
 
 The holder value `agent` is reserved. It means that any agent may take the card. It is not a name,
-so it is not counted by `wi agents` and is in no agent row on the dashboard; the plugin shows it as
-"Any agent". `wi ready` lists these requests first, ahead of the priority order, while they sit in
+so it is not counted as an active agent and it appears as a request in the dashboard Agents panel;
+the plugin shows it as "Any agent". `wi ready` lists these requests first, ahead of the priority order, while they sit in
 options. A claim by any agent replaces `agent` with the claimant's name, so the request ends at the
 first claim. `wi claim --agent agent` is refused, and `wi delegate` refuses a person note called
 `agent`. A doing child does not inherit `holder: agent` from its parent: the request is for the

@@ -161,9 +161,9 @@ test('wi dashboard --json prints the summary for the reviewer named by --you', a
     env: { ...process.env, WI_VAULT: fixture.root },
   })
   const summary = JSON.parse(stdout)
-  assert.equal(summary.you, 'Ana')
+  assert.ok(Array.isArray(summary.review))
+  assert.ok(Array.isArray(summary.people))
   assert.deepEqual(summary.review.map((row: { id: string }) => row.id), ['wi-copy'])
-  assert.equal(typeof summary.generated, 'string')
 })
 
 test('wi dashboard without --json prints one line per section', async () => {
@@ -172,4 +172,32 @@ test('wi dashboard without --json prints one line per section', async () => {
   assert.match(stderr, /--you/)
   assert.match(stdout, /^review {2}0/m)
   assert.match(stdout, /^attention {2}\d/m)
+})
+
+test('wi dashboard --panel selects panels in JSON and text output', async () => {
+  fixture = seed()
+  fixture.write('People/Ana.md', '---\ntype: person\n---\n')
+  fixture.write('Boards/People task.md', item({ type: 'work-item', id: 'wi-person', title: 'People task', status: 'options', parent: '"[[Main]]"', holder: 'Ana' }))
+  const env = { ...process.env, WI_VAULT: fixture.root }
+  const json = await run('node', [CLI, 'dashboard', '--panel', 'people', '--panel', 'agents', '--json'], { env })
+  const report = JSON.parse(json.stdout)
+  assert.deepEqual(Object.keys(report).sort(), ['agents', 'people'])
+  assert.equal(report.people[0].person, 'Ana')
+  assert.deepEqual(report.people[0].cards.map((card: { status: string }) => card.status), ['options'])
+  assert.equal(report.agents.maxAgents, null)
+  assert.equal(report.agents.activeAgents, 3)
+  const text = await run('node', [CLI, 'dashboard', '--panel', 'people'], { env })
+  assert.match(text.stdout, /^people$/m)
+  assert.match(text.stdout, /options  wi-person  People task/)
+  assert.doesNotMatch(text.stdout, /^review/m)
+})
+
+test('the Agents panel marks a request in backlog as not ready', async () => {
+  fixture = seed()
+  fixture.write('Boards/Waiting.md', item({ type: 'work-item', id: 'wi-waiting', title: 'Waiting', status: 'backlog', parent: '"[[Main]]"', holder: 'agent' }))
+  const { stdout } = await run('node', [CLI, 'dashboard', '--panel', 'agents'], {
+    env: { ...process.env, WI_VAULT: fixture.root },
+  })
+  assert.match(stdout, /not yet ready for an agent  wi-waiting  Waiting  \(backlog\)/)
+  assert.doesNotMatch(stdout, /^review/m)
 })

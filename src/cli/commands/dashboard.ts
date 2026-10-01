@@ -8,11 +8,11 @@ import { stat } from 'node:fs/promises'
 import { displayName } from '../../shared/authorship.ts'
 import { holderOf } from '../../shared/holder.ts'
 import {
-  agentFeed, cardsInScope, groupName, groupUnder, inFocus, needsAttention, parseReviewLine, progress,
+  activeAgentCount, agentFeed, agentRequests, cardsInScope, groupName, groupUnder, inFocus, needsAttention, parseReviewLine, peopleFeed, progress,
   waitsForReview, workingBadge, type AgentRow, type DashItem, type DashTree,
 } from '../../shared/dashboard.ts'
 import { dependenciesOf, titleOf } from '../dependencies.ts'
-import type { Vault, WorkItem } from '../vault.ts'
+import { maxAgentsForRun, readPeople, type Vault, type WorkItem } from '../vault.ts'
 
 export interface DashboardOptions {
   /** The reviewer. With none, no card waits for review. */
@@ -87,6 +87,7 @@ export async function dashboardSummary(vault: Vault, options: DashboardOptions =
   const scope = cardsInScope([...cards.values()], root, tree)
   const focused = scope.filter((card) => inFocus(card, focus, tree))
   const area = (card: Card) => groupName(groupUnder(card, focus, tree), focus)
+  const people = [...(await readPeople(vault.root)).values()]
 
   const review = focused.filter((card) => you !== null && waitsForReview(card, you, tree, card.item.text)).map((card) => {
     const line = parseReviewLine(card.item.text)
@@ -94,7 +95,7 @@ export async function dashboardSummary(vault: Vault, options: DashboardOptions =
   })
 
   // The feed, the working counts and the quiet claims in attention all come from this one list.
-  const feed = agentFeed(scope, you ?? '', tree, now, focus)
+  const feed = agentFeed(scope, you ?? '', tree, now, focus, people)
   const claim = (row: AgentRow<Card>) => ({
     holder: row.card.holder!, ...identity(row.card), status: row.card.status!, area: area(row.card),
     active: new Date(row.active).toISOString(),
@@ -121,7 +122,16 @@ export async function dashboardSummary(vault: Vault, options: DashboardOptions =
       percent: row.total ? Math.round((100 * row.done) / row.total) : 0,
       working: workingBadge(feed, row.area),
     })),
-    agents: { working: feed.working.map(claim), idle: feed.idle.map(claim), finished: feed.finished.map(claim) },
+    agents: {
+      maxAgents: maxAgentsForRun(vault),
+      activeAgents: activeAgentCount([...cards.values()], people),
+      requests: agentRequests(focused).map((card) => ({ ...identity(card), status: card.status! })),
+      working: feed.working.map(claim), idle: feed.idle.map(claim), finished: feed.finished.map(claim),
+    },
+    people: peopleFeed(focused, people).map((row) => ({
+      person: row.person,
+      cards: row.cards.map(({ card, status }) => ({ ...identity(card), status })),
+    })),
     attention: attention.map((row) => ({
       reason: row.reason, ...identity(row.card), holder: row.card.holder ?? null, cards: row.cards.map(identity),
     })),
@@ -131,16 +141,40 @@ export async function dashboardSummary(vault: Vault, options: DashboardOptions =
 export type DashboardSummary = Awaited<ReturnType<typeof dashboardSummary>>
 
 /** One count per section, then one line per card, for a person at a terminal. */
-export function renderDashboard(summary: DashboardSummary): string {
+export type DashboardPanel = 'review' | 'progress' | 'agents' | 'people' | 'attention'
+
+export function dashboardPanels(summary: DashboardSummary, selected: DashboardPanel[]) {
+  const result: Partial<Pick<DashboardSummary, DashboardPanel>> = {}
+  for (const panel of selected) {
+    switch (panel) {
+      case 'review': result.review = summary.review; break
+      case 'progress': result.progress = summary.progress; break
+      case 'agents': result.agents = summary.agents; break
+      case 'people': result.people = summary.people; break
+      case 'attention': result.attention = summary.attention; break
+    }
+  }
+  return result
+}
+
+export function renderDashboard(summary: DashboardSummary, selected: DashboardPanel[] = ['review', 'progress', 'agents', 'people', 'attention']): string {
   const { counts } = summary
   const card = (row: { id: string | null; title: string }) => `${row.id ?? '?'}  ${row.title}`
   const claims = (rows: DashboardSummary['agents']['working']) => rows.map((row) => `  ${row.holder}  ${card(row)}  (${row.area})`)
-  return [
-    `review  ${counts.review}`, ...summary.review.map((row) => `  ${card(row)}  ${row.what}`),
-    'progress', ...summary.progress.map((row) => `  ${row.name}  ${row.done}/${row.total} done, ${row.doing} doing, ${row.backlog} in backlog`),
+  const lines: string[] = []
+  if (selected.includes('review')) lines.push(`review  ${counts.review}`, ...summary.review.map((row) => `  ${card(row)}  ${row.what}`))
+  if (selected.includes('progress')) lines.push('progress', ...summary.progress.map((row) => `  ${row.name}  ${row.done}/${row.total} done, ${row.doing} doing, ${row.backlog} in backlog`))
+  if (selected.includes('agents')) lines.push(
+    `agents  ${summary.agents.activeAgents} active, limit ${summary.agents.maxAgents ?? 'none'}`,
+    `requests  ${summary.agents.requests.length}`,
+    ...summary.agents.requests.map((row) => `  ${row.status === 'backlog' ? 'not yet ready for an agent' : 'waiting for an agent'}  ${card(row)}  (${row.status})`),
     `working  ${counts.working}`, ...claims(summary.agents.working),
     `idle  ${counts.idle}`, ...claims(summary.agents.idle),
     `finished  ${counts.finished}`, ...claims(summary.agents.finished),
-    `attention  ${counts.attention.total}`, ...summary.attention.map((row) => `  ${row.reason}  ${card(row)}`),
-  ].join('\n') + '\n'
+  )
+  if (selected.includes('people')) lines.push('people', ...summary.people.flatMap((row) => [
+    `  ${row.person}`, ...row.cards.map((item) => `    ${item.status}  ${card(item)}`),
+  ]))
+  if (selected.includes('attention')) lines.push(`attention  ${counts.attention.total}`, ...summary.attention.map((row) => `  ${row.reason}  ${card(row)}`))
+  return lines.join('\n') + (lines.length > 0 ? '\n' : '')
 }

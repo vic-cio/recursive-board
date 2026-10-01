@@ -3,9 +3,9 @@ status: accepted
 ---
 # The dashboard summary in the CLI
 
-`wi dashboard --json` gives an agent the dashboard ([0040](0040-dashboard-view.md)) in one call. It
-returns the cards that wait for review, progress by area, the working, idle and finished claims,
-and the cards that need attention, with a count for each section. It writes nothing.
+`wi dashboard` gives an agent the dashboard ([0040](0040-dashboard-view.md)) in one call. It
+returns every panel by default. Repeat `--panel` to select `review`, `progress`, `agents`, `people`,
+or `attention`. JSON contains only the selected panels. It writes nothing.
 
 The command applies the plugin's own rules. They moved from `src/plugin/dashboard-model.ts` to
 `src/shared/dashboard.ts`, and the plugin file re-exports them. The CLI reads each card's
@@ -23,6 +23,10 @@ inside it, grouped under the next area down. Any other card is refused.
 
 Each review row lists every path from the card's `**Review:**` line, web addresses included. The
 web-row setting and the review ticks are personal display state, so the CLI leaves them out.
+
+The People panel lists person notes that hold open cards, with each card's status. It has no timing
+or idle state. The Agents panel excludes people and includes requests for any agent, the active count,
+and the configured limit.
 
 ## Why
 

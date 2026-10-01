@@ -11,8 +11,8 @@ import type { WorkItemIndex, WorkItemMeta } from '../index.ts'
 import type { Verdict } from '../../shared/review.ts'
 import { SendBackModal } from './send-back-modal.ts'
 import {
-  ago, agentFeed, areaPath, cardsInScope, groupName, groupUnder, inFocus, isLoopbackWebAddress, isWebAddress, needsAttention, parseReviewLine, progress, reviewPresentationForMode, reviewVerdictReadiness, waitsForReview, workingBadge,
-  type AgentFeed, type AgentRow, type Attention, type DashTree, type Group, type WebReviewMode,
+  activeAgentCount, ago, agentFeed, agentRequests, areaPath, cardsInScope, groupName, groupUnder, inFocus, isLoopbackWebAddress, isWebAddress, needsAttention, parseReviewLine, peopleFeed, progress, reviewPresentationForMode, reviewVerdictReadiness, waitsForReview, workingBadge,
+  type AgentFeed, type AgentRow, type Attention, type DashTree, type Group, type PersonRow, type WebReviewMode,
 } from '../dashboard-model.ts'
 import { withFold, type DashboardTicks } from '../personal-state.ts'
 
@@ -130,7 +130,9 @@ export class DashboardView extends ItemView {
     const lower = el.createDiv('wi-dash-lower')
     const main = lower.createDiv('wi-dash-column')
     // The feed, the working badges and the quiet claims in Needs attention all come from this one list.
-    const feed = agentFeed(cards, state.you, tree, Date.now(), focus)
+    const people = this.host.personNames()
+    const feed = agentFeed(cards, state.you, tree, Date.now(), focus, people)
+    const peopleRows = peopleFeed(cards.filter((card) => inFocus(card, focus, tree)), people)
     const attention = needsAttention(cards.filter((card) => inFocus(card, focus, tree)),
       (card) => card.dependsOn.map((file) => this.host.index.get(file)).filter((found): found is WorkItemMeta => found !== null),
       feed.idle.map((row) => row.card))
@@ -138,7 +140,9 @@ export class DashboardView extends ItemView {
     this.drawReviews(main.createDiv('wi-dash-panel'), reviews, state)
     const side = lower.createDiv('wi-dash-panel')
     this.drawProgress(side, cards, tree, focus, feed)
-    this.drawAgents(side, feed, state)
+    this.drawAgents(side, feed, state, this.host.index.config.maxAgents, activeAgentCount(all, people),
+      agentRequests(cards.filter((card) => inFocus(card, focus, tree))))
+    this.drawPeople(side.createDiv('wi-dash-panel'), peopleRows)
   }
 
   private async setFocus(focus: WorkItemMeta | null): Promise<void> {
@@ -439,8 +443,20 @@ export class DashboardView extends ItemView {
   }
 
   /** One flat feed, newest first. The finished claims wait behind one fold. */
-  private drawAgents(panel: HTMLElement, feed: AgentFeed<WorkItemMeta>, state: DashboardState): void {
-    this.panelHead(panel, 'bot', 'Agents', `${feed.working.length} working`).addClass('wi-dash-agents-head')
+  private drawAgents(panel: HTMLElement, feed: AgentFeed<WorkItemMeta>, state: DashboardState, limit: number | null, active: number, requests: WorkItemMeta[]): void {
+    this.panelHead(panel, 'bot', 'Agents', `${active} active / ${limit ?? 'no limit'}`).addClass('wi-dash-agents-head')
+    if (requests.length > 0) {
+      const box = panel.createDiv('wi-dash-agents')
+      box.createDiv({ cls: 'wi-dash-muted', text: 'Waiting for an agent' })
+      for (const card of requests) {
+        const row = box.createDiv({ cls: 'wi-dash-agent is-request' })
+        const body = row.createDiv('wi-dash-agent-body')
+        this.link(body, card.title, () => this.openFile(card.file))
+        body.createDiv({ cls: 'wi-dash-muted', text: card.status === 'backlog'
+          ? 'Not yet ready for an agent.' : `${card.status} · any agent may take this card` })
+        this.copyId(row, card)
+      }
+    }
     if (feed.working.length === 0) panel.createDiv({ cls: 'wi-dash-muted wi-dash-empty', text: 'No agent is working.' })
     else this.agentRows(panel.createDiv('wi-dash-agents'), feed.working, 'working')
     if (feed.finished.length === 0) return
@@ -462,6 +478,28 @@ export class DashboardView extends ItemView {
       const open = !this.host.state().finishedOpen
       show(open)
       void this.host.save({ finishedOpen: open })
+    }
+  }
+
+  private drawPeople(panel: HTMLElement, people: PersonRow<WorkItemMeta>[]): void {
+    const count = people.reduce((total, person) => total + person.cards.length, 0)
+    this.panelHead(panel, 'users', 'People', String(count))
+    const details = panel.createEl('details', { cls: 'wi-dash-people-fold' })
+    details.createEl('summary', { text: `${people.length} people holding cards` })
+    if (people.length === 0) {
+      details.createDiv({ cls: 'wi-dash-muted', text: 'No person holds an open card.' })
+      return
+    }
+    for (const person of people) {
+      const group = details.createDiv('wi-dash-person')
+      group.createEl('h3', { text: person.person })
+      for (const { card, status } of person.cards) {
+        const row = group.createDiv({ cls: 'wi-dash-agent is-person' })
+        const body = row.createDiv('wi-dash-agent-body')
+        this.link(body, card.title, () => this.openFile(card.file))
+        body.createDiv({ cls: 'wi-dash-muted', text: status })
+        this.copyId(row, card)
+      }
     }
   }
 

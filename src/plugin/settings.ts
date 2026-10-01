@@ -144,7 +144,7 @@ export class StatusColorSettingTab extends PluginSettingTab {
     containerEl.createEl('h3', { text: 'Dispatcher' })
     new Setting(containerEl)
       .setName('Concurrent agent limit')
-      .setDesc('Maximum agents with a claimed card in doing for this vault. Dispatchers read this with wi agents. WI_MAX_AGENTS overrides it for one run.')
+      .setDesc('Maximum agents with a claimed card in doing for this vault. Dispatchers read this in the dashboard Agents panel. WI_MAX_AGENTS overrides it for one run.')
       .addText((text) => {
         text.inputEl.type = 'number'
         text.inputEl.min = '0'

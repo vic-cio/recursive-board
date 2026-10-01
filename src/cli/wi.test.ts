@@ -32,7 +32,7 @@ async function wi(args: string[], vault?: string, env: NodeJS.ProcessEnv = {}): 
   }
 }
 
-test('wi agents prints the configured agent limit and claimed doing count', async () => {
+test('the Agents dashboard panel prints the limit and claimed doing count', async () => {
   fixture = seed()
   fixture.writeSettings('{"maxAgents":2}')
   const source = readFileSync(join(fixture.root, 'Boards/Build server.md'), 'utf8')
@@ -56,16 +56,25 @@ test('wi agents prints the configured agent limit and claimed doing count', asyn
     parent: '"[[Main]]"', created: '2026-09-21', updated: '2026-09-21',
   }))
 
-  const result = await wi(['agents', '--json'])
+  const result = await wi(['dashboard', '--panel', 'agents', '--json'])
   assert.equal(result.code, 0, result.stderr)
   const report = JSON.parse(result.stdout)
-  assert.equal(report.maxAgents, 2)
-  assert.equal(report.activeAgents, 2, 'codex holds a card and its subtask, and counts once; a request for any agent is no agent')
-  assert.deepEqual(report.claims.map((c: { agent: string; id: string }) => `${c.agent} ${c.id}`).sort(),
+  assert.equal(report.agents.maxAgents, 2)
+  assert.equal(report.agents.activeAgents, 2, 'codex holds a card and its subtask, and counts once; a request for any agent is no agent')
+  assert.deepEqual([...report.agents.working, ...report.agents.idle, ...report.agents.finished]
+    .map((c: { holder: string; id: string }) => `${c.holder} ${c.id}`).sort(),
     ['claude wi-0005', 'codex wi-0004', 'codex wi-0007'])
+  assert.equal(report.agents.requests[0].id, 'wi-0010')
 })
 
-test('wi agents does not count a card a person holds, known by a note with type: person', async () => {
+test('wi agents retires cleanly and names its replacement', async () => {
+  fixture = seed()
+  const result = await wi(['agents'])
+  assert.equal(result.code, 0)
+  assert.match(result.stdout, /wi dashboard --panel agents/)
+})
+
+test('the Agents panel does not count a card a person holds, known by a note with type: person', async () => {
   fixture = seed()
   fixture.writeSettings('{"maxAgents":1}')
   fixture.write('People/Ana.md', '---\ntype: person\n---\n')
@@ -78,11 +87,11 @@ test('wi agents does not count a card a person holds, known by a note with type:
     parent: '"[[Main]]"', created: '2026-09-21', updated: '2026-09-21',
   }))
 
-  const result = await wi(['agents', '--json'])
+  const result = await wi(['dashboard', '--panel', 'agents', '--json'])
   assert.equal(result.code, 0, result.stderr)
   const report = JSON.parse(result.stdout)
-  assert.equal(report.activeAgents, 1)
-  assert.deepEqual(report.claims.map((c: { agent: string }) => c.agent), ['codex-code'])
+  assert.equal(report.agents.activeAgents, 1)
+  assert.deepEqual([...report.agents.working, ...report.agents.idle, ...report.agents.finished].map((c: { holder: string }) => c.holder), ['codex-code'])
 
   const claim = await wi(['claim', 'wi-0004', '--agent', 'Ana'])
   assert.equal(claim.code, 0, claim.stderr)
@@ -134,22 +143,22 @@ test('wi trace exits successfully with its removal notice', async () => {
 test('WI_MAX_AGENTS overrides the vault config for one dispatcher run', async () => {
   fixture = seed()
   fixture.writeSettings('{"maxAgents":2}')
-  const result = await wi(['agents', '--json'], undefined, { WI_MAX_AGENTS: '5' })
+  const result = await wi(['dashboard', '--panel', 'agents', '--json'], undefined, { WI_MAX_AGENTS: '5' })
   assert.equal(result.code, 0, result.stderr)
-  assert.equal(JSON.parse(result.stdout).maxAgents, 5)
+  assert.equal(JSON.parse(result.stdout).agents.maxAgents, 5)
 })
 
 test('an empty WI_MAX_AGENTS removes the cap for that run', async () => {
   fixture = seed()
   fixture.writeSettings('{"maxAgents":2}')
-  const result = await wi(['agents', '--json'], undefined, { WI_MAX_AGENTS: '' })
+  const result = await wi(['dashboard', '--panel', 'agents', '--json'], undefined, { WI_MAX_AGENTS: '' })
   assert.equal(result.code, 0, result.stderr)
-  assert.equal(JSON.parse(result.stdout).maxAgents, null)
+  assert.equal(JSON.parse(result.stdout).agents.maxAgents, null)
 })
 
 test('WI_MAX_AGENTS must be a non-negative whole number', async () => {
   fixture = seed()
-  const result = await wi(['agents'], undefined, { WI_MAX_AGENTS: '1.5' })
+  const result = await wi(['dashboard', '--panel', 'agents'], undefined, { WI_MAX_AGENTS: '1.5' })
   assert.equal(result.code, 2)
   assert.match(result.stderr, /WI_MAX_AGENTS must be a non-negative whole number/)
 })
@@ -165,15 +174,15 @@ test('wi reads the board key from the plugin data file and ignores the old confi
   fixture = seed()
   fixture.write('.wi.json', '{"maxAgents":1}')
   fixture.write('Recursive Board config.md', '<!-- recursive-board-config -->\n```json\n{"maxAgents":2}\n```\n')
-  const before = await wi(['agents', '--json'])
+  const before = await wi(['dashboard', '--panel', 'agents', '--json'])
   assert.equal(before.code, 0, before.stderr)
-  assert.equal(JSON.parse(before.stdout).maxAgents, null)
+  assert.equal(JSON.parse(before.stdout).agents.maxAgents, null)
   assert.equal(before.stderr, '')
 
   fixture.writeSettings('{"maxAgents":3}')
-  const after = await wi(['agents', '--json'])
+  const after = await wi(['dashboard', '--panel', 'agents', '--json'])
   assert.equal(after.code, 0, after.stderr)
-  assert.equal(JSON.parse(after.stdout).maxAgents, 3)
+  assert.equal(JSON.parse(after.stdout).agents.maxAgents, 3)
   assert.equal(after.stderr, '')
 })
 

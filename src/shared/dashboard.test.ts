@@ -2,7 +2,7 @@ import { test } from 'node:test'
 import assert from 'node:assert/strict'
 
 import {
-  agentFeed, areaOf, allReviewFilesTicked, cardsInScope, fileReviewPaths, IDLE_MS, isLoopbackWebAddress, isWebAddress, FINISHED_SHOWN, FINISHED_WINDOW_MS, needsAttention, parseReviewLine, parseWebReviewMode, progress, reviewPathsForMode, reviewPresentationForMode, reviewVerdictReadiness, waitsForReview, workingBadge, type DashItem, type DashTree,
+  activeAgentCount, agentFeed, agentRequests, areaOf, allReviewFilesTicked, cardsInScope, fileReviewPaths, IDLE_MS, isLoopbackWebAddress, isWebAddress, FINISHED_SHOWN, FINISHED_WINDOW_MS, needsAttention, parseReviewLine, parseWebReviewMode, peopleFeed, progress, reviewPathsForMode, reviewPresentationForMode, reviewVerdictReadiness, waitsForReview, workingBadge, type DashItem, type DashTree,
 } from './dashboard.ts'
 
 interface Fake extends DashItem { parent: Fake | null; mtime: number }
@@ -49,6 +49,22 @@ test('the scope holds live cards under the chosen root, not roots, areas or arch
   const elsewhere = add('Elsewhere', other)
   assert.deepEqual(cardsInScope(items, home, tree), [card])
   assert.deepEqual(cardsInScope(items, null, tree), [card, elsewhere])
+})
+
+test('People lists each named person with their open cards and excludes them from Agents', () => {
+  const { add, tree } = vault()
+  const root = add('Home', null)
+  const alice = add('Alice task', root, { status: 'options', holder: 'Alice' })
+  add('Alice done', root, { status: 'done', holder: 'Alice' })
+  const bob = add('Bob task', root, { status: 'doing', holder: 'bob' })
+  const agent = add('Agent task', root, { status: 'doing', holder: 'Writer' })
+  const people = peopleFeed([alice, bob, agent], ['Alice', 'Bob', 'Nobody'])
+  assert.deepEqual(people, [
+    { person: 'Alice', cards: [{ card: alice, status: 'options' }] },
+    { person: 'Bob', cards: [{ card: bob, status: 'doing' }] },
+  ])
+  assert.deepEqual(agentFeed([alice, bob, agent], '', tree, 0, null, ['Alice', 'Bob']).working.map((row) => row.card), [agent])
+  assert.equal(activeAgentCount([alice, bob, agent], ['Alice', 'Bob']), 1)
 })
 
 test('a card waits for review only after a send, while it is yours and has no open child', () => {
@@ -238,6 +254,7 @@ test('a request for any agent is in no agent row: no agent works it yet', () => 
   add('Asked', root, { status: 'doing', holder: 'agent', mtime: 0 })
   add('Asked later', root, { status: 'done', holder: 'agent', mtime: 0 })
   assert.deepEqual(agentFeed(cardsInScope(items, null, tree), 'Ana', tree, 1000), { working: [], idle: [], finished: [] })
+  assert.deepEqual(agentRequests(cardsInScope(items, null, tree)).map((card) => card.title), ['Asked'])
 })
 
 test('the feed is one list over every area, newest first, with the area one level under the focus', () => {

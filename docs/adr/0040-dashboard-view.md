@@ -8,7 +8,7 @@ dashboard" open it in a tab, and a second call reuses that tab, like the graph v
 index and card text. Its writes are review requests from card menus and verdicts from the dashboard
 ([0043](0043-review-verdicts.md)).
 
-Its card-menu action can send a card for review. The dashboard can then record a verdict. It has four panels:
+Its card-menu action can send a card for review. The dashboard can then record a verdict. It has five panels:
 
 - **For review.** A card waits when its `owner` matches the name in the setting "Your name".
   Its newest `**Review:**` line must follow its last verdict note. The card must have no open child.
@@ -27,12 +27,15 @@ Its card-menu action can send a card for review. The dashboard can then record a
   count apart. When options run out, the bar fills, and that is the sign to bring cards out of the backlog. A click anywhere on an area row focuses that area. A board icon at the row's right end
   opens the area's board, with a tap area the full height of the row. A working badge on the row
   counts the agents that work inside it, and hides at zero.
-- **Agents.** One flat feed under Progress, newest first. Each agent row shows the card, its age,
+- **Agents.** One flat feed under Progress, newest first. The panel shows the active agent count and limit.
+  It lists open requests for any agent before the feed. Each agent row shows the card, its age,
   the agent, a chip for the area one level under the focus, and the steps done. A card directly in
   the focused area has no chip. The working badge and the feed count the same claims, so they
   agree. A card handed to you, or with every child done, counts as finished. Finished claims from
   the last 24 hours, at most ten, sit behind one fold. The fold is closed by default, and its state
   is a device setting. With nothing working and nothing finished, the feed says "No agent is working."
+- **People.** Each person with an open card appears with the cards they hold and each card's status.
+  The viewer appears when they hold an open card. The panel has no timing or idle state, and starts folded.
 - **Needs attention.** Dependency problems ([0041](0041-card-dependencies.md)), and idle claims as
   "Agent went quiet". A claim is idle when neither the card nor a child changed for an hour: its
   session most likely ended without `wi release`. The panel shows only when it has a row.

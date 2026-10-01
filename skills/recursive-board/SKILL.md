@@ -115,7 +115,7 @@ In Obsidian, use **Promote** at the top of any child card to give it its own boa
   agent can hold a card and its current subtask. A repeat by the same agent in doing writes nothing.
 - `wi status <ref> done` says when that was the parent's last open child. Check the parent's own
   criteria, then close it.
-- Before starting a worker, a dispatcher runs `wi agents`. It counts agents, not cards, and lists
+- Before starting a worker, a dispatcher reads `wi dashboard --panel agents`. It counts agents, not cards, and lists
   each agent's doing cards. The dispatcher holds off when `activeAgents` reaches `maxAgents`;
   `null` means no limit is set. `WI_MAX_AGENTS` overrides the vault setting for one run. This
   limit is advisory: `wi claim` does not enforce it.
@@ -128,7 +128,7 @@ In Obsidian, use **Promote** at the top of any child card to give it its own boa
   starts the harness with the card body as the brief, and notes the log path. The worker claims
   the card when it starts, which moves it to doing. Run it in the repository the card works on.
   To assign a card to a person, use `--to <name>` with a note of `type: person`; the card does not
-  count in `wi agents`. To leave a card for any agent, use `--to agent`.
+  count in the dashboard Agents panel. To leave a card for any agent, use `--to agent`.
 - A dispatcher records each event on the card (start, finish, retry, stop) with
   `wi note <card> "<event>" --agent <its name>`.
 - When a worker stops, its dispatcher runs `wi release` with a reason and, when available, the

@@ -36,7 +36,7 @@ import { setPeople } from './commands/set.ts'
 import { dependenciesOf, openDependencies, titleOf } from './dependencies.ts'
 import { hookStatus, installHook, uninstallHook } from './commands/hook.ts'
 import { runSetup } from './commands/setup.ts'
-import { dashboardSummary, renderDashboard } from './commands/dashboard.ts'
+import { dashboardPanels, dashboardSummary, renderDashboard, type DashboardPanel } from './commands/dashboard.ts'
 import { sendForReview } from './commands/review.ts'
 import { COMMAND_FLAGS, parseCommandLine, type Values } from './flags.ts'
 import { STATUSES } from '../shared/schema.ts'
@@ -61,7 +61,7 @@ Usage
                  [--permission <mode>]
   wi review <ref> --to <name> [--files <path>]...
   wi agents
-  wi dashboard [--you <name>] [--parent <ref>] [--json]
+  wi dashboard [--panel <review|progress|agents|people|attention>]... [--you <name>] [--parent <ref>] [--json]
   wi release <ref> --reason <text> [--where <branch-or-path>]
   wi move <ref> --to <ref>
   wi archive <ref> [--undo]
@@ -135,11 +135,9 @@ Notes
   --permission passes the harness's own mode: claude takes --permission-mode (default auto), codex
   takes --sandbox (default workspace-write), and pi has none. The default never bypasses permissions.
   \`wi objective\` is retired. Use \`wi show <ref> --json\` to read a card and its ancestor objectives.
-  \`wi agents\` reports the advisory limit, the number of distinct agents with a doing card, and each
-  claimed doing card. A card that a person holds does not count: a person is a note with type: person. WI_MAX_AGENTS overrides
-  maxAgents from the board settings for one run. Dispatchers decide whether to wait; wi claim does not enforce it.
-  \`wi dashboard\` prints the plugin dashboard's summary: review work for --you, progress by area, claims,
-  and what needs attention. --parent names a root or an area. It writes nothing.
+  \`wi agents\` is retired. Use \`wi dashboard --panel agents\`.
+  \`wi dashboard\` prints the same panels as the plugin. Repeat --panel to choose panels; without it,
+  wi prints every panel. --parent names a root or an area. It writes nothing.
   \`wi review <ref> --to <name> [--files <path>]...\` sends a card to a person note for review. Each --files
   adds one vault-relative path. The command sets owner and appends a Review note in one write.
   The board settings live in the Recursive Board plugin settings, stored in
@@ -223,7 +221,7 @@ async function main(argv: string[]): Promise<number> {
     case 'review':
       return runReview(vault, rest, values, json)
     case 'agents':
-      return runAgents(vault, rest, json)
+      return runAgents(rest)
     case 'dashboard':
       return runDashboard(vault, rest, values, json)
     case 'ready':
@@ -466,6 +464,13 @@ function singleLineOption(values: Values, key: string): string {
   return value.trim()
 }
 
+function multipleLineOption(values: Values, key: string): string[] {
+  const value = values[key]
+  if (typeof value === 'string') return [value]
+  if (Array.isArray(value) && value.every((part) => typeof part === 'string')) return value
+  throw new UsageError(`--${key} needs one or more values.`)
+}
+
 async function runClaim(vault: Vault, rest: string[], values: Values, json: boolean): Promise<number> {
   const ref = rest.join(' ').trim()
   if (ref === '') throw new UsageError('wi claim needs a <ref> and --agent <name>.')
@@ -578,30 +583,30 @@ async function activeAgentNames(vault: Vault): Promise<Set<string>> {
   return new Set((await claimedDoing(vault)).map((claim) => claim.agent))
 }
 
-async function runAgents(vault: Vault, rest: string[], json: boolean): Promise<number> {
+async function runAgents(rest: string[]): Promise<number> {
   if (rest.length > 0) throw new UsageError('wi agents takes no arguments.')
-  const maxAgents = maxAgentsForRun(vault)
-  const claims = (await claimedDoing(vault)).sort((a, b) => a.agent.localeCompare(b.agent))
-  const activeAgents = new Set(claims.map((claim) => claim.agent)).size
-  if (json) {
-    print({ maxAgents, activeAgents, claims: claims.map(({ agent, item }) => ({
-      agent, id: item.id ?? null, title: item.title ?? item.stem, path: item.relPath,
-    })) })
-    return 0
-  }
-  process.stdout.write(`limit  ${maxAgents === null ? 'none' : maxAgents}\nagents with a doing card  ${activeAgents}\n`)
-  for (const { agent, item } of claims) process.stdout.write(`  ${agent}  ${label(item)}\n`)
+  process.stdout.write('wi agents is retired. Use wi dashboard --panel agents.\n')
   return 0
 }
 
 async function runDashboard(vault: Vault, rest: string[], values: Values, json: boolean): Promise<number> {
   if (rest.length > 0) throw new UsageError('wi dashboard takes no card reference. Use --parent <ref>.')
+  const allPanels: DashboardPanel[] = ['review', 'progress', 'agents', 'people', 'attention']
+  const rawPanels = values['panel'] === undefined ? allPanels : multipleLineOption(values, 'panel')
+  const panels = [...new Set(rawPanels.map((panel) => {
+    if (!isDashboardPanel(panel)) throw new UsageError(`wi dashboard --panel needs one of: ${allPanels.join(', ')}.`)
+    return panel
+  }))]
   const you = values['you'] === undefined ? undefined : singleLineOption(values, 'you')
-  if (you === undefined) process.stderr.write('wi: warning: no --you <name>, so no card waits for review.\n')
+  if (you === undefined && panels.includes('review')) process.stderr.write('wi: warning: no --you <name>, so no card waits for review.\n')
   const summary = await dashboardSummary(vault, { ...(you === undefined ? {} : { you }), ...(typeof values['parent'] === 'string' ? { parent: values['parent'] } : {}) })
-  if (json) print(summary)
-  else process.stdout.write(renderDashboard(summary))
+  if (json) print(dashboardPanels(summary, panels))
+  else process.stdout.write(renderDashboard(summary, panels))
   return 0
+}
+
+function isDashboardPanel(value: string): value is DashboardPanel {
+  return value === 'review' || value === 'progress' || value === 'agents' || value === 'people' || value === 'attention'
 }
 
 function runReady(vault: Vault, rest: string[], values: Values, json: boolean): number {
