@@ -233,7 +233,8 @@ export class DashboardView extends ItemView {
     panel.createDiv({
       cls: 'wi-dash-muted',
       text: 'Files that wait for your review. Click a name to open it, and tick each file when you have looked. ' +
-        'When every file of a card is ticked, approve the card or send it back. Web pages have no tick.',
+        'When every file of a card is ticked, approve the card or send it back. Web pages have no tick. ' +
+        'A card that lists no file has its own row to tick.',
     })
     const table = panel.createEl('table', { cls: 'wi-dash-table' })
     const header = table.createEl('thead').createEl('tr')
