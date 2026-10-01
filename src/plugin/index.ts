@@ -12,7 +12,7 @@
 import type { App, TFile } from 'obsidian'
 
 import { readLabels } from '../shared/labels.ts'
-import { isAreaTag } from '../shared/area-tags.ts'
+import { isLegacyAreaTag } from '../shared/legacy-area-tag.ts'
 import { DEFAULT_VAULT_CONFIG, type VaultConfig } from '../shared/vault-config.ts'
 import { archiveOwner } from '../shared/archive.ts'
 import { displayName } from '../shared/authorship.ts'
@@ -163,8 +163,8 @@ export class WorkItemIndex {
       dependsOnRaw,
       dependsOn,
       prevStatus: isStatus(prev) ? prev : undefined,
-      // An area tag repeats what the board already shows, so it draws no chip (ADR 0039).
-      labels: readLabels(frontmatter['tags']).filter((label) => !isAreaTag(label)),
+      // Keep old area tags hidden because the board already shows where each card sits (ADR 0039).
+      labels: readLabels(frontmatter['tags']).filter((label) => !isLegacyAreaTag(label)),
     }
   }
 

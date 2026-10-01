@@ -33,7 +33,7 @@ test('tagSuggestions offers no new tag when the typed text is a tag in use', () 
 test('tagSuggestions refuses an area tag and text that is not a tag', () => {
   const [area] = tagSuggestions([], inUse, 'area/work')
   assert.equal(area?.kind, 'refused')
-  assert.match(area?.kind === 'refused' ? area.reason : '', /wi retag/)
+  assert.match(area?.kind === 'refused' ? area.reason : '', /reserved for old area tags/)
   const [spaced] = tagSuggestions([], inUse, 'two words')
   assert.equal(spaced?.kind, 'refused')
 })

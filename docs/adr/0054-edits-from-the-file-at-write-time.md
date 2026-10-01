@@ -11,8 +11,8 @@ cache, because both can be older than the file.
 The shared `Edit` type stays as it is. The new `EditPlan` is either a list of edits or a rule
 `(text) => Edit[] | null`. `editItem` and the plugin's `edit` run the rule on the current text. A
 rule returns null for no change, and throws to refuse. The shared rules that read a card's text
-are `cardState`, `statusEditsIn`, `untickEditsIn`, `dependencyEditIn` and `areaTagEditsIn`. Both
-writers use them, so the two writers cannot drift.
+are `cardState`, `statusEditsIn`, `untickEditsIn` and `dependencyEditIn`. Both writers use them, so
+the two writers cannot drift.
 
 A plan is smaller than an add-or-remove list edit. One mechanism covers a list (`depends_on`,
 `tags`), a recorded value (`prev_status`), and a refusal (`wi claim`, `wi area`, the creator in
@@ -20,7 +20,7 @@ A plan is smaller than an add-or-remove list edit. One mechanism covers a list (
 
 The rules for each writer:
 
-- `wi claim`, `wi release`, `wi status`, `wi depend`, `wi retag`, `wi set`, `wi area`,
+- `wi claim`, `wi release`, `wi status`, `wi depend`, `wi set`, `wi area`,
   `wi archive`, `wi promote` and `wi move` compute their edits under the lock. Of two agents that
   claim one card at once, the second finds the first agent's name and is refused.
 - The plugin's status menu, checkbox, Waits on picker, area conversion, archive, promote and

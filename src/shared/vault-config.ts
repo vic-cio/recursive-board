@@ -15,8 +15,6 @@ export interface VaultConfig {
   maxAgents: number | null
   /** Both writers promote a parent to a board when it gets its first child. */
   autoPromote: boolean
-  /** Work items carry an `area/...` tag for their areas, which `wi graph` colours. */
-  areaTags: boolean
 }
 
 export const DEFAULT_VAULT_CONFIG: Readonly<VaultConfig> = {
@@ -25,7 +23,6 @@ export const DEFAULT_VAULT_CONFIG: Readonly<VaultConfig> = {
   extraSections: [],
   maxAgents: null,
   autoPromote: true,
-  areaTags: false,
 }
 
 /** Parse at the vault boundary; malformed config must never silently select another folder. */
@@ -47,7 +44,6 @@ export function parseVaultConfigValues(value: Record<string, unknown>, source: s
   const sectionsValue = 'extraSections' in value ? value.extraSections : undefined
   const maxAgentsValue = 'maxAgents' in value ? value.maxAgents : undefined
   const autoPromoteValue = 'autoPromote' in value ? value.autoPromote : undefined
-  const areaTagsValue = 'areaTags' in value ? value.areaTags : undefined
   let workItemFolder = DEFAULT_VAULT_CONFIG.workItemFolder
   if (folderValue !== undefined) {
     if (typeof folderValue !== 'string') {
@@ -94,9 +90,5 @@ export function parseVaultConfigValues(value: Record<string, unknown>, source: s
     throw new Error(`${source}: autoPromote must be true or false.`)
   }
   const autoPromote = autoPromoteValue ?? DEFAULT_VAULT_CONFIG.autoPromote
-  if (areaTagsValue !== undefined && typeof areaTagsValue !== 'boolean') {
-    throw new Error(`${source}: areaTags must be true or false.`)
-  }
-  const areaTags = areaTagsValue ?? DEFAULT_VAULT_CONFIG.areaTags
-  return { workItemFolder, defaultRoot, extraSections, maxAgents, autoPromote, areaTags }
+  return { workItemFolder, defaultRoot, extraSections, maxAgents, autoPromote }
 }

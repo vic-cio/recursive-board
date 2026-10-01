@@ -16,7 +16,7 @@ test('the board key in the plugin data wins over the config note and .wi.json', 
   })
   assert.equal(selected.source, PLUGIN_DATA_FILE)
   assert.deepEqual(selected.config.extraSections, ['Knowledge'])
-  assert.equal(selected.config.areaTags, true)
+  assert.equal('areaTags' in selected.config, false)
   assert.equal(selected.config.defaultRoot, null)
   assert.deepEqual(selected.leftovers, ['Recursive Board config.md', '.wi.json'])
 })
@@ -56,13 +56,13 @@ test('plugin data must be a JSON object', () => {
   assert.throws(() => parsePluginData('[]'), /data\.json must contain a JSON object/)
 })
 
-test('withBoardSettings replaces only the board key', () => {
-  const config = { ...DEFAULT_VAULT_CONFIG, extraSections: ['Knowledge'], areaTags: true }
-  const data = withBoardSettings({ people: { Victor: { ticks: { 'a.md': true } } }, board: { areaTags: false } }, config)
+test('withBoardSettings preserves an old areaTags key and other plugin data', () => {
+  const config = { ...DEFAULT_VAULT_CONFIG, extraSections: ['Knowledge'] }
+  const data = withBoardSettings({ people: { Victor: { ticks: { 'a.md': true } } }, board: { areaTags: 'legacy' } }, config)
   assert.deepEqual(data['people'], { Victor: { ticks: { 'a.md': true } } })
-  assert.deepEqual(data['board'], boardSettingsRecord(config))
+  assert.deepEqual(data['board'], { ...boardSettingsRecord(config), areaTags: 'legacy' })
   assert.deepEqual(boardSettingsRecord(config), {
-    workItemFolder: 'Boards', defaultRoot: null, extraSections: ['Knowledge'], maxAgents: null, autoPromote: true, areaTags: true,
+    workItemFolder: 'Boards', defaultRoot: null, extraSections: ['Knowledge'], maxAgents: null, autoPromote: true,
   })
 })
 

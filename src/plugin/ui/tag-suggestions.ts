@@ -3,7 +3,7 @@
  *
  * The card's own tags come first and are checked, so choosing one removes it. The other tags in
  * use follow. Typed text that names no tag in use is offered as a new tag, or as a refusal when
- * the shared rule refuses it, such as an area tag.
+ * the shared rule refuses it, such as an old area tag.
  */
 import { freeTag, tagsInUse } from '../../shared/tags.ts'
 

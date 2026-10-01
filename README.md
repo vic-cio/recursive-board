@@ -33,7 +33,7 @@ Every child card has a **Promote** control at the top, even before it has childr
 
 ## Vault configuration
 
-Set the board settings in **Settings → Recursive Board → Board**. The section sets the card folder, the default parent (`defaultRoot`), the extra sections (one chip per heading), first-child promotion, and area tags. The agent limit is under **Dispatcher**.
+Set the board settings in **Settings → Recursive Board → Board**. The section sets the card folder, the default parent (`defaultRoot`), the extra sections (one chip per heading), and first-child promotion. The agent limit is under **Dispatcher**.
 
 The plugin stores the board settings under the `board` key of its data file, `.obsidian/plugins/recursive-board/data.json`. `wi` reads that file and never writes it:
 
@@ -44,8 +44,7 @@ The plugin stores the board settings under the `board` key of its data file, `.o
     "defaultRoot": "Project",
     "extraSections": ["References", "Risks"],
     "maxAgents": 3,
-    "autoPromote": true,
-    "areaTags": false
+    "autoPromote": true
   }
 }
 ```
@@ -58,7 +57,7 @@ Obsidian Sync carries the plugin data file only when **Installed community plugi
 
 `autoPromote` is `true` or `false`. It defaults to `true`. When `wi new` or the board's add row gives a card its first child, it also sets `board: true` on that card, so the children show as a board. It never changes a root, an area, a card that already has children, or a card that has a `board` key. Undoing an add in Obsidian also restores the parent when the add promoted it.
 
-`areaTags` is `true` or `false`. It defaults to `false`. When it is `true`, each work item under an area carries one tag that names its areas from the top down, such as `area/work/web-site`. `wi new` and the board's add row write it, `wi validate` warns when one is stale, and `wi retag` fixes them. `wi graph` turns the tags into graph colours. The board hides `area/` chips.
+The board hides old `area/` tags. The Tags… picker leaves them out. New cards get no area tags. The plugin ignores the old `areaTags` setting. It keeps that key when it saves other settings.
 
 `wi setup` writes the selected vault to the user config at `$XDG_CONFIG_HOME/wi/config.json`, or `~/.config/wi/config.json` when `XDG_CONFIG_HOME` is unset. The format is `{"defaultVault":"/absolute/path/to/vault"}`. Vault detection uses Obsidian's registry on macOS, Linux, and Windows. `--vault <path>` selects a vault directly, and `--yes --vault <path>` runs without prompts.
 
@@ -154,7 +153,7 @@ The pre-commit hook runs `wi validate` and stops a commit when the vault has err
 | `wi set <ref> [--owner <name>] [--role <name>] [--creator <name> [--model <id>]]` | Changes a card's owner or role (an empty value removes it). Writes the creator and model only when the card has none: a creator is set once. |
 | `wi depend <ref> --on <ref> [--off]` | Makes a card wait on another card, or with `--off` stops it. `wi claim` and `wi status <ref> doing` refuse a card that waits on a card that is not done. The board allows it and shows a notice. `wi status <ref> done` names each card that can start now. |
 | `wi area <ref> [--off]` | Marks a card as an area or removes the area mark. The current status stays in place. Conversion refuses a card with an agent. |
-| `wi tag <ref> <tag> [--off]` | Adds a free tag to a card, or with `--off` removes it. Case and a leading `#` do not matter. It refuses an `area/` tag, because `wi retag` owns it. On the board, **Tags…** in the card menu does the same: it lists the card's tags, checked, then the other tags on work items, and adds a tag you type. |
+| `wi tag <ref> <tag> [--off]` | Adds a free tag to a card, or with `--off` removes it. Case and a leading `#` do not matter. It refuses old `area/` tags. On the board, **Tags…** in the card menu does the same: it lists the card's free tags, checked, then the other free tags on work items, and adds a tag you type. |
 | `wi claim <ref> --agent <name>` | Claims a card for an agent and moves it to doing in one write. Refuses a different agent, a done card, an open dependency, or a board with a child in doing that another agent or a person works. An agent can hold a card and its current subtask at once. Repeating an active claim by the same agent writes nothing. |
 | `wi agents` | Prints the configured agent limit, the number of distinct agents with a card in doing, and each claimed doing card. A card that a person holds does not count: a person is a note with `type: person`. `--json` returns `maxAgents`, `activeAgents` and `claims`. |
 | `wi delegate <ref> --to <person\|claude\|codex\|pi> [--model <id>] [--agent <name>] [--permission <mode>]` | Hands a card to a person or a headless agent. For a person, it only assigns the card: their name goes in `agent`, and the status stays. For `claude`, `codex` or `pi`, it claims the card, moves it to doing, makes a worktree of the current Git repository on `card/<slug>`, starts the harness in it with the card body as the brief, and notes the log path and the resume command. See [Delegate a card](#delegate-a-card). |
@@ -163,8 +162,6 @@ The pre-commit hook runs `wi validate` and stops a commit when the vault has err
 | `wi release <ref> --reason <text> [--where <branch-or-path>]` | Clears the agent, moves the card to options, and adds a dated line to Notes with the reason and optional work location. Refuses an unclaimed card. |
 | `wi move <ref> --to <ref>` | Changes the item's parent. Its status stays the same, and its children move with it. |
 | `wi archive <ref> [--undo]` | Archives an item. `--undo` unarchives it. Archived items are hidden from normal reads; descendants are hidden with an archived parent. |
-| `wi retag [--dry-run]` | Needs `areaTags`. Gives every work item the area tag its place in the tree calls for, and removes stale ones. Run it after `wi move` or `wi area`; both say when tags are stale. |
-| `wi graph` | Needs `areaTags`. Writes two colour groups per area into `.obsidian/graph.json`: a shade for boards and areas, and a lighter one for cards. A sub-area is a lighter shade of its top area. Your own groups stay, after the area groups. Close the graph view first, because Obsidian may write over the file. |
 | `wi promote <ref>` / `wi demote <ref>` | Makes an item a board or a card again. Promotion sets `board: true`; demotion removes the `board` key. |
 | `wi rm <ref> [--recursive] [--dry-run]` | Moves an item to the vault's `.trash` folder. Use `--dry-run` to preview. Items with children require `--recursive`. |
 | `wi children [<ref>] [--status <status>] [--tree] [--archived]` | Lists an item's children. If the ref is omitted, uses the repo pointer's board. `--status` filters by status, `--tree` shows descendants, and `--archived` includes archived items. |

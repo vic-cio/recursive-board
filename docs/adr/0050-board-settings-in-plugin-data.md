@@ -4,7 +4,7 @@ supersedes: 0048-synced-vault-config-note.md
 ---
 # Store the board settings in the plugin data
 
-Store the board settings under one `board` key in the plugin data file, `.obsidian/plugins/recursive-board/data.json`. The key holds `workItemFolder`, `defaultRoot`, `extraSections`, `maxAgents`, `autoPromote` and `areaTags`, next to `statusColors` and `people`. The settings tab edits every setting. A note in the vault root is clunky, and a user expects a plugin's settings in its settings tab.
+Store the board settings under one `board` key in the plugin data file, `.obsidian/plugins/recursive-board/data.json`. The key holds `workItemFolder`, `defaultRoot`, `extraSections`, `maxAgents` and `autoPromote`, next to `statusColors` and `people`. The settings tab edits every setting. A note in the vault root is clunky, and a user expects a plugin's settings in its settings tab.
 
 The plugin is the one writer. It keeps the plugin data in memory and writes the whole file on `saveData`, so a second writer would lose updates. `wi` reads the file and never writes it. `wi config migrate` is removed.
 
@@ -12,7 +12,7 @@ The plugin is the one writer. It keeps the plugin data in memory and writes the 
 
 When the plugin loads and its data has no `board` key, it migrates. It writes the settings from the config note, or `.wi.json`, into the `board` key. It reads the file back, and only then moves the old file to the trash, so a failed save never loses a setting. The trash follows the user's delete setting, so a bad migration can be undone.
 
-Obsidian Sync carries the plugin data file only when **Installed community plugins** sync is on for the device. A device with no `board` key and no old file uses the defaults. When it has cards, it shows a notice once, stored per device. Saving any board setting writes the key.
+Obsidian Sync carries the plugin data file only when **Installed community plugins** sync is on for the device. A device with no `board` key and no old file uses defaults. When it has cards, the plugin shows one notice per device. Saving any board setting writes the key. Keep and ignore a removed `areaTags` property in the key.
 
 `onExternalSettingsChange` reloads the board settings, so a change synced from another device applies at once. First-board setup sets `defaultRoot` in the `board` key.
 

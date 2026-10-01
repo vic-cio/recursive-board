@@ -12,8 +12,6 @@ import {
   CORE_FIELDS, OPTIONAL_FIELDS, STATUSES, isStatus, parseWikilink,
 } from '../../shared/schema.ts'
 import type { Vault, WorkItem } from '../vault.ts'
-import { staleAreaTags } from './retag.ts'
-import { isAreaTag } from '../../shared/area-tags.ts'
 import { dependencyCycle } from '../../shared/dependencies.ts'
 import { dependenciesOf, titleOf } from '../dependencies.ts'
 import { displayName, LINK_FIELDS, linkTypeProblem, type LinkField } from '../../shared/authorship.ts'
@@ -62,15 +60,6 @@ export async function validate(vault: Vault): Promise<Report> {
   checkCycles(vault, report)
   checkDependencies(vault, report)
   await checkPeopleAndRoles(vault, report)
-  if (vault.config.areaTags) {
-    for (const { item, to } of staleAreaTags(vault)) {
-      const tag = to.find(isAreaTag)
-      report('area-tag-stale', 'warning', item.relPath, item.id, tag
-        ? `should carry the area tag ${tag}. Run wi retag.`
-        : 'carries an area tag but sits in no area. Run wi retag.')
-    }
-  }
-
   problems.sort((a, b) => a.relPath.localeCompare(b.relPath) || a.rule.localeCompare(b.rule))
 
   const errorCount = problems.filter((p) => p.severity === 'error').length

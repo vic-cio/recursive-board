@@ -13,7 +13,6 @@ import { join } from 'node:path'
 import { claimItem, releaseItem } from './commands/claim-release.ts'
 import { setDependency } from './commands/depend.ts'
 import { createItem } from './commands/new.ts'
-import { retag } from './commands/retag.ts'
 import { setStatus } from './commands/status.ts'
 import { moveItem } from './commands/move.ts'
 import { setArea } from './commands/area.ts'
@@ -118,16 +117,6 @@ test('wi new refuses to replace a file that appeared after the load', async () =
   assert.equal(textOf(fixture, 'Streaming'), other, 'the other file is untouched')
   assert.notEqual(created.relPath, 'Boards/Streaming.md')
   assert.equal(created.renamed, true)
-})
-
-test('retag keeps a tag added after the load', async () => {
-  fixture = seed()
-  fixture.write('.wi.json', JSON.stringify({ areaTags: true }))
-  fixture.write('Boards/Task.md', card('wi-0002', 'Task', { tags: 'area/old' }))
-  const vault = await loadVault(fixture.root)
-  writeFileSync(join(fixture.root, 'Boards/Task.md'), textOf(fixture, 'Task').replace('tags: area/old', 'tags: area/old design'))
-  await retag(vault, false)
-  assert.deepEqual(getList(textOf(fixture, 'Task'), 'tags'), ['design'])
 })
 
 test('done records the status the card has now, not the loaded one', async () => {

@@ -259,6 +259,19 @@ test('wi area converts a card to an area and back while preserving its status', 
   assert.ok(text.endsWith('# Build server\n'))
 })
 
+test('removed area tag commands remain successful stubs', async () => {
+  fixture = seed()
+  for (const args of [['retag', '--dry-run'], ['graph']]) {
+    const result = await wi(args)
+    assert.equal(result.code, 0, result.stderr)
+    assert.match(result.stdout, /removed in 0\.8\.0/i)
+  }
+  const help = await wi(['--help'])
+  assert.doesNotMatch(help.stdout, /wi retag \[--dry-run\]/)
+  assert.doesNotMatch(help.stdout, /wi graph\n/)
+  assert.match(help.stdout, /wi retag and wi graph were removed in 0\.8\.0/i)
+})
+
 test('wi tag adds and removes a free tag, and takes a title with spaces', async () => {
   fixture = seed()
   const path = join(fixture.root, 'Boards/Build server.md')
@@ -282,7 +295,7 @@ test('wi tag refuses an area tag and a missing tag with exit 2', async () => {
   const before = readFileSync(join(fixture.root, 'Boards/Build server.md'), 'utf8')
   const area = await wi(['tag', 'wi-0004', 'area/work'])
   assert.equal(area.code, 2)
-  assert.match(area.stderr, /wi retag/)
+  assert.match(area.stderr, /reserved for old area tags/)
   const missing = await wi(['tag', 'wi-0004'])
   assert.equal(missing.code, 2)
   assert.match(missing.stderr, /needs a <ref> and a <tag>/)

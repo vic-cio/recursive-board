@@ -1,7 +1,7 @@
 /**
  * The "Tags…" picker: the card's free tags, checked, then every other free tag on a work item, and
  * the typed text as a new tag (docs/adr/0057-free-tags.md). Choosing a row adds or removes one tag
- * through the same shared rule as `wi tag`, so an area tag is refused here too.
+ * through the same shared rule as `wi tag`, so an old area tag is refused here too.
  */
 import { Notice, SuggestModal, type App } from 'obsidian'
 

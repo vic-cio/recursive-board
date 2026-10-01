@@ -233,13 +233,6 @@ export class StatusColorSettingTab extends PluginSettingTab {
       .addToggle((toggle) => toggle
         .setValue(config.autoPromote)
         .onChange((value) => void this.board.update({ autoPromote: value })))
-
-    new Setting(containerEl)
-      .setName('Area tags')
-      .setDesc('Cards carry an area/... tag for their areas, which the graph view colours.')
-      .addToggle((toggle) => toggle
-        .setValue(config.areaTags)
-        .onChange((value) => void this.board.update({ areaTags: value })))
   }
 
   /** One chip per heading, so no one has to follow a separator rule. A heading is added or removed, never edited. */

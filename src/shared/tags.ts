@@ -1,17 +1,15 @@
 /**
- * Free tags: the tags a person or an agent chooses for a card, as against the area tag the tree
- * gives it (docs/adr/0057-free-tags.md).
+ * Free tags: the tags a person or an agent chooses for a card (docs/adr/0057-free-tags.md).
  *
  * `wi tag` and the card menu's "Tags…" both go through this module, so they add, remove and
- * refuse the same tags. The area tag is derived (docs/adr/0039-colour-the-graph-by-area.md) and
- * `wi retag` owns it, so every step here refuses an `area/` tag and keeps the one on the card.
+ * refuse the same tags. Old `area/` tags stay on existing cards until the owner chooses a cleanup.
  * Obsidian matches tags without regard to case, so `Design` and `#design` are one tag here too.
  *
  * This module imports nothing from Node, so the plugin bundle carries it to iOS.
  */
 import type { Edit } from './edits.ts'
 import { getList } from './frontmatter.ts'
-import { AREA_TAG_PREFIX, isAreaTag } from './area-tags.ts'
+import { isLegacyAreaTag, LEGACY_AREA_TAG_PREFIX } from './legacy-area-tag.ts'
 
 /** Letters, numbers, `_`, `-` and `/`: the characters Obsidian reads as part of a tag. */
 const TAG = /^[\p{L}\p{M}\p{N}_-]+(?:\/[\p{L}\p{M}\p{N}_-]+)*$/u
@@ -21,14 +19,14 @@ function key(tag: string): string {
 }
 
 /**
- * The tag as the card stores it: no `#`, no surrounding space. Throws for an area tag, and for
+ * The tag as the card stores it: no `#`, no surrounding space. Throws for a legacy area tag, and for
  * text Obsidian would not read as one tag.
  */
 export function freeTag(input: string): string {
   const tag = input.trim().replace(/^#/, '')
   // `area` alone is refused too: Obsidian's `tag:#area` also matches every area tag.
-  if (isAreaTag(tag) || key(tag) === AREA_TAG_PREFIX.slice(0, -1)) {
-    throw new Error(`"${tag}" is an area tag. The tree sets it and wi retag writes it.`)
+  if (isLegacyAreaTag(tag) || key(tag) === LEGACY_AREA_TAG_PREFIX.slice(0, -1)) {
+    throw new Error(`"${tag}" is reserved for old area tags and cannot be changed with wi tag.`)
   }
   if (!TAG.test(tag) || /^[\p{N}/]+$/u.test(tag)) {
     throw new Error(`"${input.trim()}" is not a tag. Use letters, numbers, "_", "-" and "/", with no space.`)
@@ -64,7 +62,7 @@ export function tagsInUse(lists: Iterable<readonly string[]>): string[] {
   for (const tags of lists) {
     for (const raw of tags) {
       const tag = raw.trim().replace(/^#/, '')
-      if (tag === '' || isAreaTag(tag) || seen.has(key(tag))) continue
+      if (tag === '' || isLegacyAreaTag(tag) || seen.has(key(tag))) continue
       seen.set(key(tag), tag)
     }
   }

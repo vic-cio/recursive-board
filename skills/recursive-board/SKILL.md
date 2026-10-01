@@ -129,9 +129,8 @@ In Obsidian, use **Promote** at the top of any child card to give it its own boa
 - When a worker stops, its dispatcher runs `wi release` with a reason and, when available, the
   branch or worktree path. Release clears the agent, returns the card to options, and records the
   continuation location in Notes.
-- If the vault sets `areaTags`, `wi` keeps an `area/...` tag on each card. Leave it to `wi`. After
-  `wi move` or `wi area`, run `wi retag`.
-- Add or remove any other tag with `wi tag <ref> <tag> [--off]`. It refuses an `area/` tag.
+- Old `area/...` tags stay on existing cards. The board hides them, and Tags… leaves them out.
+- Add or remove a free tag with `wi tag <ref> <tag> [--off]`. It refuses old `area/` tags.
 - Run `wi validate` after a batch of writes. Exit 0 is clean. Exit 1 lists what broke.
 
 ## Writing a card

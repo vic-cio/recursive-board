@@ -68,7 +68,7 @@ test('the Markdown config note overrides a valid legacy config file', async () =
   assert.deepEqual(vault.config.extraSections, ['References'])
   assert.equal(vault.config.maxAgents, 2)
   assert.equal(vault.config.autoPromote, false)
-  assert.equal(vault.config.areaTags, true)
+  assert.equal('areaTags' in vault.config, false)
   assert.deepEqual(vault.items.map((entry) => entry.id), ['wi-0100'])
 })
 

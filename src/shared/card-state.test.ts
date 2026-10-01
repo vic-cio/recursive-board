@@ -5,7 +5,6 @@ import { cardState } from './card-state.ts'
 import { applyStampedEdits, editsFor } from './edits.ts'
 import { statusEditsIn, untickEditsIn } from './transitions.ts'
 import { dependencyEditIn, dependsOnRaw } from './dependencies.ts'
-import { areaTagEditsIn } from './area-tags.ts'
 
 const TEXT = `---
 type: work-item
@@ -67,11 +66,4 @@ test('dependencyEditIn adds to and removes from the list in the text', () => {
   assert.deepEqual(dependencyEditIn(TEXT, 'Build', true), { op: 'list', key: 'depends_on', values: ['[[Spec]]', '[[Build]]'] })
   assert.equal(dependencyEditIn(TEXT, 'Spec', true), null)
   assert.deepEqual(dependencyEditIn(TEXT, 'Spec', false), { op: 'list', key: 'depends_on', values: [] })
-})
-
-test('areaTagEditsIn replaces only the area tag in the current tags', () => {
-  const text = '---\ntags:\n  - design\n  - area/old\n---\n'
-  assert.deepEqual(areaTagEditsIn(text, 'area/new'), [{ op: 'list', key: 'tags', values: ['design', 'area/new'] }])
-  assert.equal(areaTagEditsIn('---\ntags:\n  - area/new\n---\n', 'area/new'), null)
-  assert.deepEqual(areaTagEditsIn(text, null), [{ op: 'list', key: 'tags', values: ['design'] }])
 })

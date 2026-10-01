@@ -55,8 +55,8 @@ test('setTag refuses an area tag and writes nothing', async () => {
   fixture = seed('\n  - area/work')
   const before = readFileSync(path(fixture), 'utf8')
   const vault = await loadVault(fixture.root)
-  await assert.rejects(setTag(vault, 'Task', 'area/home', true), /wi retag/)
-  await assert.rejects(setTag(vault, 'Task', 'area/work', false), /wi retag/)
+  await assert.rejects(setTag(vault, 'Task', 'area/home', true), /reserved for old area tags/)
+  await assert.rejects(setTag(vault, 'Task', 'area/work', false), /reserved for old area tags/)
   assert.equal(readFileSync(path(fixture), 'utf8'), before)
 })
 

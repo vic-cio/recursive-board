@@ -22,7 +22,6 @@ import { claimItem, releaseItem } from './commands/claim-release.ts'
 import { delegate, runGit, spawnWorker } from './commands/delegate.ts'
 import { addNote } from './commands/note.ts'
 import { setTag } from './commands/tag.ts'
-import { retag, staleAreaTags, writeGraphColours } from './commands/retag.ts'
 import { listChildren, type ChildRow } from './commands/children.ts'
 import { readyCards } from './commands/ready.ts'
 import { showCard } from './commands/show.ts'
@@ -73,9 +72,6 @@ Usage
   wi ready [--parent <ref>] [--agent <name>] [--json]
   wi show <ref> [--json]
   wi validate
-  wi retag [--dry-run]
-  wi graph
-  wi template
   wi hook <install|uninstall|status> [--force]
   wi here [--board <ref>] [--vault <path>]
 
@@ -91,6 +87,7 @@ Options
   -V, --version    Print the version.
 
 Notes
+  wi retag and wi graph were removed in 0.8.0. The board tree shows each card's area.
   Each command takes only the flags its usage line shows, plus --vault and --json where it reads a
   vault or prints a result. It refuses any other flag with exit 2 and names the flag.
   \`wi new\` writes the brief: --objective once, --context and --criteria once per paragraph or
@@ -101,16 +98,12 @@ Notes
   the new file gets the id's suffix; wi never writes over a file.
   \`wi new\` makes a parent a board when it gives the parent its first child. Set
   "autoPromote": false in Recursive Board config.md to turn this off. A root or an area is never changed.
-  With "areaTags": true in Recursive Board config.md, each work item carries one tag naming its areas, such as
-  area/work/website. \`wi new\` writes it. After \`wi move\` or \`wi area\`, run \`wi retag\` to fix
-  the tags below. \`wi graph\` writes a colour group per area to .obsidian/graph.json and keeps
-  your own groups. Close the graph view first: Obsidian may write over the file.
   \`wi new\` writes creator, creator_model and role as the plain names of person or role notes. --creator and
   --model fall back to WI_CREATOR and WI_MODEL; wi new warns when a card has no creator, and
   --strict refuses it. Without --role, the card copies the role of its nearest ancestor that has one.
   An empty --role "" writes no role.
   \`wi tag <ref> <tag>\` adds a free tag to a card, and --off removes it. Case and a leading # do not
-  matter. It refuses an area/ tag, because the tree sets that tag and \`wi retag\` writes it.
+  matter. It refuses old area/ tags, which remain on cards until the owner chooses a cleanup.
   \`wi set\` changes a card's owner or role (an empty value removes it), and writes its creator and
   model only when it has none: a creator is set once.
   \`wi note\` appends "- <date> <time>, <writer>: <text>" under Notes. The writer is --agent, or
@@ -193,6 +186,11 @@ async function main(argv: string[]): Promise<number> {
     return 0
   }
 
+  if (command === 'retag' || command === 'graph') {
+    process.stdout.write('wi retag and wi graph were removed in 0.8.0. The board tree shows each card\'s area.\n')
+    return 0
+  }
+
   const vault = await openVault(text(values, 'vault'))
   const json = values.json === true
 
@@ -202,7 +200,7 @@ async function main(argv: string[]): Promise<number> {
     case 'status':
       return runStatus(vault, rest, json)
     case 'area':
-      return withRetagHint(vault, () => runArea(vault, rest, values, json))
+      return runArea(vault, rest, values, json)
     case 'note':
       return runNote(vault, rest, values, json)
     case 'tag':
@@ -226,7 +224,7 @@ async function main(argv: string[]): Promise<number> {
     case 'release':
       return runRelease(vault, rest, values, json)
     case 'move':
-      return withRetagHint(vault, () => runMove(vault, rest, values, json))
+      return runMove(vault, rest, values, json)
     case 'archive':
       return runArchive(vault, rest, values, json)
     case 'promote':
@@ -246,10 +244,6 @@ async function main(argv: string[]): Promise<number> {
       return runShow(vault, rest, json)
     case 'validate':
       return runValidate(vault, json)
-    case 'retag':
-      return runRetag(vault, rest, values, json)
-    case 'graph':
-      return runGraph(vault, rest, json)
     case 'hook':
       return runHook(vault, rest, values, json)
     default:
@@ -813,39 +807,6 @@ function runChildren(vault: Vault, rest: string[], values: Values, json: boolean
   }
   if (listing.cycle) out.push('  ! the parent chain loops. Run wi validate.')
   process.stdout.write(`${out.join('\n')}\n`)
-  return 0
-}
-
-/** A move or an area change can leave area tags below it stale. Say so, since it writes one file. */
-async function withRetagHint(vault: Vault, run: () => Promise<number>): Promise<number> {
-  const code = await run()
-  if (vault.config.areaTags) {
-    const stale = staleAreaTags(await loadVault(vault.root)).length
-    if (stale > 0) process.stderr.write(`wi: ${stale} work item${stale === 1 ? ' has' : 's have'} a stale area tag. Run wi retag.\n`)
-  }
-  return code
-}
-
-async function runRetag(vault: Vault, rest: string[], values: Values, json: boolean): Promise<number> {
-  if (rest.length > 0) throw new UsageError('wi retag takes no arguments.')
-  const dryRun = values['dry-run'] === true
-  const changed = await retag(vault, dryRun)
-  if (json) {
-    print({ dryRun, changed: changed.map(({ item, from, to }) => ({ id: item.id ?? null, path: item.relPath, from, to })) })
-    return 0
-  }
-  const verb = dryRun ? 'would retag' : 'retagged'
-  for (const { item, to } of changed) process.stdout.write(`${verb}  ${label(item)}  [${to.join(', ')}]\n`)
-  process.stdout.write(`${changed.length} work item${changed.length === 1 ? '' : 's'}${dryRun ? ', nothing written' : ''}\n`)
-  return 0
-}
-
-async function runGraph(vault: Vault, rest: string[], json: boolean): Promise<number> {
-  if (rest.length > 0) throw new UsageError('wi graph takes no arguments.')
-  const written = await writeGraphColours(vault)
-  if (json) print(written)
-  else process.stdout.write(`wrote ${written.groups} area colour groups to ${written.path}, kept ${written.kept} of your own\n` +
-    'reopen the graph view to see them\n')
   return 0
 }
 

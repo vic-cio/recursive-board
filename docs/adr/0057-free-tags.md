@@ -1,14 +1,13 @@
 ---
 status: accepted
 ---
-# Free tags have one shared step and never touch the area tag
+# Free tags have one shared step and leave old area tags alone
 
-A card's `tags` hold two kinds of tag. The area tag (0039) names the card's areas and is derived
-from the tree. A free tag is any other tag: a person or an agent chooses it. A free tag is a label
-on the board (0018), so search, the tag pane and the graph see it with no extra work.
+A card's `tags` can hold old area tags and free tags. A free tag is any tag a person or an agent
+chooses. A free tag is a label on the board (0018), so search and the tag pane see it with no extra
+work.
 
-Before this, `wi` wrote only the area tag, and a person typed free tags into the frontmatter by
-hand. An agent had to edit the file with a text tool, which 0004 tells it not to do.
+Agents use `wi tag` instead of a text tool to change free tags, which 0004 requires.
 
 ## The decision
 
@@ -17,9 +16,9 @@ and the **Tags…** item in the card menu both call it, so they agree:
 
 - A leading `#` and the case do not matter. `Design`, `design` and `#design` are one tag, as in
   Obsidian. A new tag goes at the end of the list. A remove takes out every spelling of the tag.
-- The step refuses an `area/` tag, and the bare tag `area`. The tree sets the area tag and
-  `wi retag` writes it. A hand-made area tag would go stale, and `wi retag` would remove it.
-  Obsidian's `tag:#area` also matches every area tag, so a free tag `area` would join that family.
+- The step refuses an `area/` tag, and the bare tag `area`. Existing area tags stay unchanged until
+  the owner chooses a cleanup. Obsidian's `tag:#area` also matches every area tag, so a free tag
+  `area` would join that family.
 - The step refuses text that Obsidian does not read as one tag: a space, a character other than a
   letter, a number, `_`, `-` or `/`, or a tag of numbers only.
 - The step reads the tags in the file at write time (0054). A tag that another writer added since

@@ -12,10 +12,10 @@ test('freeTag drops a leading # and the surrounding space', () => {
   assert.equal(freeTag('café_2'), 'café_2')
 })
 
-test('freeTag refuses an area tag, because wi retag owns it', () => {
-  assert.throws(() => freeTag('area/obsidian-development'), /wi retag/)
-  assert.throws(() => freeTag('#Area/x'), /wi retag/)
-  assert.throws(() => freeTag('area'), /wi retag/)
+test('freeTag refuses legacy area tags', () => {
+  assert.throws(() => freeTag('area/obsidian-development'), /reserved for old area tags/)
+  assert.throws(() => freeTag('#Area/x'), /reserved for old area tags/)
+  assert.throws(() => freeTag('area'), /reserved for old area tags/)
 })
 
 test('freeTag refuses text that Obsidian does not read as a tag', () => {
@@ -31,7 +31,7 @@ test('withFreeTag adds a tag at the end, once', () => {
   assert.deepEqual(withFreeTag(['#design'], 'design', true), ['#design'])
 })
 
-test('withFreeTag removes every spelling of a tag and keeps the area tag', () => {
+test('withFreeTag removes every spelling of a tag and keeps the old area tag', () => {
   assert.deepEqual(withFreeTag(['design', 'area/x', '#Design', 'web'], 'design', false), ['area/x', 'web'])
   assert.deepEqual(withFreeTag(['area/x'], 'design', false), ['area/x'])
 })
@@ -42,7 +42,7 @@ test('withFreeTag leaves a nested tag alone when its parent is removed', () => {
 
 const card = (tags: string) => `---\ntype: work-item\n${tags}status: todo\n---\n\nBody\n`
 
-test('freeTagEditsIn adds to a block list and keeps the area tag', () => {
+test('freeTagEditsIn adds to a block list and keeps the old area tag', () => {
   const text = card('tags:\n  - area/x\n')
   const edits = freeTagEditsIn(text, 'design', true)
   assert.ok(edits)
@@ -76,9 +76,9 @@ test('freeTagEditsIn returns null when nothing changes', () => {
   assert.equal(freeTagEditsIn(card(''), 'web', false), null)
 })
 
-test('freeTagEditsIn refuses an area tag before it reads the file', () => {
-  assert.throws(() => freeTagEditsIn(card(''), 'area/x', true), /wi retag/)
-  assert.throws(() => freeTagEditsIn(card('tags:\n  - area/x\n'), 'area/x', false), /wi retag/)
+test('freeTagEditsIn refuses an old area tag before it reads the file', () => {
+  assert.throws(() => freeTagEditsIn(card(''), 'area/x', true), /reserved for old area tags/)
+  assert.throws(() => freeTagEditsIn(card('tags:\n  - area/x\n'), 'area/x', false), /reserved for old area tags/)
 })
 
 test('tagsInUse lists the free tags once each, sorted, with no area tag', () => {

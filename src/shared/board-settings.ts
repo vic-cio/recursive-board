@@ -71,13 +71,16 @@ export function boardSettingsRecord(config: Readonly<VaultConfig>): Record<strin
     extraSections: [...config.extraSections],
     maxAgents: config.maxAgents,
     autoPromote: config.autoPromote,
-    areaTags: config.areaTags,
   }
 }
 
 /** Replaces the board key and keeps every other key of the plugin data. */
 export function withBoardSettings(pluginData: Readonly<Record<string, unknown>>, config: Readonly<VaultConfig>): Record<string, unknown> {
-  return { ...pluginData, [BOARD_SETTINGS_KEY]: boardSettingsRecord(config) }
+  const oldBoard = pluginData[BOARD_SETTINGS_KEY]
+  const legacyAreaTags = isRecord(oldBoard) && 'areaTags' in oldBoard
+    ? { areaTags: oldBoard['areaTags'] }
+    : {}
+  return { ...pluginData, [BOARD_SETTINGS_KEY]: { ...boardSettingsRecord(config), ...legacyAreaTags } }
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {

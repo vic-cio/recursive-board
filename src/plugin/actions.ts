@@ -23,7 +23,6 @@ import {
 } from '../shared/transitions.ts'
 import { fileNameFor, newId, today, type Status } from '../shared/schema.ts'
 import { inheritedChildFields, renderWorkItem } from '../shared/work-item.ts'
-import { areaTagFor } from '../shared/area-tags.ts'
 import { dependencyEdit, dependencyEditIn, dependencyPathByKey } from '../shared/dependencies.ts'
 import { freeTagEditsIn } from '../shared/tags.ts'
 import { parseFrontmatter } from '../shared/frontmatter.ts'
@@ -185,7 +184,7 @@ export class Actions {
     if (written) this.undoableNotice(label)
   }
 
-  /** Add or remove one free tag through the same rule as `wi tag`. An area tag is refused. */
+  /** Add or remove one free tag through the same rule as `wi tag`. Old area tags are refused. */
   async setTag(meta: WorkItemMeta, tag: string, on: boolean): Promise<void> {
     const label = on ? `Tagged ${meta.title} #${tag}` : `Removed #${tag} from ${meta.title}`
     // The tags are the ones in the file now, so a tag added since the cache was read survives.
@@ -287,7 +286,7 @@ export class Actions {
     if (written) this.undoableNotice(`Moved ${meta.title} to ${target.title}`)
   }
 
-  /** The item, then each ancestor up to the root, for the area tag and the role. A loop stops where it repeats. */
+  /** The item and each ancestor up to the root. A loop stops where it repeats. */
   private chainOf(start: WorkItemMeta): WorkItemMeta[] {
     const chain: WorkItemMeta[] = []
     const seen = new Set<string>()
@@ -319,7 +318,6 @@ export class Actions {
     const stamp = today()
     const chain = this.chainOf(parent)
     const childCount = this.index.childrenOf(parent.file).length
-    const areaTag = this.index.config.areaTags ? areaTagFor([{ title, area: false }, ...chain]) : null
     // The same rule as wi new (docs/adr/0056-inherit-role-from-the-nearest-ancestor.md).
     const role = roleForNewCard(undefined, chain.map((item) => item.role))
     const text = renderWorkItem({
@@ -328,7 +326,6 @@ export class Actions {
       status,
       parentStem: parent.stem,
       ...inheritedChildFields(parent, status),
-      ...(areaTag === null ? {} : { tags: [areaTag] }),
       ...(role === undefined ? {} : { role }),
       // A person typed this card on the board (docs/adr/0042-creator-and-role.md).
       ...(this.you().trim() === '' ? {} : { creator: asName(this.you()) }),

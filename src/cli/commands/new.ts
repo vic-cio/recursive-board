@@ -13,8 +13,6 @@ import { cardState } from '../../shared/card-state.ts'
 import { inheritedChildFields, renderWorkItem, type NewWorkItem } from '../../shared/work-item.ts'
 import { briefGaps, renderBody, requireTemplate, type Brief } from '../../shared/templates.ts'
 import { firstChildPromotion } from '../../shared/transitions.ts'
-import { areaTagFor } from '../../shared/area-tags.ts'
-import { chainOf } from './retag.ts'
 import { asName, roleForNewCard } from '../../shared/authorship.ts'
 import { fileNameFor, fileNameStem, isStatus, newId, today, WORK_ITEM_TYPE, type Status } from '../../shared/schema.ts'
 import { parseFrontmatter } from '../../shared/frontmatter.ts'
@@ -93,9 +91,6 @@ export async function createItem(vault: Vault, options: NewOptions): Promise<Cre
   }, status, options)
   // An area does no work, so it takes a role only when one is given (docs/adr/0056-inherit-role-from-the-nearest-ancestor.md).
   const role = roleForNewCard(options.role, template.area ? [] : ancestorRoles(vault, parent))
-  const areaTag = vault.config.areaTags
-    ? areaTagFor([{ title, area: template.area === true }, ...chainOf(vault, parent)])
-    : null
   const render = (id: string): string => {
     const common = {
       id,
@@ -114,7 +109,6 @@ export async function createItem(vault: Vault, options: NewOptions): Promise<Cre
     if (creator !== undefined && options.model?.trim()) fields.creatorModel = options.model.trim()
     if (role !== undefined) fields.role = role
     if (options.owner?.trim()) fields.owner = asName(options.owner)
-    if (areaTag !== null) fields.tags = [areaTag]
     return renderWorkItem(fields, vault.config.extraSections)
   }
 

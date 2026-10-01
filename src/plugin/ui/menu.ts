@@ -62,7 +62,7 @@ function buildMenu(ctx: RenderContext, meta: WorkItemMeta): Menu {
     .setTitle('Move to…')
     .setIcon('folder-input')
     .onClick(() => new MoveModal(ctx.app, ctx.index, ctx.actions, meta).open()))
-  // Free tags (docs/adr/0057-free-tags.md). The area tag is the tree's, so the picker never offers it.
+  // Free tags (docs/adr/0057-free-tags.md). The picker never offers old area tags.
   menu.addItem((item) => item
     .setTitle('Tags…')
     .setIcon('tags')
