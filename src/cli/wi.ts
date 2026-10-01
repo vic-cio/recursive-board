@@ -13,7 +13,7 @@ import { resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 import {
-  loadVault, findVaultRoot, getDefaultVault, getRepoPointer, setRepoPointer, maxAgentsForRun, readPeople,
+  loadVault, findVaultRoot, getDefaultVault, maxAgentsForRun, readPeople,
   type Vault, type WorkItem,
 } from './vault.ts'
 import { createItem } from './commands/new.ts'
@@ -73,13 +73,12 @@ Usage
   wi show <ref> [--json]
   wi validate
   wi hook <install|uninstall|status> [--force]
-  wi here [--board <ref>] [--vault <path>]
+  wi here         Retired. A project's AGENTS.md names its board.
 
 A <ref> is a work item id, a filename or a title. An id always wins.
 A <status> is one of: ${STATUSES.join(', ')}.
 Options
-  --vault <path>   The vault root. Defaults to $WI_VAULT, the nearest vault, this repo's pointer, then defaultVault.
-  --board <ref>    Board work item used by wi here.
+  --vault <path>   The vault root. Defaults to $WI_VAULT, the vault this folder is in, then defaultVault.
   --json           Machine-readable output.
   --force          Replace an unrelated hook, or an unmanaged skill during setup.
   --yes            Run setup without prompts; requires --vault <path>.
@@ -143,7 +142,7 @@ Notes
   .obsidian/plugins/recursive-board/data.json. wi reads them and never writes them. Until the
   plugin migrates them, wi reads Recursive Board config.md, then .wi.json.
   \`wi new\` warns when such a file exists because a new id or filename may clash with it.
-  \`wi here\` reads or sets this repository's vault and board pointer in your user config.
+  \`wi here\` is retired and changes nothing. A project's AGENTS.md names its board: pass it as --parent.
   \`wi trace\` was removed in 0.8.0. Use \`wi show <ref> --json\` to read a card's Knowledge links.
 `
 
@@ -162,7 +161,7 @@ async function main(argv: string[]): Promise<number> {
     process.stdout.write(`${VERSION}\n`)
     return 0
   }
-  let [command, ...rest] = positionals
+  const [command, ...rest] = positionals
   if (values.help || command === undefined || command === 'help') {
     process.stdout.write(HELP)
     return command === undefined && !values.help ? 2 : 0
@@ -179,7 +178,7 @@ async function main(argv: string[]): Promise<number> {
     return 0
   }
 
-  if (command === 'here') return runHere(values, values.json === true)
+  if (command === 'here') return runHere()
 
   if (command === 'template') {
     process.stdout.write('wi template is retired. Use wi new --template to choose a template when you create a work item.\n')
@@ -234,11 +233,7 @@ async function main(argv: string[]): Promise<number> {
     case 'rm':
       return runRemove(vault, rest, values, json)
     case 'children':
-      if (rest.length === 0) {
-        const board = await repoBoardForVault(vault)
-        if (!board) throw new UsageError('wi children needs a <ref> or a matching board pointer from wi here.')
-        rest = [board]
-      }
+      if (rest.length === 0) throw new UsageError('wi children needs a <ref>. A project\'s AGENTS.md names its board.')
       return runChildren(vault, rest, values, json)
     case 'show':
       return runShow(vault, rest, json)
@@ -277,16 +272,12 @@ async function resolveVaultRoot(flag: string | undefined): Promise<string> {
   const hint = flag ?? process.env['WI_VAULT']
   let root = hint ? resolve(hint) : findVaultRoot(process.cwd())
   if (root === null) {
-    const pointer = await getRepoPointer(process.cwd())
-    root = pointer ? resolve(pointer.vault) : null
-  }
-  if (root === null) {
     const configured = await getDefaultVault()
     root = configured ? resolve(configured) : null
   }
   if (root === null) {
     throw new UsageError(
-      'no vault found. Run wi inside a vault, pass --vault <path>, set WI_VAULT, run wi here, or configure defaultVault with wi setup.',
+      'no vault found. Pass --vault <path>, set WI_VAULT, run wi inside a vault, or set defaultVault with wi setup.',
     )
   }
   return root
@@ -299,34 +290,10 @@ function runObjective(vault: Vault, rest: string[]): number {
   return 0
 }
 
-async function runHere(values: Values, json: boolean): Promise<number> {
-  const start = process.cwd()
-  const hasFlags = typeof values['board'] === 'string' || typeof values['vault'] === 'string'
-  const needsExisting = !hasFlags || typeof values['board'] !== 'string' || typeof values['vault'] !== 'string'
-  const existing = needsExisting ? await getRepoPointer(start) : null
-  if (!hasFlags) {
-    if (!existing) throw new UsageError('no board pointer is set for this Git repository. Run wi here --board <ref> --vault <path>.')
-    if (json) process.stdout.write(`${JSON.stringify(existing)}\n`)
-    else process.stdout.write(`vault  ${existing.vault}\nboard  ${existing.board}\n`)
-    return 0
-  }
-
-  const vault = await openVault(typeof values['vault'] === 'string' ? values['vault'] : undefined)
-  const board = typeof values['board'] === 'string'
-    ? values['board']
-    : existing?.board ?? vault.config.defaultRoot
-  if (!board) throw new UsageError('wi here needs --board <ref> or an existing repo board pointer.')
-  const resolved = vault.resolve(board)
-  const pointer = { vault: vault.root, board: resolved.id ?? resolved.stem }
-  await setRepoPointer(start, pointer)
-  if (json) process.stdout.write(`${JSON.stringify(pointer)}\n`)
-  else process.stdout.write(`set repo pointer\nvault  ${pointer.vault}\nboard  ${pointer.board}\n`)
+/** wi here is retired (docs/adr/0026-repo-board-pointers.md). It exits 0 so an old script still runs. */
+function runHere(): number {
+  process.stdout.write('wi here is retired. A project\'s AGENTS.md names its board; pass it to wi new as --parent.\n')
   return 0
-}
-
-async function repoBoardForVault(vault: Vault): Promise<string | undefined> {
-  const pointer = await getRepoPointer(process.cwd())
-  return pointer && resolve(pointer.vault) === resolve(vault.root) ? pointer.board : undefined
 }
 
 async function runNew(vault: Vault, rest: string[], values: Values, json: boolean): Promise<number> {
@@ -334,9 +301,8 @@ async function runNew(vault: Vault, rest: string[], values: Values, json: boolea
   if (title === '') throw new UsageError('wi new needs a title. Try: wi new "Build server" --parent Main')
 
   const explicitParent = typeof values['parent'] === 'string' ? values['parent'] : undefined
-  const pointerBoard = explicitParent === undefined ? await repoBoardForVault(vault) : undefined
-  const parent = explicitParent ?? pointerBoard ?? vault.config.defaultRoot
-  if (!parent) throw new UsageError('wi new needs --parent <ref>, a repo board pointer, or defaultRoot in Recursive Board config.md.')
+  const parent = explicitParent ?? vault.config.defaultRoot
+  if (!parent) throw new UsageError('wi new needs --parent <ref>, or a defaultRoot in the board settings.')
 
   const priority = typeof values['priority'] === 'string' ? Number(values['priority']) : undefined
   if (priority !== undefined && !Number.isFinite(priority)) {

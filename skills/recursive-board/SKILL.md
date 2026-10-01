@@ -25,13 +25,12 @@ delete, how to name cards) take priority over this page.
 
 ## Reaching the vault
 
-`wi` finds the vault in this order: `--vault <path>`, `$WI_VAULT`, the nearest folder above the
-working directory that holds `Recursive Board config.md`, `.wi.json`, or `Boards/`, this Git repo's pointer, then
-`defaultVault` in `~/.config/wi/config.json` (or `$XDG_CONFIG_HOME/wi/config.json`). To set a
-repo pointer, run `wi here --vault <path> --board <ref>` once from that repo. It is stored in
-user config outside the repo, keyed by Git's common directory, so linked worktrees share it.
-Run `wi here` to print the current repo's pointer. With a pointer, `wi new` defaults to its board
-and `wi children` can omit the reference. Explicit `--parent` and `wi children <ref>` still work.
+`wi` finds the vault in this order: `--vault <path>`, `$WI_VAULT`, the vault the working
+directory is in (the nearest folder above it that holds `Boards/` or the plugin data file), then
+`defaultVault` in `~/.config/wi/config.json` (or `$XDG_CONFIG_HOME/wi/config.json`).
+
+A project's `AGENTS.md` names its board. Pass that board to `wi new` as `--parent`, and to
+`wi children`. Without `--parent`, `wi new` uses `defaultRoot` from the board settings.
 
 `wi --help` is the full command reference. Read it for any flag this page does not name.
 
@@ -51,7 +50,6 @@ and survives a rename.
 wi children <root> --tree          # the whole tree under a root item
 wi children <ref>                  # one board, grouped by status
 wi children <ref> --status doing   # one column
-wi children                       # use the repo pointer's board
 ```
 
 Add `--json` when you parse the result. A card's own text (objective, criteria, notes) is in
@@ -178,8 +176,8 @@ card's Objective, Context and Acceptance Criteria as the brief. These steps are 
 its owner present. In a Git repo, steps 3 to 5 use a branch; elsewhere, record where the result
 is.
 
-1. Resolve the vault and board from the repo map (`wi here`). If the repo has no entry, ask once
-   which board to use, then record it with `wi here --board <board> --vault <vault>`.
+1. Find the board in the project's `AGENTS.md`. If it names none, ask once which board to use,
+   and propose a line for `AGENTS.md` that names it.
 2. Read the card body. If Objective or Acceptance Criteria is missing, write a proposed brief in
    the card and ask for approval; wait before doing the work.
 3. Claim it with `wi claim <card> --agent <agent name>`. In a Git repo, work on a new

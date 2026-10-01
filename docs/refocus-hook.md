@@ -86,7 +86,7 @@ Keep this registration opt-in and keep existing hook entries.
 ## Choose when the hook runs
 
 The default hook is enabled after registration. Set environment variables in the command or agent environment.
-Set `WI_VAULT` when the agent cannot find the intended vault from its working folder or repo pointer.
+Set `WI_VAULT` when the agent cannot find the intended vault from its working folder or `defaultVault`.
 
 | Setting | Effect |
 | --- | --- |

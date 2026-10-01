@@ -61,7 +61,7 @@ The board hides old `area/` tags. The Tags… picker leaves them out. New cards 
 
 `wi setup` writes the selected vault to the user config at `$XDG_CONFIG_HOME/wi/config.json`, or `~/.config/wi/config.json` when `XDG_CONFIG_HOME` is unset. The format is `{"defaultVault":"/absolute/path/to/vault"}`. Vault detection uses Obsidian's registry on macOS, Linux, and Windows. `--vault <path>` selects a vault directly, and `--yes --vault <path>` runs without prompts.
 
-`wi` finds the vault from `--vault <path>`, then `$WI_VAULT`, then the nearest folder with the plugin data file, an old config file, or `Boards/`, then the current Git repo's pointer, then `defaultVault` in `~/.config/wi/config.json` (or `$XDG_CONFIG_HOME/wi/config.json`). Use `wi here --vault <path> --board <ref>` once in a repo to save its vault and board outside the repo. The pointer is keyed by Git's common directory, so linked worktrees share it. Run `wi here` to print the current repo's pointer.
+`wi` finds the vault from `--vault <path>`, then `$WI_VAULT`, then the vault the current folder is in (the nearest folder with the plugin data file or `Boards/`), then `defaultVault` in `~/.config/wi/config.json` (or `$XDG_CONFIG_HOME/wi/config.json`).
 
 ## Start a board
 
@@ -121,7 +121,7 @@ wi --help
 wi setup
 ```
 
-Run `wi` inside a vault, pass `--vault <path>`, set `WI_VAULT`, or set a repo pointer with `wi here`. Commands accept a work-item id, filename, or title as a reference. An id takes precedence when references are ambiguous. Add `--json` for machine-readable output. The `--vault <path>` and `--json` flags apply to all commands. With a repo pointer, `wi new` uses its board when `--parent` is omitted, and `wi children` uses it when the reference is omitted.
+Pass `--vault <path>`, set `WI_VAULT`, run `wi` inside a vault, or set `defaultVault` with `wi setup`. Commands accept a work-item id, filename, or title as a reference. An id takes precedence when references are ambiguous. Add `--json` for machine-readable output. The `--vault <path>` and `--json` flags apply to all commands.
 
 ## Use with coding agents
 
@@ -146,7 +146,7 @@ The pre-commit hook runs `wi validate` and stops a commit when the vault has err
 | Command | What it does |
 | --- | --- |
 | `wi setup [--yes] [--vault <path>] [--force]` | Installs the agent skill, selects and saves a default vault, and offers the Git validation hook for a Git vault. `--yes` requires `--vault` and asks no questions. |
-| `wi new <title> [--parent <ref>] [--status <status>] [--template <name>] [--owner <name>] [--agent <name>] [--priority <number>] [--objective <text>] [--context <text>]... [--criteria <text>]... [--strict]` | Creates a work item under the given parent. It does not copy the parent's owner; pass `--owner` to set one. If `--parent` is omitted, uses the repo pointer's board, then `defaultRoot` from the board settings. The brief flags fill the body: repeat `--context` for each paragraph and `--criteria` for each criterion. It wraps bare angle placeholders in backticks and preserves code, links, autolinks, and HTML. It warns when the card has no Objective or Acceptance Criteria, and `--strict` refuses the card instead. Unsafe filename characters in the title become hyphens; a filename clash adds the id suffix and never overwrites. See `autoPromote`. |
+| `wi new <title> [--parent <ref>] [--status <status>] [--template <name>] [--owner <name>] [--agent <name>] [--priority <number>] [--objective <text>] [--context <text>]... [--criteria <text>]... [--strict]` | Creates a work item under the given parent. It does not copy the parent's owner; pass `--owner` to set one. If `--parent` is omitted, uses `defaultRoot` from the board settings. The brief flags fill the body: repeat `--context` for each paragraph and `--criteria` for each criterion. It wraps bare angle placeholders in backticks and preserves code, links, autolinks, and HTML. It warns when the card has no Objective or Acceptance Criteria, and `--strict` refuses the card instead. Unsafe filename characters in the title become hyphens; a filename clash adds the id suffix and never overwrites. See `autoPromote`. |
 | `wi status <ref> <status>` | Changes an item's status. Use `backlog`, `options`, `doing`, or `done`. Leaving `done` clears the recorded previous status. When the item was its parent's last open child, it says so; it does not close the parent. |
 | `wi note <ref> <text> [--agent <name>]` | Appends `- <date> <time>, <agent>: <text>` under the card's Notes. It wraps bare angle placeholders in backticks and preserves code, links, autolinks, and HTML. The agent defaults to the card's agent. The write re-reads the card under a lock, so two notes at the same moment both survive. |
 | `wi new … [--creator <name>] [--model <id>] [--role <name>]` | Records who made the card and which role does its work, as the plain names of person and role notes (any folder), so the graph gets no edge to them. Without `--role`, the card copies the role of its nearest ancestor that has one, so set `role` once on a board. An empty `--role ""` writes no role. The board's add row copies the role too. `--creator` and `--model` fall back to `WI_CREATOR` and `WI_MODEL`. `wi new` warns when a card has no creator; `--strict` refuses it. `wi note` then names its writer as "Role (model)". |
@@ -164,11 +164,11 @@ The pre-commit hook runs `wi validate` and stops a commit when the vault has err
 | `wi archive <ref> [--undo]` | Archives an item. `--undo` unarchives it. Archived items are hidden from normal reads; descendants are hidden with an archived parent. |
 | `wi promote <ref>` / `wi demote <ref>` | Makes an item a board or a card again. Promotion sets `board: true`; demotion removes the `board` key. |
 | `wi rm <ref> [--recursive] [--dry-run]` | Moves an item to the vault's `.trash` folder. Use `--dry-run` to preview. Items with children require `--recursive`. |
-| `wi children [<ref>] [--status <status>] [--tree] [--archived]` | Lists an item's children. If the ref is omitted, uses the repo pointer's board. `--status` filters by status, `--tree` shows descendants, and `--archived` includes archived items. |
+| `wi children <ref> [--status <status>] [--tree] [--archived]` | Lists an item's children. `--status` filters by status, `--tree` shows descendants, and `--archived` includes archived items. |
 | `wi show <ref> --json` | Reads one complete card as JSON. It includes the brief, Notes, Knowledge lines, assignment, ancestor objectives, dependencies, and child summary. Broken links appear as issues; the command changes no files. |
 | `wi validate` | Checks work-item structure and reports errors and warnings. Exits with code 1 when it finds errors. |
 | `wi hook install\|uninstall\|status [--vault <path>]` | Installs, removes, or inspects the Git pre-commit validation hook. `install --force` replaces an unrelated hook. |
-| `wi here [--board <ref>] [--vault <path>]` | Prints this Git repo's pointer, or sets it in user config. Linked worktrees share the pointer. |
+| `wi here` | Retired. Exits 0 and changes nothing. A project's `AGENTS.md` names its board; pass it to `wi new` as `--parent`. |
 
 | `wi template` | Retired command. Prints a message that names `wi new --template` and exits with code 0. |
 | `wi --help` or `wi help` | Prints usage, options, and notes. |
