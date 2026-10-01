@@ -8,7 +8,7 @@
  * process launcher is injected, so the tests never start an agent.
  */
 import { spawn, execFile } from 'node:child_process'
-import { closeSync, existsSync, mkdirSync, openSync, writeFileSync, writeSync } from 'node:fs'
+import { closeSync, existsSync, mkdirSync, openSync, realpathSync, writeFileSync, writeSync } from 'node:fs'
 import { readFile } from 'node:fs/promises'
 import { basename, dirname, join } from 'node:path'
 import { promisify } from 'node:util'
@@ -133,7 +133,7 @@ async function planWorktree(deps: DelegateDeps, repo: string, worktree: string, 
   if (existsSync(worktree)) {
     const current = await deps.git(['branch', '--show-current'], worktree).catch(() => '')
     const top = await deps.git(['rev-parse', '--show-toplevel'], worktree).catch(() => '')
-    if (current.trim() !== branch || top.trim() !== worktree) {
+    if (current.trim() !== branch || top.trim() === '' || realpathSync(top.trim()) !== realpathSync(worktree)) {
       throw new Error(`${worktree} is not a worktree of ${branch}. Move it away, or give the card another title.`)
     }
     return async () => {}
