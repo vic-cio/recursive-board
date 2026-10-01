@@ -70,6 +70,7 @@ wi new <title> --creator <role> --model <id> [--role <role>]  # who made it, whi
 wi set <ref> --owner <name> | --role <role>                   # change who owns it or does it
 wi area <ref>                         # mark a card as an area
 wi area <ref> --off                   # remove the area mark
+wi tag <ref> <tag>                    # add a free tag; --off removes it
 wi claim <ref> --agent <name>        # assign and move to doing in one write
 wi release <ref> --reason <text> [--where <branch-or-path>]
 wi move <ref> --to <new parent ref>
@@ -114,6 +115,7 @@ In Obsidian, use **Promote** at the top of any child card to give it its own boa
   continuation location in Notes.
 - If the vault sets `areaTags`, `wi` keeps an `area/...` tag on each card. Leave it to `wi`. After
   `wi move` or `wi area`, run `wi retag`.
+- Add or remove any other tag with `wi tag <ref> <tag> [--off]`. It refuses an `area/` tag.
 - Run `wi validate` after a batch of writes. Exit 0 is clean. Exit 1 lists what broke.
 
 ## Writing a card
