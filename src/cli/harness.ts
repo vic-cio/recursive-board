@@ -1,5 +1,5 @@
 /**
- * The command line that starts a headless worker on each harness (docs/adr/delegate-a-card.md).
+ * The command line that starts a headless worker on each harness (docs/adr/0058-delegate-a-card.md).
  *
  * Pure, so the tests check every flag without starting an agent. The default permission is the
  * mode a worker needs to edit its worktree and run `wi`, never a bypass: Claude Code's `auto`

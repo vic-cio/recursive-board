@@ -92,7 +92,7 @@ export async function createItem(vault: Vault, options: NewOptions): Promise<Cre
     owner: textField(parent.frontmatter.get('owner')),
     agent: template.area ? undefined : textField(parent.frontmatter.get('agent')),
   }, status, options)
-  // An area does no work, so it takes a role only when one is given (docs/adr/inherit-role-from-the-nearest-ancestor.md).
+  // An area does no work, so it takes a role only when one is given (docs/adr/0056-inherit-role-from-the-nearest-ancestor.md).
   const role = roleForNewCard(options.role, template.area ? [] : ancestorRoles(vault, parent))
   const areaTag = vault.config.areaTags
     ? areaTagFor([{ title, area: template.area === true }, ...chainOf(vault, parent)])

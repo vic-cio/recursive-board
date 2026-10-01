@@ -1,5 +1,5 @@
 /**
- * The rows of the "Tags…" picker (docs/adr/free-tags.md). Pure, so it is tested without Obsidian.
+ * The rows of the "Tags…" picker (docs/adr/0057-free-tags.md). Pure, so it is tested without Obsidian.
  *
  * The card's own tags come first and are checked, so choosing one removes it. The other tags in
  * use follow. Typed text that names no tag in use is offered as a new tag, or as a refusal when

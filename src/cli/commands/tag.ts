@@ -1,5 +1,5 @@
 /**
- * `wi tag` — add or remove one free tag on a card (docs/adr/free-tags.md).
+ * `wi tag` — add or remove one free tag on a card (docs/adr/0057-free-tags.md).
  *
  * The area tag is not a free tag: the tree sets it and `wi retag` writes it, so this refuses one.
  * The tags are edited as the file holds them under the lock, so a tag added since the load stays.

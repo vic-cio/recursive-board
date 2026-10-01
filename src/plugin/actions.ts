@@ -303,7 +303,7 @@ export class Actions {
     const stamp = today()
     const chain = this.chainOf(parent)
     const areaTag = this.index.config.areaTags ? areaTagFor([{ title, area: false }, ...chain]) : null
-    // The same rule as wi new (docs/adr/inherit-role-from-the-nearest-ancestor.md).
+    // The same rule as wi new (docs/adr/0056-inherit-role-from-the-nearest-ancestor.md).
     const role = roleForNewCard(undefined, chain.map((item) => item.role))
     const text = renderWorkItem({
       id,

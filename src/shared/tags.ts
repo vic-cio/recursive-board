@@ -1,6 +1,6 @@
 /**
  * Free tags: the tags a person or an agent chooses for a card, as against the area tag the tree
- * gives it (docs/adr/free-tags.md).
+ * gives it (docs/adr/0057-free-tags.md).
  *
  * `wi tag` and the card menu's "Tags…" both go through this module, so they add, remove and
  * refuse the same tags. The area tag is derived (docs/adr/0039-colour-the-graph-by-area.md) and

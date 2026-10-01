@@ -1,5 +1,5 @@
 /**
- * Handing a card to a person or an agent (docs/adr/delegate-a-card.md).
+ * Handing a card to a person or an agent (docs/adr/0058-delegate-a-card.md).
  *
  * `wi delegate` and the plugin's card menu both claim the card for the delegate and write one note
  * that says who has it and why. The claim is the same edit as `wi claim`, so a delegated card

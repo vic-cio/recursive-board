@@ -1,6 +1,6 @@
 /**
  * `wi delegate` — hand a card to a person or start a headless worker on it
- * (docs/adr/delegate-a-card.md).
+ * (docs/adr/0058-delegate-a-card.md).
  *
  * For a person it claims the card for them and notes who has it and why. For an agent it also makes
  * a worktree of the current Git repository on `card/<slug>`, starts the harness with the card body

@@ -33,7 +33,7 @@ reasoning effort changes for each run.
   `--creator` and `--model` fall back to `WI_CREATOR` and `WI_MODEL`, so a dispatcher sets them
   once for each worker. `wi new` warns when a card has no creator, and `--strict` refuses it, as
   with the brief (0036). Without `--role`, the card copies the role of its nearest ancestor that
-  has one (inherit-role-from-the-nearest-ancestor.md). The board's add row does the same.
+  has one (0056-inherit-role-from-the-nearest-ancestor.md). The board's add row does the same.
 - `wi set <ref> --owner … --role … --creator … --model …` changes an existing card, one file, one
   write. An empty `--owner` or `--role` removes it. It writes `creator` and `creator_model` only
   when the card has none, so a migration can credit old cards but nothing can rewrite who made one.

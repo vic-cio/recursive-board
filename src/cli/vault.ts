@@ -448,7 +448,7 @@ export async function loadVault(root: string): Promise<Vault> {
 
 /**
  * The people the vault knows: each note with `type: person`, in any folder, as the plugin reads
- * them (docs/adr/delegate-a-card.md). A vault with no person note knows no one, so every claim
+ * them (docs/adr/0058-delegate-a-card.md). A vault with no person note knows no one, so every claim
  * counts as an agent, as before.
  */
 export async function readPeople(root: string): Promise<Map<string, string>> {
