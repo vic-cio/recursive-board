@@ -107,7 +107,8 @@ Notes
   your own groups. Close the graph view first: Obsidian may write over the file.
   \`wi new\` writes creator, creator_model and role as the plain names of person or role notes. --creator and
   --model fall back to WI_CREATOR and WI_MODEL; wi new warns when a card has no creator, and
-  --strict refuses it.
+  --strict refuses it. Without --role, the card copies the role of its nearest ancestor that has one.
+  An empty --role "" writes no role.
   \`wi set\` changes a card's owner or role (an empty value removes it), and writes its creator and
   model only when it has none: a creator is set once.
   \`wi note\` appends "- <date> <time>, <writer>: <text>" under Notes. The writer is --agent, or

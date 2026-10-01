@@ -66,6 +66,7 @@ wi status <ref> <backlog|options|doing|done>
 wi note <ref> "<result>" [--agent <name>]   # one dated line under Notes
 wi depend <ref> --on <ref>            # the card waits on another card; --off removes it
 wi new <title> --creator <role> --model <id> [--role <role>]  # who made it, which role does it
+                                                              # no --role: the nearest ancestor's role
 wi set <ref> --owner <name> | --role <role>                   # change who owns it or does it
 wi area <ref>                         # mark a card as an area
 wi area <ref> --off                   # remove the area mark
@@ -132,7 +133,9 @@ your own agent name everywhere `<me>` appears.
 The dispatcher sets `WI_CREATOR` to your role and `WI_MODEL` to your model, so every card you
 make and every note you write names you. If they are unset, pass `--creator <role> --model <id>`
 to `wi new`. When the card has a `role`, read that role note: it is your procedure. In a live
-session with the owner, your role is the vault's session role note, if it has one.
+session with the owner, your role is the vault's session role note, if it has one. A child you
+make copies the role of its nearest ancestor that has one. Pass `--role <role>` only when the
+step needs a different procedure.
 
 1. Claim the card: `wi claim <card> --agent <me>`. Read its body and its open children.
 2. Split it before you start when it holds more than one deliverable. Make each step a child with
