@@ -1006,6 +1006,19 @@
   font-size: var(--font-ui-smaller);
 }
 
+/* The tags picker: a fixed column for the check, so the tag names line up. */
+.wi-tag-check {
+  display: inline-block;
+  width: 1.5em;
+  color: var(--text-accent);
+}
+
+.wi-tag-refused small {
+  display: block;
+  color: var(--text-error);
+  font-size: var(--font-ui-smaller);
+}
+
 /* Archived items are revealed only by the session toggle. */
 .wi-card.is-archived,
 .wi-check-row.is-archived {

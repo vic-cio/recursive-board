@@ -15,6 +15,7 @@ import type { WorkItemMeta } from '../index.ts'
 import type { RenderContext } from './context.ts'
 import { MoveModal } from './move-modal.ts'
 import { DependModal } from './depend-modal.ts'
+import { TagModal } from './tag-modal.ts'
 import { statusLabel } from './status-label.ts'
 import { menuStatuses } from './menu-status.ts'
 
@@ -61,6 +62,11 @@ function buildMenu(ctx: RenderContext, meta: WorkItemMeta): Menu {
     .setTitle('Move to…')
     .setIcon('folder-input')
     .onClick(() => new MoveModal(ctx.app, ctx.index, ctx.actions, meta).open()))
+  // Free tags (docs/adr/free-tags.md). The area tag is the tree's, so the picker never offers it.
+  menu.addItem((item) => item
+    .setTitle('Tags…')
+    .setIcon('tags')
+    .onClick(() => new TagModal(ctx.app, ctx.index, ctx.actions, meta).open()))
 
   // Dependencies (docs/adr/0041-card-dependencies.md). An area is ongoing and waits on nothing.
   if (meta.parentLink !== null && !meta.area) {

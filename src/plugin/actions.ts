@@ -25,6 +25,7 @@ import { fileNameFor, newId, today, type Status } from '../shared/schema.ts'
 import { inheritedChildFields, renderWorkItem } from '../shared/work-item.ts'
 import { areaTagFor } from '../shared/area-tags.ts'
 import { dependencyEdit, dependencyEditIn, dependencyPathByKey } from '../shared/dependencies.ts'
+import { freeTagEditsIn } from '../shared/tags.ts'
 import { parseFrontmatter } from '../shared/frontmatter.ts'
 import { parseWikilink } from '../shared/schema.ts'
 import { asName, roleForNewCard } from '../shared/authorship.ts'
@@ -165,6 +166,15 @@ export class Actions {
       const edit = dependencyEditIn(text, target.stem, on, names)
       return edit === null ? null : [edit]
     }, label))
+    if (written) this.undoableNotice(label)
+  }
+
+  /** Add or remove one free tag through the same rule as `wi tag`. An area tag is refused. */
+  async setTag(meta: WorkItemMeta, tag: string, on: boolean): Promise<void> {
+    const label = on ? `Tagged ${meta.title} #${tag}` : `Removed #${tag} from ${meta.title}`
+    // The tags are the ones in the file now, so a tag added since the cache was read survives.
+    const written = await this.run(on ? `tag ${meta.title}` : `untag ${meta.title}`,
+      () => this.edit(meta.file, (text) => freeTagEditsIn(text, tag, on), label))
     if (written) this.undoableNotice(label)
   }
 

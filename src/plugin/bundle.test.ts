@@ -23,6 +23,7 @@ const obsidian = {
   TFile: class {},
   Menu: class {},
   FuzzySuggestModal: class {},
+  SuggestModal: class {},
   Modal: class {},
   Component: class {},
   ItemView: class {},
