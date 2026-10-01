@@ -14,10 +14,12 @@ import { basename, dirname, join } from 'node:path'
 import { promisify } from 'node:util'
 
 import { claimItem, releaseItem } from './claim-release.ts'
+import { ancestorRoles } from './new.ts'
 import { launchSpec, workerPrompt, type LaunchSpec } from '../harness.ts'
 import { readPeople, type Vault, type WorkItem } from '../vault.ts'
 import { editItem } from '../write.ts'
 import { appendNote, noteLine } from '../../shared/notes.ts'
+import { roleForNewCard } from '../../shared/authorship.ts'
 import { frontmatterBody } from '../../shared/frontmatter.ts'
 import { cardSlug, delegateTarget, delegationNote, workerName, type Harness } from '../../shared/delegate.ts'
 
@@ -84,7 +86,7 @@ export async function delegate(
   const folder = join(dirname(repo), `${basename(repo)}-worktrees`)
   const worktree = join(folder, slug)
   const log = join(folder, `${slug}.log`)
-  const role = roleOf(vault, item)
+  const role = roleForNewCard(undefined, ancestorRoles(vault, item))
   const sessionId = deps.uuid()
   const run = {
     harness, model: options.model, permission: options.permission, worktree, vault: vault.root,
@@ -143,17 +145,6 @@ async function planWorktree(deps: DelegateDeps, repo: string, worktree: string, 
   return async () => {
     await deps.git(exists ? ['worktree', 'add', worktree, branch] : ['worktree', 'add', '-b', branch, worktree, head], repo)
   }
-}
-
-/** The card's role, or the nearest ancestor's (a card inherits its role). */
-function roleOf(vault: Vault, item: WorkItem): string | undefined {
-  const seen = new Set<WorkItem>()
-  for (let current: WorkItem | undefined = item; current && !seen.has(current); current = vault.resolveLink(current.parent)) {
-    seen.add(current)
-    const role = current.frontmatter.get('role')
-    if (typeof role === 'string' && role.trim() !== '') return role.trim()
-  }
-  return undefined
 }
 
 const execFileAsync = promisify(execFile)

@@ -170,7 +170,8 @@ export async function createItem(vault: Vault, options: NewOptions): Promise<Cre
 }
 
 /** The `role` of the parent and each ancestor above it, nearest first. */
-function ancestorRoles(vault: Vault, parent: WorkItem): unknown[] {
+/** The `role` of the card and of each ancestor, nearest first. */
+export function ancestorRoles(vault: Vault, parent: WorkItem): unknown[] {
   const roles: unknown[] = []
   const seen = new Set<string>()
   for (let current: WorkItem | undefined = parent; current; current = vault.resolveLink(current.parent)) {
