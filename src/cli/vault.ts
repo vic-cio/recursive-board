@@ -19,6 +19,7 @@ import { WI_CONFIG_FILE, type VaultConfig } from '../shared/vault-config.ts'
 import { VAULT_CONFIG_NOTE } from '../shared/vault-config-note.ts'
 import { parsePluginData, PLUGIN_DATA_FILE, selectVaultConfig, type ConfigSource } from '../shared/board-settings.ts'
 import { archiveOwner } from '../shared/archive.ts'
+import { peopleIn, PEOPLE_FOLDER } from '../shared/delegate.ts'
 import {
   BOARDS, FOLDERS, WORK_ITEM_TYPE, isArea, isStatus, parseWikilink, type Status,
 } from '../shared/schema.ts'
@@ -443,6 +444,18 @@ export async function loadVault(root: string): Promise<Vault> {
     isArchived: (item) => archiveOwner(item, (current) => resolveLink(current.parent) ?? null, (current) => current.archived) !== null,
     resolveNote: noteResolver(root),
   }
+}
+
+/**
+ * The people the vault knows: one note in `People/` each (docs/adr/delegate-a-card.md). A vault
+ * with no such folder knows no one, so every claim counts as an agent, as before.
+ */
+export async function readPeople(root: string): Promise<Map<string, string>> {
+  const folder = join(root, PEOPLE_FOLDER)
+  if (!existsSync(folder)) return new Map()
+  const entries = await readdir(folder, { withFileTypes: true, recursive: true })
+  return peopleIn(entries.filter((entry) => !entry.isDirectory()).map((entry) =>
+    `${(entry.parentPath ?? folder).slice(root.length + 1).split(sep).join('/')}/${entry.name}`))
 }
 
 /** Folders a vault keeps for tools, never for notes. */

@@ -61,6 +61,30 @@ test('wi agents prints the configured agent limit and claimed doing count', asyn
     ['claude wi-0005', 'codex wi-0004', 'codex wi-0007'])
 })
 
+test('wi agents does not count a card a person holds, known by a note in People/', async () => {
+  fixture = seed()
+  fixture.write('.wi.json', '{"maxAgents":1}')
+  fixture.write('People/Ana.md', '---\ntype: person\n---\n')
+  fixture.write('Boards/Quote.md', item({
+    type: 'work-item', id: 'wi-0008', title: 'Quote', status: 'doing', agent: 'ana',
+    parent: '"[[Main]]"', created: '2026-09-21', updated: '2026-09-21',
+  }))
+  fixture.write('Boards/Code.md', item({
+    type: 'work-item', id: 'wi-0009', title: 'Code', status: 'doing', agent: 'codex-code',
+    parent: '"[[Main]]"', created: '2026-09-21', updated: '2026-09-21',
+  }))
+
+  const result = await wi(['agents', '--json'])
+  assert.equal(result.code, 0, result.stderr)
+  const report = JSON.parse(result.stdout)
+  assert.equal(report.activeAgents, 1)
+  assert.deepEqual(report.claims.map((c: { agent: string }) => c.agent), ['codex-code'])
+
+  const claim = await wi(['claim', 'wi-0004', '--agent', 'Ana'])
+  assert.equal(claim.code, 0, claim.stderr)
+  assert.doesNotMatch(claim.stderr, /agent limit/, 'a person claiming a card adds no agent')
+})
+
 test('wi ready --json returns dispatchable options and exclusion reasons', async () => {
   fixture = seed()
   fixture.write('Boards/Ready.md', item({ type: 'work-item', id: 'wi-ready', title: 'Ready',

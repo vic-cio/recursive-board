@@ -13,7 +13,7 @@ import { resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 import {
-  loadVault, readVaultConfig, findVaultRoot, getDefaultVault, getRepoPointer, setRepoPointer, maxAgentsForRun,
+  loadVault, readVaultConfig, findVaultRoot, getDefaultVault, getRepoPointer, setRepoPointer, maxAgentsForRun, readPeople,
   type Vault, type WorkItem,
 } from './vault.ts'
 import { createItem } from './commands/new.ts'
@@ -139,7 +139,7 @@ Notes
   doing that a different agent or a person works.
   \`wi objective\` prints the WI_CARD objective chain, or the unambiguous deepest WI_AGENT claim.
   \`wi agents\` reports the advisory limit, the number of distinct agents with a doing card, and each
-  claimed doing card. WI_MAX_AGENTS overrides
+  claimed doing card. A card that a person holds does not count: a person is a note in People/. WI_MAX_AGENTS overrides
   maxAgents from the board settings for one run. Dispatchers decide whether to wait; wi claim does not enforce it.
   \`wi dashboard\` prints the plugin dashboard's summary: review work for --you, progress by area, claims,
   and what needs attention. --parent names a root or an area. It writes nothing.
@@ -524,14 +524,15 @@ async function runClaim(vault: Vault, rest: string[], values: Values, json: bool
   if (ref === '') throw new UsageError('wi claim needs a <ref> and --agent <name>.')
   const agent = singleLineOption(values, 'agent')
   const maxAgents = maxAgentsForRun(vault)
-  const active = activeAgentNames(vault)
+  const active = await activeAgentNames(vault)
+  const person = (await readPeople(vault.root)).has(agent.toLowerCase())
   const change = await claimItem(vault, ref, agent)
   if (json) print({ id: change.item.id, path: change.item.relPath, agent: change.agent,
     from: change.from ?? null, to: change.to, changed: change.changed })
   else process.stdout.write(change.changed
     ? `${label(change.item)}  ${change.from ?? '—'} → doing  (agent: ${agent})\n`
     : `${label(change.item)} is already claimed by ${agent} in doing. Nothing written.\n`)
-  if (change.changed && maxAgents !== null && !active.has(agent) && active.size + 1 > maxAgents) {
+  if (change.changed && !person && maxAgents !== null && !active.has(agent) && active.size + 1 > maxAgents) {
     process.stderr.write(`wi: warning: agent limit is ${maxAgents}; ${active.size + 1} agents now have a doing card.\n`)
   }
   return 0
@@ -560,24 +561,29 @@ async function runNote(vault: Vault, rest: string[], values: Values, json: boole
   return 0
 }
 
-/** Doing cards that carry an agent. One agent may hold a card and its current subtask. */
-function claimedDoing(vault: Vault): { agent: string; item: WorkItem }[] {
+/**
+ * Doing cards that carry an agent. One agent may hold a card and its current subtask. A card a
+ * person holds is not an agent's: a person is a note in People/.
+ */
+async function claimedDoing(vault: Vault): Promise<{ agent: string; item: WorkItem }[]> {
+  const people = await readPeople(vault.root)
   return vault.items.flatMap((item) => {
     const agent = item.frontmatter.get('agent')
-    return item.status === 'doing' && typeof agent === 'string' && agent.trim() !== ''
+    return item.status === 'doing' && typeof agent === 'string' && agent.trim() !== '' &&
+      !people.has(agent.trim().toLowerCase())
       ? [{ agent, item }]
       : []
   })
 }
 
-function activeAgentNames(vault: Vault): Set<string> {
-  return new Set(claimedDoing(vault).map((claim) => claim.agent))
+async function activeAgentNames(vault: Vault): Promise<Set<string>> {
+  return new Set((await claimedDoing(vault)).map((claim) => claim.agent))
 }
 
-function runAgents(vault: Vault, rest: string[], json: boolean): number {
+async function runAgents(vault: Vault, rest: string[], json: boolean): Promise<number> {
   if (rest.length > 0) throw new UsageError('wi agents takes no arguments.')
   const maxAgents = maxAgentsForRun(vault)
-  const claims = claimedDoing(vault).sort((a, b) => a.agent.localeCompare(b.agent))
+  const claims = (await claimedDoing(vault)).sort((a, b) => a.agent.localeCompare(b.agent))
   const activeAgents = new Set(claims.map((claim) => claim.agent)).size
   if (json) {
     print({ maxAgents, activeAgents, claims: claims.map(({ agent, item }) => ({
