@@ -50,6 +50,10 @@ file, so run `git checkout test/.wi.json` after you look at the test vault in Ob
 
 ## Working here
 
+People use the plugin; agents and scripts use `wi`. A person never types a `wi` command, so each
+command needs a plugin feature that calls the same `src/shared/` step, as the add row does for
+`wi new`. When you add a command, add its plugin feature, or a card for it.
+
 Node 26 runs the TypeScript directly, so there is no build step for the CLI. `npm test`
 typechecks both projects and runs every test; `npm run build` produces the plugin.
 
