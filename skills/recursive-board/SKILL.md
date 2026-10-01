@@ -73,7 +73,7 @@ wi area <ref> --off                   # remove the area mark
 wi tag <ref> <tag>                    # add a free tag; --off removes it
 wi claim <ref> --agent <name>        # assign and move to doing in one write
 wi delegate <ref> --to <person>      # assign to a person (a type: person note); status stays
-wi delegate <ref> --to <claude|codex|pi> [--model <id>] --reason <text>  # start a headless worker
+wi delegate <ref> --to <claude|codex|pi> [--model <id>]  # start a headless worker on the card's brief
 wi release <ref> --reason <text> [--where <branch-or-path>]
 wi move <ref> --to <new parent ref>
 wi archive <ref>                    # --undo reverses it
@@ -110,7 +110,8 @@ In Obsidian, use **Promote** at the top of any child card to give it its own boa
   limit is advisory: `wi claim` does not enforce it.
 - To report the state of the boards to a person, run `wi dashboard --you <name> --json`. It
   returns what the person's dashboard shows: review work, progress, claims and attention.
-- To hand a card to a worker, run `wi delegate <card> --to <harness> --model <id> --reason <why>`.
+- To hand a card to a worker, run `wi delegate <card> --to <harness> --model <id>`. The worker
+  reads the card body as its brief, so write the brief on the card, not in `--reason`.
   It makes a worktree of the current Git repository on `card/<slug>`, claims the card for the
   worker, starts the harness with the card body as the brief, and notes the log path. Run it in the
   repository the card works on. To assign a card to a person, use `--to <name>` with a note of
