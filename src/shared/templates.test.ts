@@ -3,32 +3,22 @@ import assert from 'node:assert/strict'
 
 import {
   TEMPLATES, DEFAULT_TEMPLATE, findTemplate, requireTemplate, templateNames,
-  renderBody, renderVaultTemplate, briefGaps,
+  renderBody, briefGaps,
 } from './templates.ts'
-import { parseFrontmatter } from './frontmatter.ts'
-import { STATUSES, WORK_ITEM_TYPE } from './schema.ts'
 
 test('there is a default template and it is in the registry', () => {
   assert.ok(findTemplate(DEFAULT_TEMPLATE))
   assert.ok(templateNames().includes(DEFAULT_TEMPLATE))
 })
 
-test('every template has a name, a description and at least one section', () => {
+test('every template has a name and at least one section', () => {
   const names = new Set<string>()
   for (const template of TEMPLATES) {
     assert.match(template.name, /^[a-z0-9-]+$/, `${template.name} is not a filename-safe name`)
     assert.equal(names.has(template.name), false, `${template.name} is registered twice`)
     names.add(template.name)
-    assert.ok(template.description.length > 0)
     assert.ok(template.sections.length > 0)
   }
-})
-
-test('the area template marks an ongoing space with a backlog status', () => {
-  const text = renderVaultTemplate(requireTemplate('area'))
-  const frontmatter = parseFrontmatter(text)!
-  assert.equal(frontmatter.get('area'), true)
-  assert.equal(frontmatter.get('status'), 'backlog')
 })
 
 test('requireTemplate falls back to the default', () => {
@@ -62,40 +52,6 @@ test('renderBody leaves every work-item section empty, so no lone bullet shows',
 test('the first-board card explains how to promote itself', () => {
   const body = renderBody(requireTemplate('first-board-card'))
   assert.match(body, /Promote at the top of this card/)
-})
-
-test('the vault template parses as frontmatter with the core fields', () => {
-  const text = renderVaultTemplate(requireTemplate())
-  const fm = parseFrontmatter(text)
-  assert.ok(fm)
-  assert.deepEqual(fm.keys(), ['type', 'id', 'title', 'status', 'parent', 'created', 'updated'])
-  assert.equal(fm.get('type'), WORK_ITEM_TYPE)
-  assert.equal(fm.get('parent'), undefined)
-  assert.ok((STATUSES as readonly string[]).includes(String(fm.get('status'))))
-})
-
-test('the vault template uses the configured root filename as its parent', () => {
-  const fm = parseFrontmatter(renderVaultTemplate(requireTemplate(), 'House move'))!
-  assert.equal(fm.get('parent'), '[[House move]]')
-})
-
-test('the vault template writes neither board nor prev_status', () => {
-  const fm = parseFrontmatter(renderVaultTemplate(requireTemplate()))!
-  assert.equal(fm.has('board'), false, 'absence is what "not a board" means')
-  assert.equal(fm.has('prev_status'), false)
-})
-
-test('the vault template leaves the fields a human fills in blank', () => {
-  const text = renderVaultTemplate(requireTemplate())
-  assert.match(text, /^title:$/m)
-  assert.match(text, /^created:$/m)
-  assert.match(text, /^updated:$/m)
-  assert.match(text, /^id: wi-XXXX$/m)
-})
-
-test('the vault template and a new work item share one body', () => {
-  const body = renderBody(requireTemplate())
-  assert.ok(renderVaultTemplate(requireTemplate()).endsWith(body))
 })
 
 test('renderBody fills the brief in place of the starters', () => {

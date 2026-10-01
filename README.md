@@ -50,7 +50,7 @@ The plugin stores the board settings under the `board` key of its data file, `.o
 }
 ```
 
-`workItemFolder` is a vault-relative folder path. It defaults to `Boards`. In the settings tab, **Rename** renames the folder with all its cards in one step. Links name files, not folders, so they keep working. If a folder with the new name exists, the board reads that folder and moves nothing. `defaultRoot` is a root filename stem. It defaults to `null`, so `wi new` needs an explicit `--parent`. `extraSections` lists non-empty, single-line headings. Each heading follows the built-in sections, empty like them. These settings apply to `wi new`, `wi template write`, and plugin item creation. Invalid values stop config loading.
+`workItemFolder` is a vault-relative folder path. It defaults to `Boards`. In the settings tab, **Rename** renames the folder with all its cards in one step. Links name files, not folders, so they keep working. If a folder with the new name exists, the board reads that folder and moves nothing. `defaultRoot` is a root filename stem. It defaults to `null`, so `wi new` needs an explicit `--parent`. `extraSections` lists non-empty, single-line headings. Each heading follows the built-in sections, empty like them. These settings apply to `wi new` and plugin item creation. Invalid values stop config loading.
 
 `maxAgents` is a non-negative whole number or `null` for no limit. `WI_MAX_AGENTS` overrides it for one CLI run. `wi agents` reports the limit and claimed cards. One agent counts once when it holds a card and its subtask. The limit is advisory. `wi claim` can exceed it.
 
@@ -173,11 +173,13 @@ The pre-commit hook runs `wi validate` and stops a commit when the vault has err
 | `wi hook install\|uninstall\|status [--vault <path>]` | Installs, removes, or inspects the Git pre-commit validation hook. `install --force` replaces an unrelated hook. |
 | `wi here [--board <ref>] [--vault <path>]` | Prints this Git repo's pointer, or sets it in user config. Linked worktrees share the pointer. |
 
-| `wi template [list\|write]` | Lists available templates, or writes the code's templates into `Templates/` with `wi template write`. Defaults to `list`. |
+| `wi template` | Retired command. Prints a message that names `wi new --template` and exits with code 0. |
 | `wi --help` or `wi help` | Prints usage, options, and notes. |
 | `wi --version` | Prints the installed CLI version. |
 
 Each command takes only the flags its row shows, plus `--vault` and `--json` where it reads a vault or prints a result. It refuses any other flag with exit code 2 and names the flag, so a flag cannot look as if it worked. `wi archive` refuses `--dry-run`: an archive changes one flag, and `--undo` reverses it.
+
+`wi template` no longer lists or writes template files. Use `wi new --template <name>` when you create a work item. The available names are `work-item`, `first-board-card`, and `area`.
 
 `wi new --template area` creates an area in `backlog` by default. Pass `--status` to choose its
 starting status. Areas appear in their status column. Areas in options or doing also appear in the area bar; a backlog or done area stays in its column only.

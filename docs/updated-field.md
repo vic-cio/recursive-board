@@ -14,7 +14,6 @@
 | `src/plugin/actions.ts` `undo`; `src/plugin/undo.ts` `UndoStack.restore` | Undo last board action | Restores the prior file bytes, including the prior `updated` date, if the file has not changed since that action. Undoing a creation trashes the new file. |
 | `src/cli/commands/remove.ts` `removeItem`; `src/plugin/actions.ts` `remove` | `wi rm` or plugin delete | Moves or deletes the file without editing its frontmatter. The prior date survives in a trashed copy when one is kept. |
 | `scripts/fixture.ts` `renderRoot`, `render`, `generate`, `writeFixture` | `npm run fixture` or a fixture test | Generates test-vault files with dates relative to the supplied day, then replaces fixture-owned files. This is not a production vault writer. |
-| `src/shared/templates.ts` `renderVaultTemplate`; `src/cli/commands/template.ts` `writeTemplates`; `test/Templates/work-item.md` | `wi template write`, then optionally Obsidian's Insert template | Writes `updated:` as an empty placeholder in a template file. `wi template write` leaves an identical template untouched. Inserting that template can put the blank field into a note; the user or another tool must fill it. |
 
 ## Rule and findings
 

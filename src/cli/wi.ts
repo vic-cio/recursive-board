@@ -27,7 +27,6 @@ import { listChildren, type ChildRow } from './commands/children.ts'
 import { readyCards } from './commands/ready.ts'
 import { showCard } from './commands/show.ts'
 import { validate, type Problem } from './commands/validate.ts'
-import { listTemplates, writeTemplates } from './commands/template.ts'
 import { removeItem } from './commands/remove.ts'
 import { moveItem } from './commands/move.ts'
 import { archiveItem } from './commands/archive.ts'
@@ -44,7 +43,6 @@ import { correctionTrace, renderCorrectionTrace } from './commands/trace.ts'
 import { COMMAND_FLAGS, parseCommandLine, type Values } from './flags.ts'
 import { PLUGIN_DATA_FILE } from '../shared/board-settings.ts'
 import { STATUSES } from '../shared/schema.ts'
-import { templateNames } from '../shared/templates.ts'
 import { authorLabel } from '../shared/authorship.ts'
 
 const HELP = `wi — the Recursive Board CLI
@@ -79,14 +77,12 @@ Usage
   wi validate
   wi retag [--dry-run]
   wi graph
-  wi template [list|write]
+  wi template
   wi hook <install|uninstall|status> [--force]
   wi here [--board <ref>] [--vault <path>]
 
 A <ref> is a work item id, a filename or a title. An id always wins.
 A <status> is one of: ${STATUSES.join(', ')}.
-A <template> is one of: ${templateNames().join(', ')}.
-
 Options
   --vault <path>   The vault root. Defaults to $WI_VAULT, the nearest vault, this repo's pointer, then defaultVault.
   --board <ref>    Board work item used by wi here.
@@ -124,7 +120,7 @@ Notes
   \`wi status <ref> done\` says when that was the parent's last open child. It does not close the parent.
   Unticking a done item is \`wi status <ref> <its prev_status>\`, which also clears the record.
   \`wi validate\` exits 1 when the vault has errors, so it works as a pre-commit hook.
-  \`wi template write\` regenerates Templates/ from the code, which is authoritative.
+  \`wi template\` is retired. Use \`wi new --template\` to choose a template when you create a work item.
   \`wi rm\` moves a file to the vault's .trash. It refuses an item that has children
   unless you pass --recursive, because removing a parent leaves its children on no board.
   \`wi move\` changes only the item's parent. Its status stays, and its children follow it.
@@ -189,6 +185,11 @@ async function main(argv: string[]): Promise<number> {
   }
 
   if (command === 'here') return runHere(values, values.json === true)
+
+  if (command === 'template') {
+    process.stdout.write('wi template is retired. Use wi new --template to choose a template when you create a work item.\n')
+    return 0
+  }
 
   if (command === 'trace') {
       const heading = text(values, 'heading')
@@ -263,8 +264,6 @@ async function main(argv: string[]): Promise<number> {
       return runRetag(vault, rest, values, json)
     case 'graph':
       return runGraph(vault, rest, json)
-    case 'template':
-      return runTemplate(vault, rest, json)
     case 'hook':
       return runHook(vault, rest, values, json)
     default:
@@ -882,41 +881,6 @@ async function runValidate(vault: Vault, json: boolean): Promise<number> {
   const counts = `${report.itemCount} work items, ${report.errorCount} errors, ${report.warningCount} warnings`
   process.stdout.write(report.ok ? `ok: ${counts}\n` : `FAILED: ${counts}\n`)
   return report.ok ? 0 : 1
-}
-
-async function runTemplate(vault: Vault, rest: string[], json: boolean): Promise<number> {
-  const action = rest[0] ?? 'list'
-
-  if (action === 'list') {
-    const templates = listTemplates()
-    if (json) {
-      print(templates.map((t) => ({
-        name: t.name,
-        description: t.description,
-        sections: t.sections.map((s) => s.heading),
-      })))
-      return 0
-    }
-    for (const template of templates) {
-      process.stdout.write(`${template.name.padEnd(14)}  ${template.description}\n`)
-      process.stdout.write(`${' '.repeat(16)}${template.sections.map((s) => s.heading).join(', ')}\n`)
-    }
-    return 0
-  }
-
-  if (action === 'write') {
-    const written = await writeTemplates(vault)
-    if (json) {
-      print(written)
-      return 0
-    }
-    for (const entry of written) {
-      process.stdout.write(`${entry.outcome.padEnd(10)}${entry.relPath}\n`)
-    }
-    return 0
-  }
-
-  throw new UsageError(`wi template takes "list" or "write", not "${action}".`)
 }
 
 async function runHook(vault: Vault, rest: string[], values: Values, json: boolean): Promise<number> {

@@ -73,6 +73,21 @@ test('wi archive --dry-run is refused and does not archive the card', async () =
   }
 })
 
+test('wi template is a retired command and points to wi new --template without writing', async () => {
+  const vault = seed()
+  const home = mkdtempSync(join(tmpdir(), 'wi-home-'))
+  try {
+    const before = snapshot(vault.root)
+    const result = await wi(['template', 'write'], vault, home)
+    assert.equal(result.code, 0, result.stderr)
+    assert.match(result.stdout, /use wi new --template/i)
+    assert.equal(snapshot(vault.root), before)
+  } finally {
+    vault.cleanup()
+    rmSync(home, { recursive: true, force: true })
+  }
+})
+
 /** Arguments that would make each command run, so a refusal must come before the work. */
 const INVOCATIONS: Record<string, string[]> = {
   setup: ['setup', '--yes'],

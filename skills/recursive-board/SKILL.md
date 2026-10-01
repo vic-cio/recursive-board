@@ -62,6 +62,7 @@ its file in the work-item folder (`Boards/` by default). Read the file.
 ```bash
 wi new "<title>" --parent <ref> --objective <text> --context <text> --criteria <text> --criteria <text>
                  [--status backlog] [--priority <n>]   # 1 is the highest
+                 [--template work-item|first-board-card|area]
 wi status <ref> <backlog|options|doing|done>
 wi note <ref> "<result>" [--agent <name>]   # one dated line under Notes
 wi depend <ref> --on <ref>            # the card waits on another card; --off removes it
@@ -81,6 +82,10 @@ wi promote <ref>                    # render this item's children as a board
 wi demote <ref>                     # render this item's children as a checklist
 wi rm <ref> --recursive --dry-run   # read what it lists, then run it without --dry-run
 ```
+
+`wi new --template` chooses the body for a new work item. Its names are `work-item`, `first-board-card`, and `area`.
+
+`wi template` is retired. It exits with code 0 and tells you to use `wi new --template`.
 
 In Obsidian, use **Promote** at the top of any child card to give it its own board, even before it has children. The child-count line at the top of a note jumps to its checklist below the body.
 

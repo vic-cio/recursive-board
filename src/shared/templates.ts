@@ -1,19 +1,14 @@
 /**
  * The body templates a new work item can be created from.
  *
- * The code is authoritative and the vault's `Templates/` folder is generated from it, by
- * `wi template write`. That direction was chosen over reading the vault's file because the CLI is
- * the shared component used by both writers so the integrity rules live in tested code: a template read
- * from the vault could be malformed by a hand edit or a sync conflict, and would then produce
- * malformed work items from the one path that is supposed to be trustworthy.
+ * The templates stay in code. `wi new` and the plugin use the shared renderer so both writers
+ * create the same body and apply the same integrity rules.
  *
- * Adding a board type is a data change. Append an entry to TEMPLATES, run `wi template write`,
- * and `wi new --template <name>` works. Nothing else has to change.
+ * Adding a board type is a data change. Append an entry to TEMPLATES, then use it with
+ * `wi new --template <name>`.
  *
  * This module imports nothing from Node, so the plugin bundle carries it to iOS.
  */
-import { formatScalar } from './frontmatter.ts'
-import { CORE_FIELDS, WORK_ITEM_TYPE, formatWikilink } from './schema.ts'
 import { wrapAnglePlaceholders } from './markdown.ts'
 
 export interface Section {
@@ -24,8 +19,6 @@ export interface Section {
 
 export interface BodyTemplate {
   name: string
-  /** One line, shown by `wi template list`. */
-  description: string
   sections: Section[]
   /** Area templates create ongoing spaces, which have no status column. */
   area?: boolean
@@ -38,7 +31,6 @@ export interface BodyTemplate {
 export const TEMPLATES: readonly BodyTemplate[] = [
   {
     name: 'work-item',
-    description: 'The default. What every work item starts as.',
     sections: [
       { heading: 'Objective' },
       { heading: 'Context' },
@@ -48,7 +40,6 @@ export const TEMPLATES: readonly BodyTemplate[] = [
   },
   {
     name: 'first-board-card',
-    description: 'A short guide to adding and moving cards on your first board.',
     sections: [
       { heading: 'Getting started', starter: 'Add cards from a board column. Use Promote at the top of this card to give it its own board. To move this card, open its card menu and choose “Move to…”.' },
       { heading: 'Notes' },
@@ -56,7 +47,6 @@ export const TEMPLATES: readonly BodyTemplate[] = [
   },
   {
     name: 'area',
-    description: 'An ongoing area of work.',
     area: true,
     sections: [
       { heading: 'Objective' },
@@ -155,35 +145,4 @@ export function renderBody(
     if (filled !== undefined) parts.push(filled, '')
   }
   return parts.join('\n')
-}
-
-/**
- * The file written to `Templates/<name>.md`.
- *
- * It carries placeholder frontmatter so Obsidian's own template insert produces something
- * `wi validate` can then complain about precisely, rather than something that looks valid and is
- * not. `board` and `prev_status` are left out: absence is what "not a board" and "never ticked"
- * mean, and a template should not teach you to write either.
- */
-export function renderVaultTemplate(
-  template: BodyTemplate,
-  defaultRoot: string | null = null,
-  extraSections: readonly string[] = [],
-): string {
-  const placeholders: Record<string, string> = {
-    type: formatScalar(WORK_ITEM_TYPE),
-    id: 'wi-XXXX',
-    title: '',
-    parent: defaultRoot === null ? '' : formatScalar(formatWikilink(defaultRoot)),
-    created: '',
-    updated: '',
-  }
-  placeholders['status'] = 'backlog'
-  if (template.area) placeholders['area'] = 'true'
-  const fields = CORE_FIELDS
-  const lines = fields.filter((field) => field in placeholders).map(
-    (field) => `${field}: ${placeholders[field]}`.trimEnd(),
-  )
-  if (template.area) lines.splice(4, 0, 'area: true')
-  return `---\n${lines.join('\n')}\n---\n\n${renderBody(template, extraSections)}`
 }
