@@ -23,11 +23,11 @@ import {
 } from '../shared/transitions.ts'
 import { fileNameFor, newId, today, type Status } from '../shared/schema.ts'
 import { inheritedChildFields, renderWorkItem } from '../shared/work-item.ts'
-import { areaTagFor, type AreaNode } from '../shared/area-tags.ts'
+import { areaTagFor } from '../shared/area-tags.ts'
 import { dependencyEdit, dependencyEditIn, dependencyPathByKey } from '../shared/dependencies.ts'
 import { parseFrontmatter } from '../shared/frontmatter.ts'
 import { parseWikilink } from '../shared/schema.ts'
-import { asName } from '../shared/authorship.ts'
+import { asName, roleForNewCard } from '../shared/authorship.ts'
 import { applyVerdict, type Verdict } from '../shared/review.ts'
 import type { WorkItemIndex, WorkItemMeta } from './index.ts'
 import { UndoStack } from './undo.ts'
@@ -261,13 +261,13 @@ export class Actions {
     if (written) this.undoableNotice(`Moved ${meta.title} to ${target.title}`)
   }
 
-  /** The item, then each ancestor up to the root, for the area tag. A loop stops where it repeats. */
-  private chainOf(start: WorkItemMeta): AreaNode[] {
-    const chain: AreaNode[] = []
+  /** The item, then each ancestor up to the root, for the area tag and the role. A loop stops where it repeats. */
+  private chainOf(start: WorkItemMeta): WorkItemMeta[] {
+    const chain: WorkItemMeta[] = []
     const seen = new Set<string>()
     for (let item: WorkItemMeta | null = start; item && !seen.has(item.file.path); item = this.index.get(item.parent)) {
       seen.add(item.file.path)
-      chain.push({ title: item.title, area: item.area })
+      chain.push(item)
     }
     return chain
   }
@@ -291,7 +291,10 @@ export class Actions {
     }
 
     const stamp = today()
-    const areaTag = this.index.config.areaTags ? areaTagFor([{ title, area: false }, ...this.chainOf(parent)]) : null
+    const chain = this.chainOf(parent)
+    const areaTag = this.index.config.areaTags ? areaTagFor([{ title, area: false }, ...chain]) : null
+    // The same rule as wi new (docs/adr/inherit-role-from-the-nearest-ancestor.md).
+    const role = roleForNewCard(undefined, chain.map((item) => item.role))
     const text = renderWorkItem({
       id,
       title,
@@ -299,6 +302,7 @@ export class Actions {
       parentStem: parent.stem,
       ...inheritedChildFields(parent, status),
       ...(areaTag === null ? {} : { tags: [areaTag] }),
+      ...(role === undefined ? {} : { role }),
       // A person typed this card on the board (docs/adr/0042-creator-and-role.md).
       ...(this.you().trim() === '' ? {} : { creator: asName(this.you()) }),
       created: stamp,
