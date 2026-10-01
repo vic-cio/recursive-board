@@ -156,7 +156,8 @@ The pre-commit hook runs `wi validate` and stops a commit when the vault has err
 | `wi area <ref> [--off]` | Marks a card as an area or removes the area mark. The current status stays in place. Conversion refuses a card with an agent. |
 | `wi tag <ref> <tag> [--off]` | Adds a free tag to a card, or with `--off` removes it. Case and a leading `#` do not matter. It refuses an `area/` tag, because `wi retag` owns it. On the board, **Tags…** in the card menu does the same: it lists the card's tags, checked, then the other tags on work items, and adds a tag you type. |
 | `wi claim <ref> --agent <name>` | Claims a card for an agent and moves it to doing in one write. Refuses a different agent, a done card, or a board with a child in doing that another agent or a person works. It also refuses a card with `blocked: true`, which `wi children` marks `[blocked]`. An agent can hold a card and its current subtask at once. Repeating an active claim by the same agent writes nothing. |
-| `wi agents` | Prints the configured agent limit, the number of distinct agents with a card in doing, and each claimed doing card. `--json` returns `maxAgents`, `activeAgents` and `claims`. |
+| `wi agents` | Prints the configured agent limit, the number of distinct agents with a card in doing, and each claimed doing card. A card that a person holds does not count: a person is a note in `People/`. `--json` returns `maxAgents`, `activeAgents` and `claims`. |
+| `wi delegate <ref> --to <person\|claude\|codex\|pi> [--model <id>] [--reason <text>] [--agent <name>] [--permission <mode>]` | Hands a card to a person or a headless agent. It claims the card for the delegate and adds a note that says who has it and why. For `claude`, `codex` or `pi`, it also makes a worktree of the current Git repository on `card/<slug>`, starts the harness in it with the card body as the brief, and notes the log path and the resume command. See [Delegate a card](#delegate-a-card). |
 | `wi ready [--parent <ref>] [--agent <name>] --json` | Lists unclaimed cards in options that a dispatcher can start. `--parent` limits the result to descendants of one board; without it, the query covers the vault. It sorts by priority, then update date. JSON also names excluded option cards and reasons. `--agent` permits a board whose active child belongs to that agent. |
 | `wi dashboard [--you <name>] [--parent <ref>] --json` | Prints the dashboard's summary: the cards that wait for review by `--you`, progress by area, working, idle and finished claims, and the cards that need attention, with counts. `--parent` names a root or an area to focus on. It uses the plugin's dashboard rules and writes nothing. |
 | `wi release <ref> --reason <text> [--where <branch-or-path>]` | Clears the agent, moves the card to options, and adds a dated line to Notes with the reason and optional work location. Refuses an unclaimed card. |
@@ -187,7 +188,44 @@ starting status. Areas appear in their status column. Areas in options or doing 
 
 Use `wi` for work-item changes. Do not edit work-item Markdown directly with scripts or bulk text tools. Use `wi validate` to check the vault after changes. `wi rm` moves items into `.trash`; removing a parent requires `--recursive`. Use `wi rm <ref> --dry-run` to review the affected items first.
 
-A dispatcher runs `wi agents` before starting workers and holds off when `activeAgents` reaches `maxAgents`; `null` means there is no configured limit. Set `WI_MAX_AGENTS` for a one-run override. The limit is advisory, and `wi claim` does not enforce it. A dispatcher assigns a card with `wi claim <ref> --agent <name>`. If that worker stops, the dispatcher runs `wi release <ref> --reason <text> [--where <branch-or-path>]` so the next worker can find the unfinished work. Keep a card in doing until its work is accepted.
+A dispatcher runs `wi agents` before starting workers and holds off when `activeAgents` reaches `maxAgents`; `null` means there is no configured limit. Set `WI_MAX_AGENTS` for a one-run override. The limit is advisory, and `wi claim` does not enforce it. A dispatcher assigns a card with `wi claim <ref> --agent <name>`, or starts a worker on it with `wi delegate <ref> --to <harness>`. `wi delegate` warns when the new worker passes the limit, and it does not refuse. If that worker stops, the dispatcher runs `wi release <ref> --reason <text> [--where <branch-or-path>]` so the next worker can find the unfinished work. Keep a card in doing until its work is accepted.
+
+### Delegate a card
+
+`wi delegate <ref> --to <person>` claims the card for a person and notes who has it and why. The person needs a note in the vault's `People/` folder, for example `People/Ana.md`. A claim by a person does not count toward `maxAgents`. Any other name is refused, so a typo cannot pass for an agent.
+
+`wi delegate <ref> --to claude|codex|pi` hands the card to a headless agent:
+
+1. It makes a worktree of the Git repository you run it in. The worktree is `<repo>-worktrees/<slug>` beside the repository, on the branch `card/<slug>`. The slug comes from the card title. A worktree that is already on that branch is used again.
+2. It claims the card for the worker, `<harness>-<slug>` by default or `--agent <name>`, and notes who has it and why.
+3. It starts the harness as a detached process in the worktree, so the worker outlives the command and the session that ran it. The prompt names the card, the worker and the worktree, then gives the card body as the brief.
+4. It notes the process id, the log `<repo>-worktrees/<slug>.log`, and the command that resumes the session.
+
+The worker gets `WI_VAULT`, `WI_CARD`, `WI_AGENT`, `WI_CREATOR` (the card's role, inherited from the nearest ancestor, or `Worker`) and `WI_MODEL`. Without `--model`, the harness uses its own default model.
+
+| Harness | Command | `--permission` | Default |
+|---|---|---|---|
+| `claude` | `claude -p`, the prompt on stdin | Claude Code's `--permission-mode` | `auto` |
+| `codex` | `codex exec`, the prompt on stdin | Codex's `--sandbox` | `workspace-write`, with network access |
+| `pi` | `pi -p` with a saved session | none: pi has no permission modes | |
+
+The default never bypasses permissions. Pass a bypass mode yourself only when the worktree runs in a sandbox you trust.
+
+Every check runs before the first write: the target, the Git repository, the permission mode, and the worktree path. If the harness cannot start, `wi delegate` releases the claim with the reason.
+
+#### Allow `wi delegate` in Claude Code
+
+Claude Code's auto mode can block an agent that starts another headless agent. `wi delegate` does not work around that block. To let a Claude Code session delegate, add an allow rule to your user settings, `~/.claude/settings.json`:
+
+```json
+{
+  "permissions": {
+    "allow": ["Bash(wi delegate *)"]
+  }
+}
+```
+
+Put the rule in user settings, not in a project's `.claude/settings.local.json`. A worktree does not carry that file, so a worker that delegates its own children would not have the rule.
 
 ## Development
 

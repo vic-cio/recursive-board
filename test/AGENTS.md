@@ -33,6 +33,10 @@ and doing status in one file write. If that worker stops, its dispatcher runs `w
 `--reason <text>` and optionally `--where <branch-or-path>`. Release clears the agent, returns
 the card to options, and adds a dated line to Notes so the next worker can continue.
 
+To start a headless worker on a card, run `wi delegate <ref> --to <claude|codex|pi>` in the Git
+repository the card works on. It claims the card and starts the worker in a worktree. A card
+given to a person with `wi delegate <ref> --to <name>` needs a note in `People/`.
+
 ## Identity
 
 Every work item has a stable `id`. Parent links use wikilinks. The wikilink determines parent
