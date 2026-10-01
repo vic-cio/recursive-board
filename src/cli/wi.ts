@@ -280,7 +280,7 @@ function runObjective(vault: Vault, rest: string[]): number {
   return 0
 }
 
-/** wi here is retired (docs/adr/find-the-vault-in-four-ways.md). It exits 0 so an old script still runs. */
+/** wi here is retired (docs/adr/0059-find-the-vault-in-four-ways.md). It exits 0 so an old script still runs. */
 function runHere(): number {
   process.stdout.write('wi here is retired. A project\'s AGENTS.md names its board; pass it to wi new as --parent.\n')
   return 0

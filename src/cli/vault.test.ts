@@ -365,7 +365,7 @@ test('the board key in the plugin data file holds the settings', async () => {
   fixture.write('.obsidian/plugins/recursive-board/data.json', '{"people":{},"board":{"extraSections":["Knowledge"],"areaTags":true}}')
   const vault = await loadVault(fixture.root)
   assert.deepEqual(vault.config.extraSections, ['Knowledge'])
-  assert.equal(vault.config.areaTags, true)
+  assert.equal('areaTags' in vault.config, false, 'a removed areaTags key is ignored')
   assert.equal(vault.config.defaultRoot, null)
 })
 

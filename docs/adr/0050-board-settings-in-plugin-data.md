@@ -1,7 +1,7 @@
 ---
 status: accepted
 supersedes: 0048-synced-vault-config-note.md
-amended_by: read-the-board-settings-from-the-plugin-data-alone.md
+amended_by: 0060-read-the-board-settings-from-the-plugin-data-alone.md
 ---
 # Store the board settings in the plugin data
 
@@ -11,7 +11,7 @@ The plugin is the one writer. It keeps the plugin data in memory and writes the 
 
 `wi` reads the `board` key, or uses the defaults when there is none. An invalid key is an error; it never falls through to the defaults. `findVaultRoot` also stops at a folder that holds the plugin data file. `wi` assumes the config folder is `.obsidian`.
 
-Amended: `wi` and the plugin no longer read `Recursive Board config.md` or `.wi.json`, and the plugin no longer migrates them. See [read-the-board-settings-from-the-plugin-data-alone.md](read-the-board-settings-from-the-plugin-data-alone.md).
+Amended: `wi` and the plugin no longer read `Recursive Board config.md` or `.wi.json`, and the plugin no longer migrates them. See [0060-read-the-board-settings-from-the-plugin-data-alone.md](0060-read-the-board-settings-from-the-plugin-data-alone.md).
 
 Obsidian Sync carries the plugin data file only when **Installed community plugins** sync is on for the device. A device with no `board` key uses the defaults. When it has cards, it shows a notice once, stored per device. Saving any board setting writes the key. Keep and ignore a removed `areaTags` property in the key.
 

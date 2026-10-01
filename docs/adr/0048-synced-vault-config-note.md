@@ -4,7 +4,7 @@ supersedes: vault config file locations in ADRs 0003, 0012, 0024, 0027, 0034, 00
 superseded_by: 0050-board-settings-in-plugin-data.md
 ---
 
-> Superseded by [0050](0050-board-settings-in-plugin-data.md): the board settings now live in the plugin data. Nothing reads this note or `.wi.json` now ([read-the-board-settings-from-the-plugin-data-alone.md](read-the-board-settings-from-the-plugin-data-alone.md)).
+> Superseded by [0050](0050-board-settings-in-plugin-data.md): the board settings now live in the plugin data. Nothing reads this note or `.wi.json` now ([0060-read-the-board-settings-from-the-plugin-data-alone.md](0060-read-the-board-settings-from-the-plugin-data-alone.md)).
 # Store vault config in a synced Markdown note
 
 Store vault settings in one marked JSON fence in `Recursive Board config.md` at the vault root. The note is visible, and sync clients can carry it with other Markdown notes. Keep the setting names and validation rules shared by the plugin and CLI.

@@ -1,10 +1,10 @@
 ---
 status: superseded
-superseded_by: find-the-vault-in-four-ways.md
+superseded_by: 0059-find-the-vault-in-four-ways.md
 ---
 # Resolve a repository's board through user config
 
-`wi` no longer reads the pointer, and `wi here` is retired. See [find-the-vault-in-four-ways.md](find-the-vault-in-four-ways.md).
+`wi` no longer reads the pointer, and `wi here` is retired. See [0059-find-the-vault-in-four-ways.md](0059-find-the-vault-in-four-ways.md).
 
 `wi` can be run from a code repository without a vault flag. `wi here --vault <path> --board <ref>` stores the association in `wi/repos.json` under the absolute Git common directory. That keeps vault paths out of the repository and makes linked worktrees share one pointer. The location follows `XDG_CONFIG_HOME`, falling back to `~/.config/wi/`.
 
