@@ -212,7 +212,7 @@ test('board true is accepted', async () => {
 
 test('validation reports configured folder rather than Boards for an empty vault', async () => {
   fixture = healthy()
-  fixture.write('.wi.json', '{"workItemFolder":"Projects"}')
+  fixture.writeSettings('{"workItemFolder":"Projects"}')
   const report = await run(fixture)
   assert.ok(report.problems.some((p) => p.rule === 'root-missing' && p.relPath === 'Projects'))
 })

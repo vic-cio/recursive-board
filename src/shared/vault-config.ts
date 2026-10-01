@@ -1,8 +1,5 @@
 /** The one vault-level setting read by both wi and the plugin. No platform imports belong here. */
 import { fileNameStem } from './schema.ts'
-import { parseConfigNote, parseLegacyConfig } from './vault-config-note.ts'
-
-export const WI_CONFIG_FILE = '.wi.json'
 
 export interface VaultConfig {
   /** Vault-relative directory. Work items sit directly in it. */
@@ -26,17 +23,6 @@ export const DEFAULT_VAULT_CONFIG: Readonly<VaultConfig> = {
 }
 
 /** Parse at the vault boundary; malformed config must never silently select another folder. */
-export function parseVaultConfig(text: string | null): VaultConfig {
-  if (text === null) return { ...DEFAULT_VAULT_CONFIG, extraSections: [] }
-  return parseVaultConfigValues(parseLegacyConfig(text), WI_CONFIG_FILE)
-}
-
-/** Parse a validated config object from a selected source file. */
-export function parseVaultConfigNote(text: string): VaultConfig {
-  return parseVaultConfigValues(parseConfigNote(text), 'Recursive Board config.md')
-}
-
-/** Parse values after the selected file parser has checked its external format. */
 export function parseVaultConfigValues(value: Record<string, unknown>, source: string): VaultConfig {
 
   const folderValue = 'workItemFolder' in value ? value.workItemFolder : undefined

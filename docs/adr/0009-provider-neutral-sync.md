@@ -7,4 +7,4 @@ The plugin and CLI read and write vault files through Obsidian and the local fil
 
 This keeps vault behavior the same across local storage and different sync services. Provider-specific recovery steps belong in the user's own environment instructions.
 
-The config note also stays provider neutral. [ADR 0048](0048-synced-vault-config-note.md) defines its format and fallback.
+The board settings also stay provider neutral. [ADR 0050](0050-board-settings-in-plugin-data.md) defines where they live.

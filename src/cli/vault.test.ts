@@ -45,7 +45,7 @@ test('loadVault reads every work item in Boards', async () => {
 
 test('loadVault reads work items from the configured folder only', async () => {
   fixture = vaultWithTree()
-  fixture.write('.wi.json', '{"workItemFolder":"Projects","defaultRoot":"Launch"}')
+  fixture.writeSettings('{"workItemFolder":"Projects","defaultRoot":"Launch"}')
   fixture.write('Projects/Launch.md', item({
     type: 'work-item', id: 'wi-0100', title: 'Launch', created: '2026-09-21', updated: '2026-09-21',
   }))
@@ -55,40 +55,27 @@ test('loadVault reads work items from the configured folder only', async () => {
   assert.deepEqual(vault.items.map((i) => i.id), ['wi-0100'])
 })
 
-test('the Markdown config note overrides a valid legacy config file', async () => {
+test('loadVault reads neither .wi.json nor the old config note', async () => {
   fixture = vaultWithTree()
-  fixture.write('.wi.json', '{"workItemFolder":"Boards","defaultRoot":"Legacy"}')
-  fixture.write('Recursive Board config.md', '# Settings\n\n<!-- recursive-board-config -->\n```json\n{"workItemFolder":"Projects","defaultRoot":"Launch","extraSections":["References"],"maxAgents":2,"autoPromote":false,"areaTags":true}\n```\n')
-  fixture.write('Projects/Launch.md', item({
-    type: 'work-item', id: 'wi-0100', title: 'Launch', created: '2026-09-21', updated: '2026-09-21',
-  }))
-  const vault = await loadVault(fixture.root)
-  assert.equal(vault.config.workItemFolder, 'Projects')
-  assert.equal(vault.config.defaultRoot, 'Launch')
-  assert.deepEqual(vault.config.extraSections, ['References'])
-  assert.equal(vault.config.maxAgents, 2)
-  assert.equal(vault.config.autoPromote, false)
-  assert.equal('areaTags' in vault.config, false)
-  assert.deepEqual(vault.items.map((entry) => entry.id), ['wi-0100'])
-})
-
-test('an invalid Markdown config note reports an error instead of using the legacy config', async () => {
-  fixture = vaultWithTree()
-  fixture.write('.wi.json', '{"defaultRoot":"Main"}')
+  fixture.write('.wi.json', '{"workItemFolder":"Projects","defaultRoot":"Launch"}')
   fixture.write('Recursive Board config.md', '# Settings\n\n<!-- recursive-board-config -->\n```json\n{broken}\n```\n')
-  await assert.rejects(loadVault(fixture.root), /Recursive Board config\.md.*valid JSON/)
+  const vault = await loadVault(fixture.root)
+  assert.deepEqual(vault.config, {
+    workItemFolder: 'Boards', defaultRoot: null, extraSections: [], maxAgents: null, autoPromote: true,
+  })
+  assert.equal(vault.items.length, 4)
 })
 
 test('loadVault rejects malformed config rather than indexing Boards', async () => {
   fixture = vaultWithTree()
-  fixture.write('.wi.json', '{"workItemFolder":"../Elsewhere"}')
-  await assert.rejects(loadVault(fixture.root), /\.wi\.json/)
+  fixture.writeSettings('{"workItemFolder":"../Elsewhere"}')
+  await assert.rejects(loadVault(fixture.root), /data\.json: workItemFolder/)
 })
 
 test('loadVault reports invalid extra sections as a config error', async () => {
   fixture = vaultWithTree()
-  fixture.write('.wi.json', '{"extraSections":["Valid",12]}')
-  await assert.rejects(loadVault(fixture.root), /\.wi\.json: extraSections/)
+  fixture.writeSettings('{"extraSections":["Valid",12]}')
+  await assert.rejects(loadVault(fixture.root), /data\.json: extraSections/)
 })
 
 test('loadVault records the filename stem, which is what a wikilink resolves to', async () => {
@@ -176,7 +163,7 @@ test('childrenOf resolves a wikilink that carries a folder path', async () => {
 
 test('resolveLink keeps a folder-qualified target inside the configured work-item folder', async () => {
   fixture = makeVault()
-  fixture.write('.wi.json', '{"workItemFolder":"Knowledge"}')
+  fixture.writeSettings('{"workItemFolder":"Knowledge"}')
   fixture.write('Knowledge/Plan.md', item({
     type: 'work-item', id: 'wi-0101', title: 'Knowledge plan', status: 'backlog',
   }))
@@ -287,7 +274,7 @@ test('loadVault records a hidden non-Markdown file in the work-item folder as un
 
 test('loadVault checks the configured work-item folder for hidden sync stubs', async () => {
   fixture = makeVault()
-  fixture.write('.wi.json', '{"workItemFolder":"Projects"}')
+  fixture.writeSettings('{"workItemFolder":"Projects"}')
   fixture.write('Projects/.Evicted card.md.icloud', '')
   const vault = await loadVault(fixture.root)
   assert.deepEqual(vault.unaccounted, ['Projects/.Evicted card.md.icloud'])
@@ -336,12 +323,14 @@ test('findVaultRoot walks up from a nested directory', async () => {
   assert.equal(findVaultRoot(fixture.root), fixture.root)
 })
 
-test('findVaultRoot discovers a configured folder without Boards', () => {
+test('findVaultRoot does not stop at a folder that holds only an old config file', () => {
   fixture = makeVault()
-  fixture.write('.wi.json', '{"workItemFolder":"Projects"}')
-  fixture.write('Projects/Root.md', item({ type: 'work-item', id: 'wi-0100', title: 'Root' }))
   rmSync(join(fixture.root, 'Boards'), { recursive: true })
-  assert.equal(findVaultRoot(join(fixture.root, 'Projects')), fixture.root)
+  fixture.write('Inner/.wi.json', '{}')
+  fixture.write('Inner/Recursive Board config.md', '<!-- recursive-board-config -->\n```json\n{}\n```\n')
+  fixture.write('Inner/Deeper/Note.md', '')
+  fixture.writeSettings('{}')
+  assert.equal(findVaultRoot(join(fixture.root, 'Inner', 'Deeper')), fixture.root)
 })
 
 test('findVaultRoot returns null outside a vault', () => {
@@ -371,30 +360,26 @@ test('childrenOf sorts by priority ascending, then updated descending', async ()
   )
 })
 
-test('the board key in the plugin data file overrides the config note', async () => {
+test('the board key in the plugin data file holds the settings', async () => {
   fixture = makeVault()
   fixture.write('.obsidian/plugins/recursive-board/data.json', '{"people":{},"board":{"extraSections":["Knowledge"],"areaTags":true}}')
-  fixture.write('Recursive Board config.md', '<!-- recursive-board-config -->\n```json\n{"defaultRoot":"Launch"}\n```\n')
   const vault = await loadVault(fixture.root)
-  assert.equal(vault.configFile, '.obsidian/plugins/recursive-board/data.json')
   assert.deepEqual(vault.config.extraSections, ['Knowledge'])
+  assert.equal(vault.config.areaTags, true)
   assert.equal(vault.config.defaultRoot, null)
-  assert.deepEqual(vault.configLeftovers, ['Recursive Board config.md'])
 })
 
-test('plugin data without a board key falls back to the config note', async () => {
+test('plugin data without a board key gives the defaults', async () => {
   fixture = makeVault()
   fixture.write('.obsidian/plugins/recursive-board/data.json', '{"people":{}}')
-  fixture.write('Recursive Board config.md', '<!-- recursive-board-config -->\n```json\n{"defaultRoot":"Launch"}\n```\n')
+  fixture.write('.wi.json', '{"defaultRoot":"Launch"}')
   const vault = await loadVault(fixture.root)
-  assert.equal(vault.configFile, 'Recursive Board config.md')
-  assert.equal(vault.config.defaultRoot, 'Launch')
+  assert.equal(vault.config.defaultRoot, null)
 })
 
 test('unreadable plugin data is an error, never a silent fallback', async () => {
   fixture = makeVault()
   fixture.write('.obsidian/plugins/recursive-board/data.json', '{"board":')
-  fixture.write('.wi.json', '{"defaultRoot":"Launch"}')
   await assert.rejects(loadVault(fixture.root), /data\.json must contain valid JSON/)
 })
 

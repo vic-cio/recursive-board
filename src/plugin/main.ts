@@ -10,10 +10,9 @@
  * Node types, and `build/forbidden-imports.mjs` fails the build.
  */
 import { MarkdownView, Notice, normalizePath, Platform, Plugin, TFile, TFolder, type Editor } from 'obsidian'
-import { parseVaultConfigValues, WI_CONFIG_FILE, type VaultConfig } from '../shared/vault-config.ts'
-import { isVaultConfigEvent, VAULT_CONFIG_NOTE } from '../shared/vault-config-note.ts'
+import { parseVaultConfigValues, type VaultConfig } from '../shared/vault-config.ts'
 import {
-  boardSettingsIn, boardSettingsRecord, PLUGIN_DATA_FILE, selectVaultConfig, withBoardSettings, type SelectedConfig,
+  boardSettingsIn, boardSettingsRecord, PLUGIN_DATA_FILE, readBoardSettings, withBoardSettings,
 } from '../shared/board-settings.ts'
 import { today, type Status } from '../shared/schema.ts'
 
@@ -94,7 +93,7 @@ export default class RecursiveBoardPlugin extends Plugin {
     ))
 
     try {
-      this.index = new WorkItemIndex(this.app, normalizedConfig((await this.readVaultConfig()).config))
+      this.index = new WorkItemIndex(this.app, normalizedConfig(readBoardSettings(this.storedData).config))
     } catch (error) {
       const reason = error instanceof Error ? error.message : String(error)
       new Notice(`Recursive Board could not read the board settings: ${reason}`)
@@ -123,15 +122,9 @@ export default class RecursiveBoardPlugin extends Plugin {
     // The cache is the source the board reads (the board index), so any change to it redraws.
     this.registerEvent(this.app.metadataCache.on('changed', () => this.stale()))
     this.registerEvent(this.app.metadataCache.on('resolved', () => this.stale()))
-    this.registerEvent(this.app.vault.on('create', (file) => this.vaultChanged(file.path)))
-    this.registerEvent(this.app.vault.on('modify', (file) => {
-      if (isVaultConfigEvent({ kind: 'modify', path: file.path })) void this.reloadConfig()
-    }))
-    this.registerEvent(this.app.vault.on('delete', (file) => this.vaultChanged(file.path)))
-    this.registerEvent(this.app.vault.on('rename', (file, oldPath) => {
-      this.vaultChanged(file.path)
-      if (isVaultConfigEvent({ kind: 'rename', path: file.path, oldPath })) void this.reloadConfig()
-    }))
+    this.registerEvent(this.app.vault.on('create', () => this.stale()))
+    this.registerEvent(this.app.vault.on('delete', () => this.stale()))
+    this.registerEvent(this.app.vault.on('rename', () => this.stale()))
 
     this.registerEvent(this.app.workspace.on('layout-change', () => this.schedule()))
     this.registerEvent(this.app.workspace.on('active-leaf-change', () => {
@@ -217,7 +210,7 @@ export default class RecursiveBoardPlugin extends Plugin {
         this.rememberActiveEditor()
         this.schedule()
         void this.showFirstBoardNotice()
-        void this.migrateOldConfig()
+        this.showNoBoardNotice()
       }
     })
   }
@@ -363,7 +356,7 @@ export default class RecursiveBoardPlugin extends Plugin {
   /** Obsidian calls this when Sync changes the plugin data, for example a tick made on the phone. */
   override async onExternalSettingsChange(): Promise<void> {
     await this.freshData()
-    await this.reloadConfig()
+    this.reloadConfig()
     this.statusColors = parseStatusColors(this.storedData.statusColors)
     this.applyStatusColors()
     this.dashboard.ticks = personTicks(this.storedData, this.dashboard.you)
@@ -418,7 +411,7 @@ export default class RecursiveBoardPlugin extends Plugin {
     const next = parseVaultConfigValues(boardSettingsRecord({ ...base, ...patch }), PLUGIN_DATA_FILE)
     this.storedData = withBoardSettings(data, next)
     await this.saveData(this.storedData)
-    await this.reloadConfig()
+    this.reloadConfig()
   }
 
   /**
@@ -457,48 +450,9 @@ export default class RecursiveBoardPlugin extends Plugin {
     }
   }
 
-  /**
-   * Moves the settings from the config note or .wi.json into the plugin data, once. The old file
-   * goes to the trash only after the board key is on disk, so a failed save never loses a setting.
-   */
-  private async migrateOldConfig(): Promise<void> {
-    let selected: SelectedConfig
-    try {
-      selected = await this.readVaultConfig()
-    } catch {
-      return // onload already reported the unreadable settings.
-    }
-    if (selected.fromBoard) return
-    if (selected.source === PLUGIN_DATA_FILE) {
-      this.showNoBoardNotice()
-      return
-    }
-    try {
-      const data = await this.freshData()
-      if (boardSettingsIn(data) === null) {
-        this.storedData = withBoardSettings(data, selected.config)
-        await this.saveData(this.storedData)
-        if (boardSettingsIn(await this.loadData()) === null) throw new Error('the plugin data did not keep the board settings.')
-      }
-      await this.trashOldConfig()
-      await this.reloadConfig()
-      new Notice(`Recursive Board moved the board settings from ${selected.source} into its settings tab. The old file is in the trash.`)
-    } catch (error) {
-      const reason = error instanceof Error ? error.message : String(error)
-      new Notice(`Recursive Board could not move the board settings from ${selected.source}: ${reason}`)
-    }
-  }
-
-  private async trashOldConfig(): Promise<void> {
-    const note = this.app.vault.getFileByPath(VAULT_CONFIG_NOTE)
-    if (note) await this.app.fileManager.trashFile(note)
-    // .wi.json is a dotfile, so Obsidian does not index it and fileManager cannot trash it.
-    const adapter = this.app.vault.adapter
-    if (await adapter.exists(WI_CONFIG_FILE) && !(await adapter.trashSystem(WI_CONFIG_FILE))) await adapter.trashLocal(WI_CONFIG_FILE)
-  }
-
   /** A device whose plugin data has no board key: most often, plugin settings sync is off here. */
   private showNoBoardNotice(): void {
+    if (boardSettingsIn(this.storedData) !== null) return
     if (this.index.all().length === 0) return // An empty vault gets the first-board notice instead.
     if (this.app.loadLocalStorage(NO_BOARD_NOTICE_KEY) === true) return
     this.app.saveLocalStorage(NO_BOARD_NOTICE_KEY, true)
@@ -538,30 +492,14 @@ export default class RecursiveBoardPlugin extends Plugin {
     if (stamped !== current) replaceChangedSpan(editor, current, stamped)
   }
 
-  /** The board key in the plugin data, then the old config note, then .wi.json. */
-  private async readVaultConfig(): Promise<SelectedConfig> {
-    const adapter = this.app.vault.adapter
-    const noteFile = this.app.vault.getFileByPath(VAULT_CONFIG_NOTE)
-    const note = noteFile
-      ? await this.app.vault.read(noteFile)
-      : await adapter.exists(VAULT_CONFIG_NOTE) ? await adapter.read(VAULT_CONFIG_NOTE) : null
-    const legacy = await adapter.exists(WI_CONFIG_FILE) ? await adapter.read(WI_CONFIG_FILE) : null
-    return selectVaultConfig({ pluginData: this.storedData, note, legacy })
-  }
-
-  private async reloadConfig(): Promise<void> {
+  private reloadConfig(): void {
     try {
-      this.index.setConfig(normalizedConfig((await this.readVaultConfig()).config))
+      this.index.setConfig(normalizedConfig(readBoardSettings(this.storedData).config))
       this.schedule()
     } catch (error) {
       const reason = error instanceof Error ? error.message : String(error)
       new Notice(`Recursive Board could not read the board settings: ${reason}`)
     }
-  }
-
-  private vaultChanged(path: string): void {
-    if (isVaultConfigEvent({ kind: 'create', path }) || isVaultConfigEvent({ kind: 'delete', path })) void this.reloadConfig()
-    else this.stale()
   }
 
   /** Coalesces a burst of events into one redraw. A card move fires several. */

@@ -3,7 +3,7 @@ status: accepted
 ---
 # Create the first board from Obsidian
 
-When an enabled plugin finds no work items, it offers a dismissible first-board notice. The same command is available in the command palette in every vault. The command asks for a name, creates a root board and a starter child using shared renderers, sets that root as the vault config's `defaultRoot`, and opens it. [ADR 0048](0048-synced-vault-config-note.md) defines the config source.
+When an enabled plugin finds no work items, it offers a dismissible first-board notice. The same command is available in the command palette in every vault. The command asks for a name, creates a root board and a starter child using shared renderers, sets that root as the vault config's `defaultRoot`, and opens it. [ADR 0050](0050-board-settings-in-plugin-data.md) defines the config source.
 
 The notice dismissal lives in the plugin's vault-scoped data. It is not written into a work item or the vault's settings. Existing settings are kept when `defaultRoot` is selected. A root with the requested filename stem is never replaced.
 

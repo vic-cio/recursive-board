@@ -110,7 +110,7 @@ test('createItem refuses an explicit agent for an area before writing', async ()
 
 test('createItem uses the configured folder and root when no parent is given', async () => {
   fixture = seed()
-  fixture.write('.wi.json', '{"workItemFolder":"Projects","defaultRoot":"Launch"}')
+  fixture.writeSettings('{"workItemFolder":"Projects","defaultRoot":"Launch"}')
   fixture.write('Projects/Launch.md', item({
     type: 'work-item', id: 'wi-0100', title: 'Launch', created: '2026-09-21', updated: '2026-09-21',
   }))
@@ -190,7 +190,7 @@ test('createItem writes the template body with Objective first', async () => {
 
 test('createItem appends vault-configured sections', async () => {
   fixture = seed()
-  fixture.write('.wi.json', '{"extraSections":["References","Risks"]}')
+  fixture.writeSettings('{"extraSections":["References","Risks"]}')
   const created = await createItem(await reload(fixture), { title: 'Streaming', parent: 'wi-0004' })
   assert.match(readFileSync(created.path, 'utf8'),
     /## Notes\n\n## References\n\n## Risks\n?$/)
@@ -355,7 +355,7 @@ test('createItem leaves the parent alone when autoPromote is off, or the parent 
   assert.equal(underRoot.promotedParent, false)
   assert.equal(readFileSync(join(fixture.root, 'Boards', 'Main.md'), 'utf8'), rootBefore)
 
-  fixture.write('.wi.json', '{"autoPromote":false}')
+  fixture.writeSettings('{"autoPromote":false}')
   const off = await createItem(await reload(fixture), { title: 'Off', parent: 'wi-0004' })
   assert.equal(off.promotedParent, false)
 })

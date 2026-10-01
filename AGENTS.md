@@ -44,10 +44,6 @@ vault, and losing it is not visible until two devices conflict. The one exceptio
 [0035](docs/adr/0035-promote-a-parent-on-its-first-child.md): `wi new` sets `board: true` on a parent
 at its first child.
 
-**The plugin moves `test/.wi.json` to the trash when it loads on `test/`.** `test/.wi.json` keeps the
-old config path covered. Its migration (docs/adr/0050-board-settings-in-plugin-data.md) deletes a tracked
-file, so run `git checkout test/.wi.json` after you look at the test vault in Obsidian.
-
 ## Working here
 
 People use the plugin; agents and scripts use `wi`. A person never types a `wi` command, so each

@@ -14,9 +14,8 @@ import { homedir } from 'node:os'
 import { join, resolve as resolvePath, dirname, basename, sep, isAbsolute } from 'node:path'
 
 import { parseFrontmatter, type Frontmatter } from '../shared/frontmatter.ts'
-import { WI_CONFIG_FILE, type VaultConfig } from '../shared/vault-config.ts'
-import { VAULT_CONFIG_NOTE } from '../shared/vault-config-note.ts'
-import { parsePluginData, PLUGIN_DATA_FILE, selectVaultConfig, type ConfigSource } from '../shared/board-settings.ts'
+import { type VaultConfig } from '../shared/vault-config.ts'
+import { parsePluginData, PLUGIN_DATA_FILE, readBoardSettings } from '../shared/board-settings.ts'
 import { archiveOwner } from '../shared/archive.ts'
 import { peopleIn } from '../shared/delegate.ts'
 import {
@@ -47,10 +46,6 @@ export interface WorkItem {
 export interface Vault {
   root: string
   config: VaultConfig
-  /** The file the settings came from, for diagnostics. Defaults name the plugin data file. */
-  configFile: ConfigSource
-  /** Old config files that still exist next to the board key in the plugin data file. */
-  configLeftovers: ConfigSource[]
   items: WorkItem[]
   byId: Map<string, WorkItem>
   /** Work items whose id another work item also claims. */
@@ -147,11 +142,11 @@ function isUnaccounted(name: string): boolean {
   return !IGNORED_HIDDEN.has(name)
 }
 
-/** Walks up to the nearest vault: one with plugin data, a config file, or `Boards/`. */
+/** Walks up to the vault the folder is in: the nearest one with plugin data or `Boards/`. */
 export function findVaultRoot(start: string): string | null {
   let dir = resolvePath(start)
   for (;;) {
-    if (existsSync(join(dir, PLUGIN_DATA_FILE)) || existsSync(join(dir, VAULT_CONFIG_NOTE)) || existsSync(join(dir, WI_CONFIG_FILE)) || existsSync(join(dir, BOARDS))) return dir
+    if (existsSync(join(dir, PLUGIN_DATA_FILE)) || existsSync(join(dir, BOARDS))) return dir
     const parent = dirname(dir)
     if (parent === dir) return null
     dir = parent
@@ -283,14 +278,9 @@ export function requireAccountedTree(vault: Vault, what: string): void {
 }
 
 /** Read settings without scanning or reading work item files (docs/adr/0050-board-settings-in-plugin-data.md). */
-export async function readVaultConfig(root: string): Promise<Pick<Vault, 'config' | 'configFile' | 'configLeftovers'>> {
+export async function readVaultConfig(root: string): Promise<VaultConfig> {
   const pluginText = await readIfPresent(join(root, ...PLUGIN_DATA_FILE.split('/')))
-  const selected = selectVaultConfig({
-    pluginData: pluginText === null ? null : parsePluginData(pluginText),
-    note: await readIfPresent(join(root, VAULT_CONFIG_NOTE)),
-    legacy: await readIfPresent(join(root, WI_CONFIG_FILE)),
-  })
-  return { config: selected.config, configFile: selected.source, configLeftovers: selected.leftovers }
+  return readBoardSettings(pluginText === null ? null : parsePluginData(pluginText)).config
 }
 
 async function readIfPresent(path: string): Promise<string | null> {
@@ -303,7 +293,7 @@ async function readIfPresent(path: string): Promise<string | null> {
 }
 
 export async function loadVault(root: string): Promise<Vault> {
-  const { config, configFile, configLeftovers } = await readVaultConfig(root)
+  const config = await readVaultConfig(root)
   const { markdown, unaccounted, misplaced } = await scan(root, config.workItemFolder)
 
   const items: WorkItem[] = []
@@ -378,8 +368,6 @@ export async function loadVault(root: string): Promise<Vault> {
   return {
     root,
     config,
-    configFile,
-    configLeftovers,
     items,
     byId,
     duplicateIds,

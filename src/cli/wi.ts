@@ -39,7 +39,6 @@ import { runSetup } from './commands/setup.ts'
 import { objectiveReport } from './commands/objective.ts'
 import { dashboardSummary, renderDashboard } from './commands/dashboard.ts'
 import { COMMAND_FLAGS, parseCommandLine, type Values } from './flags.ts'
-import { PLUGIN_DATA_FILE } from '../shared/board-settings.ts'
 import { STATUSES } from '../shared/schema.ts'
 import { authorLabel } from '../shared/authorship.ts'
 
@@ -96,7 +95,7 @@ Notes
   A title's unsafe filename characters become hyphens. When another item has the same filename,
   the new file gets the id's suffix; wi never writes over a file.
   \`wi new\` makes a parent a board when it gives the parent its first child. Set
-  "autoPromote": false in Recursive Board config.md to turn this off. A root or an area is never changed.
+  "autoPromote": false in the board settings to turn this off. A root or an area is never changed.
   \`wi new\` writes creator, creator_model and role as the plain names of person or role notes. --creator and
   --model fall back to WI_CREATOR and WI_MODEL; wi new warns when a card has no creator, and
   --strict refuses it. Without --role, the card copies the role of its nearest ancestor that has one.
@@ -139,9 +138,8 @@ Notes
   \`wi dashboard\` prints the plugin dashboard's summary: review work for --you, progress by area, claims,
   and what needs attention. --parent names a root or an area. It writes nothing.
   The board settings live in the Recursive Board plugin settings, stored in
-  .obsidian/plugins/recursive-board/data.json. wi reads them and never writes them. Until the
-  plugin migrates them, wi reads Recursive Board config.md, then .wi.json.
-  \`wi new\` warns when such a file exists because a new id or filename may clash with it.
+  .obsidian/plugins/recursive-board/data.json. wi reads them and never writes them.
+  \`wi new\` warns when a hidden file sits in the work-item folder, because a new id or filename may clash with it.
   \`wi here\` is retired and changes nothing. A project's AGENTS.md names its board: pass it as --parent.
   \`wi trace\` was removed in 0.8.0. Use \`wi show <ref> --json\` to read a card's Knowledge links.
 `
@@ -257,15 +255,7 @@ async function openVault(flag: string | undefined): Promise<Vault> {
   if (findVaultRoot(root) !== root) {
     throw new UsageError(`${root} is not a vault: it has no Boards/ folder or board settings.`)
   }
-  const vault = await loadVault(root)
-  hintMigration(vault.configFile)
-  return vault
-}
-
-/** docs/adr/0050-board-settings-in-plugin-data.md: only the plugin migrates, so wi names the step. */
-function hintMigration(configFile: Vault['configFile']): void {
-  if (configFile === PLUGIN_DATA_FILE) return
-  process.stderr.write(`wi: read ${configFile}. Open the vault in Obsidian to move these settings into the plugin.\n`)
+  return loadVault(root)
 }
 
 async function resolveVaultRoot(flag: string | undefined): Promise<string> {
@@ -290,7 +280,7 @@ function runObjective(vault: Vault, rest: string[]): number {
   return 0
 }
 
-/** wi here is retired (docs/adr/0026-repo-board-pointers.md). It exits 0 so an old script still runs. */
+/** wi here is retired (docs/adr/find-the-vault-in-four-ways.md). It exits 0 so an old script still runs. */
 function runHere(): number {
   process.stdout.write('wi here is retired. A project\'s AGENTS.md names its board; pass it to wi new as --parent.\n')
   return 0

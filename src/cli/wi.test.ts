@@ -34,7 +34,7 @@ async function wi(args: string[], vault?: string, env: NodeJS.ProcessEnv = {}): 
 
 test('wi agents prints the configured agent limit and claimed doing count', async () => {
   fixture = seed()
-  fixture.write('.wi.json', '{"maxAgents":2}')
+  fixture.writeSettings('{"maxAgents":2}')
   const source = readFileSync(join(fixture.root, 'Boards/Build server.md'), 'utf8')
     .replace('owner: sam', 'owner: sam\nagent: codex')
   writeFileSync(join(fixture.root, 'Boards/Build server.md'), source)
@@ -63,7 +63,7 @@ test('wi agents prints the configured agent limit and claimed doing count', asyn
 
 test('wi agents does not count a card a person holds, known by a note with type: person', async () => {
   fixture = seed()
-  fixture.write('.wi.json', '{"maxAgents":1}')
+  fixture.writeSettings('{"maxAgents":1}')
   fixture.write('People/Ana.md', '---\ntype: person\n---\n')
   fixture.write('Boards/Quote.md', item({
     type: 'work-item', id: 'wi-0008', title: 'Quote', status: 'doing', agent: 'ana',
@@ -129,7 +129,7 @@ test('wi trace exits successfully with its removal notice', async () => {
 
 test('WI_MAX_AGENTS overrides the vault config for one dispatcher run', async () => {
   fixture = seed()
-  fixture.write('.wi.json', '{"maxAgents":2}')
+  fixture.writeSettings('{"maxAgents":2}')
   const result = await wi(['agents', '--json'], undefined, { WI_MAX_AGENTS: '5' })
   assert.equal(result.code, 0, result.stderr)
   assert.equal(JSON.parse(result.stdout).maxAgents, 5)
@@ -137,7 +137,7 @@ test('WI_MAX_AGENTS overrides the vault config for one dispatcher run', async ()
 
 test('an empty WI_MAX_AGENTS removes the cap for that run', async () => {
   fixture = seed()
-  fixture.write('.wi.json', '{"maxAgents":2}')
+  fixture.writeSettings('{"maxAgents":2}')
   const result = await wi(['agents', '--json'], undefined, { WI_MAX_AGENTS: '' })
   assert.equal(result.code, 0, result.stderr)
   assert.equal(JSON.parse(result.stdout).maxAgents, null)
@@ -157,30 +157,21 @@ test('wi config is no longer a command: the plugin moves the settings', async ()
   assert.match(result.stderr, /unknown command "config"/)
 })
 
-test('wi reads the board key from the plugin data file and prints no hint', async () => {
+test('wi reads the board key from the plugin data file and ignores the old config files', async () => {
   fixture = seed()
-  fixture.write('.obsidian/plugins/recursive-board/data.json', '{"board":{"maxAgents":3}}')
   fixture.write('.wi.json', '{"maxAgents":1}')
-  const result = await wi(['agents'])
-  assert.equal(result.code, 0, result.stderr)
-  assert.match(result.stdout, /3/)
-  assert.doesNotMatch(result.stderr, /Open the vault in Obsidian/)
-})
+  fixture.write('Recursive Board config.md', '<!-- recursive-board-config -->\n```json\n{"maxAgents":2}\n```\n')
+  const before = await wi(['agents', '--json'])
+  assert.equal(before.code, 0, before.stderr)
+  assert.equal(JSON.parse(before.stdout).maxAgents, null)
+  assert.equal(before.stderr, '')
 
-for (const [file, text] of [
-  ['.wi.json', '{"maxAgents":1}'],
-  ['Recursive Board config.md', '<!-- recursive-board-config -->\n```json\n{"maxAgents":1}\n```\n'],
-] as const) {
-  test(`wi prints one hint line when it reads ${file}`, async () => {
-    fixture = seed()
-    fixture.write(file, text)
-    const result = await wi(['agents'])
-    assert.equal(result.code, 0, result.stderr)
-    const hints = result.stderr.split('\n').filter((line) => line.includes('Open the vault in Obsidian'))
-    assert.equal(hints.length, 1)
-    assert.match(hints[0]!, new RegExp(file.replace('.', '\\.')))
-  })
-}
+  fixture.writeSettings('{"maxAgents":3}')
+  const after = await wi(['agents', '--json'])
+  assert.equal(after.code, 0, after.stderr)
+  assert.equal(JSON.parse(after.stdout).maxAgents, 3)
+  assert.equal(after.stderr, '')
+})
 
 function readFixture(path: string): string | null {
   const fullPath = join(fixture!.root, path)
@@ -189,7 +180,7 @@ function readFixture(path: string): string | null {
 
 test('wi claim remains advisory when the active agent count reaches the limit', async () => {
   fixture = seed()
-  fixture.write('.wi.json', '{"maxAgents":0}')
+  fixture.writeSettings('{"maxAgents":0}')
   const result = await wi(['claim', 'wi-0004', '--agent', 'codex'])
   assert.equal(result.code, 0, result.stderr)
   assert.match(result.stdout, /doing/)
@@ -372,7 +363,7 @@ test('wi new does not inherit owner from the parent', async () => {
 
 test('wi new uses the configured folder and root when --parent is omitted', async () => {
   fixture = seed()
-  fixture.write('.wi.json', '{"workItemFolder":"Projects","defaultRoot":"Launch"}')
+  fixture.writeSettings('{"workItemFolder":"Projects","defaultRoot":"Launch"}')
   fixture.write('Projects/Launch.md', item({
     type: 'work-item', id: 'wi-0100', title: 'Launch',
     created: '2026-09-21', updated: '2026-09-21',
@@ -616,7 +607,7 @@ test('non-destructive commands still run while a file is unaccounted for', async
 
 test('wi validate warns when defaultRoot does not name a root work item', async () => {
   fixture = seed()
-  fixture.write('.wi.json', '{"defaultRoot":"Build server"}')
+  fixture.writeSettings('{"defaultRoot":"Build server"}')
 
   const { code, stdout } = await wi(['validate', '--json'])
   assert.equal(code, 0)
@@ -629,7 +620,7 @@ test('wi validate warns when defaultRoot does not name a root work item', async 
 
 test('wi validate warns when defaultRoot names no work item', async () => {
   fixture = seed()
-  fixture.write('.wi.json', '{"defaultRoot":"Missing"}')
+  fixture.writeSettings('{"defaultRoot":"Missing"}')
 
   const { code, stdout } = await wi(['validate', '--json'])
   assert.equal(code, 0)

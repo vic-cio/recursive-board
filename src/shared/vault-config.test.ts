@@ -1,11 +1,12 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 
-import { DEFAULT_VAULT_CONFIG, parseVaultConfig } from './vault-config.ts'
+import { parseVaultConfigValues } from './vault-config.ts'
 
-test('a missing vault config keeps Boards and has no default root', () => {
-  assert.deepEqual(parseVaultConfig(null), DEFAULT_VAULT_CONFIG)
-  assert.deepEqual(parseVaultConfig(null), { workItemFolder: 'Boards', defaultRoot: null, extraSections: [], maxAgents: null, autoPromote: true })
+const parseVaultConfig = (text: string) => parseVaultConfigValues(JSON.parse(text) as Record<string, unknown>, 'data.json')
+
+test('an empty board key keeps Boards and has no default root', () => {
+  assert.deepEqual(parseVaultConfig('{}'), { workItemFolder: 'Boards', defaultRoot: null, extraSections: [], maxAgents: null, autoPromote: true })
 })
 
 test('the vault config selects a work-item folder and root filename', () => {
@@ -39,7 +40,7 @@ test('the vault config accepts a non-negative whole-number agent limit or no lim
 
 test('invalid config fails instead of silently selecting another folder or root', () => {
   for (const source of [
-    '{', '[]', '{"workItemFolder":""}', '{"workItemFolder":"/Projects"}',
+    '{"workItemFolder":""}', '{"workItemFolder":"/Projects"}',
     '{"workItemFolder":"../Projects"}', '{"workItemFolder":"Projects\\\\Cards"}',
     '{"workItemFolder":7}', '{"defaultRoot":""}', '{"defaultRoot":"[[Home]]"}',
     '{"defaultRoot":true}',
@@ -47,7 +48,7 @@ test('invalid config fails instead of silently selecting another folder or root'
     '{"extraSections":[""]}', '{"extraSections":["  "]}',
     '{"extraSections":["First\\nSecond"]}',
   ]) {
-    assert.throws(() => parseVaultConfig(source), /\.wi\.json/)
+    assert.throws(() => parseVaultConfig(source), /data\.json/)
   }
 })
 

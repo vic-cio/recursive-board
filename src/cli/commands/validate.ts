@@ -12,6 +12,7 @@ import {
   CORE_FIELDS, OPTIONAL_FIELDS, STATUSES, isStatus, parseWikilink,
 } from '../../shared/schema.ts'
 import type { Vault, WorkItem } from '../vault.ts'
+import { PLUGIN_DATA_FILE } from '../../shared/board-settings.ts'
 import { dependencyCycle } from '../../shared/dependencies.ts'
 import { dependenciesOf, titleOf } from '../dependencies.ts'
 import { displayName, LINK_FIELDS, linkTypeProblem, type LinkField } from '../../shared/authorship.ts'
@@ -55,7 +56,6 @@ export async function validate(vault: Vault): Promise<Report> {
   }
 
   checkDefaultRoot(vault, report)
-  checkConfigLeftovers(vault, report)
   checkRoots(vault, report)
   checkCycles(vault, report)
   checkDependencies(vault, report)
@@ -145,17 +145,10 @@ function checkDefaultRoot(vault: Vault, report: Reporter): void {
   const target = vault.items.find((item) => item.stem.toLowerCase() === configured.toLowerCase())
   if (target !== undefined && target.parent === null) return
 
-  report('default-root-unresolved', 'warning', vault.configFile, target?.id,
+  report('default-root-unresolved', 'warning', PLUGIN_DATA_FILE, target?.id,
     `sets defaultRoot to "${configured}", which does not name a root work item.`)
 }
 
-/** docs/adr/0050-board-settings-in-plugin-data.md: the plugin moves an old file to the trash once it migrates it. */
-function checkConfigLeftovers(vault: Vault, report: Reporter): void {
-  for (const relPath of vault.configLeftovers) {
-    report('config-leftover', 'warning', relPath, undefined,
-      `is no longer read: the board settings live in ${vault.configFile}. Delete this file.`)
-  }
-}
 
 /** docs/adr/0003-flat-configurable-work-item-folder.md keeps work items flat. Templates/
  * is also checked for nesting; other vault folders are outside the validator's scope. */

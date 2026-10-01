@@ -1,6 +1,6 @@
 ---
 name: recursive-board
-description: Read and change work items in a Recursive Board vault through the `wi` CLI. Use when asked what is on a board, backlog or agenda; to add, tick, move, archive or remove a card; to break work into child items; or to take on and work a card. Also use whenever the working directory holds a `Boards/` folder, a `Recursive Board config.md` note, or a legacy `.wi.json` file.
+description: Read and change work items in a Recursive Board vault through the `wi` CLI. Use when asked what is on a board, backlog or agenda; to add, tick, move, archive or remove a card; to break work into child items; or to take on and work a card. Also use whenever the working directory holds a `Boards/` folder.
 ---
 
 # recursive-board

@@ -2,52 +2,29 @@ import { test } from 'node:test'
 import assert from 'node:assert/strict'
 
 import {
-  boardSettingsRecord, cleanSections, parsePluginData, PLUGIN_DATA_FILE, selectVaultConfig, withBoardSettings,
+  boardSettingsRecord, cleanSections, parsePluginData, readBoardSettings, withBoardSettings,
 } from './board-settings.ts'
 import { DEFAULT_VAULT_CONFIG } from './vault-config.ts'
 
-const note = (json: string) => `<!-- recursive-board-config -->\n\`\`\`json\n${json}\n\`\`\`\n`
-
-test('the board key in the plugin data wins over the config note and .wi.json', () => {
-  const selected = selectVaultConfig({
-    pluginData: { people: {}, board: { extraSections: ['Knowledge'], areaTags: true } },
-    note: note('{"defaultRoot":"Note root"}'),
-    legacy: '{"defaultRoot":"Legacy root"}',
-  })
-  assert.equal(selected.source, PLUGIN_DATA_FILE)
+test('the board key in the plugin data holds the settings', () => {
+  const selected = readBoardSettings({ people: {}, board: { extraSections: ['Knowledge'], areaTags: true } })
+  assert.equal(selected.fromBoard, true)
   assert.deepEqual(selected.config.extraSections, ['Knowledge'])
   assert.equal('areaTags' in selected.config, false)
   assert.equal(selected.config.defaultRoot, null)
-  assert.deepEqual(selected.leftovers, ['Recursive Board config.md', '.wi.json'])
 })
 
-test('without a board key the config note is read, then .wi.json', () => {
-  const fromNote = selectVaultConfig({ pluginData: { people: {} }, note: note('{"defaultRoot":"Main"}'), legacy: '{"defaultRoot":"Old"}' })
-  assert.equal(fromNote.source, 'Recursive Board config.md')
-  assert.equal(fromNote.config.defaultRoot, 'Main')
-  assert.deepEqual(fromNote.leftovers, [])
-
-  const fromLegacy = selectVaultConfig({ pluginData: null, note: null, legacy: '{"defaultRoot":"Old"}' })
-  assert.equal(fromLegacy.source, '.wi.json')
-  assert.equal(fromLegacy.config.defaultRoot, 'Old')
+test('without a board key the defaults apply', () => {
+  for (const pluginData of [null, { people: {} }]) {
+    const selected = readBoardSettings(pluginData)
+    assert.equal(selected.fromBoard, false)
+    assert.deepEqual(selected.config, { ...DEFAULT_VAULT_CONFIG, extraSections: [] })
+  }
 })
 
-test('with no source the defaults apply and name the plugin data file', () => {
-  const selected = selectVaultConfig({ pluginData: null, note: null, legacy: null })
-  assert.equal(selected.source, PLUGIN_DATA_FILE)
-  assert.equal(selected.fromBoard, false)
-  assert.deepEqual(selected.config, { ...DEFAULT_VAULT_CONFIG, extraSections: [] })
-})
-
-test('an invalid board key is an error, never a fallback to the config note', () => {
-  assert.throws(
-    () => selectVaultConfig({ pluginData: { board: { maxAgents: -1 } }, note: note('{}'), legacy: null }),
-    /data\.json: maxAgents/,
-  )
-  assert.throws(
-    () => selectVaultConfig({ pluginData: { board: ['Boards'] }, note: null, legacy: null }),
-    /data\.json: the board settings must be a JSON object/,
-  )
+test('an invalid board key is an error, never the defaults', () => {
+  assert.throws(() => readBoardSettings({ board: { maxAgents: -1 } }), /data\.json: maxAgents/)
+  assert.throws(() => readBoardSettings({ board: ['Boards'] }), /data\.json: the board settings must be a JSON object/)
 })
 
 test('plugin data must be a JSON object', () => {
