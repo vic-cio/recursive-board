@@ -78,8 +78,19 @@ test('delegating to a name with no person note and no harness writes nothing', a
   const f = seed()
   const before = card(f)
   await assert.rejects(delegate(await loadVault(f.root), 'wi-0004', { to: 'Bo' }, deps('/nowhere', [])),
-    /no note in People\/ called Bo/)
+    /no person note called Bo/)
   assert.equal(card(f), before)
+})
+
+test('a person is a note with type: person in any folder, not a note in People/', async () => {
+  const f = seed()
+  f.write('Team/Sam.md', '---\ntype: person\n---\n')
+  f.write('People/Bo.md', '---\ntype: role\n---\n')
+  const vault = await loadVault(f.root)
+  await assert.rejects(delegate(vault, 'wi-0004', { to: 'Bo' }, deps('/nowhere', [])), /no person note called Bo/)
+  const result = await delegate(vault, 'wi-0004', { to: 'sam' }, deps('/nowhere', []))
+  assert.equal(result.holder, 'Sam')
+  assert.match(card(f), /^agent: Sam$/m)
 })
 
 for (const harness of ['claude', 'codex', 'pi'] as const) {
@@ -228,7 +239,7 @@ test('wi delegate refuses an unknown --to with exit 2 and writes nothing', () =>
   const before = card(f)
   const result = wi(['delegate', 'wi-0004', '--to', 'gpt'], repo(), f.root, fakeBin())
   assert.equal(result.code, 2)
-  assert.match(result.stderr, /no note in People\/ called gpt/)
+  assert.match(result.stderr, /no person note called gpt/)
   assert.equal(card(f), before)
 })
 

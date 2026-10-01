@@ -7,8 +7,13 @@ import {
 
 const card = (fields: string) => `---\ntype: work-item\nid: wi-a1\ntitle: Price the job\n${fields}---\n\nBody\n`
 
-test('peopleIn reads one person per note in People/, by lower-case name', () => {
-  const people = peopleIn(['People/Ana.md', 'People/Team/Sam Lee.md', 'Boards/Main.md', 'People/photo.png', 'Peoples/Bo.md'])
+const person = (path: string) => ({ path, type: 'person' })
+
+test('peopleIn reads one person per note with type: person, in any folder, by lower-case name', () => {
+  const people = peopleIn([
+    person('People/Ana.md'), person('Team/Sam Lee.md'), person('photo.png'),
+    { path: 'People/Bo.md', type: 'role' }, { path: 'People/Cy.md', type: undefined },
+  ])
   assert.deepEqual([...people.entries()], [['ana', 'Ana'], ['sam lee', 'Sam Lee']])
 })
 
@@ -17,11 +22,11 @@ test('isHarness knows claude, codex and pi only', () => {
 })
 
 test('delegateTarget names a harness first, then a person note, and refuses anything else', () => {
-  const people = peopleIn(['People/Ana.md', 'People/Claude.md'])
+  const people = peopleIn([person('People/Ana.md'), person('People/Claude.md')])
   assert.deepEqual(delegateTarget('codex', people), { kind: 'agent', harness: 'codex' })
   assert.deepEqual(delegateTarget('claude', people), { kind: 'agent', harness: 'claude' })
   assert.deepEqual(delegateTarget('ana', people), { kind: 'person', name: 'Ana' })
-  assert.throws(() => delegateTarget('Bo', people), /no note in People\/ called Bo.*claude, codex or pi/)
+  assert.throws(() => delegateTarget('Bo', people), /no person note called Bo.*type: person.*claude, codex or pi/)
   assert.throws(() => delegateTarget('  ', people), /needs a person or a harness/)
 })
 

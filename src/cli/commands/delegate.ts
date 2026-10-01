@@ -22,7 +22,7 @@ import { frontmatterBody } from '../../shared/frontmatter.ts'
 import { cardSlug, delegateTarget, delegationNote, workerName, type Harness } from '../../shared/delegate.ts'
 
 export interface DelegateOptions {
-  /** A person with a note in People/, or a harness: claude, codex or pi. */
+  /** A person (a note with type: person), or a harness: claude, codex or pi. */
   to: string
   model?: string | undefined
   reason?: string | undefined

@@ -1,6 +1,6 @@
 ---
 status: accepted
-amends: docs/adr/0034-agent-limit.md (who counts), docs/adr/0042-creator-and-role.md (a People/ folder for delegation)
+amends: docs/adr/0034-agent-limit.md (who counts), docs/adr/0042-creator-and-role.md (the full list of person notes for delegation)
 ---
 # Delegate a card to a person or a headless agent
 
@@ -16,13 +16,13 @@ A delegated card carries the delegate's name in `agent`, through the same claim 
 a person's card refuses a second claimant, and `wi release` works on it. `owner` is not used: on
 the dashboard, a doing card that you own waits for your review, which is a different thing.
 
-`wi` knows a person by a note in the vault's `People/` folder. `wi agents` does not count a doing
-card whose `agent` names a person, and `wi claim` gives no limit warning for one. `wi delegate`
-refuses a name that is not a harness and has no `People/` note, because that claim would count as
-an agent. A harness name wins over a person note of the same name. A vault with no `People/`
-folder knows no one, so every claim still counts, as before. 0042 rejected product-owned
-`People/` and `Roles/` folders for `creator`, `owner` and `role`; they still match a note anywhere.
-Only delegation and the agent count read `People/`, because they need the full list of people.
+`wi` knows a person by a note with `type: person`, in any folder, as the plugin's people picker
+does. `wi agents` does not count a doing card whose `agent` names a person, and `wi claim` gives no
+limit warning for one. `wi delegate` refuses a name that is not a harness and has no person note,
+because that claim would count as an agent. A harness name wins over a person note of the same
+name. A vault with no person note knows no one, so every claim still counts, as before. 0042
+rejected product-owned `People/` and `Roles/` folders, so the folder does not decide: the
+frontmatter `type` does. Only delegation and the agent count read the full list of people.
 
 The claim and the note are pure functions in `src/shared/delegate.ts`, so a plugin menu can run the
 same step for a person.
@@ -82,7 +82,7 @@ script first on a `PATH` that holds no real harness. No test starts an agent.
 
 - **A person in `owner`.** It would put the card in the owner's review list, and leave the card
   open to a claim by an agent.
-- **A name with no `People/` note accepted as a person.** It would count as an agent in
+- **A name with no person note accepted as a person.** It would count as an agent in
   `wi agents`, and a typo in a harness name would pass silently.
 - **The worktree inside the repository.** The repository would index the worker's files.
 - **Refusing at the agent limit.** The limit stays advisory (0034). Waiting is the delegating

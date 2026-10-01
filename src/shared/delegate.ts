@@ -4,8 +4,9 @@
  * `wi delegate` and the plugin's card menu both claim the card for the delegate and write one note
  * that says who has it and why. The claim is the same edit as `wi claim`, so a delegated card
  * refuses a second claimant. A person holds a card through `agent` too; `wi agents` tells a person
- * from an agent by a note in `People/`. This module imports nothing from Node.
+ * from an agent by a note with `type: person`. This module imports nothing from Node.
  */
+import { PERSON_TYPE } from './authorship.ts'
 import { cardState } from './card-state.ts'
 import type { Edit } from './edits.ts'
 import { claimEdits } from './transitions.ts'
@@ -13,21 +14,24 @@ import { claimEdits } from './transitions.ts'
 export const HARNESSES = ['claude', 'codex', 'pi'] as const
 export type Harness = typeof HARNESSES[number]
 
-/** The folder whose notes name the people a card can be delegated to. */
-export const PEOPLE_FOLDER = 'People'
-
 export function isHarness(value: string): value is Harness {
   return (HARNESSES as readonly string[]).includes(value)
 }
 
+/** A Markdown note by its vault-relative path, with its frontmatter `type`. */
+export interface TypedNote {
+  path: string
+  type: unknown
+}
+
 /**
- * The people a vault knows, from its vault-relative Markdown paths: one note in `People/`, at any
- * depth, per person. Keyed by the lower-case name, because a name is matched as a link is.
+ * The people a vault knows: each note with `type: person`, in any folder, as the plugin's people
+ * picker reads them. Keyed by the lower-case name, because a name is matched as a link is.
  */
-export function peopleIn(paths: Iterable<string>): Map<string, string> {
+export function peopleIn(notes: Iterable<TypedNote>): Map<string, string> {
   const people = new Map<string, string>()
-  for (const path of paths) {
-    if (!path.startsWith(`${PEOPLE_FOLDER}/`) || !path.toLowerCase().endsWith('.md')) continue
+  for (const { path, type } of notes) {
+    if (type !== PERSON_TYPE || !path.toLowerCase().endsWith('.md')) continue
     const name = path.slice(path.lastIndexOf('/') + 1, -'.md'.length)
     if (name.trim() !== '') people.set(name.toLowerCase(), name)
   }
@@ -48,8 +52,8 @@ export function delegateTarget(to: string, people: Map<string, string>): Delegat
   if (isHarness(name)) return { kind: 'agent', harness: name }
   const person = people.get(name.toLowerCase())
   if (person !== undefined) return { kind: 'person', name: person }
-  throw new Error(`there is no note in ${PEOPLE_FOLDER}/ called ${name}. ` +
-    `Make the note ${PEOPLE_FOLDER}/${name}.md for a person, or name a harness: ${HARNESSES.join(', ').replace(/, (?=[^,]*$)/, ' or ')}.`)
+  throw new Error(`there is no person note called ${name}. ` +
+    `Make the note ${name}.md with type: ${PERSON_TYPE} for a person, or name a harness: ${HARNESSES.join(', ').replace(/, (?=[^,]*$)/, ' or ')}.`)
 }
 
 /** The agent name a worker claims under, unique per card: `codex-price-the-job`. */

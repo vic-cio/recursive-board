@@ -61,7 +61,7 @@ test('wi agents prints the configured agent limit and claimed doing count', asyn
     ['claude wi-0005', 'codex wi-0004', 'codex wi-0007'])
 })
 
-test('wi agents does not count a card a person holds, known by a note in People/', async () => {
+test('wi agents does not count a card a person holds, known by a note with type: person', async () => {
   fixture = seed()
   fixture.write('.wi.json', '{"maxAgents":1}')
   fixture.write('People/Ana.md', '---\ntype: person\n---\n')

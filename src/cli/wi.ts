@@ -141,7 +141,7 @@ Notes
   \`wi status <ref> done\` names each card it unblocks. An archived card that is not done still blocks.
   \`wi claim\` lets an agent hold a card and its subtasks at once. It refuses a board with a child in
   doing that a different agent or a person works.
-  \`wi delegate <ref> --to <person>\` claims the card for a person with a note in People/, and notes who
+  \`wi delegate <ref> --to <person>\` claims the card for a person (a note with type: person), and notes who
   has it and why (--reason). \`--to claude|codex|pi\` also makes a worktree of this Git repository on
   card/<slug> beside it, in <repo>-worktrees/, and starts that harness headless with the card body as its
   brief. The note names the log, <repo>-worktrees/<slug>.log, and the command that resumes the session.
@@ -149,7 +149,7 @@ Notes
   takes --sandbox (default workspace-write), and pi has none. The default never bypasses permissions.
   \`wi objective\` prints the WI_CARD objective chain, or the unambiguous deepest WI_AGENT claim.
   \`wi agents\` reports the advisory limit, the number of distinct agents with a doing card, and each
-  claimed doing card. A card that a person holds does not count: a person is a note in People/. WI_MAX_AGENTS overrides
+  claimed doing card. A card that a person holds does not count: a person is a note with type: person. WI_MAX_AGENTS overrides
   maxAgents from the board settings for one run. Dispatchers decide whether to wait; wi claim does not enforce it.
   \`wi dashboard\` prints the plugin dashboard's summary: review work for --you, progress by area, claims,
   and what needs attention. --parent names a root or an area. It writes nothing.
@@ -605,7 +605,7 @@ async function runNote(vault: Vault, rest: string[], values: Values, json: boole
 
 /**
  * Doing cards that carry an agent. One agent may hold a card and its current subtask. A card a
- * person holds is not an agent's: a person is a note in People/.
+ * person holds is not an agent's: a person is a note with type: person.
  */
 async function claimedDoing(vault: Vault): Promise<{ agent: string; item: WorkItem }[]> {
   const people = await readPeople(vault.root)

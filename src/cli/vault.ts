@@ -19,7 +19,7 @@ import { WI_CONFIG_FILE, type VaultConfig } from '../shared/vault-config.ts'
 import { VAULT_CONFIG_NOTE } from '../shared/vault-config-note.ts'
 import { parsePluginData, PLUGIN_DATA_FILE, selectVaultConfig, type ConfigSource } from '../shared/board-settings.ts'
 import { archiveOwner } from '../shared/archive.ts'
-import { peopleIn, PEOPLE_FOLDER } from '../shared/delegate.ts'
+import { peopleIn } from '../shared/delegate.ts'
 import {
   BOARDS, FOLDERS, WORK_ITEM_TYPE, isArea, isStatus, parseWikilink, type Status,
 } from '../shared/schema.ts'
@@ -447,15 +447,19 @@ export async function loadVault(root: string): Promise<Vault> {
 }
 
 /**
- * The people the vault knows: one note in `People/` each (docs/adr/delegate-a-card.md). A vault
- * with no such folder knows no one, so every claim counts as an agent, as before.
+ * The people the vault knows: each note with `type: person`, in any folder, as the plugin reads
+ * them (docs/adr/delegate-a-card.md). A vault with no person note knows no one, so every claim
+ * counts as an agent, as before.
  */
 export async function readPeople(root: string): Promise<Map<string, string>> {
-  const folder = join(root, PEOPLE_FOLDER)
-  if (!existsSync(folder)) return new Map()
-  const entries = await readdir(folder, { withFileTypes: true, recursive: true })
-  return peopleIn(entries.filter((entry) => !entry.isDirectory()).map((entry) =>
-    `${(entry.parentPath ?? folder).slice(root.length + 1).split(sep).join('/')}/${entry.name}`))
+  const entries = await readdir(root, { withFileTypes: true, recursive: true })
+  const notes = await Promise.all(entries.flatMap((entry) => {
+    if (entry.isDirectory() || !MARKDOWN.test(entry.name)) return []
+    const path = `${(entry.parentPath ?? root).slice(root.length + 1).split(sep).join('/')}/${entry.name}`.replace(/^\//, '')
+    if (path.split('/').some((part) => NOT_NOTES.has(part))) return []
+    return [readFile(join(root, ...path.split('/')), 'utf8').then((text) => ({ path, type: parseFrontmatter(text)?.get('type') }))]
+  }))
+  return peopleIn(notes)
 }
 
 /** Folders a vault keeps for tools, never for notes. */

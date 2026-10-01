@@ -35,7 +35,7 @@ the card to options, and adds a dated line to Notes so the next worker can conti
 
 To start a headless worker on a card, run `wi delegate <ref> --to <claude|codex|pi>` in the Git
 repository the card works on. It claims the card and starts the worker in a worktree. A card
-given to a person with `wi delegate <ref> --to <name>` needs a note in `People/`.
+given to a person with `wi delegate <ref> --to <name>` needs a note with `type: person`.
 
 ## Identity
 
