@@ -17,6 +17,7 @@ import { MoveModal } from './move-modal.ts'
 import { DependModal } from './depend-modal.ts'
 import { TagModal } from './tag-modal.ts'
 import { SendForReviewModal } from './send-for-review-modal.ts'
+import { DelegateModal } from './delegate-modal.ts'
 import { statusLabel } from './status-label.ts'
 import { menuStatuses } from './menu-status.ts'
 
@@ -69,6 +70,12 @@ function buildMenu(ctx: RenderContext, meta: WorkItemMeta): Menu {
     .setIcon('tags')
     .onClick(() => new TagModal(ctx.app, ctx.index, ctx.actions, meta).open()))
   if (meta.parentLink !== null) {
+    if (!meta.area) {
+      menu.addItem((item) => item
+        .setTitle('Delegate to…')
+        .setIcon('user-round-plus')
+        .onClick(() => new DelegateModal(ctx.app, ctx.actions, meta, ctx.personNames()).open()))
+    }
     menu.addItem((item) => item
       .setTitle('Send for review…')
       .setIcon('send')

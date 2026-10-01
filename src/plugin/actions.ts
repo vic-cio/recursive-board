@@ -28,6 +28,7 @@ import { freeTagEditsIn } from '../shared/tags.ts'
 import { parseFrontmatter } from '../shared/frontmatter.ts'
 import { parseWikilink } from '../shared/schema.ts'
 import { applyReviewRequest, applyVerdict, type Verdict } from '../shared/review.ts'
+import { assignEdits } from '../shared/delegate.ts'
 import type { WorkItemIndex, WorkItemMeta } from './index.ts'
 import { UndoStack } from './undo.ts'
 
@@ -166,6 +167,17 @@ export class Actions {
     })
     if (done) this.undoableNotice(`Sent ${meta.title} for review`)
     return done === true
+  }
+
+  /** Assigns a person or any agent through the same shared step as `wi delegate`. */
+  async delegate(meta: WorkItemMeta, holder: string): Promise<void> {
+    const label = `delegate ${meta.title} to ${holder === 'agent' ? 'an agent' : holder}`
+    const written = await this.run(label, () => this.edit(
+      meta.file,
+      (text) => assignEdits(text, holder),
+      label,
+    ))
+    if (written) this.undoableNotice(`Delegated ${meta.title} to ${holder === 'agent' ? 'an agent' : holder}`)
   }
 
   /** A card this one may wait on: not itself, not a root, and not one that already waits on it. */

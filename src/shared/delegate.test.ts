@@ -4,6 +4,7 @@ import assert from 'node:assert/strict'
 import {
   assignEdits, cardSlug, delegateTarget, delegationNote, isHarness, peopleIn, withdrawEdits, workerName,
 } from './delegate.ts'
+import { applyEdits } from './edits.ts'
 
 const card = (fields: string) => `---\ntype: work-item\nid: wi-a1\ntitle: Price the job\n${fields}---\n\nBody\n`
 
@@ -47,20 +48,31 @@ test('workerName joins the model and the card slug, or the harness when there is
   assert.equal(workerName('claude', 'price', '  '), 'claude-price')
 })
 
-test('assignEdits puts the person on the card and leaves its status alone', () => {
-  const ana = [{ op: 'set', key: 'holder', value: 'Ana' }, { op: 'remove', key: 'agent' }]
-  assert.deepEqual(assignEdits(card('status: options\n'), 'Ana'), ana)
-  assert.deepEqual(assignEdits(card('status: backlog\n'), 'Ana'), ana)
+test('assignEdits assigns a person and changes no other card data', () => {
+  const before = card('status: options\n')
+  const edits = assignEdits(before, 'Ana')
+  assert.deepEqual(edits, [{ op: 'set', key: 'holder', value: 'Ana' }, { op: 'remove', key: 'agent' }])
+  const after = applyEdits(before, edits ?? [])
+  assert.match(after, /^holder: Ana$/m)
+  assert.match(after, /^status: options$/m)
+  assert.match(after, /\nBody\n$/)
+  assert.equal(assignEdits(card('status: backlog\n'), 'Ana')?.[0]?.key, 'holder')
   assert.equal(assignEdits(card('status: options\nagent: Ana\n'), 'Ana'), null)
   assert.throws(() => assignEdits(card('status: doing\nagent: codex-x\n'), 'Ana'), /already held by codex-x/)
   assert.throws(() => assignEdits(card('status: done\n'), 'Ana'), /done card/)
 })
 
-test('assignEdits replaces a request for any agent, and writes one', () => {
-  const ana = [{ op: 'set', key: 'holder', value: 'Ana' }, { op: 'remove', key: 'agent' }]
-  assert.deepEqual(assignEdits(card('status: options\nholder: agent\n'), 'Ana'), ana)
-  assert.deepEqual(assignEdits(card('status: backlog\n'), 'agent'),
-    [{ op: 'set', key: 'holder', value: 'agent' }, { op: 'remove', key: 'agent' }])
+test('assignEdits assigns the generic agent and changes no other card data', () => {
+  const before = card('status: doing\n')
+  const edits = assignEdits(before, 'agent')
+  assert.deepEqual(edits, [{ op: 'set', key: 'holder', value: 'agent' }, { op: 'remove', key: 'agent' }])
+  const after = applyEdits(before, edits ?? [])
+  assert.match(after, /^holder: agent$/m)
+  assert.match(after, /^status: doing$/m)
+  assert.match(after, /\nBody\n$/)
+  assert.deepEqual(assignEdits(card('status: options\nholder: agent\n'), 'Ana'),
+    [{ op: 'set', key: 'holder', value: 'Ana' }, { op: 'remove', key: 'agent' }])
+  assert.equal(assignEdits(card('status: backlog\n'), 'agent')?.[0]?.key, 'holder')
   assert.equal(assignEdits(card('status: options\nholder: agent\n'), 'agent'), null)
   assert.throws(() => assignEdits(card('status: options\nholder: Ana\n'), 'agent'), /already held by Ana/)
 })
