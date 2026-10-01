@@ -225,8 +225,17 @@ test('wi --help documents area conversion', async () => {
   const { code, stdout } = await wi(['--help'])
   assert.equal(code, 0)
   assert.match(stdout, /wi area <ref> \[--off\]/)
-  assert.match(stdout, /It refuses a card\s+with an agent/i)
+  assert.match(stdout, /It refuses a card\s+with a holder/i)
   assert.match(stdout, /wi agents/)
+})
+
+test('wi --help documents the holder and delegation to any agent', async () => {
+  fixture = seed()
+  const { code, stdout } = await wi(['--help'])
+  assert.equal(code, 0)
+  assert.match(stdout, /wi delegate <ref> --to <person\|agent\|claude\|codex\|pi>/)
+  assert.match(stdout, /holder field names the person or agent/)
+  assert.match(stdout, /--to agent\` writes holder: agent and starts nothing/)
 })
 
 test('wi area converts a card to an area and back while preserving its status', async () => {

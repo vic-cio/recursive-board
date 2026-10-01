@@ -25,7 +25,7 @@ Each work item is a Markdown file in the configured work-item folder. The defaul
 | `prev_status` | Previous status recorded when an item moves to `done`; cleared when it leaves `done`. |
 | `area` | Set to `true` for an ongoing area. Areas keep a status and have no `prev_status`. |
 
-Optional fields include `owner`, `agent`, `priority`, `due`, `depends_on`, `tags`, and `archived`. Unknown frontmatter keys are preserved. `wi validate` reports them as warnings. A leftover `blocked` key is unknown and produces a warning.
+Optional fields include `owner`, `holder`, `priority`, `due`, `depends_on`, `tags`, and `archived`. `holder` names the person or agent who does the card's work; an old card's `agent` is read as its holder, and `holder: agent` asks for any agent. Unknown frontmatter keys are preserved. `wi validate` reports them as warnings. A leftover `blocked` key is unknown and produces a warning.
 
 An item with `board: true` renders its children in status columns. Any other item renders its children as a checklist. The plugin reads the item's frontmatter and generates the view; the Markdown files remain the source of truth.
 
@@ -94,7 +94,7 @@ The ribbon's dashboard icon, or the command **Open dashboard**, opens one page o
 
 - **For review.** The dashboard lists cards that you own and that have no open child. The newest `**Review:**` note must follow the last verdict note. Status does not decide this. Use **Send for review…** in the card menu to choose a person and optional files. Agents can use `wi review`. Both actions make the same edit. Set your name in the plugin settings. A note lists files as vault-relative paths in backticks. A name opens the file. On phones, each row stacks its review details inside the screen width.
 - **Progress.** Done cards out of all cards, for each top area. Click an area to see the areas inside it, and to narrow the other panels to it.
-- **Agents.** Claimed cards for each area: working, idle for an hour, or recently finished.
+- **Agents.** Claimed cards for each area: working, idle for an hour, or recently finished. A card with `holder: agent` has no agent on it yet, so it is not listed.
 
 Mobile dashboard links open vault files in the current tab. Desktop links open them in a new tab.
 
@@ -152,15 +152,15 @@ The pre-commit hook runs `wi validate` and stops a commit when the vault has err
 | `wi new … [--creator <name>] [--model <id>] [--role <name>]` | Writes an explicit role as a plain name. Otherwise, the card reads its role from the nearest ancestor. The add row stores no role. `--creator` and `--model` remain accepted no-ops. The command reports this on stderr. `--strict` checks only the brief. |
 | `wi set <ref> [--owner <name>] [--role <name>] [--creator <name> [--model <id>]]` | Changes a card's owner or role (an empty value removes it). Writes the creator and model only when the card has none: a creator is set once. |
 | `wi depend <ref> --on <ref> [--off]` | Makes a card wait on another card, or with `--off` stops it. `wi claim` and `wi status <ref> doing` refuse a card that waits on a card that is not done. The board allows it and shows a notice. `wi status <ref> done` names each card that can start now. |
-| `wi area <ref> [--off]` | Marks a card as an area or removes the area mark. The current status stays in place. Conversion refuses a card with an agent. |
+| `wi area <ref> [--off]` | Marks a card as an area or removes the area mark. The current status stays in place. Conversion refuses a card with a holder. |
 | `wi tag <ref> <tag> [--off]` | Adds a free tag to a card, or with `--off` removes it. Case and a leading `#` do not matter. It refuses old `area/` tags. On the board, **Tags…** in the card menu does the same: it lists the card's free tags, checked, then the other free tags on work items, and adds a tag you type. |
-| `wi claim <ref> --agent <name>` | Claims a card for an agent and moves it to doing in one write. Refuses a different agent, a done card, an open dependency, or a board with a child in doing that another agent or a person works. An agent can hold a card and its current subtask at once. Repeating an active claim by the same agent writes nothing. |
-| `wi agents` | Prints the configured agent limit, the number of distinct agents with a card in doing, and each claimed doing card. A card that a person holds does not count: a person is a note with `type: person`. `--json` returns `maxAgents`, `activeAgents` and `claims`. |
-| `wi delegate <ref> --to <person\|claude\|codex\|pi> [--model <id>] [--agent <name>] [--permission <mode>]` | Hands a card to a person or a headless agent. For a person, it only assigns the card: their name goes in `agent`, and the status stays. For `claude`, `codex` or `pi`, it claims the card, moves it to doing, makes a worktree of the current Git repository on `card/<slug>`, starts the harness in it with the card body as the brief, and notes the log path and the resume command. See [Delegate a card](#delegate-a-card). |
+| `wi claim <ref> --agent <name>` | Sets the card's `holder` to the name and moves the card to doing in one write. The holder of a delegated card claims it to start it. A claim replaces `holder: agent`. Refuses a different holder, the name `agent`, a done card, an open dependency, or a board with a child in doing that another agent or a person works. An agent can hold a card and its current subtask at once. Repeating an active claim by the same agent writes nothing. |
+| `wi agents` | Prints the configured agent limit, the number of distinct agents with a card in doing, and each claimed doing card. A card that a person holds does not count: a person is a note with `type: person`. `--json` returns `maxAgents`, `activeAgents` and `claims`. A card with `holder: agent` does not count. |
+| `wi delegate <ref> --to <person\|agent\|claude\|codex\|pi> [--model <id>] [--agent <name>] [--permission <mode>]` | Sets the card's `holder` and nothing else: the status stays. For a person, it writes their name. For `agent`, it writes `holder: agent`, which asks any agent, and starts nothing. For `claude`, `codex` or `pi`, it names the worker as holder, makes a worktree of the current Git repository on `card/<slug>`, starts the harness in it with the card body as the brief, and notes the log path and the resume command. The worker claims the card when it starts. See [Delegate a card](#delegate-a-card). |
 | `wi review <ref> --to <name> [--files <path>]...` | Sends a card to a person note for review. It sets `owner` and appends a `**Review:**` note in one write. Repeat `--files` for each vault-relative path. The card menu uses the same edit. |
-| `wi ready [--parent <ref>] [--agent <name>] --json` | Lists unclaimed cards in options that a dispatcher can start. `--parent` limits the result to descendants of one board; without it, the query covers the vault. It sorts by priority, then update date. JSON also names excluded option cards and reasons. `--agent` permits a board whose active child belongs to that agent. |
+| `wi ready [--parent <ref>] [--agent <name>] --json` | Lists unclaimed cards in options that a dispatcher can start. `--parent` limits the result to descendants of one board; without it, the query covers the vault. It lists the cards with `holder: agent` first, then sorts by priority, then update date. JSON also names excluded option cards and reasons. `--agent` permits a board whose active child belongs to that agent. |
 | `wi dashboard [--you <name>] [--parent <ref>] --json` | Prints the dashboard's summary: the cards that wait for review by `--you`, progress by area, working, idle and finished claims, and the cards that need attention, with counts. `--parent` names a root or an area to focus on. It uses the plugin's dashboard rules and writes nothing. |
-| `wi release <ref> --reason <text> [--where <branch-or-path>]` | Clears the agent, moves the card to options, and adds a dated line to Notes with the reason and optional work location. Refuses an unclaimed card. |
+| `wi release <ref> --reason <text> [--where <branch-or-path>]` | Clears the holder, moves the card to options, and adds a dated line to Notes with the reason and optional work location. Refuses an unclaimed card. |
 | `wi move <ref> --to <ref>` | Changes the item's parent. Its status stays the same, and its children move with it. |
 | `wi archive <ref> [--undo]` | Archives an item. `--undo` unarchives it. Archived items are hidden from normal reads; descendants are hidden with an archived parent. |
 | `wi promote <ref>` / `wi demote <ref>` | Makes an item a board or a card again. Promotion sets `board: true`; demotion removes the `board` key. |
@@ -189,17 +189,21 @@ starting status. Areas appear in their status column. Areas in options or doing 
 
 Use `wi` for work-item changes. Do not edit work-item Markdown directly with scripts or bulk text tools. Use `wi validate` to check the vault after changes. `wi rm` moves items into `.trash`; removing a parent requires `--recursive`. Use `wi rm <ref> --dry-run` to review the affected items first.
 
-A dispatcher runs `wi agents` before starting workers and holds off when `activeAgents` reaches `maxAgents`; `null` means there is no configured limit. Set `WI_MAX_AGENTS` for a one-run override. The limit is advisory, and `wi claim` does not enforce it. A dispatcher assigns a card with `wi claim <ref> --agent <name>`, or starts a worker on it with `wi delegate <ref> --to <harness>`. `wi delegate` warns when the new worker passes the limit, and it does not refuse. If that worker stops, the dispatcher runs `wi release <ref> --reason <text> [--where <branch-or-path>]` so the next worker can find the unfinished work. Keep a card in doing until its work is accepted.
+A dispatcher runs `wi agents` before starting workers and holds off when `activeAgents` reaches `maxAgents`; `null` means there is no configured limit. Set `WI_MAX_AGENTS` for a one-run override. The limit is advisory, and `wi claim` does not enforce it. A dispatcher assigns a card with `wi claim <ref> --agent <name>`, starts a worker on it with `wi delegate <ref> --to <harness>`, or leaves it for any agent with `wi delegate <ref> --to agent`. `wi delegate` warns when the new worker passes the limit, and it does not refuse. If that worker stops, the dispatcher runs `wi release <ref> --reason <text> [--where <branch-or-path>]` so the next worker can find the unfinished work. Keep a card in doing until its work is accepted.
 
 ### Delegate a card
 
-`wi delegate <ref> --to <person>` assigns the card to a person. Their name goes in `agent`, and the status stays, so they choose when to start. It writes no note; people explain a hand-off on the platform they talk on. The person needs a note with `type: person` in its frontmatter, in any folder, for example `People/Ana.md`. A card a person holds does not count toward `maxAgents`. Any other name is refused, so a typo cannot pass for an agent.
+Delegating sets the card's `holder` and nothing else. The status stays: the delegator moves the card if it must move, or the holder does when they start.
+
+`wi delegate <ref> --to <person>` assigns the card to a person. Their name goes in `holder`. It writes no note; people explain a hand-off on the platform they talk on. The person needs a note with `type: person` in its frontmatter, in any folder, for example `People/Ana.md`. A card a person holds does not count toward `maxAgents`. Any other name is refused, so a typo cannot pass for an agent.
+
+`wi delegate <ref> --to agent` writes `holder: agent`: any agent may take the card. It starts nothing and writes no note. `wi ready` lists these cards first, and the first agent's `wi claim` replaces `agent` with its own name. A person note called `agent` is refused, because the name is reserved.
 
 `wi delegate <ref> --to claude|codex|pi` hands the card to a headless agent:
 
 1. It makes a worktree of the Git repository you run it in. The worktree is `<repo>-worktrees/<slug>` beside the repository, on the branch `card/<slug>`. The slug comes from the card title. A worktree that is already on that branch is used again.
-2. It claims the card for the worker, `<harness>-<slug>` by default or `--agent <name>`, and notes who has it and why.
-3. It starts the harness as a detached process in the worktree, so the worker outlives the command and the session that ran it. The prompt names the card, the worker and the worktree, then gives the card body as the brief.
+2. It names the worker as the card's holder and notes who has it. The worker's name is the model and the slug, for example `gpt-6-luna-price-the-job`; with no `--model` it is `<harness>-<slug>`; `--agent <name>` sets it. The status stays.
+3. It starts the harness as a detached process in the worktree, so the worker outlives the command and the session that ran it. The prompt names the card, the worker and the worktree, and tells the worker to run `wi claim` on its card when it starts, which moves the card to doing. Then it gives the card body as the brief.
 4. It notes the process id, the log `<repo>-worktrees/<slug>.log`, and the command that resumes the session.
 
 The worker gets `WI_VAULT`, `WI_CARD`, `WI_AGENT` and `WI_MODEL`. `WI_AGENT` names the worker. `WI_MODEL` names the model when set. `wi note` signs with the writer's name. It refuses to write without `WI_AGENT` or `--agent`. `wi show` returns the effective role. It marks a role as inherited when it comes from an ancestor.
@@ -212,7 +216,7 @@ The worker gets `WI_VAULT`, `WI_CARD`, `WI_AGENT` and `WI_MODEL`. `WI_AGENT` nam
 
 The default never bypasses permissions. Pass a bypass mode yourself only when the worktree runs in a sandbox you trust.
 
-Every check runs before the first write: the target, the Git repository, the permission mode, and the worktree path. If the harness cannot start, `wi delegate` releases the claim with the reason.
+Every check runs before the first write: the target, the Git repository, the permission mode, the worktree path, and every check `wi claim` would make for the worker. If the harness cannot start, `wi delegate` gives the card back its holder from before and notes the reason. The status stays.
 
 #### Allow `wi delegate` in Claude Code
 

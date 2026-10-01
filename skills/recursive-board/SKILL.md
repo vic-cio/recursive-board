@@ -72,10 +72,11 @@ wi set <ref> --owner <name> | --role <role>                   # change who owns 
 wi area <ref>                         # mark a card as an area
 wi area <ref> --off                   # remove the area mark
 wi tag <ref> <tag>                    # add a free tag; --off removes it
-wi claim <ref> --agent <name>        # assign and move to doing in one write
+wi claim <ref> --agent <name>        # set the holder and move to doing in one write
 wi review <ref> --to <person> [--files <path>]...  # send the card to a person for review
-wi delegate <ref> --to <person>      # assign to a person (a type: person note); status stays
-wi delegate <ref> --to <claude|codex|pi> [--model <id>]  # start a headless worker on the card's brief
+wi delegate <ref> --to <person>      # make a person (a type: person note) the holder; status stays
+wi delegate <ref> --to agent         # leave the card for any agent (holder: agent); starts nothing
+wi delegate <ref> --to <claude|codex|pi> [--model <id>]  # name a worker as holder and start it
 wi release <ref> --reason <text> [--where <branch-or-path>]
 wi move <ref> --to <new parent ref>
 wi archive <ref>                    # --undo reverses it
@@ -102,9 +103,12 @@ In Obsidian, use **Promote** at the top of any child card to give it its own boa
 - The first child a card gets turns the card into a board, unless the vault sets
   `autoPromote: false`.
 - To untick a done item, set it back to its `prev_status`.
-- `wi area <ref>` marks the item as an area and keeps its status. It removes `prev_status` and refuses a card with an agent. Convert it back with `wi area <ref> --off`; its status stays the same.
-- A dispatcher claims cards from options for its workers. `wi claim` refuses a card claimed by a
-  different agent, a done card, or a board with a child in doing that someone else works. `wi claim`
+- `wi area <ref>` marks the item as an area and keeps its status. It removes `prev_status` and refuses a card with a holder. Convert it back with `wi area <ref> --off`; its status stays the same.
+- A card's `holder` names the person or agent who does its work. An old card's `agent` is read as
+  its holder. `holder: agent` asks for any agent: `wi ready` lists those cards first, and your
+  claim replaces `agent` with your name.
+- A dispatcher claims cards from options for its workers. `wi claim` refuses a card held by a
+  different holder, a done card, or a board with a child in doing that someone else works. `wi claim`
   and `wi status <ref> doing` refuse a card with an open dependency. `wi children` marks it
   `[waits on N]`, and `wi status <ref> done` names each card it unblocks. When work must wait for
   another card, record it with `wi depend <card> --on <other>`, not in prose. One
@@ -119,15 +123,16 @@ In Obsidian, use **Promote** at the top of any child card to give it its own boa
   returns what the person's dashboard shows: review work, progress, claims and attention.
 - To hand a card to a worker, run `wi delegate <card> --to <harness> --model <id>`. The worker
   reads the card body as its brief, so write the brief on the card first.
-  It makes a worktree of the current Git repository on `card/<slug>`, claims the card for the
-  worker, starts the harness with the card body as the brief, and notes the log path. Run it in the
-  repository the card works on. To assign a card to a person, use `--to <name>` with a note of
-  `type: person`. It sets only `agent`, so the person starts when they choose, and the card does
-  not count in `wi agents`.
+  Delegating sets the holder and nothing else; the status stays. It names the worker
+  `<model>-<slug>` as holder, makes a worktree of the current Git repository on `card/<slug>`,
+  starts the harness with the card body as the brief, and notes the log path. The worker claims
+  the card when it starts, which moves it to doing. Run it in the repository the card works on.
+  To assign a card to a person, use `--to <name>` with a note of `type: person`; the card does not
+  count in `wi agents`. To leave a card for any agent, use `--to agent`.
 - A dispatcher records each event on the card (start, finish, retry, stop) with
   `wi note <card> "<event>" --agent <its name>`.
 - When a worker stops, its dispatcher runs `wi release` with a reason and, when available, the
-  branch or worktree path. Release clears the agent, returns the card to options, and records the
+  branch or worktree path. Release clears the holder, returns the card to options, and records the
   continuation location in Notes.
 - Old `area/...` tags stay on existing cards. The board hides them, and Tags… leaves them out.
 - Add or remove a free tag with `wi tag <ref> <tag> [--off]`. It refuses old `area/` tags.
@@ -154,7 +159,8 @@ marks an inherited role, and `wi delegate` gives the worker that procedure. New 
 inherited role. `--role <role>` sets an explicit role. The board's add row also stores no role.
 `--creator` and `--model` on `wi new` remain accepted no-ops. Old creator fields stay valid.
 
-1. Claim the card: `wi claim <card> --agent <me>`. Read its body and its open children.
+1. Claim the card: `wi claim <card> --agent <me>`. A delegated card names you as its holder
+   already; your claim moves it to doing. Read its body and its open children.
 2. Split it before you start when it holds more than one deliverable. Make each step a child with
    a full brief: `wi new "<title>" --parent <card> --objective ... --criteria ...`. Set
    `--priority` when the order matters.

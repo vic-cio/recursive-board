@@ -47,7 +47,7 @@ const HELP = `wi — the Recursive Board CLI
 
 Usage
   wi setup [--yes] [--vault <path>] [--force]
-  wi new <title> [--parent <ref>] [--status <s>] [--template <t>] [--owner <o>] [--agent <a>]
+  wi new <title> [--parent <ref>] [--status <s>] [--template <t>] [--owner <o>] [--agent <holder>]
                  [--priority <n>] [--objective <text>] [--context <text>]... [--criteria <text>]...
                  [--creator <name>] [--model <id>] [--role <name>] [--strict]
   wi status <ref> <status>
@@ -57,7 +57,7 @@ Usage
   wi depend <ref> --on <ref> [--off]
   wi set <ref> [--owner <name>] [--role <name>] [--creator <name> [--model <id>]]
   wi claim <ref> --agent <name>
-  wi delegate <ref> --to <person|claude|codex|pi> [--model <id>] [--agent <name>]
+  wi delegate <ref> --to <person|agent|claude|codex|pi> [--model <id>] [--agent <name>]
                  [--permission <mode>]
   wi review <ref> --to <name> [--files <path>]...
   wi agents
@@ -116,18 +116,22 @@ Notes
   folder, because the index cannot read it and may be missing a work item. Let the sync
   client download the file, or delete the stray file, then retry. There is no --force.
   \`wi archive\` changes one flag. Descendants disappear with their parent at read time.
-  \`wi area <ref>\` marks a card as an area and keeps its status. It refuses a card with an agent.
+  \`wi area <ref>\` marks a card as an area and keeps its status. It refuses a card with a holder.
   Use \`wi area <ref> --off\` to convert back without changing its status.
   \`wi depend <ref> --on <ref>\` makes a card wait on another card; --off removes that. \`wi claim\`
   and \`wi status <ref> doing\` refuse a card with an open dependency. \`wi children\` marks it
   [waits on N].
   \`wi status <ref> done\` names each card it unblocks. An archived card that is not done still blocks.
-  \`wi claim\` lets an agent hold a card and its subtasks at once. It refuses a board with a child in
-  doing that a different agent or a person works.
-  \`wi delegate <ref> --to <person>\` assigns the card to a person (a note with type: person): it sets
-  agent and keeps the status, and writes no note. \`--to claude|codex|pi\` claims the card,
+  A card's holder field names the person or agent who does its work. An old card's agent field
+  is read as its holder. The holder value agent asks for any agent: \`wi ready\` lists those cards
+  first, and a claim replaces agent with the claimant's name.
+  \`wi claim\` writes the holder and moves the card to doing. It lets an agent hold a card and its
+  subtasks at once. It refuses a board with a child in doing that a different agent or a person works.
+  \`wi delegate\` sets the holder and nothing else: the status stays. \`--to <person>\` names a person
+  (a note with type: person) and writes no note. \`--to agent\` writes holder: agent and starts nothing.
+  \`--to claude|codex|pi\` names the worker <model>-<slug> (or <harness>-<slug> with no --model) as holder,
   makes a worktree of this Git repository on card/<slug> beside it, in <repo>-worktrees/, and starts that harness headless with the card body as its
-  brief. The note names the log, <repo>-worktrees/<slug>.log, and the command that resumes the session.
+  brief. The worker runs \`wi claim\` on its card when it starts, which moves it to doing. The note names the log, <repo>-worktrees/<slug>.log, and the command that resumes the session.
   --permission passes the harness's own mode: claude takes --permission-mode (default auto), codex
   takes --sandbox (default workspace-write), and pi has none. The default never bypasses permissions.
   \`wi objective\` is retired. Use \`wi show <ref> --json\` to read a card and its ancestor objectives.
