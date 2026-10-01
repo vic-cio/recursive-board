@@ -4,7 +4,7 @@ import { chmodSync, existsSync, readdirSync, readFileSync, rmSync, statSync, uti
 import { join } from 'node:path'
 import { setTimeout as sleep } from 'node:timers/promises'
 
-import { applyEdits, withStamp, writeAtomic, writeNew, editItem, withFileLock, lockPathFor } from './write.ts'
+import { applyEdits, withStamp, writeAtomic, writeNew, editItem, withFileLock, lockPathFor, isSameLock } from './write.ts'
 import { parseFrontmatter } from '../shared/frontmatter.ts'
 import { loadVault } from './vault.ts'
 import { makeVault, item, type Fixture } from './test-helpers.ts'
@@ -201,6 +201,13 @@ test('two processes that both find a stale lock never both hold it', async () =>
   await Promise.all([a, b])
   assert.equal(most, 1, 'the two holders never overlapped')
   assert.equal(existsSync(lock), false, 'the lock is gone when both are done')
+})
+
+test('a fresh lock that reuses the stale lock\'s inode is a different lock', () => {
+  // Linux reuses a freed inode at once, so the inode alone cannot tell the two apart.
+  const stale = { ino: 42, mtimeMs: Date.now() - 60_000 }
+  assert.equal(isSameLock(stale, { ino: 42, mtimeMs: Date.now() }), false)
+  assert.equal(isSameLock(stale, { ...stale }), true)
 })
 
 test('a holder whose lock was taken over as stale does not remove the new holder\'s lock', async () => {

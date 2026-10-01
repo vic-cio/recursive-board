@@ -71,13 +71,25 @@ export interface LockHooks {
   afterStaleCheck?: () => Promise<void>
 }
 
+/** What identifies a lock file between two looks at it. */
+export interface LockStamp { ino: number; mtimeMs: number }
+
 /**
- * Moves the lock at `lock` aside when it is still the one judged stale (`ino`), and removes it.
+ * True when two looks saw the same lock. The inode alone is not enough: Linux reuses a freed
+ * inode at once, so a fresh lock can carry the stale one's number. A stale lock is over 30
+ * seconds old and a fresh one is new, so the modification time tells them apart.
+ */
+export function isSameLock(judged: LockStamp, seen: LockStamp): boolean {
+  return judged.ino === seen.ino && judged.mtimeMs === seen.mtimeMs
+}
+
+/**
+ * Moves the lock at `lock` aside when it is still the one judged stale (`judged`), and removes it.
  * The rename is atomic, so only one process moves a given lock. A process that moved a fresh
  * lock instead, because another process took the stale one over first, links it back. A link
  * never replaces a file, so this cannot remove a third process's lock either.
  */
-async function takeOver(lock: string, ino: number): Promise<void> {
+async function takeOver(lock: string, judged: LockStamp): Promise<void> {
   const aside = `${lock}.stale-${uniqueSuffix()}`
   try {
     await rename(lock, aside)
@@ -86,7 +98,7 @@ async function takeOver(lock: string, ino: number): Promise<void> {
     throw error
   }
   const moved = await stat(aside).catch(() => undefined)
-  if (moved !== undefined && moved.ino !== ino) {
+  if (moved !== undefined && !isSameLock(judged, moved)) {
     // A directory is a live lock from wi 0.7.0 or earlier, and a directory cannot be linked.
     await (moved.isFile() ? link(aside, lock) : rename(aside, lock)).catch(() => undefined)
   }
@@ -133,7 +145,7 @@ export async function withFileLock<T>(path: string, fn: () => Promise<T>, hooks:
       if (found === undefined) continue
       if (Date.now() - found.mtimeMs > LOCK_STALE_MS) {
         await hooks.afterStaleCheck?.()
-        await takeOver(lock, found.ino)
+        await takeOver(lock, found)
         continue
       }
       if (Date.now() > deadline) {
