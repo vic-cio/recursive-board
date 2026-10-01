@@ -12,7 +12,7 @@ It has four panels:
 - **For review.** A card waits for your review when it is in doing, its `owner` equals the name
   in the setting "Your name", and it has no open child. The card's newest `**Review:**` line says
   what to check and lists each file to open as a vault-relative path in backticks. A `wi note`
-  prefix before it is fine. With no such line, the row opens the card. Markdown opens in Obsidian.
+  prefix before it is fine. When the line lists no file, a row for the card itself opens it and carries the tick. Markdown opens in Obsidian.
   Another file opens in its own app on a desktop, and in Obsidian on a phone.
   The line may also list a web address (`http://` or `https://`). The setting "Web pages in For
   review" controls whether those rows appear and where they open. A web row has no tick and no

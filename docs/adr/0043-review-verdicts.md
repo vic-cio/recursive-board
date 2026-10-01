@@ -7,8 +7,8 @@ This amends [0040](0040-dashboard-view.md), which said the dashboard writes no w
 
 A tick in the review table records only that you looked at a file row. Ticks follow the selected
 person across devices. Web rows have no tick and do not count toward a verdict. When every file row of a card is ticked, the
-card's row shows two buttons. A card with only web rows has no verdict buttons; its agent closes
-it.
+card's row shows two buttons. A card whose review lists no file, or only web pages, has its own row
+with a tick. That tick counts as the card's one file row.
 
 - **Approve** writes the note `Approved by <you>.` and moves the card to done.
 - **Send back** offers a comment, writes the note `Sent back by <you>: <comment>`, or
@@ -27,6 +27,9 @@ sent back starts its next review clean. The notice that confirms a verdict carri
 The review table told you what to check but left the verdict to a separate session with an
 agent. Approving is the common case and is one click. Sending back needs words, so it asks for
 them, and the Notes line carries them to the agent that picks the card up.
+
+A card with no file to check still needs a verdict from the dashboard. Its own row gives the
+reviewer one place to record that they looked.
 
 Removing `owner` is enough to hand the card back: `owner` is what puts it in For review, and the
 agent's `agent` field is still on the card. No new field records the verdict; the Notes line does.
