@@ -140,7 +140,6 @@ export function renderMetaStrip(host: HTMLElement, meta: WorkItemMeta, ctx?: Ren
   } else if (meta.parentLink === null) {
     strip.createSpan({ cls: 'wi-pill is-root', text: 'Root' })
   }
-  if (meta.blocked) strip.createSpan({ cls: 'wi-pill is-blocked', text: 'Blocked' })
   const waits = ctx?.index.openDependencies(meta) ?? []
   if (waits.length > 0) {
     const pill = strip.createSpan({ cls: 'wi-pill is-waiting' })

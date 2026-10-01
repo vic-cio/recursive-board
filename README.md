@@ -25,7 +25,7 @@ Each work item is a Markdown file in the configured work-item folder. The defaul
 | `prev_status` | Previous status recorded when an item moves to `done`; cleared when it leaves `done`. |
 | `area` | Set to `true` for an ongoing area. Areas keep a status and have no `prev_status`. |
 
-Optional fields include `owner`, `agent`, `priority`, `due`, `blocked`, `depends_on`, `tags`, and `archived`. Unknown frontmatter keys are preserved. `wi validate` reports them as warnings.
+Optional fields include `owner`, `agent`, `priority`, `due`, `depends_on`, `tags`, and `archived`. Unknown frontmatter keys are preserved. `wi validate` reports them as warnings. A leftover `blocked` key is unknown and produces a warning.
 
 An item with `board: true` renders its children in status columns. Any other item renders its children as a checklist. The plugin reads the item's frontmatter and generates the view; the Markdown files remain the source of truth.
 
@@ -155,7 +155,7 @@ The pre-commit hook runs `wi validate` and stops a commit when the vault has err
 | `wi depend <ref> --on <ref> [--off]` | Makes a card wait on another card, or with `--off` stops it. `wi claim` and `wi status <ref> doing` refuse a card that waits on a card that is not done. The board allows it and shows a notice. `wi status <ref> done` names each card that can start now. |
 | `wi area <ref> [--off]` | Marks a card as an area or removes the area mark. The current status stays in place. Conversion refuses a card with an agent. |
 | `wi tag <ref> <tag> [--off]` | Adds a free tag to a card, or with `--off` removes it. Case and a leading `#` do not matter. It refuses an `area/` tag, because `wi retag` owns it. On the board, **Tags…** in the card menu does the same: it lists the card's tags, checked, then the other tags on work items, and adds a tag you type. |
-| `wi claim <ref> --agent <name>` | Claims a card for an agent and moves it to doing in one write. Refuses a different agent, a done card, or a board with a child in doing that another agent or a person works. It also refuses a card with `blocked: true`, which `wi children` marks `[blocked]`. An agent can hold a card and its current subtask at once. Repeating an active claim by the same agent writes nothing. |
+| `wi claim <ref> --agent <name>` | Claims a card for an agent and moves it to doing in one write. Refuses a different agent, a done card, an open dependency, or a board with a child in doing that another agent or a person works. An agent can hold a card and its current subtask at once. Repeating an active claim by the same agent writes nothing. |
 | `wi agents` | Prints the configured agent limit, the number of distinct agents with a card in doing, and each claimed doing card. A card that a person holds does not count: a person is a note with `type: person`. `--json` returns `maxAgents`, `activeAgents` and `claims`. |
 | `wi delegate <ref> --to <person\|claude\|codex\|pi> [--model <id>] [--agent <name>] [--permission <mode>]` | Hands a card to a person or a headless agent. For a person, it only assigns the card: their name goes in `agent`, and the status stays. For `claude`, `codex` or `pi`, it claims the card, moves it to doing, makes a worktree of the current Git repository on `card/<slug>`, starts the harness in it with the card body as the brief, and notes the log path and the resume command. See [Delegate a card](#delegate-a-card). |
 | `wi ready [--parent <ref>] [--agent <name>] --json` | Lists unclaimed cards in options that a dispatcher can start. `--parent` limits the result to descendants of one board; without it, the query covers the vault. It sorts by priority, then update date. JSON also names excluded option cards and reasons. `--agent` permits a board whose active child belongs to that agent. |
@@ -168,7 +168,7 @@ The pre-commit hook runs `wi validate` and stops a commit when the vault has err
 | `wi promote <ref>` / `wi demote <ref>` | Makes an item a board or a card again. Promotion sets `board: true`; demotion removes the `board` key. |
 | `wi rm <ref> [--recursive] [--dry-run]` | Moves an item to the vault's `.trash` folder. Use `--dry-run` to preview. Items with children require `--recursive`. |
 | `wi children [<ref>] [--status <status>] [--tree] [--archived]` | Lists an item's children. If the ref is omitted, uses the repo pointer's board. `--status` filters by status, `--tree` shows descendants, and `--archived` includes archived items. |
-| `wi show <ref> --json` | Reads one complete card as JSON. It includes the brief, Notes, assignment, ancestor objectives, dependencies, blocked state, and child summary. Broken links appear as issues; the command changes no files. |
+| `wi show <ref> --json` | Reads one complete card as JSON. It includes the brief, Notes, assignment, ancestor objectives, dependencies, and child summary. Broken links appear as issues; the command changes no files. |
 | `wi validate` | Checks work-item structure and reports errors and warnings. Exits with code 1 when it finds errors. |
 | `wi hook install\|uninstall\|status [--vault <path>]` | Installs, removes, or inspects the Git pre-commit validation hook. `install --force` replaces an unrelated hook. |
 | `wi here [--board <ref>] [--vault <path>]` | Prints this Git repo's pointer, or sets it in user config. Linked worktrees share the pointer. |

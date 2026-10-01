@@ -60,11 +60,13 @@ test('two concurrent claims of one card: one agent wins and the other is refused
   assert.equal(fmOf(fixture, 'Task').get('agent'), winner)
 })
 
-test('a claim refuses a card that another process marked blocked after the load', async () => {
+test('a claim refuses a card that another process gave an open dependency after the load', async () => {
   fixture = seed()
+  fixture.write('Boards/Spec.md', item({ type: 'work-item', id: 'wi-spec', title: 'Spec',
+    status: 'backlog', parent: '"[[Main]]"' }))
   const vault = await loadVault(fixture.root)
-  writeFileSync(join(fixture.root, 'Boards/Task.md'), textOf(fixture, 'Task').replace('status: options', 'status: options\nblocked: true'))
-  await assert.rejects(claimItem(vault, 'Task', 'alpha'), /blocked/)
+  writeFileSync(join(fixture.root, 'Boards/Task.md'), textOf(fixture, 'Task').replace('status: options', 'status: options\ndepends_on: "[[Spec]]"'))
+  await assert.rejects(claimItem(vault, 'Task', 'alpha'), /waits on Spec/)
   assert.equal(fmOf(fixture, 'Task').has('agent'), false)
 })
 

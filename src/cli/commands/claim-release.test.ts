@@ -3,6 +3,7 @@ import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 
 import { claimItem, releaseItem } from './claim-release.ts'
+import { setDependency } from './depend.ts'
 import { loadVault } from '../vault.ts'
 import { parseFrontmatter } from '../../shared/frontmatter.ts'
 import { today } from '../../shared/schema.ts'
@@ -91,14 +92,17 @@ test('an agent can hold a card and the subtask it works now, in either order', a
   await assert.rejects(claimItem(await loadVault(fixture.root), 'wi-0003', 'luna'), /already claimed by codex/)
 })
 
-test('claim refuses a blocked card, but a holder can repeat its claim', async () => {
-  fixture = seed({ blocked: true })
+test('claim refuses an open dependency, but a holder can repeat its claim', async () => {
+  fixture = seed()
+  fixture.write('Boards/Spec.md', item({ type: 'work-item', id: 'wi-spec', title: 'Spec',
+    status: 'backlog', parent: '"[[Main]]"', created: '2026-09-21', updated: '2026-09-21' }))
+  await setDependency(await loadVault(fixture.root), 'Task', 'Spec', true)
   const before = textOf(fixture)
-  await assert.rejects(claimItem(await loadVault(fixture.root), 'wi-0002', 'codex'), /is blocked/)
+  await assert.rejects(claimItem(await loadVault(fixture.root), 'wi-0002', 'codex'), /waits on Spec/)
   assert.equal(textOf(fixture), before)
   fixture.cleanup()
 
-  fixture = seed({ blocked: true, status: 'doing', agent: 'codex' })
+  fixture = seed({ depends_on: '"[[Spec]]"', status: 'doing', agent: 'codex' })
   const repeat = await claimItem(await loadVault(fixture.root), 'wi-0002', 'codex')
   assert.equal(repeat.changed, false)
 })

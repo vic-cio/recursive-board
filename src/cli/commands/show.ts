@@ -1,7 +1,7 @@
 /** A complete read of one card for agents. This command never changes a vault file. */
 import { getList } from '../../shared/frontmatter.ts'
 import { bodyOf, listItems, section } from '../../shared/sections.ts'
-import { dependenciesOf, openDependencies, titleOf } from '../dependencies.ts'
+import { dependenciesOf, titleOf } from '../dependencies.ts'
 import type { Vault, WorkItem } from '../vault.ts'
 
 function stringField(item: WorkItem, key: string): string | null {
@@ -46,7 +46,6 @@ export function showCard(vault: Vault, ref: string) {
   const item = vault.resolve(ref)
   const body = bodyOf(item.text)
   const dependencies = dependenciesOf(vault, item)
-  const waiting = openDependencies(vault, item)
   const ancestry = ancestryOf(vault, item)
   const parent = item.parent === null ? undefined : vault.resolveLink(item.parent)
   const children = vault.childrenOf(item)
@@ -79,7 +78,6 @@ export function showCard(vault: Vault, ref: string) {
     })),
     unresolvedDependencies: dependencies.unresolved,
     malformedDependencies: dependencies.malformed,
-    blocked: { flag: item.frontmatter.get('blocked') === true, waiting: waiting.length > 0 },
     children: {
       total: children.length,
       open: children.filter((child) => child.status !== 'done' && !vault.isArchived(child)).length,

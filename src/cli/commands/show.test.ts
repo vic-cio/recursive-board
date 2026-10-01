@@ -17,7 +17,7 @@ test('showCard returns the card, its brief, ancestry, dependencies, and children
   fixture.write('Boards/Build.md', item({
     type: 'work-item', id: 'wi-build', title: 'Build', status: 'doing', parent: '"[[Main]]"',
     board: true, owner: 'Victor', agent: 'codex', role: 'Worker', priority: 2, due: '2026-10-03',
-    created: '2026-09-01', updated: '2026-09-29', blocked: true,
+    created: '2026-09-01', updated: '2026-09-29',
   }, '## Objective\n\nBuild the app.\n\n## Context\n\nUse the spec.\n\n## Acceptance Criteria\n\n- App starts\n- Tests pass\n\n## Notes\n\n- Work started.\n'))
   fixture.write('Boards/Ship.md', item({
     type: 'work-item', id: 'wi-ship', title: 'Ship', status: 'options', parent: '"[[Main]]"',
@@ -31,7 +31,7 @@ test('showCard returns the card, its brief, ancestry, dependencies, and children
   assert.equal(shown.parent?.id, 'wi-root')
   assert.deepEqual(shown.ancestry.map((entry) => entry.id), ['wi-root'])
   assert.deepEqual(shown.dependencies.map((entry) => [entry.id, entry.satisfied]), [['wi-build', false]])
-  assert.deepEqual(shown.blocked, { flag: false, waiting: true })
+  assert.equal('blocked' in shown, false)
 
   const build = showCard(await loadVault(fixture.root), 'wi-build')
   assert.equal(build.owner, 'Victor')
@@ -47,7 +47,7 @@ test('showCard returns the card, its brief, ancestry, dependencies, and children
     { id: 'wi-deploy', title: 'Deploy', status: 'options', archived: false },
     { id: 'wi-test', title: 'Test', status: 'done', archived: false },
   ] })
-  assert.deepEqual(build.blocked, { flag: true, waiting: false })
+  assert.equal('blocked' in build, false)
 })
 
 test('showCard exposes a broken parent link and unresolved dependencies', async () => {

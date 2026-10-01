@@ -273,14 +273,18 @@ test('an unknown key is a warning, never an error, because it must be preserved'
   assert.equal(report.ok, true)
 })
 
-test('an optional field is not an unknown key', async () => {
+test('the removed blocked field is an unknown key warning', async () => {
   fixture = healthy()
   fixture.write('Boards/Full.md', item({
     type: 'work-item', id: 'wi-0024', title: 'Full', status: 'backlog',
     parent: '"[[Main]]"', owner: 'sam', agent: 'codex', priority: 1,
     due: '2026-10-01', blocked: true, created: '2026-09-21', updated: '2026-09-21',
   }))
-  assert.deepEqual((await run(fixture)).problems, [])
+  const report = await run(fixture)
+  const problem = report.problems.find((p) => p.rule === 'unknown-key' && p.relPath.includes('Full.md'))
+  assert.ok(problem)
+  assert.equal(problem.severity, 'warning')
+  assert.equal(report.ok, true)
 })
 
 test('a Markdown file nested below Boards is an error', async () => {

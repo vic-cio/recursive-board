@@ -4,7 +4,7 @@
  * `depends_on` is a list of wikilinks to the cards this card waits on. A dependency is open until
  * its card is done. An archived card that is not done stays open: archiving drops the work, and
  * the card that needed it must not start without a decision. Nothing is written when a dependency
- * closes; the block is derived at read time. `blocked: true` stays for a block outside the board.
+ * closes; the wait is derived at read time.
  *
  * Both writers use these rules. This module imports nothing from Node.
  */

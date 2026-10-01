@@ -16,7 +16,7 @@
  * - two items titled "Authentication", so the second takes the id collision suffix;
  * - a title long enough to wrap;
  * - a done item outside the window, and one inside it;
- * - a blocked item, an agent-owned item, labels, priorities and two promoted boards.
+ * - a waiting item, an agent-owned item, labels, priorities and two promoted boards.
  *
  * Usage: node scripts/fixture.ts [--vault test]
  */
@@ -43,7 +43,7 @@ export interface Spec {
   tags?: string[]
   board?: boolean
   area?: boolean
-  blocked?: boolean
+  dependsOn?: string
   prevStatus?: Status
   /** Frontmatter lines outside the schema, written as given. */
   unknown?: string[]
@@ -83,7 +83,7 @@ export const SPECS: Spec[] = [
   { id: 'wi-0005', title: 'Authentication', parent: 'Build server', status: 'backlog',
     created: 30, updated: 5 },
   { id: 'wi-0006', title: 'Session management', parent: 'Build server', status: 'backlog',
-    created: 30, updated: 4, agent: 'codex', blocked: true,
+    created: 30, updated: 4, agent: 'codex', dependsOn: 'Authentication',
     body: OBJECTIVE('Track app sessions so a reconnect attaches rather than spawning a duplicate.') },
   { id: 'wi-0007', title: 'Streaming', parent: 'Build server', status: 'options', created: 30,
     updated: 1, agent: 'codex', priority: 1,
@@ -97,6 +97,7 @@ export const SPECS: Spec[] = [
     created: 10, updated: 2 },
   { id: 'wi-0015', title: 'Product pages', parent: 'Marketing site', status: 'doing',
     created: 10, updated: 1, tags: ['design'] },
+
 
   { id: 'wi-0012', title: 'Improve knowledge system', parent: 'Main', status: 'backlog',
     created: 30, updated: 6, owner: 'sam', priority: 3, tags: ['knowledge'],
@@ -133,7 +134,7 @@ function extraLines(spec: Spec): string[] {
   const lines: string[] = []
   if (spec.tags) lines.push(`tags: [${spec.tags.join(', ')}]`)
   if (spec.board) lines.push('board: true')
-  if (spec.blocked) lines.push('blocked: true')
+  if (spec.dependsOn) lines.push(`depends_on: "[[${spec.dependsOn}]]"`)
   if (spec.prevStatus) lines.push(`prev_status: ${spec.prevStatus}`)
   return [...lines, ...(spec.unknown ?? [])]
 }

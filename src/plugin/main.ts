@@ -510,10 +510,9 @@ export default class RecursiveBoardPlugin extends Plugin {
       options: '--wi-custom-rgb-options',
       doing: '--wi-custom-rgb-doing',
       done: '--wi-custom-rgb-done',
-      blocked: '--wi-custom-rgb-blocked',
       agent: '--wi-custom-rgb-agent',
     }
-    for (const key of ['options', 'doing', 'done', 'blocked', 'agent'] as const) {
+    for (const key of ['options', 'doing', 'done', 'agent'] as const) {
       const color = this.statusColors[key]
       const value = color ? color.slice(1).match(/.{2}/g)?.map((channel) => Number.parseInt(channel, 16)).join(', ') : ''
       if (value) this.app.workspace.containerEl.style.setProperty(names[key], value)

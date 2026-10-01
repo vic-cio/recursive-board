@@ -130,10 +130,9 @@ Notes
   \`wi archive\` changes one flag. Descendants disappear with their parent at read time.
   \`wi area <ref>\` marks a card as an area and keeps its status. It refuses a card with an agent.
   Use \`wi area <ref> --off\` to convert back without changing its status.
-  \`wi claim\` refuses a card with blocked: true, and \`wi children\` marks one [blocked].
   \`wi depend <ref> --on <ref>\` makes a card wait on another card; --off removes that. \`wi claim\`
-  and \`wi status <ref> doing\` refuse a card that waits on a card that is not done, and \`wi status
-  <ref> doing\` also refuses blocked: true. \`wi children\` marks a waiting card [waits on N].
+  and \`wi status <ref> doing\` refuse a card with an open dependency. \`wi children\` marks it
+  [waits on N].
   \`wi status <ref> done\` names each card it unblocks. An archived card that is not done still blocks.
   \`wi claim\` lets an agent hold a card and its subtasks at once. It refuses a board with a child in
   doing that a different agent or a person works.
@@ -801,7 +800,6 @@ function runChildren(vault: Vault, rest: string[], values: Values, json: boolean
         children: row.childCount,
         depth: row.depth,
         archived: row.archived,
-        blocked: row.item.frontmatter.get('blocked') === true,
         waits_on: openDependencies(vault, row.item).map((item) => item.id ?? item.stem),
         depends_on: dependenciesOf(vault, row.item).resolved.map((item) => item.id ?? item.stem),
       })),
@@ -940,10 +938,9 @@ function row3(row: ChildRow, vault: Vault): string {
   const board = row.item.board ? '  [board]' : ''
   const area = row.item.area ? '  [area]' : ''
   const archived = row.archived ? '  [archived]' : ''
-  const blocked = row.item.frontmatter.get('blocked') === true ? '  [blocked]' : ''
   const open = row.item.status === 'done' ? 0 : openDependencies(vault, row.item).length
   const waits = open > 0 ? `  [waits on ${open}]` : ''
-  return `${row.item.id ?? '(no id)'}  ${status.padEnd(7)}  ${row.item.title ?? row.item.stem}${kids}${board}${area}${blocked}${waits}${archived}`
+  return `${row.item.id ?? '(no id)'}  ${status.padEnd(7)}  ${row.item.title ?? row.item.stem}${kids}${board}${area}${waits}${archived}`
 }
 
 function print(value: unknown): void {

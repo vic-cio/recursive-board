@@ -20,7 +20,7 @@ updated: 2026-09-22
 ```
 
 Roots have no `parent` or `status`. Optional fields include `owner`, `agent`, `priority`, `due`,
-`blocked`, `depends_on`, `tags`, `board`, and `prev_status`. Preserve unknown frontmatter keys.
+`depends_on`, `tags`, `board`, and `prev_status`. Preserve unknown frontmatter keys.
 Change only the key you mean to change.
 
 ## Status

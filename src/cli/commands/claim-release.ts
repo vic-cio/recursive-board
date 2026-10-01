@@ -49,9 +49,6 @@ export async function claimItem(
     const state = cardState(text)
     from = state.status
     const holding = state.agent === agent && state.status === 'doing'
-    if (!holding && state.blocked) {
-      throw new Error(`${item.relPath} is blocked. Clear its blocked flag when the block is gone, or claim another card.`)
-    }
     const waiting = holding ? [] : openDependencies(vault, item, text)
     if (waiting.length > 0) throw new Error(waitingRefusal(item.relPath, waiting.map(titleOf)))
     const edits = claimEdits(state.status, state.agent, agent, state.hasPrevStatus, state.board && otherDoingChild)

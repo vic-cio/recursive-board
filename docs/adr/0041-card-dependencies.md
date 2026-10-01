@@ -10,10 +10,9 @@ depends_on:
   - "[[Write the spec]]"
 ```
 
-A dependency is open until its card is done. The block is derived when the vault is read, so
-nothing is written when a dependency closes, and the card that waits needs no edit to start.
-`blocked: true` stays for a block outside the board, such as a person or a supplier, which only a
-person can clear.
+A dependency is open until its card is done. The wait is derived when the vault is read, so
+nothing is written when a dependency closes, and the card that waits needs no edit to start. An
+external wait becomes a card of its own, and the waiting card depends on it.
 
 An archived card that is not done stays open. Archiving drops the work, and the card that needed
 it must not start without a decision. `wi validate` warns (`depends-archived`), and the dashboard
@@ -21,10 +20,8 @@ lists it under "Needs attention".
 
 ## Who enforces it
 
-- `wi claim` and `wi status <ref> doing` refuse a card with an open dependency. `wi status <ref>
-  doing` also refuses `blocked: true` now, as `wi claim` does (0038), so an agent cannot start
-  either kind of blocked card by moving it. The same agent that already holds the card in doing
-  passes `wi claim`, as before.
+- `wi claim` and `wi status <ref> doing` refuse a card with an open dependency. The same agent
+  that already holds the card in doing passes `wi claim`, as before.
 - The board lets a person move a waiting card to doing. It shows a notice that names the open
   dependencies, and the dashboard lists the card under "Needs attention" while it stays in doing.
   A person can judge that a dependency does not matter; an agent cannot.
@@ -43,9 +40,9 @@ on a root, and a cycle, as errors.
 
 ## How it shows
 
-A waiting card gets an hourglass badge whose label names the open dependencies, apart from the
-red octagon of `blocked: true`. The meta strip says "Waits on" with a link to each one, and a
-checklist row says "Waiting". `wi children` marks the card `[waits on N]` and lists `waits_on` and
+A waiting card gets an hourglass badge whose label names the open dependencies. The meta strip says
+"Waits on" with a link to each one, and a checklist row says "Waiting". `wi children` marks the card
+`[waits on N]` and lists `waits_on` and
 `depends_on` in its JSON.
 
 ## Why not more than this

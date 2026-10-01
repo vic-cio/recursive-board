@@ -51,7 +51,6 @@ export interface WorkItemMeta {
   /** The role that must do the work, by name. */
   role: string | undefined
   roleFile: TFile | null
-  blocked: boolean
   /** The raw `depends_on` entries, kept for an edit (docs/adr/0041-card-dependencies.md). */
   dependsOnRaw: string[]
   /** The files the `depends_on` links resolve to. */
@@ -161,7 +160,6 @@ export class WorkItemIndex {
       creatorModel: str(frontmatter['creator_model']),
       role: displayName(frontmatter['role']),
       roleFile: this.linkedFile(frontmatter['role'], file),
-      blocked: frontmatter['blocked'] === true,
       dependsOnRaw,
       dependsOn,
       prevStatus: isStatus(prev) ? prev : undefined,

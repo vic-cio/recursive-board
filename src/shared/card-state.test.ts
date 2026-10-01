@@ -11,7 +11,6 @@ const TEXT = `---
 type: work-item
 status: doing
 agent: alpha
-blocked: true
 archived: true
 board: true
 area: true
@@ -26,14 +25,13 @@ Body.
 test('cardState reads the values an edit rule depends on from the text', () => {
   assert.deepEqual(cardState(TEXT), {
     status: 'doing', prevStatus: undefined, hasPrevStatus: false, agent: 'alpha',
-    blocked: true, archived: true, board: true, hasBoardKey: true, area: true,
+    archived: true, board: true, hasBoardKey: true, area: true,
   })
   const bare = cardState('---\ntype: work-item\nstatus: nonsense\nprev_status: done\nagent: "  "\n---\n')
   assert.equal(bare.status, undefined)
   assert.equal(bare.prevStatus, 'done')
   assert.equal(bare.hasPrevStatus, true)
   assert.equal(bare.agent, undefined, 'a blank agent is no agent')
-  assert.equal(bare.blocked, false)
 })
 
 test('editsFor takes a list as it is and runs a plan on the text', () => {

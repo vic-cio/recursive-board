@@ -103,9 +103,8 @@ In Obsidian, use **Promote** at the top of any child card to give it its own boa
 - To untick a done item, set it back to its `prev_status`.
 - `wi area <ref>` marks the item as an area and keeps its status. It removes `prev_status` and refuses a card with an agent. Convert it back with `wi area <ref> --off`; its status stays the same.
 - A dispatcher claims cards from options for its workers. `wi claim` refuses a card claimed by a
-  different agent, a done card, a `blocked: true` card, or a board with a child in doing that
-  someone else works. `wi children` marks a blocked card `[blocked]`. `wi claim` and `wi status
-  <ref> doing` also refuse a card that waits on a card that is not done; `wi children` marks it
+  different agent, a done card, or a board with a child in doing that someone else works. `wi claim`
+  and `wi status <ref> doing` refuse a card with an open dependency. `wi children` marks it
   `[waits on N]`, and `wi status <ref> done` names each card it unblocks. When work must wait for
   another card, record it with `wi depend <card> --on <other>`, not in prose. One
   agent can hold a card and its current subtask. A repeat by the same agent in doing writes nothing.

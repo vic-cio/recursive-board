@@ -112,11 +112,10 @@ export class Actions {
       written = await this.edit(meta.file, plan, `mark ${meta.title} ${to}`)
       return true
     })
-    // wi refuses to start such a card. A person may, so the board only says so (docs/adr/0041-card-dependencies.md).
+    // wi refuses a card with an open dependency. A person may move it, so the board gives a notice (docs/adr/0041-card-dependencies.md).
     if (done && written !== null && cardState(written).status === 'doing') {
       const waits = this.index.openDependencies(meta)
       if (waits.length > 0) new Notice(`${meta.title} still waits on ${waits.map((dependency) => dependency.title).join(', ')}.`)
-      if (meta.blocked) new Notice(`${meta.title} is marked blocked.`)
     }
   }
 

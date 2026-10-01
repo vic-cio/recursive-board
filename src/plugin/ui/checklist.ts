@@ -138,7 +138,6 @@ function renderRows(host: HTMLElement, ctx: RenderContext, children: WorkItemMet
 /** Wires one rendered row to its work item and appends the badges and controls. */
 function decorateRow(row: HTMLElement, ctx: RenderContext, meta: WorkItemMeta): void {
   row.addClass('wi-check-row')
-  row.toggleClass('is-blocked', meta.blocked)
   row.toggleClass('is-archived', meta.effectiveArchived)
 
   // Capture phase, so this runs before any handler Obsidian attached to the checkbox or the link.
@@ -180,7 +179,6 @@ function decorateRow(row: HTMLElement, ctx: RenderContext, meta: WorkItemMeta): 
   if (meta.labels.length > 0) renderLabels(extras.createSpan({ cls: 'wi-labels' }), meta.labels)
   const children = ctx.index.childCount(meta.file)
   if (children > 0) extras.createSpan({ cls: 'wi-check-count', text: `${children}` })
-  if (meta.blocked) extras.createSpan({ cls: 'wi-check-blocked', text: 'Blocked' })
   const waits = ctx.index.openDependencies(meta)
   if (waits.length > 0) {
     extras.createSpan({ cls: 'wi-check-waiting', text: 'Waiting', attr: { 'aria-label': `Waits on ${waits.map((dependency) => dependency.title).join(', ')}` } })

@@ -94,10 +94,10 @@ test('status done names only the cards with nothing else open', async () => {
   assert.deepEqual((await setStatus(await vaultOf(fixture), 'Spec', 'done')).unblocked, [])
 })
 
-test('status doing refuses blocked: true, as claim does', async () => {
+test('status doing refuses an open dependency, as claim does', async () => {
   fixture = seed()
-  fixture.write('Boards/Build.md', card('wi-0003', 'Build', { blocked: true }))
-  await assert.rejects(setStatus(await vaultOf(fixture), 'Build', 'doing'), /is blocked/)
+  await setDependency(await vaultOf(fixture), 'Build', 'Spec', true)
+  await assert.rejects(setStatus(await vaultOf(fixture), 'Build', 'doing'), /waits on Spec/)
 })
 
 test('an archived card that is not done still blocks, and validate warns', async () => {

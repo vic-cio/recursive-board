@@ -71,9 +71,6 @@ export async function setStatus(vault: Vault, ref: string, status: string): Prom
 
 /** The same checks as `wi claim`, so an agent cannot start a card by moving it (docs/adr/0041-card-dependencies.md). */
 function refuseStart(vault: Vault, item: WorkItem, text: string): void {
-  if (cardState(text).blocked) {
-    throw new Error(`${item.relPath} is blocked. Clear its blocked flag when the block is gone, or start another card.`)
-  }
   const waiting = openDependencies(vault, item, text)
   if (waiting.length > 0) throw new Error(waitingRefusal(item.relPath, waiting.map(titleOf)))
 }

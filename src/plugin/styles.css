@@ -25,7 +25,6 @@
   --wi-rgb-options: var(--wi-custom-rgb-options, var(--color-yellow-rgb, 224, 172, 0));
   --wi-rgb-doing: var(--wi-custom-rgb-doing, var(--color-blue-rgb, 8, 109, 221));
   --wi-rgb-done: var(--wi-custom-rgb-done, var(--color-green-rgb, 8, 185, 78));
-  --wi-rgb-blocked: var(--wi-custom-rgb-blocked, var(--color-red-rgb, 233, 49, 71));
   --wi-rgb-agent: var(--wi-custom-rgb-agent, var(--color-purple-rgb, 168, 130, 255));
 
   /* How strongly a status shows: on a pill, on a whole card, and on a card's edge. */
@@ -249,11 +248,6 @@
   color: var(--color-green);
 }
 
-.wi-pill.is-blocked {
-  background: rgba(var(--wi-rgb-blocked), var(--wi-tint-pill));
-  color: var(--color-red);
-}
-
 .wi-pill.is-agent {
   background: rgba(var(--wi-rgb-agent), var(--wi-tint-pill));
   color: var(--color-purple);
@@ -467,12 +461,6 @@
   opacity: 0.4;
 }
 
-/* Blocked outranks status: it is the thing you need to see first. */
-.wi-card.is-blocked {
-  border-left-color: rgba(var(--wi-rgb-blocked), 1);
-  background: rgba(var(--wi-rgb-blocked), var(--wi-tint-card));
-}
-
 .wi-card.is-expanded {
   border-color: var(--interactive-accent);
   cursor: default;
@@ -528,11 +516,6 @@
 .wi-badge-icon .svg-icon {
   width: 11px;
   height: 11px;
-}
-
-.wi-badge-blocked {
-  background: rgba(var(--wi-rgb-blocked), var(--wi-tint-pill));
-  color: var(--color-red);
 }
 
 .wi-badge-who {
@@ -646,7 +629,7 @@
 }
 
 .wi-remove:hover {
-  background: rgba(var(--wi-rgb-blocked), var(--wi-tint-pill));
+  background: rgba(var(--color-red-rgb, 233, 49, 71), var(--wi-tint-pill));
   color: var(--color-red);
 }
 
@@ -748,10 +731,6 @@
   text-align: right;
 }
 
-.wi-check-row.is-blocked {
-  box-shadow: inset 3px 0 0 rgba(var(--wi-rgb-blocked), 1);
-}
-
 .wi-row-extras {
   display: inline-flex;
   align-items: center;
@@ -762,7 +741,6 @@
 
 .wi-check-status,
 .wi-check-count,
-.wi-check-blocked,
 .wi-check-waiting {
   flex: none;
   font-size: var(--font-ui-smaller);
@@ -780,11 +758,6 @@
 .wi-check-status.is-options {
   background: rgba(var(--wi-rgb-options), var(--wi-tint-pill));
   color: var(--color-yellow);
-}
-
-.wi-check-blocked {
-  background: rgba(var(--wi-rgb-blocked), var(--wi-tint-pill));
-  color: var(--color-red);
 }
 
 .wi-group {

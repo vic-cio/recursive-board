@@ -54,7 +54,6 @@ export async function writeBenchFixture(vault: string, cards = 1000): Promise<vo
     if (i % 3 === 0) fields.push(`priority: ${i % 4 + 1}`)
     if (i % 5 === 0) fields.push('tags: [product, review]')
     if (i % 7 === 0) fields.push('owner: team')
-    if (i % 23 === 0) fields.push('blocked: true')
     if (status === 'done') fields.push('prev_status: doing')
     const body = [
       '---', '', '## Objective', '',

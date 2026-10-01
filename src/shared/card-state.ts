@@ -16,7 +16,6 @@ export interface CardState {
   hasPrevStatus: boolean
   /** The claiming agent. A blank value is no agent. */
   agent: string | undefined
-  blocked: boolean
   archived: boolean
   board: boolean
   /** True when the card carries a `board` key, set or invalid. */
@@ -35,7 +34,6 @@ export function cardState(text: string): CardState {
     prevStatus: isStatus(prev) ? prev : undefined,
     hasPrevStatus: fm?.has('prev_status') ?? false,
     agent: typeof agent === 'string' && agent.trim() !== '' ? agent : undefined,
-    blocked: get('blocked') === true,
     archived: get('archived') === true,
     board: get('board') === true,
     hasBoardKey: fm?.has('board') ?? false,

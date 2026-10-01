@@ -20,11 +20,13 @@ test('readyCards selects unclaimed options in priority order and explains exclus
   fixture.write('Boards/Main.md', item({ type: 'work-item', id: 'wi-main', title: 'Main' }))
   write('Low', 'wi-low', { priority: 9 })
   write('High', 'wi-high', { priority: 1 })
-  write('Blocked', 'wi-blocked', { blocked: true })
+  fixture.write('Boards/Blocker.md', item({ type: 'work-item', id: 'wi-blocker', title: 'Blocker',
+    status: 'backlog', parent: '"[[Main]]"' }))
+  write('Waiting', 'wi-waiting', { depends_on: '"[[Blocker]]"' })
   write('Claimed', 'wi-claimed', { agent: 'other' })
   write('Archived', 'wi-archived', { archived: true })
   write('Dependency', 'wi-dependency', { status: 'doing' })
-  write('Waiting', 'wi-waiting', { depends_on: '"[[Dependency]]"' })
+  write('Waiting on dependency', 'wi-waiting-on-dependency', { depends_on: '"[[Dependency]]"' })
   write('Area', 'wi-area', { area: true })
   write('Backlog', 'wi-backlog', { status: 'backlog' })
   write('Done', 'wi-done', { status: 'done' })
@@ -36,9 +38,9 @@ test('readyCards selects unclaimed options in priority order and explains exclus
   const result = readyCards(await loadVault(fixture.root))
   assert.deepEqual(result.ready.map((card) => card.id), ['wi-high', 'wi-low'])
   const reasons = new Map(result.excluded.map((card) => [card.id, card.reasons]))
-  assert.deepEqual(reasons.get('wi-blocked'), ['blocked'])
   assert.deepEqual(reasons.get('wi-claimed'), ['claimed'])
   assert.deepEqual(reasons.get('wi-waiting'), ['dependency'])
+  assert.deepEqual(reasons.get('wi-waiting-on-dependency'), ['dependency'])
   assert.deepEqual(reasons.get('wi-board'), ['active-child'])
   assert.deepEqual(reasons.get('wi-orphan'), ['missing-parent'])
   assert.equal(reasons.has('wi-backlog'), false)
@@ -120,15 +122,17 @@ test('readyCards scopes descendants and exclusion reasons without changing card 
     status: 'doing', parent: '"[[Scope]]"', board: true, agent: 'codex' }))
   fixture.write('Boards/Inside.md', item({ type: 'work-item', id: 'wi-inside', title: 'Inside',
     status: 'options', parent: '"[[Nested]]"' }))
-  fixture.write('Boards/Blocked.md', item({ type: 'work-item', id: 'wi-blocked', title: 'Blocked',
-    status: 'options', parent: '"[[Scope]]"', blocked: true }))
+  fixture.write('Boards/Waited on.md', item({ type: 'work-item', id: 'wi-waited-on', title: 'Waited on',
+    status: 'backlog', parent: '"[[Main]]"' }))
+  fixture.write('Boards/Waiting.md', item({ type: 'work-item', id: 'wi-waiting', title: 'Waiting',
+    status: 'options', parent: '"[[Scope]]"', depends_on: '"[[Waited on]]"' }))
   fixture.write('Boards/Outside.md', item({ type: 'work-item', id: 'wi-outside', title: 'Outside',
-    status: 'options', parent: '"[[Main]]"', blocked: true }))
+    status: 'options', parent: '"[[Main]]"', depends_on: '"[[Waited on]]"' }))
   const vault = await loadVault(fixture.root)
   const result = readyCards(vault, { parent: 'wi-scope' })
   assert.equal(result.scope?.id, 'wi-scope')
   assert.deepEqual(result.ready.map((card) => card.id), ['wi-inside'])
-  assert.deepEqual(result.excluded.map((card) => [card.id, card.reasons]), [['wi-blocked', ['blocked']]])
+  assert.deepEqual(result.excluded.map((card) => [card.id, card.reasons]), [['wi-waiting', ['dependency']]])
   assert.deepEqual(result.counts, { ready: 1, excluded: 1 })
   assert.throws(() => readyCards(vault, { parent: 'wi-missing' }), /no work item matches/)
   for (const card of vault.items) assert.equal(readFileSync(card.path, 'utf8'), card.text)

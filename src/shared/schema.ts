@@ -28,7 +28,6 @@ export const OPTIONAL_FIELDS = [
   'agent',
   'priority',
   'due',
-  'blocked',
   'depends_on',
   'tags',
   'archived', // docs/adr/0007-archive-is-a-frontmatter-flag.md: a flag, not a status.

@@ -246,8 +246,8 @@ test('formatScalar quotes a colon or a hash that follows a tab', () => {
 })
 
 test('parseScalar drops a trailing comment', () => {
-  const fm = parseFrontmatter('---\nblocked: true # supplier\npriority: 2 # high\nowner: sam # lead\nnote: "x # y" # c\nplain: a#b\nsingle: \'it\'\'s\' # c\n---\n')!
-  assert.equal(fm.get('blocked'), true)
+  const fm = parseFrontmatter('---\nlegacy: true # supplier\npriority: 2 # high\nowner: sam # lead\nnote: "x # y" # c\nplain: a#b\nsingle: \'it\'\'s\' # c\n---\n')!
+  assert.equal(fm.get('legacy'), true)
   assert.equal(fm.get('priority'), 2)
   assert.equal(fm.get('owner'), 'sam')
   assert.equal(fm.get('note'), 'x # y')

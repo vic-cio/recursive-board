@@ -2,7 +2,7 @@
 import { dependenciesOf, openDependencies, titleOf } from '../dependencies.ts'
 import type { Vault, WorkItem } from '../vault.ts'
 
-export type ExclusionReason = 'blocked' | 'claimed' | 'dependency' | 'invalid-dependency' | 'active-child' | 'missing-parent'
+export type ExclusionReason = 'claimed' | 'dependency' | 'invalid-dependency' | 'active-child' | 'missing-parent'
 
 export interface ReadyOptions {
   agent?: string
@@ -56,7 +56,6 @@ export function readyCards(vault: Vault, options: ReadyOptions = {}) {
     if (scope !== null && !isBelow(vault, item, scope)) continue
     const reasons: ExclusionReason[] = []
     if (item.parent === null || vault.resolveLink(item.parent) === undefined) reasons.push('missing-parent')
-    if (item.frontmatter.get('blocked') === true) reasons.push('blocked')
     const claimed = item.frontmatter.get('agent')
     if (typeof claimed === 'string' && claimed.trim() !== '') reasons.push('claimed')
     if (openDependencies(vault, item).length > 0) reasons.push('dependency')

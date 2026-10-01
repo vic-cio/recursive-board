@@ -41,7 +41,7 @@ class FolderSuggest extends AbstractInputSuggest<TFolder> {
   }
 }
 
-export const STATUS_COLOR_KEYS = ['options', 'doing', 'done', 'blocked', 'agent'] as const
+export const STATUS_COLOR_KEYS = ['options', 'doing', 'done', 'agent'] as const
 export type StatusColorKey = typeof STATUS_COLOR_KEYS[number]
 export type StatusColors = Partial<Record<StatusColorKey, string>>
 
@@ -55,7 +55,6 @@ const COLOR_SETTINGS: ReadonlyArray<{
   { key: 'options', name: 'Options', description: 'Colour for options status.', themeVariable: '--color-yellow-rgb', fallback: '#e0ac00' },
   { key: 'doing', name: 'Doing', description: 'Colour for doing status.', themeVariable: '--color-blue-rgb', fallback: '#086ddd' },
   { key: 'done', name: 'Done', description: 'Colour for done status.', themeVariable: '--color-green-rgb', fallback: '#08b94e' },
-  { key: 'blocked', name: 'Blocked', description: 'Colour for blocked work.', themeVariable: '--color-red-rgb', fallback: '#e93147' },
   { key: 'agent', name: 'Agent badge', description: 'Colour for agent badges.', themeVariable: '--color-purple-rgb', fallback: '#a882ff' },
 ]
 

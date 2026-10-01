@@ -89,14 +89,16 @@ test('wi ready --json returns dispatchable options and exclusion reasons', async
   fixture = seed()
   fixture.write('Boards/Ready.md', item({ type: 'work-item', id: 'wi-ready', title: 'Ready',
     status: 'options', parent: '"[[Main]]"', priority: 1 }))
-  fixture.write('Boards/Blocked.md', item({ type: 'work-item', id: 'wi-blocked', title: 'Blocked',
-    status: 'options', parent: '"[[Main]]"', blocked: true }))
+  fixture.write('Boards/Blocker.md', item({ type: 'work-item', id: 'wi-blocker', title: 'Blocker',
+    status: 'backlog', parent: '"[[Main]]"' }))
+  fixture.write('Boards/Waiting.md', item({ type: 'work-item', id: 'wi-waiting', title: 'Waiting',
+    status: 'options', parent: '"[[Main]]"', depends_on: '"[[Blocker]]"' }))
   const result = await wi(['ready', '--json'])
   assert.equal(result.code, 0, result.stderr)
   const report = JSON.parse(result.stdout)
   assert.deepEqual(report.ready.map((card: { id: string }) => card.id), ['wi-ready'])
   assert.deepEqual(report.excluded.map((card: { id: string; reasons: string[] }) =>
-    [card.id, card.reasons]), [['wi-blocked', ['blocked']]])
+    [card.id, card.reasons]), [['wi-waiting', ['dependency']]])
   const scoped = await wi(['ready', '--parent', 'wi-0004', '--json'])
   assert.equal(scoped.code, 0, scoped.stderr)
   assert.equal(JSON.parse(scoped.stdout).scope.id, 'wi-0004')
@@ -788,14 +790,18 @@ test('brief flags outside wi new are refused', async () => {
   assert.match(result.stderr, /--objective applies only to wi new/)
 })
 
-test('wi children marks a blocked card', async () => {
+test('wi children marks a card that waits on an open dependency', async () => {
   fixture = seed()
+  fixture.write('Boards/Spec.md', item({ type: 'work-item', id: 'wi-spec', title: 'Spec', status: 'backlog',
+    parent: '"[[Main]]"', created: '2026-09-21', updated: '2026-09-21' }))
   fixture.write('Boards/Stuck.md', item({
-    type: 'work-item', id: 'wi-0009', title: 'Stuck', status: 'options', blocked: true,
+    type: 'work-item', id: 'wi-0009', title: 'Stuck', status: 'options', depends_on: '"[[Spec]]"',
     parent: '"[[Main]]"', created: '2026-09-21', updated: '2026-09-21',
   }))
   const text = await wi(['children', 'Main'])
-  assert.match(text.stdout, /wi-0009 +options +Stuck +\[blocked\]/)
+  assert.match(text.stdout, /wi-0009 +options +Stuck +\[waits on 1\]/)
   const json = await wi(['children', 'Main', '--json'])
-  assert.equal(JSON.parse(json.stdout).children.find((c: { id: string }) => c.id === 'wi-0009').blocked, true)
+  const child = JSON.parse(json.stdout).children.find((c: { id: string }) => c.id === 'wi-0009')
+  assert.equal('blocked' in child, false)
+  assert.equal(child.waits_on[0], 'wi-spec')
 })
