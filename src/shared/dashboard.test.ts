@@ -3,7 +3,7 @@ import assert from 'node:assert/strict'
 
 import {
   agentFeed, areaOf, allReviewFilesTicked, cardsInScope, fileReviewPaths, IDLE_MS, isLoopbackWebAddress, isWebAddress, FINISHED_SHOWN, FINISHED_WINDOW_MS, needsAttention, parseReviewLine, parseWebReviewMode, progress, reviewPathsForMode, reviewPresentationForMode, reviewVerdictReadiness, waitsForReview, workingBadge, type DashItem, type DashTree,
-} from './dashboard-model.ts'
+} from './dashboard.ts'
 
 interface Fake extends DashItem { parent: Fake | null; mtime: number }
 
