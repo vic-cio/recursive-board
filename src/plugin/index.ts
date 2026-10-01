@@ -16,6 +16,7 @@ import { isLegacyAreaTag } from '../shared/legacy-area-tag.ts'
 import { DEFAULT_VAULT_CONFIG, type VaultConfig } from '../shared/vault-config.ts'
 import { archiveOwner } from '../shared/archive.ts'
 import { displayName, resolveRole } from '../shared/authorship.ts'
+import { holderOf } from '../shared/holder.ts'
 import { dependsOnValues, isOpenDependency, parseDependsOn } from '../shared/dependencies.ts'
 import {
   doneCutoff, isStatus, parseWikilink, STATUSES, WORK_ITEM_TYPE, type Status,
@@ -43,7 +44,8 @@ export interface WorkItemMeta {
   owner: string | undefined
   /** The note the owner links to, when it is a link that resolves. */
   ownerFile: TFile | null
-  agent: string | undefined
+  /** The person or agent who does the work: `holder`, or an old card's `agent`. */
+  holder: string | undefined
   /** The person or role that made the item, by name (docs/adr/0042-creator-and-role.md). */
   creator: string | undefined
   creatorFile: TFile | null
@@ -174,7 +176,7 @@ export class WorkItemIndex {
       updated: str(frontmatter['updated']),
       owner: displayName(frontmatter['owner']),
       ownerFile: this.linkedFile(frontmatter['owner'], file),
-      agent: str(frontmatter['agent']),
+      holder: holderOf((key) => frontmatter[key]),
       creator: displayName(frontmatter['creator']),
       creatorFile: this.linkedFile(frontmatter['creator'], file),
       creatorModel: str(frontmatter['creator_model']),

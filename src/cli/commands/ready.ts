@@ -1,5 +1,6 @@
 /** Dispatcher selection from current vault state. This command writes nothing. */
 import { dependenciesOf, openDependencies, titleOf } from '../dependencies.ts'
+import { holderOf, isAnyAgent } from '../../shared/holder.ts'
 import type { Vault, WorkItem } from '../vault.ts'
 
 export type ExclusionReason = 'claimed' | 'dependency' | 'invalid-dependency' | 'active-child' | 'missing-parent'
@@ -32,6 +33,15 @@ function updated(item: WorkItem): string {
   return typeof value === 'string' ? value : ''
 }
 
+function holder(item: WorkItem): string | undefined {
+  return holderOf((key) => item.frontmatter.get(key))
+}
+
+/** A request for any agent: its holder is the reserved value `agent`. */
+function isRequest(item: WorkItem): boolean {
+  return isAnyAgent(holder(item))
+}
+
 function summary(item: WorkItem) {
   const due = item.frontmatter.get('due')
   const owner = item.frontmatter.get('owner')
@@ -41,12 +51,17 @@ function summary(item: WorkItem) {
     priority: Number.isFinite(priority(item)) ? priority(item) : null,
     due: typeof due === 'string' ? due : null,
     owner: typeof owner === 'string' ? owner : null,
+    holder: holder(item) ?? null,
+    request: isRequest(item),
     role: typeof role === 'string' ? role : null,
     parent: item.parent,
   }
 }
 
-/** Options are dispatchable when wi claim would accept the proposed agent. */
+/**
+ * Options are dispatchable when wi claim would accept the proposed agent. A card that asks for any
+ * agent is free to claim, and comes first.
+ */
 export function readyCards(vault: Vault, options: ReadyOptions = {}) {
   const scope = options.parent === undefined ? null : vault.resolve(options.parent)
   const ready: WorkItem[] = []
@@ -56,19 +71,18 @@ export function readyCards(vault: Vault, options: ReadyOptions = {}) {
     if (scope !== null && !isBelow(vault, item, scope)) continue
     const reasons: ExclusionReason[] = []
     if (item.parent === null || vault.resolveLink(item.parent) === undefined) reasons.push('missing-parent')
-    const claimed = item.frontmatter.get('agent')
-    if (typeof claimed === 'string' && claimed.trim() !== '') reasons.push('claimed')
+    if (holder(item) !== undefined && !isRequest(item)) reasons.push('claimed')
     if (openDependencies(vault, item).length > 0) reasons.push('dependency')
     const dependencies = dependenciesOf(vault, item)
     if (dependencies.unresolved.length > 0 || dependencies.malformed.length > 0) reasons.push('invalid-dependency')
     if (item.board && vault.childrenOf(item).some((child) =>
-      child.status === 'doing' && (options.agent === undefined || child.frontmatter.get('agent') !== options.agent))) {
+      child.status === 'doing' && (options.agent === undefined || holder(child) !== options.agent))) {
       reasons.push('active-child')
     }
     if (reasons.length === 0) ready.push(item)
     else excluded.push({ item, reasons })
   }
-  ready.sort((a, b) => priority(a) - priority(b) || updated(b).localeCompare(updated(a)) || a.stem.localeCompare(b.stem))
+  ready.sort((a, b) => Number(isRequest(b)) - Number(isRequest(a)) || priority(a) - priority(b) || updated(b).localeCompare(updated(a)) || a.stem.localeCompare(b.stem))
   excluded.sort((a, b) => a.item.stem.localeCompare(b.item.stem))
   return {
     scope: scope === null ? null : { id: scope.id ?? null, title: titleOf(scope), path: scope.relPath },

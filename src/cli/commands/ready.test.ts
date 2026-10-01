@@ -49,6 +49,25 @@ test('readyCards selects unclaimed options in priority order and explains exclus
   assert.equal(reasons.has('wi-area'), false)
 })
 
+test('readyCards lists the requests for any agent first, and excludes a card someone holds', async () => {
+  fixture = makeVault()
+  const write = (stem: string, id: string, fields: Record<string, string | number | boolean>) =>
+    fixture!.write(`Boards/${stem}.md`, item({ type: 'work-item', id, title: stem,
+      parent: '"[[Main]]"', status: 'options', ...fields }))
+  fixture.write('Boards/Main.md', item({ type: 'work-item', id: 'wi-main', title: 'Main' }))
+  write('High', 'wi-high', { priority: 1 })
+  write('Request', 'wi-request', { priority: 5, holder: 'agent' })
+  write('Old request', 'wi-old-request', { agent: 'agent' })
+  write('Held', 'wi-held', { holder: 'Ana' })
+  write('Asked in backlog', 'wi-backlog', { status: 'backlog', holder: 'agent' })
+
+  const result = readyCards(await loadVault(fixture.root))
+  assert.deepEqual(result.ready.map((card) => [card.id, card.holder, card.request]), [
+    ['wi-request', 'agent', true], ['wi-old-request', 'agent', true], ['wi-high', null, false],
+  ])
+  assert.deepEqual(result.excluded.map((card) => [card.id, card.holder, card.reasons]), [['wi-held', 'Ana', ['claimed']]])
+})
+
 test('readyCards permits a nested claim by the agent already working on its child', async () => {
   fixture = makeVault()
   fixture.write('Boards/Main.md', item({ type: 'work-item', id: 'wi-main', title: 'Main' }))

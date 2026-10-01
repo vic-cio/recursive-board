@@ -28,13 +28,15 @@ function seed(extra: Record<string, string | number | boolean> = {}, body = '## 
 const textOf = (f: Fixture) => readFileSync(`${f.root}/Boards/Task.md`, 'utf8')
 const fmOf = (f: Fixture) => parseFrontmatter(textOf(f))!
 
-test('claim sets agent and doing with one write, preserving unrelated text', async () => {
+test('claim sets holder and doing with one write, preserving unrelated text', async () => {
   fixture = seed()
   const rootBefore = readFileSync(`${fixture.root}/Boards/Main.md`, 'utf8')
   const change = await claimItem(await loadVault(fixture.root), 'wi-0002', 'codex')
   assert.equal(change.changed, true)
   assert.equal(change.from, 'options')
-  assert.equal(fmOf(fixture).get('agent'), 'codex')
+  assert.equal(change.holder, 'codex')
+  assert.equal(fmOf(fixture).get('holder'), 'codex')
+  assert.equal(fmOf(fixture).has('agent'), false)
   assert.equal(fmOf(fixture).get('status'), 'doing')
   assert.equal(fmOf(fixture).get('updated'), today())
   assert.equal(fmOf(fixture).has('prev_status'), false)
@@ -59,10 +61,33 @@ test('claim by the same agent restores doing if status was moved', async () => {
   assert.equal(fmOf(fixture).has('prev_status'), false)
 })
 
+test('a worker delegated a card claims it itself, and its claim moves the card to doing', async () => {
+  fixture = seed({ holder: 'claude-task', status: 'backlog' })
+  const change = await claimItem(await loadVault(fixture.root), 'wi-0002', 'claude-task')
+  assert.equal(change.changed, true)
+  assert.equal(fmOf(fixture).get('status'), 'doing')
+  assert.equal(fmOf(fixture).get('holder'), 'claude-task')
+})
+
+test('any worker claims a card that asks for any agent, and its name replaces agent', async () => {
+  fixture = seed({ holder: 'agent' })
+  await claimItem(await loadVault(fixture.root), 'wi-0002', 'pi-task')
+  assert.equal(fmOf(fixture).get('holder'), 'pi-task')
+  assert.equal(fmOf(fixture).get('status'), 'doing')
+  await assert.rejects(claimItem(await loadVault(fixture.root), 'wi-0002', 'codex'), /already claimed by pi-task/)
+})
+
+test('a claim refuses the reserved name agent', async () => {
+  fixture = seed()
+  const before = textOf(fixture)
+  await assert.rejects(claimItem(await loadVault(fixture.root), 'wi-0002', 'agent'), /reserved/)
+  assert.equal(textOf(fixture), before)
+})
+
 test('claim refuses a different agent, a done item, and a board with doing children', async () => {
   fixture = seed({ agent: 'claude' })
   await assert.rejects(claimItem(await loadVault(fixture.root), 'wi-0002', 'codex'), /already claimed by claude/i)
-  assert.equal(fmOf(fixture).get('agent'), 'claude')
+  assert.equal(fmOf(fixture).get('agent'), 'claude', 'an old card\'s agent still holds it')
   fixture.cleanup()
 
   fixture = seed({ status: 'done', prev_status: 'options' })
@@ -88,7 +113,7 @@ test('an agent can hold a card and the subtask it works now, in either order', a
   fixture.write('Boards/Child.md', item({ type: 'work-item', id: 'wi-0003', title: 'Child', status: 'doing', agent: 'codex', parent: '"[[Task]]"', created: '2026-09-21', updated: '2026-09-21' }))
   const parent = await claimItem(await loadVault(fixture.root), 'wi-0002', 'codex')
   assert.equal(parent.changed, true)
-  assert.equal(fmOf(fixture).get('agent'), 'codex')
+  assert.equal(fmOf(fixture).get('holder'), 'codex')
   await assert.rejects(claimItem(await loadVault(fixture.root), 'wi-0003', 'luna'), /already claimed by codex/)
 })
 
@@ -116,13 +141,14 @@ test('claim refuses an area', async () => {
   await assert.rejects(claimItem(await loadVault(fixture.root), 'wi-0090', 'codex'), /area/i)
 })
 
-test('release clears agent, moves to options, and appends one dated note before the next section', async () => {
+test('release clears the holder, moves to options, and appends one dated note before the next section', async () => {
   fixture = seed({ agent: 'codex', status: 'done', prev_status: 'doing' })
   const rootBefore = readFileSync(`${fixture.root}/Boards/Main.md`, 'utf8')
   const change = await releaseItem(await loadVault(fixture.root), 'wi-0002', 'usage spent', 'card/task')
-  assert.equal(change.agent, 'codex')
+  assert.equal(change.holder, 'codex')
   assert.equal(change.from, 'done')
   assert.equal(fmOf(fixture).has('agent'), false)
+  assert.equal(fmOf(fixture).has('holder'), false)
   assert.equal(fmOf(fixture).get('status'), 'options')
   assert.equal(fmOf(fixture).has('prev_status'), false)
   assert.equal(fmOf(fixture).get('updated'), today())
@@ -132,7 +158,7 @@ test('release clears agent, moves to options, and appends one dated note before 
 })
 
 test('release creates a Notes section when absent and accepts no location', async () => {
-  fixture = seed({ agent: 'codex', status: 'doing' }, '## Objective\n\nKeep this.\n')
+  fixture = seed({ holder: 'codex', status: 'doing' }, '## Objective\n\nKeep this.\n')
   await releaseItem(await loadVault(fixture.root), 'wi-0002', 'stopped')
   assert.ok(textOf(fixture).endsWith(`## Objective\n\nKeep this.\n\n## Notes\n\n- ${today()} Released from codex: stopped.\n`))
 })
@@ -140,7 +166,7 @@ test('release creates a Notes section when absent and accepts no location', asyn
 test('release refuses an unclaimed item without changing the file', async () => {
   fixture = seed()
   const before = textOf(fixture)
-  await assert.rejects(releaseItem(await loadVault(fixture.root), 'wi-0002', 'stopped'), /no agent/i)
+  await assert.rejects(releaseItem(await loadVault(fixture.root), 'wi-0002', 'stopped'), /no holder/i)
   assert.equal(textOf(fixture), before)
 })
 

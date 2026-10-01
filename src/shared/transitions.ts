@@ -10,6 +10,7 @@
  */
 import type { Edit } from './edits.ts'
 import { cardState } from './card-state.ts'
+import { clearHolderEdits, isAnyAgent, setHolderEdits } from './holder.ts'
 import { formatWikilink, type Status } from './schema.ts'
 
 /**
@@ -48,34 +49,37 @@ export function untickEditsIn(text: string): Edit[] | null {
 }
 
 /**
- * A claim is one status transition and one agent edit on the same card.
+ * A claim is one status transition and one holder edit on the same card.
  * `hasOtherDoingChild` is a child in doing that someone other than this agent works: a person, or
  * another agent. A child this agent holds does not block, so an agent can hold a card and the
- * subtask it works now, in either order.
+ * subtask it works now, in either order. The reserved holder `agent` asks for any agent, so any
+ * claim replaces it.
  */
 export function claimEdits(
   from: Status | undefined,
-  currentAgent: string | undefined,
+  currentHolder: string | undefined,
   agent: string,
   hasPrevStatus: boolean,
   hasOtherDoingChild: boolean,
 ): Edit[] | null {
+  if (isAnyAgent(agent)) throw new Error('agent is the reserved holder that means any agent. Claim with your own name.')
   if (from === 'done') throw new Error('a done card cannot be claimed.')
-  if (currentAgent && currentAgent !== agent) {
-    throw new Error(`already claimed by ${currentAgent}. Release that claim first.`)
+  const holder = isAnyAgent(currentHolder) ? undefined : currentHolder
+  if (holder && holder !== agent) {
+    throw new Error(`already claimed by ${holder}. Release that claim first.`)
   }
-  if (currentAgent === agent && from === 'doing') return null
+  if (holder === agent && from === 'doing') return null
   if (hasOtherDoingChild) {
     throw new Error('this board has a child in doing that another agent or a person works. Release or finish that child first.')
   }
   const status = statusEdits(from, 'doing', hasPrevStatus)
-  if (currentAgent === agent) return status
-  return [...(status ?? []), { op: 'set', key: 'agent', value: agent }]
+  if (holder === agent) return status
+  return [...(status ?? []), ...setHolderEdits(agent)]
 }
 
-/** Release retains normal status history rules while removing the claim. */
+/** Release retains normal status history rules while removing the holder. */
 export function releaseEdits(from: Status | undefined, hasPrevStatus: boolean): Edit[] {
-  return [...(statusEdits(from, 'options', hasPrevStatus) ?? []), { op: 'remove', key: 'agent' }]
+  return [...(statusEdits(from, 'options', hasPrevStatus) ?? []), ...clearHolderEdits()]
 }
 
 /**

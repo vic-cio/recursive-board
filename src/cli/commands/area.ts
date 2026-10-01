@@ -37,7 +37,7 @@ export async function setArea(vault: Vault, ref: string, options: AreaOptions): 
       isRoot: item.parent === null,
       isArea: now.area,
       status: now.status,
-      agent: now.agent,
+      holder: now.holder,
     }
     const refusal = areaRefusal(state, direction)
     if (refusal !== null) throw new Error(refusal)

@@ -35,8 +35,9 @@ test('workerName joins the harness and the card slug', () => {
 })
 
 test('assignEdits puts the person on the card and leaves its status alone', () => {
-  assert.deepEqual(assignEdits(card('status: options\n'), 'Ana'), [{ op: 'set', key: 'agent', value: 'Ana' }])
-  assert.deepEqual(assignEdits(card('status: backlog\n'), 'Ana'), [{ op: 'set', key: 'agent', value: 'Ana' }])
+  const ana = [{ op: 'set', key: 'holder', value: 'Ana' }, { op: 'remove', key: 'agent' }]
+  assert.deepEqual(assignEdits(card('status: options\n'), 'Ana'), ana)
+  assert.deepEqual(assignEdits(card('status: backlog\n'), 'Ana'), ana)
   assert.equal(assignEdits(card('status: options\nagent: Ana\n'), 'Ana'), null)
   assert.throws(() => assignEdits(card('status: doing\nagent: codex-x\n'), 'Ana'), /already held by codex-x/)
   assert.throws(() => assignEdits(card('status: done\n'), 'Ana'), /done card/)

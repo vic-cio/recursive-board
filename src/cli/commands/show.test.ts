@@ -35,7 +35,8 @@ test('showCard returns the card, its brief, ancestry, dependencies, and children
 
   const build = showCard(await loadVault(fixture.root), 'wi-build')
   assert.equal(build.owner, 'Victor')
-  assert.equal(build.agent, 'codex')
+  assert.equal(build.holder, 'codex', 'an old card\'s agent is its holder')
+  assert.equal('agent' in build, false)
   assert.equal(build.role, 'Worker')
   assert.equal(build.priority, 2)
   assert.equal(build.due, '2026-10-03')

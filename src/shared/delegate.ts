@@ -10,6 +10,7 @@
 import { PERSON_TYPE } from './authorship.ts'
 import { cardState } from './card-state.ts'
 import type { Edit } from './edits.ts'
+import { setHolderEdits } from './holder.ts'
 
 export const HARNESSES = ['claude', 'codex', 'pi'] as const
 export type Harness = typeof HARNESSES[number]
@@ -69,8 +70,8 @@ export function workerName(harness: Harness, slug: string): string {
 export function assignEdits(text: string, person: string): Edit[] | null {
   const state = cardState(text)
   if (state.status === 'done') throw new Error('a done card cannot be assigned.')
-  if (state.agent && state.agent !== person) throw new Error(`already held by ${state.agent}. Release that claim first.`)
-  return state.agent === person ? null : [{ op: 'set', key: 'agent', value: person }]
+  if (state.holder && state.holder !== person) throw new Error(`already held by ${state.holder}. Release that claim first.`)
+  return state.holder === person ? null : setHolderEdits(person)
 }
 
 export interface Delegation {

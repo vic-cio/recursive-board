@@ -3,13 +3,14 @@
  *
  * This is the decomposition path: an agent that finds a work item too large creates children
  * rather than writing a plan into a chat transcript. It is also the board's add row (docs/adr/0017-inline-status-capture.md),
- * which is why a status can be given and why agent assignment follows the shared status rule.
+ * which is why a status can be given and why the holder follows the shared status rule.
  */
 import { readFile } from 'node:fs/promises'
 import { join } from 'node:path'
 
 import { editItem, writeNew } from '../write.ts'
 import { cardState } from '../../shared/card-state.ts'
+import { holderOf } from '../../shared/holder.ts'
 import { inheritedChildFields, renderWorkItem, type NewWorkItem } from '../../shared/work-item.ts'
 import { briefGaps, renderBody, requireTemplate, type Brief } from '../../shared/templates.ts'
 import { firstChildPromotion } from '../../shared/transitions.ts'
@@ -24,7 +25,8 @@ export interface NewOptions {
   parent?: string
   status?: Status
   owner?: string
-  agent?: string
+  /** The person or agent who does the work. `wi new --agent` sets it. */
+  holder?: string
   /** The role that must do the work. */
   role?: string
   priority?: number
@@ -63,8 +65,8 @@ export async function createItem(vault: Vault, options: NewOptions): Promise<Cre
   if (!isStatus(status)) {
     throw new Error(`"${status}" is not a status. Use backlog, options, doing or done.`)
   }
-  if (template.area && options.agent?.trim()) {
-    throw new Error('areas cannot have an agent')
+  if (template.area && options.holder?.trim()) {
+    throw new Error('areas cannot have a holder')
   }
 
   const parent = vault.resolve(parentRef)
@@ -77,7 +79,7 @@ export async function createItem(vault: Vault, options: NewOptions): Promise<Cre
 
   const stamp = today()
   const inherited = inheritedChildFields({
-    agent: template.area ? undefined : textField(parent.frontmatter.get('agent')),
+    holder: template.area ? undefined : holderOf((key) => parent.frontmatter.get(key)),
   }, status, options)
   const role = options.role?.trim() ? asName(options.role) : undefined
   const render = (id: string): string => {
@@ -158,8 +160,4 @@ export function ancestorRoles(vault: Vault, parent: WorkItem): unknown[] {
     roles.push(current.frontmatter.get('role'))
   }
   return roles
-}
-
-function textField(value: string | number | boolean | null | undefined): string | undefined {
-  return value === undefined || value === null ? undefined : String(value)
 }

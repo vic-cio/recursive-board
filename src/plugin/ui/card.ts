@@ -12,6 +12,7 @@
  */
 import { Notice, Platform, setIcon } from 'obsidian'
 
+import { holderLabel } from '../../shared/holder.ts'
 import { labelColour, labelText } from '../../shared/labels.ts'
 import { bodyOf, listItems, section } from '../../shared/sections.ts'
 import type { WorkItemMeta } from '../index.ts'
@@ -149,12 +150,12 @@ function renderBadges(host: HTMLElement, ctx: RenderContext, meta: WorkItemMeta)
     const badge = host.createSpan({ cls: 'wi-badge wi-badge-waiting', attr: { 'aria-label': `Waits on ${names}` } })
     setIcon(badge, 'hourglass')
   }
-  const who = meta.agent ?? meta.owner
+  const who = meta.holder ?? meta.owner
   if (who !== undefined) {
     host.createSpan({
-      cls: `wi-badge wi-badge-who${meta.agent ? ' is-agent' : ''}`,
+      cls: `wi-badge wi-badge-who${meta.holder ? ' is-agent' : ''}`,
       text: who.slice(0, 1).toUpperCase(),
-      attr: { 'aria-label': meta.agent ? `Agent ${who}` : `Owner ${who}` },
+      attr: { 'aria-label': meta.holder ? `Held by ${holderLabel(meta.holder)}` : `Owner ${who}` },
     })
   }
 }

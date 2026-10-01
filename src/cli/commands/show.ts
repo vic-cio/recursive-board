@@ -1,5 +1,6 @@
 /** A complete read of one card for agents. This command never changes a vault file. */
 import { getList } from '../../shared/frontmatter.ts'
+import { holderOf } from '../../shared/holder.ts'
 import { bodyOf, listItems, section } from '../../shared/sections.ts'
 import { dependenciesOf, titleOf } from '../dependencies.ts'
 import { resolveRole } from '../../shared/authorship.ts'
@@ -64,7 +65,7 @@ export function showCard(vault: Vault, ref: string) {
     ...identity(item),
     status: item.status ?? null,
     owner: stringField(item, 'owner'),
-    agent: stringField(item, 'agent'),
+    holder: holderOf((key) => item.frontmatter.get(key)) ?? null,
     role: role.role ?? null,
     roleInherited: role.inherited,
     creator: stringField(item, 'creator'),

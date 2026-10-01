@@ -16,7 +16,8 @@
  * - two items titled "Authentication", so the second takes the id collision suffix;
  * - a title long enough to wrap;
  * - a done item outside the window, and one inside it;
- * - a waiting item, an agent-owned item, labels, priorities and two promoted boards.
+ * - a waiting item, a held item, a request for any agent, an old card that names its holder in
+ *   agent, labels, priorities and two promoted boards.
  *
  * Usage: node scripts/fixture.ts [--vault test]
  */
@@ -38,7 +39,8 @@ export interface Spec {
   created: number
   updated: number
   owner?: string
-  agent?: string
+  /** Who does the work. `agent` asks for any agent. */
+  holder?: string
   priority?: number
   tags?: string[]
   board?: boolean
@@ -83,10 +85,12 @@ export const SPECS: Spec[] = [
   { id: 'wi-0005', title: 'Authentication', parent: 'Build server', status: 'backlog',
     created: 30, updated: 5 },
   { id: 'wi-0006', title: 'Session management', parent: 'Build server', status: 'backlog',
-    created: 30, updated: 4, agent: 'codex', dependsOn: 'Authentication',
+    created: 30, updated: 4, dependsOn: 'Authentication',
+    // A card written before the rename to holder: its agent is read as its holder.
+    unknown: ['agent: codex'],
     body: OBJECTIVE('Track app sessions so a reconnect attaches rather than spawning a duplicate.') },
   { id: 'wi-0007', title: 'Streaming', parent: 'Build server', status: 'options', created: 30,
-    updated: 1, agent: 'codex', priority: 1,
+    updated: 1, holder: 'codex', priority: 1,
     body: OBJECTIVE('Stream command and agent output to the app.') },
 
   { id: 'wi-0013', title: 'Marketing site', parent: 'Main', status: 'backlog', created: 10,
@@ -118,7 +122,7 @@ write untouched.
   { id: 'wi-0019', title: 'Review card text styles', parent: 'Main', status: 'backlog', created: 1,
     updated: 1, tags: ['design', 'plugin'] },
   { id: 'wi-0020', title: 'Explore a command wrapper', parent: 'Main', status: 'options', created: 1,
-    updated: 1, agent: 'codex' },
+    updated: 1, holder: 'agent' },
   { id: 'wi-0021', title: 'Operations', parent: 'Main', area: true, status: 'backlog', created: 5, updated: 2,
     body: OBJECTIVE('An ongoing space for work that does not have a definition of done.') },
 ]
@@ -155,7 +159,7 @@ function render(spec: Spec, parentStem: string, now: Date): string {
     title: spec.title,
     parentStem,
     owner: spec.owner,
-    agent: spec.agent,
+    holder: spec.holder,
     priority: spec.priority,
     created: daysAgo(spec.created, now),
     updated: daysAgo(spec.updated, now),

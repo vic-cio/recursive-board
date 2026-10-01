@@ -6,6 +6,7 @@
 import { stat } from 'node:fs/promises'
 
 import { displayName } from '../../shared/authorship.ts'
+import { holderOf } from '../../shared/holder.ts'
 import {
   agentFeed, cardsInScope, groupName, groupUnder, inFocus, needsAttention, parseReviewLine, progress,
   waitsForReview, workingBadge, type AgentRow, type DashItem, type DashTree,
@@ -26,11 +27,6 @@ interface Card extends DashItem {
   mtime: number
 }
 
-function stringField(item: WorkItem, key: string): string | undefined {
-  const value = item.frontmatter.get(key)
-  return typeof value === 'string' && value.trim() !== '' ? value : undefined
-}
-
 function identity(card: Card) {
   return { id: card.item.id ?? null, title: card.title, path: card.item.relPath }
 }
@@ -46,7 +42,7 @@ async function cardsOf(vault: Vault): Promise<Map<WorkItem, Card>> {
       area: item.area,
       board: item.board,
       owner: displayName(item.frontmatter.get('owner')),
-      agent: stringField(item, 'agent'),
+      holder: holderOf((key) => item.frontmatter.get(key)),
       effectiveArchived: vault.isArchived(item),
       parentLink: item.parentRaw === undefined ? null : item.parent ?? item.parentRaw,
       mtime: (await stat(item.path)).mtimeMs,
@@ -94,13 +90,13 @@ export async function dashboardSummary(vault: Vault, options: DashboardOptions =
 
   const review = focused.filter((card) => you !== null && waitsForReview(card, you, tree, card.item.text)).map((card) => {
     const line = parseReviewLine(card.item.text)
-    return { ...identity(card), area: area(card), agent: card.agent ?? null, what: line?.what || 'Open the card.', paths: line?.paths ?? [] }
+    return { ...identity(card), area: area(card), holder: card.holder ?? null, what: line?.what || 'Open the card.', paths: line?.paths ?? [] }
   })
 
   // The feed, the working counts and the quiet claims in attention all come from this one list.
   const feed = agentFeed(scope, you ?? '', tree, now, focus)
   const claim = (row: AgentRow<Card>) => ({
-    agent: row.card.agent!, ...identity(row.card), status: row.card.status!, area: area(row.card),
+    holder: row.card.holder!, ...identity(row.card), status: row.card.status!, area: area(row.card),
     active: new Date(row.active).toISOString(),
     steps: { done: row.steps.filter((step) => step.status === 'done').length, total: row.steps.length },
   })
@@ -127,7 +123,7 @@ export async function dashboardSummary(vault: Vault, options: DashboardOptions =
     })),
     agents: { working: feed.working.map(claim), idle: feed.idle.map(claim), finished: feed.finished.map(claim) },
     attention: attention.map((row) => ({
-      reason: row.reason, ...identity(row.card), agent: row.card.agent ?? null, cards: row.cards.map(identity),
+      reason: row.reason, ...identity(row.card), holder: row.card.holder ?? null, cards: row.cards.map(identity),
     })),
   }
 }
@@ -138,7 +134,7 @@ export type DashboardSummary = Awaited<ReturnType<typeof dashboardSummary>>
 export function renderDashboard(summary: DashboardSummary): string {
   const { counts } = summary
   const card = (row: { id: string | null; title: string }) => `${row.id ?? '?'}  ${row.title}`
-  const claims = (rows: DashboardSummary['agents']['working']) => rows.map((row) => `  ${row.agent}  ${card(row)}  (${row.area})`)
+  const claims = (rows: DashboardSummary['agents']['working']) => rows.map((row) => `  ${row.holder}  ${card(row)}  (${row.area})`)
   return [
     `review  ${counts.review}`, ...summary.review.map((row) => `  ${card(row)}  ${row.what}`),
     'progress', ...summary.progress.map((row) => `  ${row.name}  ${row.done}/${row.total} done, ${row.doing} doing, ${row.backlog} in backlog`),

@@ -40,7 +40,7 @@ function seed(): Fixture {
   card('Copy', { id: 'wi-copy', parent: '"[[Site]]"', status: 'doing', owner: '"[[Ana]]"', agent: 'Writer' },
     '## Notes\n\n- 2026-09-30 11:00, Writer: **Review:** Check the copy: `Docs/Copy.md`, `http://localhost:3000`.\n', 30)
   card('Layout', { id: 'wi-layout', parent: '"[[Site]]"', status: 'doing', owner: 'ana', board: true })
-  card('Grid', { id: 'wi-grid', parent: '"[[Layout]]"', status: 'doing', agent: 'Builder' }, '', 10)
+  card('Grid', { id: 'wi-grid', parent: '"[[Layout]]"', status: 'doing', holder: 'Builder' }, '', 10)
   card('Taxes', { id: 'wi-taxes', parent: '"[[Home]]"', status: 'doing', agent: 'Clerk' }, '', 120)
   card('Shelf', { id: 'wi-shelf', parent: '"[[Home]]"', status: 'done', agent: 'Carpenter' }, '', 60)
   card('Paint', { id: 'wi-paint', parent: '"[[Home]]"', status: 'done', agent: 'Painter' }, '', 30 * 60)
@@ -59,7 +59,7 @@ test('dashboardSummary lists the cards that wait for the reviewer, with the path
   const summary = await dashboardSummary(await loadVault(fixture.root), { you: 'Ana', now: NOW })
   assert.equal(summary.you, 'Ana')
   assert.deepEqual(summary.review, [{
-    id: 'wi-copy', title: 'Copy', path: 'Boards/Copy.md', area: 'Work', agent: 'Writer',
+    id: 'wi-copy', title: 'Copy', path: 'Boards/Copy.md', area: 'Work', holder: 'Writer',
     what: 'Check the copy.', paths: ['Docs/Copy.md', 'http://localhost:3000'],
   }])
 })
@@ -107,7 +107,7 @@ test('dashboardSummary splits claims into working, idle and recently finished', 
   assert.deepEqual(ids(summary.agents.idle), ['wi-taxes'])
   assert.deepEqual(ids(summary.agents.finished), ['wi-copy', 'wi-shelf'], 'handed to the reviewer, then done; Paint is too old')
   assert.deepEqual(summary.agents.working[0], {
-    agent: 'Builder', id: 'wi-grid', title: 'Grid', path: 'Boards/Grid.md', status: 'doing', area: 'Work',
+    holder: 'Builder', id: 'wi-grid', title: 'Grid', path: 'Boards/Grid.md', status: 'doing', area: 'Work',
     active: new Date(NOW - 10 * MINUTE).toISOString(), steps: { done: 0, total: 0 },
   })
 })
@@ -120,7 +120,7 @@ test('dashboardSummary names each card that needs attention, and counts them by 
     ['archived', 'wi-launch', ['wi-old']],
     ['quiet', 'wi-taxes', []],
   ])
-  assert.equal(summary.attention[2]!.agent, 'Clerk')
+  assert.equal(summary.attention[2]!.holder, 'Clerk', 'an old card\'s agent is its holder')
   assert.deepEqual(summary.counts, {
     review: 1, working: 1, idle: 1, finished: 2,
     attention: { total: 3, started: 1, archived: 1, quiet: 1 },

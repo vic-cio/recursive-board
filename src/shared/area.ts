@@ -7,7 +7,7 @@ export interface AreaItemState {
   isRoot: boolean
   isArea: boolean
   status: Status | undefined
-  agent: string | undefined
+  holder: string | undefined
 }
 
 export type AreaTarget =
@@ -24,8 +24,8 @@ export function areaRefusal(item: AreaItemState, direction: AreaTarget['kind']):
   }
 
   if (item.isArea) return `${item.label} is already an area.`
-  if (item.agent !== undefined && item.agent.trim() !== '') {
-    return `${item.label} has agent "${item.agent}". Release it before converting it to an area.`
+  if (item.holder !== undefined && item.holder.trim() !== '') {
+    return `${item.label} has holder "${item.holder}". Release it before converting it to an area.`
   }
   return null
 }

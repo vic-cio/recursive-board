@@ -8,6 +8,7 @@
  * This module imports nothing from Node, so the plugin bundle can carry it to iOS.
  */
 import { formatScalar, type Scalar } from './frontmatter.ts'
+import { isAnyAgent } from './holder.ts'
 import { WORK_ITEM_TYPE, formatWikilink, type Status } from './schema.ts'
 import { renderBody, requireTemplate, type Brief } from './templates.ts'
 
@@ -17,7 +18,8 @@ interface NewWorkItemFields {
   /** The parent's filename stem. The wikilink is authoritative for resolution (docs/adr/0002-work-item-identity-and-parent-links.md). */
   parentStem: string
   owner?: string | undefined
-  agent?: string | undefined
+  /** The person or agent who does the work (docs/adr/holder-names-who-does-the-work.md). */
+  holder?: string | undefined
   /** Links to a person or role note (docs/adr/0042-creator-and-role.md). */
   creator?: string | undefined
   creatorModel?: string | undefined
@@ -38,17 +40,19 @@ export type NewWorkItem = NewWorkItemFields & (
 )
 
 /**
- * New children do not inherit owner. Agent assignment follows active work: it is inherited for
- * doing children, while an explicit owner or agent remains an intentional override.
+ * New children do not inherit owner. The holder follows active work: it is inherited for doing
+ * children, while an explicit owner or holder remains an intentional override. A request for any
+ * agent (`holder: agent`) asks for its own card only, so it is not inherited.
  */
 export function inheritedChildFields(
-  parent: Pick<NewWorkItemFields, 'owner' | 'agent'>,
+  parent: Pick<NewWorkItemFields, 'owner' | 'holder'>,
   status: Status | undefined,
-  overrides: Pick<NewWorkItemFields, 'owner' | 'agent'> = {},
-): Pick<NewWorkItemFields, 'owner' | 'agent'> {
+  overrides: Pick<NewWorkItemFields, 'owner' | 'holder'> = {},
+): Pick<NewWorkItemFields, 'owner' | 'holder'> {
+  const inherited = status === 'doing' && !isAnyAgent(parent.holder) ? parent.holder : undefined
   return {
     owner: overrides.owner,
-    agent: overrides.agent ?? (status === 'doing' ? parent.agent : undefined),
+    holder: overrides.holder ?? inherited,
   }
 }
 
@@ -78,7 +82,7 @@ export function renderWorkItem(item: NewWorkItem, extraSections: readonly string
   if (item.area) fields.push(['area', true])
   fields.push(['parent', formatWikilink(item.parentStem)])
   if (item.owner !== undefined && item.owner !== '') fields.push(['owner', item.owner])
-  if (item.agent !== undefined && item.agent !== '') fields.push(['agent', item.agent])
+  if (item.holder !== undefined && item.holder !== '') fields.push(['holder', item.holder])
   if (item.role !== undefined && item.role !== '') fields.push(['role', item.role])
   if (item.creator !== undefined && item.creator !== '') fields.push(['creator', item.creator])
   if (item.creatorModel !== undefined && item.creatorModel !== '') fields.push(['creator_model', item.creatorModel])

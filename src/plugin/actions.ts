@@ -229,7 +229,7 @@ export class Actions {
   async convertArea(meta: WorkItemMeta, target: AreaTarget): Promise<void> {
     const label = target.kind === 'area' ? 'make area' : 'make card'
     const done = await this.run(`${label} ${meta.title}`, async () => {
-      // The refusal reads the agent in the file now, so a claim made since is never discarded.
+      // The refusal reads the holder in the file now, so a claim made since is never discarded.
       await this.edit(meta.file, (text) => {
         const now = cardState(text)
         return areaEdits({
@@ -237,7 +237,7 @@ export class Actions {
           isRoot: meta.parentLink === null,
           isArea: now.area,
           status: now.status,
-          agent: now.agent,
+          holder: now.holder,
         }, target)
       }, `${label} ${meta.title}`)
       return true

@@ -71,9 +71,9 @@ test('delegating to a person only assigns the card: same status, no note, no Git
   assert.equal(launches.length, 0)
   const text = card(f)
   assert.match(text, /^status: options$/m, 'a person chooses when to start')
-  assert.match(text, /^agent: Ana$/m)
-  const strip = (t: string) => t.replace(/^(agent|updated): .*\n/gm, '')
-  assert.equal(strip(text), strip(before), 'the agent line (and the updated stamp) is the only change')
+  assert.match(text, /^holder: Ana$/m)
+  const strip = (t: string) => t.replace(/^(holder|updated): .*\n/gm, '')
+  assert.equal(strip(text), strip(before), 'the holder line (and the updated stamp) is the only change')
 })
 
 test('delegating to a name with no person note and no harness writes nothing', async () => {
@@ -92,7 +92,7 @@ test('a person is a note with type: person in any folder, not a note in People/'
   await assert.rejects(delegate(vault, 'wi-0004', { to: 'Bo' }, deps('/nowhere', [])), /no person note called Bo/)
   const result = await delegate(vault, 'wi-0004', { to: 'sam' }, deps('/nowhere', []))
   assert.equal(result.holder, 'Sam')
-  assert.match(card(f), /^agent: Sam$/m)
+  assert.match(card(f), /^holder: Sam$/m)
 })
 
 for (const harness of ['claude', 'codex', 'pi'] as const) {
@@ -126,7 +126,7 @@ for (const harness of ['claude', 'codex', 'pi'] as const) {
     assert.match(prompt, /The card body is your brief:\n\n## Objective\n\nPrice the job\.\n\n## Notes\n/)
 
     const text = card(f)
-    assert.match(text, new RegExp(`^agent: ${harness}-price-the-job$`, 'm'))
+    assert.match(text, new RegExp(`^holder: ${harness}-price-the-job$`, 'm'))
     assert.match(text, /^status: doing$/m)
     assert.match(text, new RegExp(`Delegated to ${harness}-price-the-job, a headless ${harness} worker on m-1\\.`))
     assert.ok(text.includes(`Started the worker, process 4242, on card/price-the-job in \`${worktree}\`. Log: \`${log}\`.`))
@@ -189,7 +189,7 @@ test('when the worker cannot start, the claim is released with the reason', asyn
     /spawn codex ENOENT/)
   const text = card(f)
   assert.match(text, /^status: options$/m)
-  assert.doesNotMatch(text, /^agent:/m)
+  assert.doesNotMatch(text, /^holder:/m)
   assert.match(text, /Released from codex-price-the-job: wi delegate could not start the worker: spawn codex ENOENT\./)
 })
 

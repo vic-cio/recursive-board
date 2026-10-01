@@ -213,7 +213,7 @@ export class DashboardView extends ItemView {
       this.link(body, card.title, () => this.openFile(card.file))
       const line = body.createDiv({ cls: 'wi-dash-muted' })
       if (reason === 'quiet') {
-        line.setText(`Agent went quiet: ${card.agent ?? 'an agent'} changed nothing for an hour. Release or close the card.`)
+        line.setText(`Agent went quiet: ${card.holder ?? 'an agent'} changed nothing for an hour. Release or close the card.`)
         this.copyId(row, card)
         continue
       }
@@ -473,7 +473,7 @@ export class DashboardView extends ItemView {
       const body = row.createDiv('wi-dash-agent-body')
       this.link(body, card.title, () => this.openFile(card.file))
       const line = body.createDiv('wi-dash-muted wi-dash-agent-meta')
-      line.createSpan({ text: card.agent ?? '' })
+      line.createSpan({ text: card.holder ?? '' })
       if (area) line.createSpan({ cls: 'wi-dash-chip', text: area.title })
       if (steps.length > 0) {
         line.createSpan({ text: `${steps.filter((step) => step.status === 'done').length}/${steps.length} steps` })

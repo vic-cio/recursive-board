@@ -25,7 +25,7 @@ function meta(over: Partial<WorkItemMeta> & { stem: string }): WorkItemMeta {
     priority: over.priority,
     updated: over.updated,
     owner: over.owner,
-    agent: over.agent,
+    holder: over.holder,
     dependsOnRaw: [],
     dependsOn: [],
     ownerFile: null,

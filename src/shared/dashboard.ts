@@ -1,3 +1,4 @@
+import { isAnyAgent } from './holder.ts'
 import type { Status } from './schema.ts'
 import { awaitsReviewVerdict } from './review.ts'
 
@@ -21,7 +22,8 @@ export interface DashItem {
   board: boolean
   /** The owner's name: a link's target, or plain text. */
   owner: string | undefined
-  agent: string | undefined
+  /** The person or agent who does the work. */
+  holder: string | undefined
   /** Own flag or an ancestor's flag. */
   effectiveArchived: boolean
   /** The raw wikilink target, or null when this item is a root. */
@@ -236,14 +238,15 @@ export interface AgentFeed<T> {
 }
 
 /**
- * Agents come from the `agent` field that `wi claim` writes. It stays on the card when done.
- * A card handed to you, or with every step done, has an agent that finished.
+ * Agents come from the `holder` field that `wi claim` writes. It stays on the card when done.
+ * A card handed to you, or with every step done, has an agent that finished. A request for any
+ * agent (`holder: agent`) has no agent on it yet.
  */
 export function agentFeed<T extends DashItem>(
   cards: T[], you: string, tree: DashTree<T>, now: number, focus: T | null = null,
 ): AgentFeed<T> {
   const rows: AgentRow<T>[] = cards
-    .filter((card) => card.agent !== undefined && inFocus(card, focus, tree))
+    .filter((card) => card.holder !== undefined && !isAnyAgent(card.holder) && inFocus(card, focus, tree))
     .map((card) => {
       const steps = tree.childrenOf(card).filter((child) => !child.effectiveArchived)
       return {

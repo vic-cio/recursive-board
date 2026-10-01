@@ -39,7 +39,7 @@ test('wi agents prints the configured agent limit and claimed doing count', asyn
     .replace('owner: sam', 'owner: sam\nagent: codex')
   writeFileSync(join(fixture.root, 'Boards/Build server.md'), source)
   fixture.write('Boards/Another.md', item({
-    type: 'work-item', id: 'wi-0005', title: 'Another', status: 'doing', agent: 'claude',
+    type: 'work-item', id: 'wi-0005', title: 'Another', status: 'doing', holder: 'claude',
     parent: '"[[Main]]"', created: '2026-09-21', updated: '2026-09-21',
   }))
   fixture.write('Boards/Waiting.md', item({
@@ -51,12 +51,16 @@ test('wi agents prints the configured agent limit and claimed doing count', asyn
     type: 'work-item', id: 'wi-0007', title: 'Subtask', status: 'doing', agent: 'codex',
     parent: '"[[Build server]]"', created: '2026-09-21', updated: '2026-09-21',
   }))
+  fixture.write('Boards/Asked.md', item({
+    type: 'work-item', id: 'wi-0010', title: 'Asked', status: 'doing', holder: 'agent',
+    parent: '"[[Main]]"', created: '2026-09-21', updated: '2026-09-21',
+  }))
 
   const result = await wi(['agents', '--json'])
   assert.equal(result.code, 0, result.stderr)
   const report = JSON.parse(result.stdout)
   assert.equal(report.maxAgents, 2)
-  assert.equal(report.activeAgents, 2, 'codex holds a card and its subtask, and counts once')
+  assert.equal(report.activeAgents, 2, 'codex holds a card and its subtask, and counts once; a request for any agent is no agent')
   assert.deepEqual(report.claims.map((c: { agent: string; id: string }) => `${c.agent} ${c.id}`).sort(),
     ['claude wi-0005', 'codex wi-0004', 'codex wi-0007'])
 })
@@ -435,13 +439,13 @@ test('wi claim and release expose JSON results and accept --vault', async () => 
   const claimed = await wi(['claim', 'wi-0004', '--agent', 'codex', '--json', '--vault', fixture.root])
   assert.equal(claimed.code, 0, claimed.stderr)
   assert.deepEqual(JSON.parse(claimed.stdout), {
-    id: 'wi-0004', path: 'Boards/Build server.md', agent: 'codex',
+    id: 'wi-0004', path: 'Boards/Build server.md', holder: 'codex',
     from: 'doing', to: 'doing', changed: true,
   })
   const released = await wi(['release', 'wi-0004', '--reason', 'stopped', '--where', 'card/task', '--json'])
   assert.equal(released.code, 0, released.stderr)
   assert.deepEqual(JSON.parse(released.stdout), {
-    id: 'wi-0004', path: 'Boards/Build server.md', agent: 'codex',
+    id: 'wi-0004', path: 'Boards/Build server.md', holder: 'codex',
     from: 'doing', to: 'options', reason: 'stopped', where: 'card/task', changed: true,
   })
 })

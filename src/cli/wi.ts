@@ -41,6 +41,7 @@ import { sendForReview } from './commands/review.ts'
 import { COMMAND_FLAGS, parseCommandLine, type Values } from './flags.ts'
 import { STATUSES } from '../shared/schema.ts'
 import { authorLabel } from '../shared/authorship.ts'
+import { holderOf, isAnyAgent } from '../shared/holder.ts'
 
 const HELP = `wi — the Recursive Board CLI
 
@@ -302,7 +303,7 @@ async function runNew(vault: Vault, rest: string[], values: Values, json: boolea
     parent,
     ...(typeof values['status'] === 'string' ? { status: values['status'] as never } : {}),
     ...(typeof values['owner'] === 'string' ? { owner: values['owner'] } : {}),
-    ...(typeof values['agent'] === 'string' ? { agent: values['agent'] } : {}),
+    ...(typeof values['agent'] === 'string' ? { holder: values['agent'] } : {}),
     ...(typeof values['template'] === 'string' ? { template: values['template'] } : {}),
     ...(priority !== undefined ? { priority } : {}),
     ...optional('role', typeof values['role'] === 'string' ? values['role'] : undefined),
@@ -469,10 +470,10 @@ async function runClaim(vault: Vault, rest: string[], values: Values, json: bool
   const active = await activeAgentNames(vault)
   const person = (await readPeople(vault.root)).has(agent.toLowerCase())
   const change = await claimItem(vault, ref, agent)
-  if (json) print({ id: change.item.id, path: change.item.relPath, agent: change.agent,
+  if (json) print({ id: change.item.id, path: change.item.relPath, holder: change.holder,
     from: change.from ?? null, to: change.to, changed: change.changed })
   else process.stdout.write(change.changed
-    ? `${label(change.item)}  ${change.from ?? '—'} → doing  (agent: ${agent})\n`
+    ? `${label(change.item)}  ${change.from ?? '—'} → doing  (holder: ${agent})\n`
     : `${label(change.item)} is already claimed by ${agent} in doing. Nothing written.\n`)
   if (change.changed && !person && maxAgents !== null && !active.has(agent) && active.size + 1 > maxAgents) {
     process.stderr.write(`wi: warning: agent limit is ${maxAgents}; ${active.size + 1} agents now have a doing card.\n`)
@@ -554,14 +555,15 @@ async function runNote(vault: Vault, rest: string[], values: Values, json: boole
 }
 
 /**
- * Doing cards that carry an agent. One agent may hold a card and its current subtask. A card a
- * person holds is not an agent's: a person is a note with type: person.
+ * Doing cards an agent holds. One agent may hold a card and its current subtask. A card a person
+ * holds is not an agent's: a person is a note with type: person. A request for any agent has no
+ * agent on it yet.
  */
 async function claimedDoing(vault: Vault): Promise<{ agent: string; item: WorkItem }[]> {
   const people = await readPeople(vault.root)
   return vault.items.flatMap((item) => {
-    const agent = item.frontmatter.get('agent')
-    return item.status === 'doing' && typeof agent === 'string' && agent.trim() !== '' &&
+    const agent = holderOf((key) => item.frontmatter.get(key))
+    return item.status === 'doing' && agent !== undefined && !isAnyAgent(agent) &&
       !people.has(agent.trim().toLowerCase())
       ? [{ agent, item }]
       : []
@@ -618,10 +620,10 @@ async function runRelease(vault: Vault, rest: string[], values: Values, json: bo
   const reason = singleLineOption(values, 'reason')
   const where = values['where'] === undefined ? undefined : singleLineOption(values, 'where')
   const change = await releaseItem(vault, ref, reason, where)
-  if (json) print({ id: change.item.id, path: change.item.relPath, agent: change.agent,
+  if (json) print({ id: change.item.id, path: change.item.relPath, holder: change.holder,
     from: change.from ?? null, to: change.to, reason: change.reason, where: change.where ?? null,
     changed: change.changed })
-  else process.stdout.write(`${label(change.item)}  ${change.from ?? '—'} → options  (released ${change.agent})\n`)
+  else process.stdout.write(`${label(change.item)}  ${change.from ?? '—'} → options  (released ${change.holder})\n`)
   return 0
 }
 

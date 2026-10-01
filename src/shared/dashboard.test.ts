@@ -12,7 +12,7 @@ function vault() {
   const add = (title: string, parent: Fake | null, fields: Partial<Fake> = {}): Fake => {
     const item: Fake = {
       title, parent, parentLink: parent?.title ?? null, status: parent ? 'backlog' : undefined,
-      area: false, board: false, owner: undefined, agent: undefined, effectiveArchived: false, mtime: 0, ...fields,
+      area: false, board: false, owner: undefined, holder: undefined, effectiveArchived: false, mtime: 0, ...fields,
     }
     items.push(item)
     return item
@@ -211,13 +211,13 @@ test('an agent is working, idle, or finished', () => {
   const now = 10 * IDLE_MS
   const root = add('Home', null)
   const area = add('Work', root, { area: true, status: 'doing' })
-  const working = add('Working', area, { status: 'doing', agent: 'claude', mtime: now - 60_000 })
-  const idle = add('Idle', area, { status: 'doing', agent: 'codex', mtime: now - 2 * IDLE_MS })
+  const working = add('Working', area, { status: 'doing', holder: 'claude', mtime: now - 60_000 })
+  const idle = add('Idle', area, { status: 'doing', holder: 'codex', mtime: now - 2 * IDLE_MS })
   const fresh = add('Fresh step', idle, { status: 'doing', mtime: now - 1000 })
-  const handed = add('Handed over', area, { status: 'doing', agent: 'claude', owner: 'Ana', mtime: now })
-  const stepsDone = add('Steps done', area, { status: 'doing', agent: 'claude', mtime: now - 5000 })
+  const handed = add('Handed over', area, { status: 'doing', holder: 'claude', owner: 'Ana', mtime: now })
+  const stepsDone = add('Steps done', area, { status: 'doing', holder: 'claude', mtime: now - 5000 })
   add('Only step', stepsDone, { status: 'done', mtime: now - 5000 })
-  const closed = add('Closed', area, { status: 'done', agent: 'claude', mtime: now - 3 * IDLE_MS })
+  const closed = add('Closed', area, { status: 'done', holder: 'claude', mtime: now - 3 * IDLE_MS })
 
   let feed = agentFeed(cardsInScope(items, null, tree), 'Ana', tree, now)
   // The idle card's child changed a second ago, so its claim is live.
@@ -232,6 +232,14 @@ test('an agent is working, idle, or finished', () => {
   assert.deepEqual(feed.idle.map((row) => row.card), [idle])
 })
 
+test('a request for any agent is in no agent row: no agent works it yet', () => {
+  const { items, add, tree } = vault()
+  const root = add('Home', null)
+  add('Asked', root, { status: 'doing', holder: 'agent', mtime: 0 })
+  add('Asked later', root, { status: 'done', holder: 'agent', mtime: 0 })
+  assert.deepEqual(agentFeed(cardsInScope(items, null, tree), 'Ana', tree, 1000), { working: [], idle: [], finished: [] })
+})
+
 test('the feed is one list over every area, newest first, with the area one level under the focus', () => {
   const { items, add, tree } = vault()
   const now = 10 * IDLE_MS
@@ -239,10 +247,10 @@ test('the feed is one list over every area, newest first, with the area one leve
   const dev = add('Dev', root, { area: true, status: 'doing' })
   const board = add('Board', dev, { area: true, status: 'doing' })
   const gym = add('Gym', root, { area: true, status: 'doing' })
-  const a = add('A', board, { status: 'doing', agent: 'claude', mtime: now - 3000 })
-  const b = add('B', gym, { status: 'doing', agent: 'codex', mtime: now - 1000 })
-  const c = add('C', dev, { status: 'doing', agent: 'claude', mtime: now - 2000 })
-  add('Loose', root, { status: 'doing', agent: 'claude', mtime: now - 4000 })
+  const a = add('A', board, { status: 'doing', holder: 'claude', mtime: now - 3000 })
+  const b = add('B', gym, { status: 'doing', holder: 'codex', mtime: now - 1000 })
+  const c = add('C', dev, { status: 'doing', holder: 'claude', mtime: now - 2000 })
+  add('Loose', root, { status: 'doing', holder: 'claude', mtime: now - 4000 })
   const cards = cardsInScope(items, null, tree)
 
   const top = agentFeed(cards, 'Ana', tree, now)
@@ -262,10 +270,10 @@ test('the working badge counts from the feed, per area row, and ignores idle and
   const dev = add('Dev', root, { area: true, status: 'doing' })
   const board = add('Board', dev, { area: true, status: 'doing' })
   const gym = add('Gym', root, { area: true, status: 'doing' })
-  add('A', board, { status: 'doing', agent: 'claude', mtime: now })
-  add('B', dev, { status: 'doing', agent: 'claude', mtime: now })
-  add('Quiet', dev, { status: 'doing', agent: 'codex', mtime: now - 2 * IDLE_MS })
-  add('Done', gym, { status: 'done', agent: 'claude', mtime: now })
+  add('A', board, { status: 'doing', holder: 'claude', mtime: now })
+  add('B', dev, { status: 'doing', holder: 'claude', mtime: now })
+  add('Quiet', dev, { status: 'doing', holder: 'codex', mtime: now - 2 * IDLE_MS })
+  add('Done', gym, { status: 'done', holder: 'claude', mtime: now })
   const cards = cardsInScope(items, null, tree)
 
   const top = agentFeed(cards, 'Ana', tree, now)
@@ -284,9 +292,9 @@ test('the finished fold holds claims finished in the last 24 hours, at most ten,
   const now = 100 * FINISHED_WINDOW_MS
   const root = add('Home', null)
   const area = add('Work', root, { area: true, status: 'doing' })
-  for (let i = 0; i < 12; i++) add(`Done ${i}`, area, { status: 'done', agent: 'claude', mtime: now - (i + 1) * 60_000 })
-  add('Old', area, { status: 'done', agent: 'claude', mtime: now - FINISHED_WINDOW_MS - 1 })
-  add('Dropped back', area, { status: 'options', agent: 'claude', mtime: now })
+  for (let i = 0; i < 12; i++) add(`Done ${i}`, area, { status: 'done', holder: 'claude', mtime: now - (i + 1) * 60_000 })
+  add('Old', area, { status: 'done', holder: 'claude', mtime: now - FINISHED_WINDOW_MS - 1 })
+  add('Dropped back', area, { status: 'options', holder: 'claude', mtime: now })
 
   const feed = agentFeed(cardsInScope(items, null, tree), 'Ana', tree, now)
   assert.equal(FINISHED_SHOWN, 10)
@@ -298,7 +306,7 @@ test('an empty area has an empty feed', () => {
   const root = add('Home', null)
   const quiet = add('Quiet', root, { area: true, status: 'doing' })
   add('Card', quiet, { status: 'backlog' })
-  add('Busy', add('Busy area', root, { area: true, status: 'doing' }), { status: 'doing', agent: 'claude' })
+  add('Busy', add('Busy area', root, { area: true, status: 'doing' }), { status: 'doing', holder: 'claude' })
   assert.deepEqual(agentFeed(cardsInScope(items, null, tree), 'Ana', tree, 0, quiet), { working: [], idle: [], finished: [] })
 })
 
@@ -309,7 +317,7 @@ test('a focus narrows to one area and groups by the next area down', () => {
   const board = add('Board', dev, { area: true, status: 'doing' })
   const theme = add('Theme', dev, { area: true, status: 'doing' })
   add('A', board, { status: 'done' })
-  add('B', theme, { status: 'doing', agent: 'claude' })
+  add('B', theme, { status: 'doing', holder: 'claude' })
   add('C', dev, { status: 'backlog' })
   add('Gym card', add('Gym', root, { area: true, status: 'doing' }))
   const cards = cardsInScope(items, null, tree)
@@ -356,8 +364,8 @@ test('an idle claim needs attention as an agent that went quiet', () => {
   const { items, add, tree } = vault()
   const now = 10 * IDLE_MS
   const root = add('Home', null)
-  const quiet = add('Quiet', root, { status: 'doing', agent: 'codex', mtime: now - 2 * IDLE_MS })
-  add('Live', root, { status: 'doing', agent: 'claude', mtime: now })
+  const quiet = add('Quiet', root, { status: 'doing', holder: 'codex', mtime: now - 2 * IDLE_MS })
+  add('Live', root, { status: 'doing', holder: 'claude', mtime: now })
   const cards = cardsInScope(items, null, tree)
   const feed = agentFeed(cards, 'Ana', tree, now)
   const found = needsAttention(cards, () => [], feed.idle.map((row) => row.card))
@@ -369,7 +377,7 @@ test('an idle claim needs attention as an agent that went quiet', () => {
 test('an agent becomes quiet at the one-hour idle boundary', () => {
   const { items, add, tree } = vault()
   const root = add('Home', null)
-  const card = add('Claimed', root, { status: 'doing', agent: 'codex', mtime: 0 })
+  const card = add('Claimed', root, { status: 'doing', holder: 'codex', mtime: 0 })
   const cards = cardsInScope(items, null, tree)
   const before = agentFeed(cards, '', tree, IDLE_MS - 1)
   assert.deepEqual(needsAttention(cards, () => [], before.idle.map((row) => row.card)), [])

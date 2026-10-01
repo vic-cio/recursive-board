@@ -10,7 +10,7 @@ const card: AreaItemState = {
   isRoot: false,
   isArea: false,
   status: 'options',
-  agent: undefined,
+  holder: undefined,
 }
 
 const source = `---
@@ -70,8 +70,8 @@ test('areaEdits refuses a root', () => {
 test('areaEdits converts a doing card and refuses a claimed one', () => {
   assert.equal(areaRefusal({ ...card, status: 'doing' }, 'area'), null)
   assert.throws(
-    () => areaEdits({ ...card, agent: 'codex' }, { kind: 'area' }),
-    /has agent "codex"/i,
+    () => areaEdits({ ...card, holder: 'codex' }, { kind: 'area' }),
+    /has holder "codex"/i,
   )
 })
 
