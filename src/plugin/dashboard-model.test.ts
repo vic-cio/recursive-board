@@ -116,6 +116,7 @@ test('Off removes web rows and falls back to the card when no file rows remain',
   assert.deepEqual(reviewPathsForMode(['https://example.com', 'report.md'], 'card.md', 'off'), ['report.md'])
   assert.deepEqual(reviewPathsForMode(['https://example.com'], 'card.md', 'off'), ['card.md'])
   assert.deepEqual(reviewPathsForMode([], 'card.md', 'off'), ['card.md'])
+  assert.deepEqual(reviewPathsForMode(['https://example.com'], 'card.md', 'webviewer'), ['https://example.com', 'card.md'])
 })
 
 test('only file rows count toward verdict readiness', () => {
@@ -138,10 +139,34 @@ test('a shared tick updates verdict readiness for every card that lists the file
   assert.deepEqual([...reviewVerdictReadiness(pathsByCard, ticks).values()], [false, false])
 })
 
-test('Off mode keeps its fallback row out of verdict readiness', () => {
-  const presentation = reviewPresentationForMode(['https://example.com'], 'card.md', 'off')
-  assert.deepEqual(presentation.paths, ['card.md'])
-  assert.deepEqual(presentation.verdictPaths, [])
+test('a card with no paths gets its own row, and that row carries the verdict tick', () => {
+  for (const mode of ['webviewer', 'browser', 'off'] as const) {
+    const presentation = reviewPresentationForMode([], 'card.md', mode)
+    assert.deepEqual(presentation.paths, ['card.md'], mode)
+    assert.deepEqual(presentation.verdictPaths, ['card.md'], mode)
+    assert.equal(allReviewFilesTicked(presentation.verdictPaths, {}), false, mode)
+    assert.equal(allReviewFilesTicked(presentation.verdictPaths, { 'card.md': true }), true, mode)
+  }
+})
+
+test('a card with only web paths adds its own row after the web rows, and that row carries the verdict tick', () => {
+  const web = ['https://example.com', 'http://localhost:3000']
+  assert.deepEqual(reviewPresentationForMode(web, 'card.md', 'webviewer').paths, [...web, 'card.md'])
+  assert.deepEqual(reviewPresentationForMode(web, 'card.md', 'browser').paths, [...web, 'card.md'])
+  assert.deepEqual(reviewPresentationForMode(web, 'card.md', 'off').paths, ['card.md'])
+  for (const mode of ['webviewer', 'browser', 'off'] as const) {
+    const presentation = reviewPresentationForMode(web, 'card.md', mode)
+    assert.deepEqual(presentation.verdictPaths, ['card.md'], mode)
+    const pathsByCard = new Map([['card', presentation.verdictPaths]])
+    assert.equal(reviewVerdictReadiness(pathsByCard, {}).get('card'), false, mode)
+    assert.equal(reviewVerdictReadiness(pathsByCard, { 'card.md': true }).get('card'), true, mode)
+  }
+})
+
+test('a card with file paths gets no card row, and only its files count toward the verdict', () => {
+  const mixed = ['https://example.com', 'report.md']
+  assert.deepEqual(reviewPresentationForMode(mixed, 'card.md', 'webviewer'), { paths: mixed, verdictPaths: ['report.md'] })
+  assert.deepEqual(reviewPresentationForMode(mixed, 'card.md', 'off'), { paths: ['report.md'], verdictPaths: ['report.md'] })
 })
 
 test('progress counts leaf cards per area, with no area last', () => {

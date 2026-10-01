@@ -88,17 +88,21 @@ export function parseWebReviewMode(value: unknown): WebReviewMode {
   return value === 'browser' || value === 'off' || value === 'webviewer' ? value : 'webviewer'
 }
 
-/** Hide web rows when disabled, and keep the card as the fallback when no rows remain. */
+/**
+ * Hide web rows when disabled. A card with no file rows also gets its own row, after any web
+ * rows, so the reviewer has a row to tick.
+ */
 export function reviewPathsForMode(paths: string[], fallbackPath: string, mode: WebReviewMode): string[] {
-  const visible = mode === 'off' ? paths.filter((path) => !isWebAddress(path)) : paths
-  return visible.length > 0 ? visible : [fallbackPath]
+  const visible = mode === 'off' ? fileReviewPaths(paths) : paths
+  return fileReviewPaths(paths).length > 0 ? visible : [...visible, fallbackPath]
 }
 
-/** Keep the card fallback visible without treating it as file evidence for a verdict. */
+/** The files count toward a verdict. With no file, the card's own row carries the tick. */
 export function reviewPresentationForMode(
   paths: string[], fallbackPath: string, mode: WebReviewMode,
 ): { paths: string[]; verdictPaths: string[] } {
-  return { paths: reviewPathsForMode(paths, fallbackPath, mode), verdictPaths: fileReviewPaths(paths) }
+  const files = fileReviewPaths(paths)
+  return { paths: reviewPathsForMode(paths, fallbackPath, mode), verdictPaths: files.length > 0 ? files : [fallbackPath] }
 }
 
 /** A web row never counts as a file review or toward a verdict. */
