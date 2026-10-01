@@ -1068,7 +1068,8 @@
 .wi-dash-table { width: 100%; border-collapse: collapse; margin-top: var(--size-4-2); }
 .wi-dash-table th { text-align: left; font-size: var(--font-ui-smaller); text-transform: uppercase; letter-spacing: .04em; color: var(--text-faint); padding: var(--size-4-1) var(--size-4-2); border-bottom: 1px solid var(--background-modifier-border); }
 .wi-dash-table td { padding: var(--size-4-2); border-bottom: 1px solid var(--background-modifier-border); vertical-align: top; }
-.wi-dash-table tr.is-ticked td:not(:first-child) { opacity: .55; }
+/* A tick fades the file's own cells. The card and the verdict buttons belong to the whole card, so they stay. */
+.wi-dash-table tr.is-ticked td:not(:first-child, .wi-dash-desktop-card, .wi-dash-phone-card, .wi-dash-check) { opacity: .55; }
 .wi-dash-name { display: inline-flex; gap: var(--size-4-2); align-items: center; }
 .wi-dash-nowrap { white-space: nowrap; }
 .wi-dash-check { max-width: 320px; }
@@ -1136,7 +1137,7 @@ button.wi-dash-id.wi-dash-id:hover { color: var(--text-normal); background: var(
   .wi-dash-table thead { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
   .wi-dash-table tbody { display: grid; gap: var(--size-4-2); min-width: 0; }
   .wi-dash-table tr.wi-dash-review-row { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); min-width: 0; border: 1px solid var(--background-modifier-border); border-radius: var(--radius-m); background: var(--background-primary); }
-  .wi-dash-table tr.wi-dash-review-row.is-ticked td:not(:first-child) { opacity: .75; }
+  .wi-dash-table tr.wi-dash-review-row.is-ticked td:not(:first-child, .wi-dash-desktop-card, .wi-dash-phone-card, .wi-dash-check) { opacity: .75; }
   .wi-dash-table tr.wi-dash-review-row > td { display: block; min-width: 0; padding: var(--size-4-2); border: 0; }
   .wi-dash-review-tick { grid-column: 1; grid-row: 1; }
   .wi-dash-review-target { grid-column: 2; grid-row: 1; }
