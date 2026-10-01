@@ -19,6 +19,7 @@ import {
 import { createItem } from './commands/new.ts'
 import { setStatus } from './commands/status.ts'
 import { claimItem, releaseItem } from './commands/claim-release.ts'
+import { delegate, runGit, spawnWorker } from './commands/delegate.ts'
 import { addNote } from './commands/note.ts'
 import { setTag } from './commands/tag.ts'
 import { retag, staleAreaTags, writeGraphColours } from './commands/retag.ts'
@@ -44,6 +45,7 @@ import { COMMAND_FLAGS, parseCommandLine, type Values } from './flags.ts'
 import { PLUGIN_DATA_FILE } from '../shared/board-settings.ts'
 import { STATUSES } from '../shared/schema.ts'
 import { templateNames } from '../shared/templates.ts'
+import { authorLabel } from '../shared/authorship.ts'
 
 const HELP = `wi — the Recursive Board CLI
 
@@ -59,6 +61,8 @@ Usage
   wi depend <ref> --on <ref> [--off]
   wi set <ref> [--owner <name>] [--role <name>] [--creator <name> [--model <id>]]
   wi claim <ref> --agent <name>
+  wi delegate <ref> --to <person|claude|codex|pi> [--model <id>] [--reason <text>] [--agent <name>]
+                 [--permission <mode>]
   wi objective [<ref>]
   wi trace <source.md> --heading <heading> --claim <text> [--json]
   wi agents
@@ -137,6 +141,12 @@ Notes
   \`wi status <ref> done\` names each card it unblocks. An archived card that is not done still blocks.
   \`wi claim\` lets an agent hold a card and its subtasks at once. It refuses a board with a child in
   doing that a different agent or a person works.
+  \`wi delegate <ref> --to <person>\` claims the card for a person with a note in People/, and notes who
+  has it and why (--reason). \`--to claude|codex|pi\` also makes a worktree of this Git repository on
+  card/<slug> beside it, in <repo>-worktrees/, and starts that harness headless with the card body as its
+  brief. The note names the log, <repo>-worktrees/<slug>.log, and the command that resumes the session.
+  --permission passes the harness's own mode: claude takes --permission-mode (default auto), codex
+  takes --sandbox (default workspace-write), and pi has none. The default never bypasses permissions.
   \`wi objective\` prints the WI_CARD objective chain, or the unambiguous deepest WI_AGENT claim.
   \`wi agents\` reports the advisory limit, the number of distinct agents with a doing card, and each
   claimed doing card. A card that a person holds does not count: a person is a note in People/. WI_MAX_AGENTS overrides
@@ -216,6 +226,8 @@ async function main(argv: string[]): Promise<number> {
       return runSet(vault, rest, values, json)
     case 'claim':
       return runClaim(vault, rest, values, json)
+    case 'delegate':
+      return runDelegate(vault, rest, values, json)
     case 'agents':
       return runAgents(vault, rest, json)
     case 'dashboard':
@@ -533,6 +545,36 @@ async function runClaim(vault: Vault, rest: string[], values: Values, json: bool
     ? `${label(change.item)}  ${change.from ?? '—'} → doing  (agent: ${agent})\n`
     : `${label(change.item)} is already claimed by ${agent} in doing. Nothing written.\n`)
   if (change.changed && !person && maxAgents !== null && !active.has(agent) && active.size + 1 > maxAgents) {
+    process.stderr.write(`wi: warning: agent limit is ${maxAgents}; ${active.size + 1} agents now have a doing card.\n`)
+  }
+  return 0
+}
+
+async function runDelegate(vault: Vault, rest: string[], values: Values, json: boolean): Promise<number> {
+  const ref = rest.join(' ').trim()
+  if (ref === '') throw new UsageError('wi delegate needs a <ref> and --to <person|claude|codex|pi>.')
+  const pick = (key: string) => values[key] === undefined ? undefined : singleLineOption(values, key)
+  const to = singleLineOption(values, 'to')
+  const maxAgents = maxAgentsForRun(vault)
+  const active = await activeAgentNames(vault)
+  const result = await delegate(vault, ref, {
+    to, model: pick('model'), reason: pick('reason'), agent: pick('agent'), permission: pick('permission'),
+  }, {
+    cwd: process.cwd(), git: runGit, launch: spawnWorker, uuid: () => crypto.randomUUID(),
+    author: authorLabel(envText('WI_CREATOR'), envText('WI_MODEL')),
+  })
+  if (json) {
+    print({ id: result.item.id ?? null, path: result.item.relPath, holder: result.holder, harness: result.harness ?? null,
+      branch: result.branch ?? null, worktree: result.worktree ?? null, log: result.log ?? null,
+      pid: result.pid ?? null, resume: result.resume ?? null })
+  } else {
+    process.stdout.write(`${label(result.item)}  doing  (delegated to ${result.holder})\n`)
+    if (result.harness) {
+      process.stdout.write(`  ${result.harness} worker, process ${result.pid}, on ${result.branch}\n` +
+        `  worktree  ${result.worktree}\n  log       ${result.log}\n  resume    ${result.resume}\n`)
+    }
+  }
+  if (result.harness && maxAgents !== null && !active.has(result.holder) && active.size + 1 > maxAgents) {
     process.stderr.write(`wi: warning: agent limit is ${maxAgents}; ${active.size + 1} agents now have a doing card.\n`)
   }
   return 0

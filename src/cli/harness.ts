@@ -110,7 +110,7 @@ export function workerPrompt(context: BriefContext): string {
     `You are ${context.agent}, a worker on the card ${context.card} "${context.title}" in the Recursive Board vault at ${context.vault}.`,
     `Your working directory is the worktree ${context.worktree}, on the branch ${context.branch}. Commit your work there. Do not push or merge it.`,
     'Read AGENTS.md in your working directory before you change anything.',
-    `Use wi for every write to the vault. WI_VAULT, WI_CARD, WI_AGENT, WI_CREATOR and WI_MODEL are set for you.`,
+    'Use wi for every write to the vault. The WI_ environment variables that wi reads are set for you.',
     `Follow "Working under a dispatcher" in the recursive-board skill, with ${context.agent} as your agent name. The card is already claimed for you.`,
     ...(context.role?.trim() ? [`Read the role note ${context.role.trim()}: it is your procedure.`] : []),
     'Work until the card is done without asking questions. Nobody reads your output until you finish.',

@@ -84,6 +84,8 @@ const INVOCATIONS: Record<string, string[]> = {
   depend: ['depend', 'Build server', '--on', 'Main'],
   set: ['set', 'Build server', '--owner', 'sam'],
   claim: ['claim', 'Build server', '--agent', 'codex'],
+  // A person, so a missed refusal could never start an agent.
+  delegate: ['delegate', 'Build server', '--to', 'sam'],
   objective: ['objective', 'Build server'],
   trace: ['trace', 'Boards/Main.md', '--heading', 'Main', '--claim', 'x'],
   agents: ['agents'],

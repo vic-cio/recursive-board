@@ -29,9 +29,15 @@ export interface ReleaseChange {
  * The claim is decided under the lock, from the card as it is then
  * (docs/adr/0054-edits-from-the-file-at-write-time.md): of two agents that claim one card at once,
  * the second finds the first one's name and is refused. Other cards, such as the dependencies and
- * the children, come from the loaded vault.
+ * the children, come from the loaded vault. `editBody` adds to the same write, as `wi delegate`
+ * adds its note.
  */
-export async function claimItem(vault: Vault, ref: string, agent: string): Promise<ClaimChange> {
+export async function claimItem(
+  vault: Vault,
+  ref: string,
+  agent: string,
+  editBody?: (text: string) => string,
+): Promise<ClaimChange> {
   const item = vault.resolve(ref)
   if (item.area) throw new Error(`${item.relPath} is an area, and an area cannot be claimed.`)
   if (item.parent === null) throw new Error(`${item.relPath} is a root, and a root cannot be claimed.`)
@@ -51,7 +57,7 @@ export async function claimItem(vault: Vault, ref: string, agent: string): Promi
     const edits = claimEdits(state.status, state.agent, agent, state.hasPrevStatus, state.board && otherDoingChild)
     changed = edits !== null
     return edits
-  })
+  }, editBody)
   return { item, agent, from, to: 'doing', changed }
 }
 
