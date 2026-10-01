@@ -38,8 +38,8 @@ export type NewWorkItem = NewWorkItemFields & (
 )
 
 /**
- * New children keep their owner's assignment. Agent assignment follows active work: it is
- * inherited for doing children, while an explicit agent remains an intentional override.
+ * New children do not inherit owner. Agent assignment follows active work: it is inherited for
+ * doing children, while an explicit owner or agent remains an intentional override.
  */
 export function inheritedChildFields(
   parent: Pick<NewWorkItemFields, 'owner' | 'agent'>,
@@ -47,7 +47,7 @@ export function inheritedChildFields(
   overrides: Pick<NewWorkItemFields, 'owner' | 'agent'> = {},
 ): Pick<NewWorkItemFields, 'owner' | 'agent'> {
   return {
-    owner: overrides.owner ?? parent.owner,
+    owner: overrides.owner,
     agent: overrides.agent ?? (status === 'doing' ? parent.agent : undefined),
   }
 }

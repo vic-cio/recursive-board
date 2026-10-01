@@ -89,6 +89,8 @@ In Obsidian, use **Promote** at the top of any child card to give it its own boa
   hyphens and adds the id to a clashing filename, and says so.
 - Give every new card its brief in the `wi new` command: one `--objective`, a `--context` per
   source or fact, a `--criteria` per checkable result. `wi` warns when the brief is missing.
+- A new card does not inherit its parent's owner. Pass `--owner` to set an owner on a `wi new` card.
+- The board's add row also creates a child without an owner. Accountability follows the parent tree.
 - Record progress with `wi note`. It locks the card, so a dispatcher and its worker can write
   at the same moment. Leave the frontmatter to `wi`.
 - The first child a card gets turns the card into a board, unless the vault sets

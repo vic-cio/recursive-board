@@ -339,11 +339,11 @@ test('the full loop: new, children, status, validate', async () => {
   assert.equal(after.code, 0, after.stdout)
 })
 
-test('wi new inherits owner from the parent', async () => {
+test('wi new does not inherit owner from the parent', async () => {
   fixture = seed()
   const { stdout } = await wi(['new', 'Streaming', '--parent', 'Build server', '--json'])
   const { path } = JSON.parse(stdout)
-  assert.match(readFileSync(join(fixture.root, path), 'utf8'), /^owner: sam$/m)
+  assert.doesNotMatch(readFileSync(join(fixture.root, path), 'utf8'), /^owner:/m)
 })
 
 test('wi new uses the configured folder and root when --parent is omitted', async () => {

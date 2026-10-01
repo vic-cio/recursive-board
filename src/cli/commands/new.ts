@@ -3,7 +3,7 @@
  *
  * This is the decomposition path: an agent that finds a work item too large creates children
  * rather than writing a plan into a chat transcript. It is also the board's add row (docs/adr/0017-inline-status-capture.md),
- * which is why a status can be given and why `owner` and `agent` are inherited.
+ * which is why a status can be given and why agent assignment follows the shared status rule.
  */
 import { readFile } from 'node:fs/promises'
 import { join } from 'node:path'
@@ -89,7 +89,6 @@ export async function createItem(vault: Vault, options: NewOptions): Promise<Cre
 
   const stamp = today()
   const inherited = inheritedChildFields({
-    owner: textField(parent.frontmatter.get('owner')),
     agent: template.area ? undefined : textField(parent.frontmatter.get('agent')),
   }, status, options)
   // An area does no work, so it takes a role only when one is given (docs/adr/0056-inherit-role-from-the-nearest-ancestor.md).

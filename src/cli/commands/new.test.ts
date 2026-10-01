@@ -127,7 +127,7 @@ test('createItem never writes board or prev_status on a fresh item', async () =>
   assert.equal(fm.has('prev_status'), false)
 })
 
-test('createItem always inherits owner, and inherits agent only for doing', async (t) => {
+test('createItem does not inherit owner, and inherits agent only for doing', async (t) => {
   for (const [status, expectedAgent] of [
     ['backlog', undefined],
     ['options', undefined],
@@ -140,7 +140,7 @@ test('createItem always inherits owner, and inherits agent only for doing', asyn
         title: 'Streaming', parent: 'wi-0004', status,
       })
       const fm = parseFrontmatter(readFileSync(created.path, 'utf8'))!
-      assert.equal(fm.get('owner'), 'sam')
+      assert.equal(fm.has('owner'), false)
       assert.equal(fm.get('agent'), expectedAgent)
       fixture.cleanup()
       fixture = undefined

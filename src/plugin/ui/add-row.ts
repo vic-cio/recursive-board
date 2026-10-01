@@ -37,7 +37,7 @@ export function renderAddRow(
     event.preventDefault()
     const title = input.value
     input.value = ''
-    // New items inherit the parent's owner; agent inheritance follows the shared status rule.
+    // Agent inheritance follows the shared status rule; owner does not pass to a new child.
     void ctx.actions.createChild(parent, title, status)
   })
 }
