@@ -16,17 +16,14 @@ export interface NoteAdded {
 }
 
 export interface NoteAuthor {
-  /** An explicit name for the line, from --agent. */
+  /** The writer's name, from --agent or WI_AGENT. */
   agent?: string | undefined
-  /** WI_CREATOR: the person or role writing. */
-  creator?: string | undefined
-  /** WI_MODEL. */
+  /** The model that writes the line, from WI_MODEL. */
   model?: string | undefined
 }
 
 /**
- * The line names its writer as "Role (model)" (docs/adr/0042-creator-and-role.md): --agent first,
- * then WI_CREATOR, then the card's role, then the agent that holds the card.
+ * The line names its writer as "name (model)". It never uses card metadata as the writer's name.
  */
 export async function addNote(
   vault: Vault,
@@ -36,13 +33,8 @@ export async function addNote(
   now: Date = new Date(),
 ): Promise<NoteAdded> {
   const item = vault.resolve(ref)
-  const text_ = (key: string) => {
-    const value = item.frontmatter.get(key)
-    return typeof value === 'string' && value.trim() !== '' ? value : undefined
-  }
-  const who = author.agent ??
-    authorLabel(author.creator ?? text_('role'), author.model) ??
-    text_('agent')
+  const who = authorLabel(author.agent, author.model)
+  if (who === undefined) throw new Error('wi note needs a writer name. Set WI_AGENT or pass --agent.')
   const line = noteLine(text, who, now)
   await editItem(item, [], (body) => appendNote(body, line))
   return { item, line }

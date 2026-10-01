@@ -75,3 +75,20 @@ test('showCard exposes a broken parent link and unresolved dependencies', async 
   assert.equal(shown.parentIssue, 'Missing')
   assert.deepEqual(shown.unresolvedDependencies, ['Gone'])
 })
+
+test('showCard returns the nearest effective role and marks inherited roles', async () => {
+  fixture = makeVault()
+  fixture.write('Boards/Main.md', item({ type: 'work-item', id: 'wi-root', title: 'Main', role: 'Builder' }))
+  fixture.write('Boards/Board.md', item({ type: 'work-item', id: 'wi-board', title: 'Board',
+    parent: '"[[Main]]"', role: 'Checker', board: true }))
+  fixture.write('Boards/Inherited.md', item({ type: 'work-item', id: 'wi-child', title: 'Inherited',
+    parent: '"[[Board]]"' }))
+  fixture.write('Boards/Override.md', item({ type: 'work-item', id: 'wi-override', title: 'Override',
+    parent: '"[[Board]]"', role: 'Reviewer' }))
+
+  const vault = await loadVault(fixture.root)
+  assert.equal(showCard(vault, 'Inherited').role, 'Checker')
+  assert.equal(showCard(vault, 'Inherited').roleInherited, true)
+  assert.equal(showCard(vault, 'Override').role, 'Reviewer')
+  assert.equal(showCard(vault, 'Override').roleInherited, false)
+})

@@ -119,7 +119,7 @@ for (const harness of ['claude', 'codex', 'pi'] as const) {
     assert.equal(launches[0]!.log, log)
     assert.equal(spec.env['WI_AGENT'], `${harness}-price-the-job`)
     assert.equal(spec.env['WI_CARD'], 'wi-0004')
-    assert.equal(spec.env['WI_CREATOR'], 'Coder', 'the role comes from the nearest ancestor')
+    assert.equal('WI_CREATOR' in spec.env, false)
     assert.equal(spec.env['WI_MODEL'], 'm-1')
     const prompt = spec.stdin ?? spec.args.at(-1)!
     assert.match(prompt, /You are .*-price-the-job, a worker on the card wi-0004/)
@@ -209,7 +209,7 @@ function wi(args: string[], cwd: string, vault: string, bin: string): { code: nu
   try {
     const stdout = execFileSync(process.execPath, [CLI, ...args], {
       cwd, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'],
-      env: { ...process.env, PATH: `${bin}:${git}:/usr/bin:/bin`, WI_VAULT: vault, WI_CREATOR: 'Session agent', WI_MODEL: 'm-0' },
+      env: { ...process.env, PATH: `${bin}:${git}:/usr/bin:/bin`, WI_VAULT: vault, WI_AGENT: 'Session agent', WI_MODEL: 'm-0' },
     })
     return { code: 0, stdout, stderr: '' }
   } catch (error) {

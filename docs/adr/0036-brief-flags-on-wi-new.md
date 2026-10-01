@@ -16,3 +16,7 @@ person capturing an idea may have no brief yet.
 
 `wi new` also says when a title's plain filename is taken and the file carries the id suffix, so
 an agent with a generic title learns of the clash at once.
+
+`--strict` checks only the brief. New cards do not record a creator (0042). `--creator` and
+`--model` remain accepted by `wi new` as no-ops for compatibility, and the command reports that
+fact on stderr.

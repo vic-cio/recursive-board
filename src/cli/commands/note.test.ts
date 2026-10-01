@@ -27,10 +27,16 @@ function seed(): Fixture {
 const textOf = (f: Fixture) => readFileSync(`${f.root}/Boards/Task.md`, 'utf8')
 const now = new Date(2026, 8, 25, 14, 3)
 
-test('addNote appends under Notes, names the card agent, and stamps updated', async () => {
+test('addNote refuses to write when the caller does not name its writer', async () => {
   fixture = seed()
-  await addNote(await loadVault(fixture.root), 'Task', 'Priced 12 lines.', undefined, now)
-  assert.ok(textOf(fixture).endsWith('## Notes\n\nHuman note.\n- 2026-09-25 14:03, luna-3: Priced 12 lines.\n\n## Knowledge\n\n- \n'))
+  await assert.rejects(addNote(await loadVault(fixture.root), 'Task', 'Priced 12 lines.', undefined, now), /writer name/)
+  assert.doesNotMatch(textOf(fixture), /Priced 12 lines/)
+})
+
+test('addNote signs the named writer and model, and stamps updated', async () => {
+  fixture = seed()
+  await addNote(await loadVault(fixture.root), 'Task', 'Priced 12 lines.', { agent: 'worker-1', model: 'gpt-6-luna' }, now)
+  assert.ok(textOf(fixture).endsWith('## Notes\n\nHuman note.\n- 2026-09-25 14:03, worker-1 (gpt-6-luna): Priced 12 lines.\n\n## Knowledge\n\n- \n'))
   assert.equal(parseFrontmatter(textOf(fixture))!.get('updated'), today())
 })
 
@@ -51,6 +57,6 @@ test('notes from two writers that loaded the same vault both survive', async () 
 
 test('addNote wraps placeholders in note text and preserves links', async () => {
   fixture = seed()
-  await addNote(await loadVault(fixture.root), 'Task', 'Set <port>; see [docs](<docs/index.md>).', undefined, now)
+  await addNote(await loadVault(fixture.root), 'Task', 'Set <port>; see [docs](<docs/index.md>).', { agent: 'worker' }, now)
   assert.match(textOf(fixture), /Set `<port>`; see \[docs\]\(<docs\/index\.md>\)\./)
 })

@@ -1,7 +1,7 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 
-import { asName, authorLabel, displayName, linkTypeProblem, roleForNewCard } from './authorship.ts'
+import { asName, authorLabel, displayName, linkTypeProblem, resolveRole } from './authorship.ts'
 
 test('a name is written plain, and a link becomes its target', () => {
   assert.equal(asName(' Ana '), 'Ana')
@@ -30,17 +30,10 @@ test('each field links to its own kinds of note', () => {
   assert.match(linkTypeProblem('role', 'Ana', undefined)!, /has no type\. Give that note type: role\./)
 })
 
-test('a new card takes the role of its nearest ancestor that has one', () => {
-  assert.equal(roleForNewCard(undefined, ['Coder', 'Checker']), 'Coder')
-  assert.equal(roleForNewCard(undefined, [undefined, '', 'Checker', 'Coder']), 'Checker')
-  assert.equal(roleForNewCard(undefined, [null, '[[Coder|the coder]]']), 'Coder')
-  assert.equal(roleForNewCard(undefined, [undefined, undefined]), undefined)
-  assert.equal(roleForNewCard(undefined, []), undefined)
-})
-
-test('an explicit role wins, and an empty one means no role', () => {
-  assert.equal(roleForNewCard('Checker', ['Coder']), 'Checker')
-  assert.equal(roleForNewCard('[[Checker]]', ['Coder']), 'Checker')
-  assert.equal(roleForNewCard('', ['Coder']), undefined)
-  assert.equal(roleForNewCard('  ', ['Coder']), undefined)
+test('a card resolves its own role before the nearest ancestor role', () => {
+  assert.deepEqual(resolveRole('Checker', ['Coder']), { role: 'Checker', inherited: false })
+  assert.deepEqual(resolveRole(undefined, ['Coder', 'Checker']), { role: 'Coder', inherited: true })
+  assert.deepEqual(resolveRole(undefined, [undefined, '', '[[Coder|the coder]]']), { role: 'Coder', inherited: true })
+  assert.deepEqual(resolveRole(undefined, [undefined, undefined]), { role: undefined, inherited: false })
+  assert.deepEqual(resolveRole('', ['Coder']), { role: 'Coder', inherited: true })
 })

@@ -69,9 +69,9 @@ test('with no model, the harness picks its own and WI_MODEL is removed', () => {
 
 test('the worker environment names the vault, the card, the agent, the role and the model', () => {
   assert.deepEqual(launchSpec(run()).env, {
-    WI_VAULT: '/vault', WI_CARD: 'wi-a1', WI_AGENT: 'claude-price-the-job', WI_CREATOR: 'Coder', WI_MODEL: 'm-1',
+    WI_VAULT: '/vault', WI_CARD: 'wi-a1', WI_AGENT: 'claude-price-the-job', WI_MODEL: 'm-1',
   })
-  assert.equal(launchSpec(run({ role: undefined })).env['WI_CREATOR'], 'Worker')
+  assert.equal('WI_CREATOR' in launchSpec(run({ role: undefined })).env, false)
 })
 
 test('workerPrompt names the card, the agent, the worktree and the role, then gives the card body', () => {

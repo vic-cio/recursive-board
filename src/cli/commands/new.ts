@@ -13,7 +13,7 @@ import { cardState } from '../../shared/card-state.ts'
 import { inheritedChildFields, renderWorkItem, type NewWorkItem } from '../../shared/work-item.ts'
 import { briefGaps, renderBody, requireTemplate, type Brief } from '../../shared/templates.ts'
 import { firstChildPromotion } from '../../shared/transitions.ts'
-import { asName, roleForNewCard } from '../../shared/authorship.ts'
+import { asName } from '../../shared/authorship.ts'
 import { fileNameFor, fileNameStem, isStatus, newId, today, WORK_ITEM_TYPE, type Status } from '../../shared/schema.ts'
 import { parseFrontmatter } from '../../shared/frontmatter.ts'
 import type { Vault, WorkItem } from '../vault.ts'
@@ -25,17 +25,13 @@ export interface NewOptions {
   status?: Status
   owner?: string
   agent?: string
-  /** The person or role that makes the card, as a name or a link (docs/adr/0042-creator-and-role.md). */
-  creator?: string
-  /** The model id, when an agent makes the card. */
-  model?: string
   /** The role that must do the work. */
   role?: string
   priority?: number
   /** A name from the template registry. Omitted uses the default. */
   template?: string
   brief?: Brief
-  /** Refuse to create a card whose template asks for an Objective or criteria the brief lacks, or that has no creator. */
+  /** Refuse to create a card whose template asks for an Objective or criteria the brief lacks. */
   strict?: boolean
 }
 
@@ -51,8 +47,6 @@ export interface Created {
   gaps: string[]
   /** True when another item took the plain filename, so the file carries the id suffix. */
   renamed: boolean
-  /** True when the card has no creator. */
-  uncredited: boolean
 }
 
 export async function createItem(vault: Vault, options: NewOptions): Promise<Created> {
@@ -78,10 +72,6 @@ export async function createItem(vault: Vault, options: NewOptions): Promise<Cre
   if (options.strict && gaps.length > 0) {
     throw new Error(`the card has no ${gaps.join(' or ')}. Pass --objective and --criteria, or drop --strict.`)
   }
-  const creator = options.creator?.trim() ? asName(options.creator) : undefined
-  if (options.strict && creator === undefined) {
-    throw new Error('the card has no creator. Pass --creator, or set WI_CREATOR, or drop --strict.')
-  }
   // Render the body first, so a brief the template cannot hold fails before a file exists.
   renderBody(template, vault.config.extraSections, options.brief)
 
@@ -89,8 +79,7 @@ export async function createItem(vault: Vault, options: NewOptions): Promise<Cre
   const inherited = inheritedChildFields({
     agent: template.area ? undefined : textField(parent.frontmatter.get('agent')),
   }, status, options)
-  // An area does no work, so it takes a role only when one is given (docs/adr/0056-inherit-role-from-the-nearest-ancestor.md).
-  const role = roleForNewCard(options.role, template.area ? [] : ancestorRoles(vault, parent))
+  const role = options.role?.trim() ? asName(options.role) : undefined
   const render = (id: string): string => {
     const common = {
       id,
@@ -105,8 +94,6 @@ export async function createItem(vault: Vault, options: NewOptions): Promise<Cre
       ? { ...common, ...inherited, area: true, status }
       : { ...common, ...inherited, status }
     if (options.priority !== undefined) fields.priority = options.priority
-    if (creator !== undefined) fields.creator = creator
-    if (creator !== undefined && options.model?.trim()) fields.creatorModel = options.model.trim()
     if (role !== undefined) fields.role = role
     if (options.owner?.trim()) fields.owner = asName(options.owner)
     return renderWorkItem(fields, vault.config.extraSections)
@@ -158,12 +145,10 @@ export async function createItem(vault: Vault, options: NewOptions): Promise<Cre
   return {
     id, stem, relPath, path, parentStem: parent.stem,
     promotedParent, gaps, renamed: stem !== fileNameStem(title),
-    uncredited: creator === undefined,
   }
 }
 
-/** The `role` of the parent and each ancestor above it, nearest first. */
-/** The `role` of the card and of each ancestor, nearest first. */
+/** The `role` of the item and each ancestor, nearest first. */
 export function ancestorRoles(vault: Vault, parent: WorkItem): unknown[] {
   const roles: unknown[] = []
   const seen = new Set<string>()

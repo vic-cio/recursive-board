@@ -22,8 +22,8 @@ interface Result { code: number; stdout: string; stderr: string }
 async function wi(args: string[], vault?: string, env: NodeJS.ProcessEnv = {}): Promise<Result> {
   try {
     const { stdout, stderr } = await run('node', [CLI, ...args], {
-      // A blank WI_CREATOR and WI_MODEL mean unset, so the caller's shell cannot change a result.
-      env: { ...process.env, WI_CREATOR: '', WI_MODEL: '', WI_VAULT: vault ?? fixture!.root, ...env },
+      // Blank writer variables keep the caller's shell from changing a result.
+      env: { ...process.env, WI_AGENT: '', WI_MODEL: '', WI_VAULT: vault ?? fixture!.root, ...env },
     })
     return { code: 0, stdout, stderr }
   } catch (error) {
@@ -700,7 +700,7 @@ test('wi new writes a brief from flags, and --strict refuses a card without one'
   const made = await wi(['new', 'Price demolition', '--parent', 'Main', '--objective', 'Price every line.',
     '--context', 'Survey.', '--criteria', 'Each line has a rate', '--criteria', 'Total checked', '--creator', 'Ana', '--json'])
   assert.equal(made.code, 0, made.stderr)
-  assert.equal(made.stderr, '')
+  assert.match(made.stderr, /--creator and --model are accepted but ignored/)
   const text = readFileSync(join(fixture.root, JSON.parse(made.stdout).path), 'utf8')
   assert.match(text, /## Acceptance Criteria\n\n- Each line has a rate\n- Total checked\n/)
 
@@ -713,28 +713,28 @@ test('wi new writes a brief from flags, and --strict refuses a card without one'
   assert.match(strict.stderr, /no Objective or Acceptance Criteria/)
 })
 
-test('wi new writes creator, model and role as plain names, from flags or the environment', async () => {
+test('wi new ignores creator and model flags with a note, and only writes an explicit role', async () => {
   fixture = seed()
   const flags = await wi(['new', 'Check rates', '--parent', 'Main', '--objective', 'Check.', '--criteria', 'Done',
     '--creator', 'Project lead', '--model', 'gpt-6-luna', '--role', '[[Checker]]', '--owner', 'Ana', '--json'])
   assert.equal(flags.code, 0, flags.stderr)
   const text = readFileSync(join(fixture.root, JSON.parse(flags.stdout).path), 'utf8')
   assert.match(text, /^owner: Ana$/m)
-  assert.match(text, /^role: Checker\ncreator: Project lead\ncreator_model: gpt-6-luna$/m)
+  assert.match(text, /^role: Checker$/m)
+  assert.doesNotMatch(text, /^creator(?:_model)?:/m)
+  assert.match(flags.stderr, /--creator and --model are accepted but ignored/)
 
   const env = await wi(['new', 'From env', '--parent', 'Main', '--json'], undefined, { WI_CREATOR: 'Session agent', WI_MODEL: 'claude-opus-5-5' })
   const envText = readFileSync(join(fixture.root, JSON.parse(env.stdout).path), 'utf8')
-  assert.match(envText, /^creator: Session agent\ncreator_model: claude-opus-5-5$/m)
+  assert.doesNotMatch(envText, /^creator(?:_model)?:/m)
   assert.doesNotMatch(env.stderr, /no creator/)
 
-  const bare = await wi(['new', 'Nobody', '--parent', 'Main', '--objective', 'x', '--criteria', 'y'])
-  assert.match(bare.stderr, /has no creator/)
   const strict = await wi(['new', 'Strict nobody', '--parent', 'Main', '--objective', 'x', '--criteria', 'y', '--strict'])
-  assert.equal(strict.code, 2)
-  assert.match(strict.stderr, /no creator/)
+  assert.equal(strict.code, 0, strict.stderr)
+  assert.doesNotMatch(strict.stderr, /no creator/)
 })
 
-test('wi new takes the role of the nearest ancestor that has one, and an explicit --role wins', async () => {
+test('wi new does not copy an ancestor role, and an explicit --role is kept', async () => {
   fixture = seed()
   const base = { type: 'work-item', created: '2026-09-21', updated: '2026-09-21' }
   fixture.write('Boards/Coding board.md', item({ ...base, id: 'wi-7001', title: 'Coding board', status: 'doing',
@@ -751,9 +751,9 @@ test('wi new takes the role of the nearest ancestor that has one, and an explici
     return /^role: (.*)$/m.exec(text)?.[1] ?? null
   }
 
-  assert.equal(await roleOf(['From the parent', '--parent', 'Coding board']), 'Coder')
-  assert.equal(await roleOf(['From the grandparent', '--parent', 'Plain step']), 'Coder')
-  assert.equal(await roleOf(['From the nearest', '--parent', 'Check step']), 'Checker')
+  assert.equal(await roleOf(['From the parent', '--parent', 'Coding board']), null)
+  assert.equal(await roleOf(['From the grandparent', '--parent', 'Plain step']), null)
+  assert.equal(await roleOf(['From the nearest', '--parent', 'Check step']), null)
   assert.equal(await roleOf(['No role above', '--parent', 'Build server']), null)
   assert.equal(await roleOf(['Explicit', '--parent', 'Check step', '--role', 'Reviewer']), 'Reviewer')
   assert.equal(await roleOf(['Explicitly none', '--parent', 'Check step', '--role', '']), null)
@@ -781,11 +781,16 @@ test('wi validate checks creator, owner and role names against notes anywhere', 
   ])
 })
 
-test('wi note names the writer by role and model', async () => {
+test('wi note refuses an unnamed writer and signs WI_AGENT with its model', async () => {
   fixture = seed()
-  const result = await wi(['note', 'Build server', 'Checked', 'rates.'], undefined, { WI_CREATOR: 'Checker', WI_MODEL: 'gpt-6-luna' })
+  const refused = await wi(['note', 'Build server', 'Checked', 'rates.'])
+  assert.equal(refused.code, 2)
+  assert.match(refused.stderr, /WI_AGENT.*--agent/)
+  assert.doesNotMatch(readFileSync(join(fixture.root, 'Boards/Build server.md'), 'utf8'), /Checked rates/)
+
+  const result = await wi(['note', 'Build server', 'Checked', 'rates.'], undefined, { WI_AGENT: 'worker-1', WI_MODEL: 'gpt-6-luna' })
   assert.equal(result.code, 0, result.stderr)
-  assert.match(readFileSync(join(fixture.root, 'Boards/Build server.md'), 'utf8'), /, Checker \(gpt-6-luna\): Checked rates\.\n$/)
+  assert.match(readFileSync(join(fixture.root, 'Boards/Build server.md'), 'utf8'), /, worker-1 \(gpt-6-luna\): Checked rates\.\n$/)
 })
 
 test('wi note appends a stamped line naming the agent', async () => {

@@ -64,7 +64,7 @@ export function launchSpec(run: WorkerRun): LaunchSpec {
   const model = run.model?.trim() || undefined
   const env = {
     WI_VAULT: run.vault, WI_CARD: run.card, WI_AGENT: run.agent,
-    WI_CREATOR: run.role?.trim() || 'Worker', WI_MODEL: model,
+    WI_MODEL: model,
   }
   const base = { cwd: run.worktree, env }
   switch (run.harness) {

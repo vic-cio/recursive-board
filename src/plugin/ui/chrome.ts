@@ -151,8 +151,11 @@ export function renderMetaStrip(host: HTMLElement, meta: WorkItemMeta, ctx?: Ren
   }
   if (meta.priority !== undefined) strip.createSpan({ cls: 'wi-pill', text: `P${meta.priority}` })
   if (meta.role !== undefined) {
-    const pill = strip.createSpan({ cls: 'wi-pill is-role', attr: { 'aria-label': 'The role that does this work' } })
+    const pill = strip.createSpan({ cls: 'wi-pill is-role', attr: {
+      'aria-label': meta.roleInherited ? 'The inherited role that does this work' : 'The role that does this work',
+    } })
     namePill(pill, meta.role, meta.roleFile, openFile)
+    if (meta.roleInherited) pill.createSpan({ cls: 'is-quiet', text: ' · inherited' })
   }
   if (meta.owner !== undefined) {
     const pill = strip.createSpan({ cls: 'wi-pill', attr: { 'aria-label': 'Owner' } })

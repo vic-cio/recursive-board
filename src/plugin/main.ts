@@ -99,7 +99,7 @@ export default class RecursiveBoardPlugin extends Plugin {
       new Notice(`Recursive Board could not read the board settings: ${reason}`)
       throw error
     }
-    this.actions = new Actions(this.app, this.index, () => this.dashboard.you)
+    this.actions = new Actions(this.app, this.index)
 
     this.registerView(DASHBOARD_VIEW, (leaf) => new DashboardView(leaf, {
       index: this.index,

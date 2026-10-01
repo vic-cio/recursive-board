@@ -64,10 +64,10 @@ wi new "<title>" --parent <ref> --objective <text> --context <text> --criteria <
                  [--status backlog] [--priority <n>]   # 1 is the highest
                  [--template work-item|first-board-card|area]
 wi status <ref> <backlog|options|doing|done>
-wi note <ref> "<result>" [--agent <name>]   # one dated line under Notes
+wi note <ref> "<result>" [--agent <name>]   # signs with --agent or WI_AGENT
 wi depend <ref> --on <ref>            # the card waits on another card; --off removes it
-wi new <title> --creator <role> --model <id> [--role <role>]  # who made it, which role does it
-                                                              # no --role: the nearest ancestor's role
+wi new <title> [--role <role>] [--creator <name>] [--model <id>]
+                                                # creator and model flags are accepted no-ops
 wi set <ref> --owner <name> | --role <role>                   # change who owns it or does it
 wi area <ref>                         # mark a card as an area
 wi area <ref> --off                   # remove the area mark
@@ -97,7 +97,7 @@ In Obsidian, use **Promote** at the top of any child card to give it its own boa
 - A new card does not inherit its parent's owner. Pass `--owner` to set an owner on a `wi new` card.
 - The board's add row also creates a child without an owner. Accountability follows the parent tree.
 - Record progress with `wi note`. It locks the card, so a dispatcher and its worker can write
-  at the same moment. Leave the frontmatter to `wi`.
+  at the same moment. Set `WI_AGENT` or pass `--agent` before writing. Leave the frontmatter to `wi`.
 - The first child a card gets turns the card into a board, unless the vault sets
   `autoPromote: false`.
 - To untick a done item, set it back to its `prev_status`.
@@ -146,12 +146,12 @@ A worker is an agent that a dispatcher (a script or another agent) started on on
 follows the work on the board, so the board is the live record of what each worker does now. Use
 your own agent name everywhere `<me>` appears.
 
-The dispatcher sets `WI_CREATOR` to your role and `WI_MODEL` to your model, so every card you
-make and every note you write names you. If they are unset, pass `--creator <role> --model <id>`
-to `wi new`. When the card has a `role`, read that role note: it is your procedure. In a live
-session with the owner, your role is the vault's session role note, if it has one. A child you
-make copies the role of its nearest ancestor that has one. Pass `--role <role>` only when the
-step needs a different procedure.
+The dispatcher sets `WI_AGENT` to your name and `WI_MODEL` to your model. `wi note` signs each
+line with your name and model. It refuses to write when `WI_AGENT` and `--agent` are both empty.
+Read the role from the card or its nearest ancestor. A card's own role takes priority. `wi show`
+marks an inherited role, and `wi delegate` gives the worker that procedure. New cards store no
+inherited role. `--role <role>` sets an explicit role. The board's add row also stores no role.
+`--creator` and `--model` on `wi new` remain accepted no-ops. Old creator fields stay valid.
 
 1. Claim the card: `wi claim <card> --agent <me>`. Read its body and its open children.
 2. Split it before you start when it holds more than one deliverable. Make each step a child with

@@ -15,7 +15,7 @@ import { readLabels } from '../shared/labels.ts'
 import { isLegacyAreaTag } from '../shared/legacy-area-tag.ts'
 import { DEFAULT_VAULT_CONFIG, type VaultConfig } from '../shared/vault-config.ts'
 import { archiveOwner } from '../shared/archive.ts'
-import { displayName } from '../shared/authorship.ts'
+import { displayName, resolveRole } from '../shared/authorship.ts'
 import { dependsOnValues, isOpenDependency, parseDependsOn } from '../shared/dependencies.ts'
 import {
   doneCutoff, isStatus, parseWikilink, STATUSES, WORK_ITEM_TYPE, type Status,
@@ -48,8 +48,12 @@ export interface WorkItemMeta {
   creator: string | undefined
   creatorFile: TFile | null
   creatorModel: string | undefined
-  /** The role that must do the work, by name. */
+  /** The role that must do the work, resolved from this item or its nearest ancestor. */
   role: string | undefined
+  /** True when role comes from an ancestor. */
+  roleInherited: boolean
+  /** The role written on this item, if any. */
+  ownRole: string | undefined
   roleFile: TFile | null
   /** The raw `depends_on` entries, kept for an edit (docs/adr/0041-card-dependencies.md). */
   dependsOnRaw: string[]
@@ -101,6 +105,22 @@ export class WorkItemIndex {
       const siblings = this.kids.get(meta.parent.path) ?? []
       siblings.push(meta)
       this.kids.set(meta.parent.path, siblings)
+    }
+    for (const meta of this.items.values()) {
+      const roles: string[] = []
+      const seen = new Set([meta.file.path])
+      let parent = meta.parent
+      while (parent && !seen.has(parent.path)) {
+        seen.add(parent.path)
+        const ancestor = this.items.get(parent.path)
+        if (!ancestor) break
+        roles.push(ancestor.ownRole ?? '')
+        parent = ancestor.parent
+      }
+      const resolved = resolveRole(meta.ownRole, roles)
+      meta.role = resolved.role
+      meta.roleInherited = resolved.inherited
+      meta.roleFile = this.linkedFile(resolved.role, meta.file)
     }
     for (const meta of this.items.values()) {
       meta.effectiveArchived = this.archiveOwner(meta) !== null
@@ -159,6 +179,8 @@ export class WorkItemIndex {
       creatorFile: this.linkedFile(frontmatter['creator'], file),
       creatorModel: str(frontmatter['creator_model']),
       role: displayName(frontmatter['role']),
+      roleInherited: false,
+      ownRole: displayName(frontmatter['role']),
       roleFile: this.linkedFile(frontmatter['role'], file),
       dependsOnRaw,
       dependsOn,

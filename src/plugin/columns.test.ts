@@ -33,6 +33,8 @@ function meta(over: Partial<WorkItemMeta> & { stem: string }): WorkItemMeta {
     creatorFile: null,
     creatorModel: undefined,
     role: undefined,
+    roleInherited: false,
+    ownRole: undefined,
     roleFile: null,
     archived: over.archived ?? false,
     effectiveArchived: over.effectiveArchived ?? false,

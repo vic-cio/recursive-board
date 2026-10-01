@@ -27,7 +27,6 @@ import { dependencyEdit, dependencyEditIn, dependencyPathByKey } from '../shared
 import { freeTagEditsIn } from '../shared/tags.ts'
 import { parseFrontmatter } from '../shared/frontmatter.ts'
 import { parseWikilink } from '../shared/schema.ts'
-import { asName, roleForNewCard } from '../shared/authorship.ts'
 import { applyVerdict, type Verdict } from '../shared/review.ts'
 import type { WorkItemIndex, WorkItemMeta } from './index.ts'
 import { UndoStack } from './undo.ts'
@@ -38,13 +37,9 @@ export class Actions {
   /** Every board write, so it can be reversed. Session only (see `undo.ts`). */
   readonly undoStack = new UndoStack()
 
-  /** The name in the "Your name" setting, which the add row writes as the creator. */
-  private readonly you: () => string
-
-  constructor(app: App, index: WorkItemIndex, you: () => string = () => '') {
+  constructor(app: App, index: WorkItemIndex) {
     this.app = app
     this.index = index
-    this.you = you
   }
 
   /** Applies a plan to the file's current text. Returns the text written, or null when nothing changed. */
@@ -286,17 +281,6 @@ export class Actions {
     if (written) this.undoableNotice(`Moved ${meta.title} to ${target.title}`)
   }
 
-  /** The item and each ancestor up to the root. A loop stops where it repeats. */
-  private chainOf(start: WorkItemMeta): WorkItemMeta[] {
-    const chain: WorkItemMeta[] = []
-    const seen = new Set<string>()
-    for (let item: WorkItemMeta | null = start; item && !seen.has(item.file.path); item = this.index.get(item.parent)) {
-      seen.add(item.file.path)
-      chain.push(item)
-    }
-    return chain
-  }
-
   /**
    * The add row at the foot of a column (docs/adr/0017-inline-status-capture.md).
    * Typing a title and pressing enter is one action, which is what makes a board a capture
@@ -316,19 +300,13 @@ export class Actions {
     }
 
     const stamp = today()
-    const chain = this.chainOf(parent)
     const childCount = this.index.childrenOf(parent.file).length
-    // The same rule as wi new (docs/adr/0056-inherit-role-from-the-nearest-ancestor.md).
-    const role = roleForNewCard(undefined, chain.map((item) => item.role))
     const text = renderWorkItem({
       id,
       title,
       status,
       parentStem: parent.stem,
       ...inheritedChildFields(parent, status),
-      ...(role === undefined ? {} : { role }),
-      // A person typed this card on the board (docs/adr/0042-creator-and-role.md).
-      ...(this.you().trim() === '' ? {} : { creator: asName(this.you()) }),
       created: stamp,
       updated: stamp,
     }, this.index.config.extraSections)

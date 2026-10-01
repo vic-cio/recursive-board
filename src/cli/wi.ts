@@ -94,16 +94,14 @@ Notes
   the new file gets the id's suffix; wi never writes over a file.
   \`wi new\` makes a parent a board when it gives the parent its first child. Set
   "autoPromote": false in the board settings to turn this off. A root or an area is never changed.
-  \`wi new\` writes creator, creator_model and role as the plain names of person or role notes. --creator and
-  --model fall back to WI_CREATOR and WI_MODEL; wi new warns when a card has no creator, and
-  --strict refuses it. Without --role, the card copies the role of its nearest ancestor that has one.
-  An empty --role "" writes no role.
+  \`wi new\` writes an explicit --role only. Roles inherit from the nearest ancestor at read time.
+  --creator and --model are accepted no-ops for compatibility. --strict checks only the brief.
   \`wi tag <ref> <tag>\` adds a free tag to a card, and --off removes it. Case and a leading # do not
   matter. It refuses old area/ tags, which remain on cards until the owner chooses a cleanup.
   \`wi set\` changes a card's owner or role (an empty value removes it), and writes its creator and
   model only when it has none: a creator is set once.
-  \`wi note\` appends "- <date> <time>, <writer>: <text>" under Notes. The writer is --agent, or
-  "<WI_CREATOR or the card's role> (<WI_MODEL>)", or the card's agent. The write re-reads the card under a lock, so two notes at once both survive.
+  \`wi note\` appends "- <date> <time>, <writer>: <text>" under Notes. It signs WI_AGENT or --agent,
+  and adds WI_MODEL when set. It refuses a note with no writer name. The write re-reads the card under a lock, so two notes at once both survive.
   \`wi status <ref> done\` says when that was the parent's last open child. It does not close the parent.
   Unticking a done item is \`wi status <ref> <its prev_status>\`, which also clears the record.
   \`wi validate\` exits 1 when the vault has errors, so it works as a pre-commit hook.
@@ -301,8 +299,6 @@ async function runNew(vault: Vault, rest: string[], values: Values, json: boolea
     ...(typeof values['agent'] === 'string' ? { agent: values['agent'] } : {}),
     ...(typeof values['template'] === 'string' ? { template: values['template'] } : {}),
     ...(priority !== undefined ? { priority } : {}),
-    ...optional('creator', typeof values['creator'] === 'string' ? values['creator'] : envText('WI_CREATOR')),
-    ...optional('model', typeof values['model'] === 'string' ? values['model'] : envText('WI_MODEL')),
     ...optional('role', typeof values['role'] === 'string' ? values['role'] : undefined),
     brief: {
       objective: typeof values['objective'] === 'string' ? values['objective'] : undefined,
@@ -323,9 +319,8 @@ async function runNew(vault: Vault, rest: string[], values: Values, json: boolea
     process.stderr.write(`wi: warning: ${created.id} has no ${created.gaps.join(' or ')}. ` +
       `Pass --objective and --criteria, or fill the card before work starts.\n`)
   }
-  if (created.uncredited) {
-    process.stderr.write(`wi: warning: ${created.id} has no creator. Pass --creator (and --model for an agent), ` +
-      `or set WI_CREATOR and WI_MODEL.\n`)
+  if (values['creator'] !== undefined || values['model'] !== undefined) {
+    process.stderr.write('wi: note: --creator and --model are accepted but ignored. New cards do not record their creator.\n')
   }
   if (created.renamed) {
     process.stderr.write(`wi: note: another item has this filename, so this one is ${created.relPath}. ` +
@@ -490,7 +485,7 @@ async function runDelegate(vault: Vault, rest: string[], values: Values, json: b
     to, model: pick('model'), agent: pick('agent'), permission: pick('permission'),
   }, {
     cwd: process.cwd(), git: runGit, launch: spawnWorker, uuid: () => crypto.randomUUID(),
-    author: authorLabel(envText('WI_CREATOR'), envText('WI_MODEL')),
+    author: authorLabel(envText('WI_AGENT'), envText('WI_MODEL')),
   })
   if (json) {
     print({ id: result.item.id ?? null, path: result.item.relPath, holder: result.holder, harness: result.harness ?? null,
@@ -528,7 +523,7 @@ async function runNote(vault: Vault, rest: string[], values: Values, json: boole
     throw new UsageError('wi note needs a <ref> and the text. Try: wi note wi-a7f3 "Priced 12 lines."')
   }
   const agent = values['agent'] === undefined ? undefined : singleLineOption(values, 'agent')
-  const added = await addNote(vault, ref, text, { agent, creator: envText('WI_CREATOR'), model: envText('WI_MODEL') })
+  const added = await addNote(vault, ref, text, { agent: agent ?? envText('WI_AGENT'), model: envText('WI_MODEL') })
   if (json) print({ id: added.item.id, path: added.item.relPath, line: added.line })
   else process.stdout.write(`${label(added.item)}  ${added.line}\n`)
   return 0

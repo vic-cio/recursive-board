@@ -19,7 +19,7 @@ import { launchSpec, workerPrompt, type LaunchSpec } from '../harness.ts'
 import { readPeople, type Vault, type WorkItem } from '../vault.ts'
 import { editItem } from '../write.ts'
 import { appendNote, noteLine } from '../../shared/notes.ts'
-import { roleForNewCard } from '../../shared/authorship.ts'
+import { resolveRole } from '../../shared/authorship.ts'
 import { frontmatterBody } from '../../shared/frontmatter.ts'
 import { assignEdits, cardSlug, delegateTarget, delegationNote, workerName, type Harness } from '../../shared/delegate.ts'
 
@@ -87,7 +87,8 @@ export async function delegate(
   const folder = join(dirname(repo), `${basename(repo)}-worktrees`)
   const worktree = join(folder, slug)
   const log = join(folder, `${slug}.log`)
-  const role = roleForNewCard(undefined, ancestorRoles(vault, item))
+  const parent = item.parent === null ? undefined : vault.resolveLink(item.parent)
+  const role = resolveRole(item.frontmatter.get('role'), parent ? ancestorRoles(vault, parent) : []).role
   const sessionId = deps.uuid()
   const run = {
     harness, model: options.model, permission: options.permission, worktree, vault: vault.root,

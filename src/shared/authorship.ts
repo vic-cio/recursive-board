@@ -1,11 +1,11 @@
 /**
- * Who made a card, who owns it, and which role does its work (docs/adr/0042-creator-and-role.md).
+ * Names for card authorship, ownership and roles (docs/adr/0042-creator-and-role.md).
  *
- * `creator`, `owner` and `role` hold the plain name of a person or role note. A plain name, not a
+ * Legacy `creator`, `owner` and `role` fields hold the plain name of a person or role note. A plain name, not a
  * link: a link from every note to its creator turns the graph into one star around each person.
  * The note of that name says which it is by its `type`: `person` or `role`, and lists what it made
- * with a Bases table. The product needs no folder for them. `creator_model` holds an agent's model
- * id. This module imports nothing from Node.
+ * with a Bases table. The product needs no folder for them. New cards do not write creator fields.
+ * This module imports nothing from Node.
  */
 import { parseWikilink } from './schema.ts'
 
@@ -50,17 +50,13 @@ export function linkTypeProblem(field: LinkField, target: string, type: unknown)
     `Give that note ${want}.`
 }
 
-/**
- * The role a new card gets. An explicit role wins, and an empty one means no role. With none
- * given, the card takes the role of its nearest ancestor that has one. `ancestorRoles` starts at
- * the parent and climbs to the root. The role is copied into the new card, so a later change on
- * the ancestor does not reach it.
- */
-export function roleForNewCard(explicit: string | undefined, ancestorRoles: readonly unknown[]): string | undefined {
-  if (explicit !== undefined) return displayName(explicit)
+/** Resolve a card's own role, or the nearest ancestor role, without writing a copy. */
+export function resolveRole(ownRole: unknown, ancestorRoles: readonly unknown[]): { role: string | undefined; inherited: boolean } {
+  const own = displayName(ownRole)
+  if (own !== undefined) return { role: own, inherited: false }
   for (const role of ancestorRoles) {
     const name = displayName(role)
-    if (name !== undefined) return name
+    if (name !== undefined) return { role: name, inherited: true }
   }
-  return undefined
+  return { role: undefined, inherited: false }
 }

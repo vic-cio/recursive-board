@@ -21,7 +21,7 @@ interface Result { code: number; stdout: string; stderr: string }
 async function wi(args: string[], vault: Fixture, home: string): Promise<Result> {
   try {
     const { stdout, stderr } = await run('node', [CLI, ...args], {
-      env: { ...process.env, WI_CREATOR: '', WI_MODEL: '', WI_VAULT: vault.root, HOME: home,
+      env: { ...process.env, WI_AGENT: '', WI_MODEL: '', WI_VAULT: vault.root, HOME: home,
         XDG_CONFIG_HOME: join(home, '.config'), APPDATA: join(home, 'AppData') },
       cwd: home,
       timeout: 20_000,
