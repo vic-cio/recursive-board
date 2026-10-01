@@ -40,8 +40,6 @@ and `wi children` can omit the reference. Explicit `--parent` and `wi children <
 The board settings live in the Recursive Board plugin settings tab.
 The plugin stores them under the `board` key of `.obsidian/plugins/recursive-board/data.json`.
 `wi` reads them there and never writes them. Do not edit that file while Obsidian runs.
-In an older vault, `wi` reads `Recursive Board config.md`, then `.wi.json`, and prints a hint.
-The plugin moves those settings into its data file the next time Obsidian opens the vault.
 Read the README for each setting.
 
 ## Reading

@@ -56,10 +56,6 @@ The plugin stores the board settings under the `board` key of its data file, `.o
 
 Obsidian Sync carries the plugin data file only when **Installed community plugins** sync is on for the device. Turn it on for each device. A device without the `board` key uses the defaults and shows a notice once. [Read the Obsidian Sync settings](https://obsidian.md/help/sync/settings).
 
-### Older vaults
-
-Older versions kept the settings in `Recursive Board config.md` at the vault root, or in `.wi.json`. When the plugin loads and its data file has no `board` key, it moves the settings from that file into the `board` key, then moves the old file to the trash. Until then, `wi` reads the note, then `.wi.json`, and prints a line that asks you to open the vault in Obsidian. When a `board` key exists, `wi` ignores both old files, and `wi validate` warns while one is left.
-
 `autoPromote` is `true` or `false`. It defaults to `true`. When `wi new` gives a card its first child, it also sets `board: true` on that card, so the children show as a board. It never changes a root, an area, a card that already has children, or a card that has a `board` key. Items added in Obsidian are not promoted: a person who adds to a checklist chose a checklist.
 
 `areaTags` is `true` or `false`. It defaults to `false`. When it is `true`, each work item under an area carries one tag that names its areas from the top down, such as `area/work/web-site`. `wi new` and the board's add row write it, `wi validate` warns when one is stale, and `wi retag` fixes them. `wi graph` turns the tags into graph colours. The board hides `area/` chips.
