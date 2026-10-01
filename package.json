@@ -13,7 +13,7 @@
     "node": ">=20.12"
   },
   "bin": {
-    "wi": "./dist/wi/wi.js"
+    "wi": "dist/wi/wi.js"
   },
   "files": [
     "dist/wi/",
