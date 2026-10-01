@@ -1,7 +1,7 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 
-import { asName, authorLabel, displayName, linkTypeProblem } from './authorship.ts'
+import { asName, authorLabel, displayName, linkTypeProblem, roleForNewCard } from './authorship.ts'
 
 test('a name is written plain, and a link becomes its target', () => {
   assert.equal(asName(' Ana '), 'Ana')
@@ -28,4 +28,19 @@ test('each field links to its own kinds of note', () => {
   assert.equal(linkTypeProblem('creator', 'Ana', 'person'), null)
   assert.match(linkTypeProblem('owner', 'Checker', 'role')!, /names Checker as its owner, and that note has type: role\. Give that note type: person\./)
   assert.match(linkTypeProblem('role', 'Ana', undefined)!, /has no type\. Give that note type: role\./)
+})
+
+test('a new card takes the role of its nearest ancestor that has one', () => {
+  assert.equal(roleForNewCard(undefined, ['Coder', 'Checker']), 'Coder')
+  assert.equal(roleForNewCard(undefined, [undefined, '', 'Checker', 'Coder']), 'Checker')
+  assert.equal(roleForNewCard(undefined, [null, '[[Coder|the coder]]']), 'Coder')
+  assert.equal(roleForNewCard(undefined, [undefined, undefined]), undefined)
+  assert.equal(roleForNewCard(undefined, []), undefined)
+})
+
+test('an explicit role wins, and an empty one means no role', () => {
+  assert.equal(roleForNewCard('Checker', ['Coder']), 'Checker')
+  assert.equal(roleForNewCard('[[Checker]]', ['Coder']), 'Checker')
+  assert.equal(roleForNewCard('', ['Coder']), undefined)
+  assert.equal(roleForNewCard('  ', ['Coder']), undefined)
 })

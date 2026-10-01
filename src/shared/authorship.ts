@@ -49,3 +49,18 @@ export function linkTypeProblem(field: LinkField, target: string, type: unknown)
   return `names ${target} as its ${field}, and that note has ${typeof type === 'string' ? `type: ${type}` : 'no type'}. ` +
     `Give that note ${want}.`
 }
+
+/**
+ * The role a new card gets. An explicit role wins, and an empty one means no role. With none
+ * given, the card takes the role of its nearest ancestor that has one. `ancestorRoles` starts at
+ * the parent and climbs to the root. The role is copied into the new card, so a later change on
+ * the ancestor does not reach it.
+ */
+export function roleForNewCard(explicit: string | undefined, ancestorRoles: readonly unknown[]): string | undefined {
+  if (explicit !== undefined) return displayName(explicit)
+  for (const role of ancestorRoles) {
+    const name = displayName(role)
+    if (name !== undefined) return name
+  }
+  return undefined
+}
