@@ -64,25 +64,6 @@ function buildMenu(ctx: RenderContext, meta: WorkItemMeta): Menu {
     .setTitle('Move to…')
     .setIcon('folder-input')
     .onClick(() => new MoveModal(ctx.app, ctx.index, ctx.actions, meta).open()))
-  // Free tags (docs/adr/0057-free-tags.md). The picker never offers old area tags.
-  menu.addItem((item) => item
-    .setTitle('Tags…')
-    .setIcon('tags')
-    .onClick(() => new TagModal(ctx.app, ctx.index, ctx.actions, meta).open()))
-  if (meta.parentLink !== null) {
-    if (!meta.area) {
-      menu.addItem((item) => item
-        .setTitle('Delegate to…')
-        .setIcon('user-round-plus')
-        .onClick(() => new DelegateModal(ctx.app, ctx.actions, meta, ctx.personNames()).open()))
-    }
-    menu.addItem((item) => item
-      .setTitle('Send for review…')
-      .setIcon('send')
-      .onClick(() => new SendForReviewModal(ctx.app, meta.title, ctx.personNames(), ctx.yourName(),
-        (to, files) => void ctx.actions.sendForReview(meta, to, files)).open()))
-  }
-
   // Dependencies (docs/adr/0041-card-dependencies.md). An area is ongoing and waits on nothing.
   if (meta.parentLink !== null && !meta.area) {
     menu.addItem((item) => item
@@ -98,6 +79,24 @@ function buildMenu(ctx: RenderContext, meta: WorkItemMeta): Menu {
         .onClick(() => void ctx.actions.setDependency(meta, dependency, false)))
     }
   }
+  if (meta.parentLink !== null) {
+    if (!meta.area) {
+      menu.addItem((item) => item
+        .setTitle('Delegate to…')
+        .setIcon('user-round-plus')
+        .onClick(() => new DelegateModal(ctx.app, ctx.actions, meta, ctx.personNames()).open()))
+    }
+    menu.addItem((item) => item
+      .setTitle('Send for review…')
+      .setIcon('send')
+      .onClick(() => new SendForReviewModal(ctx.app, meta.title, ctx.personNames(), ctx.yourName(),
+        (to, files) => void ctx.actions.sendForReview(meta, to, files)).open()))
+  }
+  // Free tags (docs/adr/0057-free-tags.md). The picker never offers old area tags.
+  menu.addItem((item) => item
+    .setTitle('Tags…')
+    .setIcon('tags')
+    .onClick(() => new TagModal(ctx.app, ctx.index, ctx.actions, meta).open()))
 
   if (meta.parentLink !== null) {
     menu.addSeparator()

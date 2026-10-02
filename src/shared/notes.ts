@@ -40,7 +40,12 @@ export function noteLine(text: string, agent?: string, now: Date = new Date()): 
   const body = wrapAnglePlaceholders(text.trim())
   if (body === '') throw new Error('a note needs text.')
   if (/[\r\n]/.test(body)) throw new Error('a note must be one line.')
-  const pad = (n: number) => String(n).padStart(2, '0')
   const who = agent?.trim() ? `, ${agent.trim()}` : ''
-  return `- ${today(now)} ${pad(now.getHours())}:${pad(now.getMinutes())}${who}: ${body}`
+  return `- ${noteStamp(now)}${who}: ${body}`
+}
+
+/** The local date and minute a note starts with: `YYYY-MM-DD HH:MM`. These sort as text. */
+export function noteStamp(now: Date = new Date()): string {
+  const pad = (n: number) => String(n).padStart(2, '0')
+  return `${today(now)} ${pad(now.getHours())}:${pad(now.getMinutes())}`
 }

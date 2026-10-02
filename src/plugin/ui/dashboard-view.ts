@@ -8,10 +8,11 @@ import { ItemView, Notice, Platform, setIcon, TFile, type WorkspaceLeaf } from '
 
 import type { Actions } from '../actions.ts'
 import type { WorkItemIndex, WorkItemMeta } from '../index.ts'
+import { noteStamp } from '../../shared/notes.ts'
 import type { Verdict } from '../../shared/review.ts'
 import { SendBackModal } from './send-back-modal.ts'
 import {
-  activeAgentCount, ago, agentFeed, agentRequests, areaPath, cardsInScope, groupName, groupUnder, inFocus, isLoopbackWebAddress, isWebAddress, needsAttention, parseReviewLine, peopleFeed, progress, reviewPresentationForMode, reviewVerdictReadiness, waitsForReview, workingBadge,
+  activeAgentCount, ago, agentFeed, agentRequests, areaPath, cardsInScope, groupName, groupUnder, inFocus, isLoopbackWebAddress, isWebAddress, needsAttention, parseReviewLine, peopleFeed, progress, reviewPresentationForMode, reviewVerdictReadiness, tickCounts, waitsForReview, workingBadge,
   type AgentFeed, type AgentRow, type Attention, type DashTree, type Group, type PersonRow, type WebReviewMode,
 } from '../dashboard-model.ts'
 import { withFold, type DashboardTicks } from '../personal-state.ts'
@@ -54,6 +55,7 @@ interface ReviewRow {
   card: WorkItemMeta
   path: string
   verdictPaths: string[]
+  requested: string | null
   what: string
   group: Group<WorkItemMeta>
 }
@@ -200,7 +202,8 @@ export class DashboardView extends ItemView {
       const group = { area, name: groupName(area, focus) }
       const what = line?.what || 'Open the card.'
       const presentation = reviewPresentationForMode(line?.paths ?? [], card.file.path, webReviewMode)
-      for (const path of presentation.paths) rows.push({ card, path, verdictPaths: presentation.verdictPaths, what, group })
+      const requested = line?.requested ?? null
+      for (const path of presentation.paths) rows.push({ card, path, verdictPaths: presentation.verdictPaths, requested, what, group })
     }
     return rows.sort((a, b) =>
       Number(a.group.area === null) - Number(b.group.area === null) || a.group.name.localeCompare(b.group.name))
@@ -254,15 +257,15 @@ export class DashboardView extends ItemView {
     const groupRows = new Map<string, HTMLElement[]>()
     // Approve and Send back show once every file of the card is ticked.
     const verdicts = new Map<WorkItemMeta, HTMLElement[]>()
-    const pathsByCard = new Map<WorkItemMeta, string[]>()
-    for (const row of rows) pathsByCard.set(row.card, row.verdictPaths)
+    const pathsByCard = new Map<WorkItemMeta, { paths: string[]; requested: string | null }>()
+    for (const row of rows) pathsByCard.set(row.card, { paths: row.verdictPaths, requested: row.requested })
     const syncVerdicts = () => {
       const readiness = reviewVerdictReadiness(pathsByCard, this.host.state().ticks)
       verdicts.forEach((controls, card) => controls.forEach((control) =>
         control.toggleClass('wi-dash-hidden', !readiness.get(card))))
     }
     const addVerdictControls = (check: HTMLElement, card: WorkItemMeta) => {
-      const paths = pathsByCard.get(card) ?? []
+      const paths = pathsByCard.get(card)?.paths ?? []
       if (paths.length === 0) return
       const box = check.createDiv('wi-dash-verdict wi-dash-hidden')
       box.createEl('button', { text: 'Approve', cls: 'mod-cta' }).onclick = () =>
@@ -301,12 +304,12 @@ export class DashboardView extends ItemView {
       tickCell.dataset['label'] = 'Reviewed'
       if (!web) {
         const tick = tickCell.createEl('input', { type: 'checkbox', attr: { 'aria-label': 'Reviewed' } })
-        tick.checked = state.ticks[row.path] === true
+        tick.checked = tickCounts(state.ticks[row.path], row.requested)
         tr.toggleClass('is-ticked', tick.checked)
         tick.onchange = async () => {
           tr.toggleClass('is-ticked', tick.checked)
           const ticks = { ...this.host.state().ticks }
-          if (tick.checked) ticks[row.path] = true
+          if (tick.checked) ticks[row.path] = noteStamp()
           else delete ticks[row.path]
           await this.host.save({ ticks })
           syncVerdicts()

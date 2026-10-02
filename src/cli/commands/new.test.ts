@@ -203,7 +203,7 @@ test('the body carries no H1, because Obsidian already draws the filename as the
   const created = await createItem(await reload(fixture), { title: 'Streaming', parent: 'wi-0004' })
   const text = readFileSync(created.path, 'utf8')
   assert.doesNotMatch(text, /^# /m, 'an H1 repeating the title shows the same words twice')
-  assert.match(text, /^---\n[\s\S]*?\n---\n\n## Objective\n/, 'Objective is the first thing in the body')
+  assert.match(text, /^---\n[\s\S]*?\n---\n## Objective\n/, 'Objective is the first line of the body, with no blank line above it')
 })
 
 test('createItem resolves the parent by id, filename or title', async () => {

@@ -17,8 +17,11 @@ export class SendForReviewModal extends Modal {
 
   override onOpen(): void {
     this.contentEl.empty()
-    this.contentEl.createEl('h2', { text: `Send ${this.title} for review` })
-    const select = this.contentEl.createEl('select', { cls: 'dropdown', attr: { 'aria-label': 'Reviewer' } })
+    this.contentEl.createEl('h2', { text: 'Send for review' })
+    this.contentEl.createDiv({ cls: 'setting-item-description', text: this.title })
+    const reviewer = this.contentEl.createDiv({ cls: 'wi-review-field' })
+    reviewer.createEl('label', { text: 'Reviewer' })
+    const select = reviewer.createEl('select', { cls: 'dropdown', attr: { 'aria-label': 'Reviewer' } })
     const names = [...this.names].sort((a, b) => a.localeCompare(b))
     const current = names.find((name) => name.toLowerCase() === this.currentName.trim().toLowerCase())
     if (current) names.splice(names.indexOf(current), 1)
@@ -28,11 +31,12 @@ export class SendForReviewModal extends Modal {
     if (names.length === 0) {
       select.createEl('option', { text: 'No person notes found', value: '' })
       select.disabled = true
-      this.contentEl.createDiv({ cls: 'setting-item-description', text: 'Add a note with type: person, then try again.' })
+      reviewer.createDiv({ cls: 'setting-item-description', text: 'Add a note with type: person, then try again.' })
     }
 
-    this.contentEl.createEl('label', { text: 'Files to review (optional, one path per line)' })
-    const files = this.contentEl.createEl('textarea', {
+    const field = this.contentEl.createDiv({ cls: 'wi-review-field' })
+    field.createEl('label', { text: 'Files to review (optional, one path per line)' })
+    const files = field.createEl('textarea', {
       cls: 'wi-review-files',
       attr: { 'aria-label': 'Files to review', rows: 4, placeholder: 'Work/quote.xlsx' },
     })

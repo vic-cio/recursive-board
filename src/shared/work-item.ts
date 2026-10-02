@@ -93,7 +93,7 @@ export function renderWorkItem(item: NewWorkItem, extraSections: readonly string
   if (item.tags !== undefined && item.tags.length > 0) {
     lines.push('tags:', ...item.tags.map((tag) => `  - ${formatScalar(tag)}`))
   }
-  return `---\n${lines.join('\n')}\n---\n\n${renderBody(template, extraSections, item.brief)}`
+  return `---\n${lines.join('\n')}\n---\n${renderBody(template, extraSections, item.brief)}`
 }
 
 /** Renders a board root. Roots intentionally have neither parent nor status. */
@@ -107,5 +107,5 @@ export function renderRootWorkItem(item: NewRootWorkItem, extraSections: readonl
     ['board', true],
   ]
   const frontmatter = fields.map(([key, value]) => `${key}: ${formatScalar(value)}`).join('\n')
-  return `---\n${frontmatter}\n---\n\n${renderBody(requireTemplate(), extraSections)}`
+  return `---\n${frontmatter}\n---\n${renderBody(requireTemplate(), extraSections)}`
 }

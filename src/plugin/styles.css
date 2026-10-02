@@ -1050,6 +1050,8 @@
 .wi-dash-verdict { display: flex; flex-wrap: wrap; gap: var(--size-4-2); margin-top: var(--size-4-2); }
 .wi-dash-verdict.wi-dash-hidden { display: none; }
 .wi-send-back-comment { width: 100%; resize: vertical; margin-top: var(--size-4-2); }
+.wi-review-field { display: flex; flex-direction: column; align-items: flex-start; gap: var(--size-4-1); margin-top: var(--size-4-3); }
+.wi-review-files { width: 100%; resize: vertical; }
 .wi-dash-group td { cursor: pointer; font-weight: var(--font-semibold); padding-top: var(--size-4-3); }
 .wi-dash-group .wi-dash-count { margin-left: var(--size-4-2); }
 .wi-dash-caret { display: inline-flex; vertical-align: middle; margin-right: var(--size-4-1); }

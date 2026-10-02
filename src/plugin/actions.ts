@@ -12,7 +12,7 @@
  * the metadata cache (docs/adr/0054-edits-from-the-file-at-write-time.md). The cache can be older
  * than the file. It still decides whether a click needs a write at all.
  */
-import { normalizePath, Notice, TFile, type App } from 'obsidian'
+import { MarkdownView, normalizePath, Notice, TFile, type App } from 'obsidian'
 
 import { applyStampedEdits, type EditPlan } from '../shared/edits.ts'
 import { cardState } from '../shared/card-state.ts'
@@ -31,6 +31,7 @@ import { applyReviewRequest, applyVerdict, type Verdict } from '../shared/review
 import { assignEdits } from '../shared/delegate.ts'
 import type { WorkItemIndex, WorkItemMeta } from './index.ts'
 import { UndoStack } from './undo.ts'
+import { emptyObjectiveLine } from './objective-cursor.ts'
 
 export class Actions {
   private readonly app: App
@@ -401,7 +402,13 @@ export class Actions {
 
   /** Opens a work item, which is how a card is navigated into. */
   async open(meta: WorkItemMeta, newLeaf = false): Promise<void> {
-    await this.app.workspace.getLeaf(newLeaf).openFile(meta.file)
+    const leaf = this.app.workspace.getLeaf(newLeaf)
+    await leaf.openFile(meta.file)
+    // A card with an empty Objective opens with the cursor there, ready to type it.
+    const view = leaf.view
+    if (!(view instanceof MarkdownView) || view.getMode() !== 'source') return
+    const line = emptyObjectiveLine(view.editor.getValue())
+    if (line !== null) view.editor.setCursor({ line, ch: 0 })
   }
 
   /**

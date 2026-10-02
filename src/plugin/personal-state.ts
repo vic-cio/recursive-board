@@ -11,7 +11,8 @@ export interface DeviceDashboardState {
   foldedGroups: string[]
 }
 
-export type DashboardTicks = Record<string, true>
+/** Each ticked path with the `YYYY-MM-DD HH:MM` it was ticked (ReviewTicks in src/shared/dashboard.ts). */
+export type DashboardTicks = Record<string, string>
 
 const EMPTY_DEVICE_STATE: DeviceDashboardState = {
   you: '',
@@ -53,12 +54,23 @@ export function parsePersonTicks(value: unknown): DashboardTicks {
   }
   const data = record(record(parsed)['ticks'])
   const ticks: DashboardTicks = {}
-  for (const [path, ticked] of Object.entries(data)) if (ticked === true) ticks[path] = true
+  // An old tick is `true`, with no time. It cannot say which review round it belongs to, so it is dropped.
+  for (const [path, ticked] of Object.entries(data)) {
+    if (typeof ticked === 'string' && /^\d{4}-\d{2}-\d{2}/.test(ticked)) ticks[path] = ticked
+  }
   return ticks
 }
 
+/** All the ticks, with the newer time where two sets tick the same path. */
 export function mergeTicks(...sets: DashboardTicks[]): DashboardTicks {
-  return Object.assign({}, ...sets)
+  const merged: DashboardTicks = {}
+  for (const set of sets) {
+    for (const [path, ticked] of Object.entries(set)) {
+      const current = merged[path]
+      if (current === undefined || ticked > current) merged[path] = ticked
+    }
+  }
+  return merged
 }
 
 /** Splits old plugin-data dashboard state into device choices and the person's ticks. */
@@ -115,7 +127,8 @@ export function applyTickChanges(stored: DashboardTicks, before: DashboardTicks,
   const next = { ...stored }
   for (const key of new Set([...Object.keys(before), ...Object.keys(after)])) {
     if (before[key] === after[key]) continue
-    if (after[key]) next[key] = true
+    const ticked = after[key]
+    if (ticked !== undefined) next[key] = ticked
     else delete next[key]
   }
   return next

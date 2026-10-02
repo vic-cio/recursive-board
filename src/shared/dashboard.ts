@@ -92,6 +92,8 @@ export interface ReviewLine {
   what: string
   /** Vault-relative paths written in backticks, each with an extension, and web addresses. */
   paths: string[]
+  /** When the request was written, as the note's `YYYY-MM-DD HH:MM`, or its date alone. Null with neither. */
+  requested: string | null
 }
 
 /** An http or https address, not a vault path. */
@@ -128,14 +130,27 @@ export function fileReviewPaths(paths: string[]): string[] {
   return paths.filter((path) => !isWebAddress(path))
 }
 
-export function allReviewFilesTicked(paths: string[], ticks: Record<string, boolean>): boolean {
+/** Each ticked path with the `YYYY-MM-DD HH:MM` it was ticked. */
+export type ReviewTicks = Record<string, string>
+
+/**
+ * A tick counts for a request it does not predate. A tick from an earlier round, such as before a
+ * send back, leaves the new request unticked.
+ */
+export function tickCounts(tick: string | undefined, requested: string | null): boolean {
+  return tick !== undefined && (requested === null || tick >= requested)
+}
+
+export function allReviewFilesTicked(paths: string[], ticks: ReviewTicks, requested: string | null = null): boolean {
   const files = fileReviewPaths(paths)
-  return files.length > 0 && files.every((path) => ticks[path] === true)
+  return files.length > 0 && files.every((path) => tickCounts(ticks[path], requested))
 }
 
 /** Recompute every card after a tick, because one file can appear on several review cards. */
-export function reviewVerdictReadiness<T>(pathsByCard: Map<T, string[]>, ticks: Record<string, boolean>): Map<T, boolean> {
-  return new Map([...pathsByCard].map(([card, paths]) => [card, allReviewFilesTicked(paths, ticks)]))
+export function reviewVerdictReadiness<T>(
+  requests: Map<T, { paths: string[]; requested: string | null }>, ticks: ReviewTicks,
+): Map<T, boolean> {
+  return new Map([...requests].map(([card, { paths, requested }]) => [card, allReviewFilesTicked(paths, ticks, requested)]))
 }
 
 /** True for web addresses that only work on the computer hosting the local service. */
@@ -154,10 +169,12 @@ export function isLoopbackWebAddress(address: string): boolean {
  * when the card has none.
  */
 export function parseReviewLine(text: string): ReviewLine | null {
-  const match = [...text.matchAll(/\*\*Review:\*\*\s*(.+)$/gm)].pop()
+  const match = [...text.matchAll(/^(.*)\*\*Review:\*\*\s*(.+)$/gm)].pop()
   if (!match) return null
-  const line = match[1]!
+  const stamp = /(\d{4}-\d{2}-\d{2})(?: (\d{2}:\d{2}))?/.exec(match[1]!)
+  const line = match[2]!
   return {
+    requested: stamp ? (stamp[2] ? `${stamp[1]} ${stamp[2]}` : stamp[1]!) : null,
     paths: [...line.matchAll(/`([^`]+)`/g)].map((found) => found[1]!)
       .filter((path) => isWebAddress(path) || /\.[A-Za-z0-9]+$/.test(path)),
     what: line.replace(/`[^`]+`/g, '').replace(/[\s:,]+([.;]?)\s*$/, '$1').trim(),

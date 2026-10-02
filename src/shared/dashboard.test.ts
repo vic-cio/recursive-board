@@ -2,7 +2,7 @@ import { test } from 'node:test'
 import assert from 'node:assert/strict'
 
 import {
-  activeAgentCount, agentFeed, agentRequests, areaOf, allReviewFilesTicked, cardsInScope, fileReviewPaths, IDLE_MS, isLoopbackWebAddress, isWebAddress, FINISHED_SHOWN, FINISHED_WINDOW_MS, needsAttention, parseReviewLine, parseWebReviewMode, peopleFeed, progress, reviewPathsForMode, reviewPresentationForMode, reviewVerdictReadiness, waitsForReview, workingBadge, type DashItem, type DashTree,
+  activeAgentCount, agentFeed, agentRequests, areaOf, allReviewFilesTicked, cardsInScope, fileReviewPaths, IDLE_MS, isLoopbackWebAddress, isWebAddress, FINISHED_SHOWN, FINISHED_WINDOW_MS, needsAttention, parseReviewLine, parseWebReviewMode, peopleFeed, progress, reviewPathsForMode, reviewPresentationForMode, reviewVerdictReadiness, tickCounts, waitsForReview, workingBadge, type DashItem, type DashTree,
 } from './dashboard.ts'
 
 interface Fake extends DashItem { parent: Fake | null; mtime: number }
@@ -93,18 +93,19 @@ test('the review line gives what to check and the files to open', () => {
   assert.deepEqual(parseReviewLine(text), {
     what: 'Check the totals.',
     paths: ['Work/35b/schedule.xlsx', 'Work/35b/report.md'],
+    requested: null,
   })
   assert.equal(parseReviewLine('## Notes\n\n- nothing\n'), null)
 })
 
 test('the newest review line wins, after a wi note prefix', () => {
   const text = '- **Review:** Old: `a.pdf`\n- 2026-09-28 09:31, claude: **Review:** Check the rates: `Rates/rates.csv`\n'
-  assert.deepEqual(parseReviewLine(text), { what: 'Check the rates', paths: ['Rates/rates.csv'] })
+  assert.deepEqual(parseReviewLine(text), { what: 'Check the rates', paths: ['Rates/rates.csv'], requested: '2026-09-28 09:31' })
 })
 
 test('a review line may list a web address', () => {
   const text = '- 2026-09-28 15:10, claude: **Review:** Preview: board layout: `http://127.0.0.1:61804/`\n'
-  assert.deepEqual(parseReviewLine(text), { what: 'Preview: board layout', paths: ['http://127.0.0.1:61804/'] })
+  assert.deepEqual(parseReviewLine(text), { what: 'Preview: board layout', paths: ['http://127.0.0.1:61804/'], requested: '2026-09-28 15:10' })
 })
 
 test('isWebAddress tells a web address from a vault path', () => {
@@ -146,7 +147,7 @@ test('Off removes web rows and falls back to the card when no file rows remain',
 test('only file rows count toward verdict readiness', () => {
   const mixed = ['https://example.com', 'report.md']
   assert.deepEqual(fileReviewPaths(mixed), ['report.md'])
-  assert.equal(allReviewFilesTicked(mixed, { 'report.md': true }), true)
+  assert.equal(allReviewFilesTicked(mixed, { 'report.md': '2026-10-02 09:30' }), true)
   assert.equal(allReviewFilesTicked(mixed, {}), false)
   assert.equal(allReviewFilesTicked(['https://example.com'], {}), false)
 })
@@ -154,13 +155,30 @@ test('only file rows count toward verdict readiness', () => {
 test('a shared tick updates verdict readiness for every card that lists the file', () => {
   const first = { title: 'First' }
   const second = { title: 'Second' }
-  const pathsByCard = new Map([[first, ['shared.md']], [second, ['shared.md', 'other.md']]])
-  const ticks: Record<string, boolean> = { 'shared.md': true }
+  const pathsByCard = new Map([[first, { paths: ['shared.md'], requested: null }], [second, { paths: ['shared.md', 'other.md'], requested: null }]])
+  const ticks: Record<string, string> = { 'shared.md': '2026-10-02 09:30' }
   assert.deepEqual([...reviewVerdictReadiness(pathsByCard, ticks).values()], [true, false])
-  ticks['other.md'] = true
+  ticks['other.md'] = '2026-10-02 09:30'
   assert.deepEqual([...reviewVerdictReadiness(pathsByCard, ticks).values()], [true, true])
   delete ticks['shared.md']
   assert.deepEqual([...reviewVerdictReadiness(pathsByCard, ticks).values()], [false, false])
+})
+
+test('a tick from an earlier review round leaves the new request unticked', () => {
+  assert.equal(tickCounts('2026-10-01 18:00', '2026-10-02 09:04'), false)
+  assert.equal(tickCounts('2026-10-02 09:04', '2026-10-02 09:04'), true)
+  assert.equal(tickCounts('2026-10-02 09:30', '2026-10-02'), true)
+  assert.equal(tickCounts(undefined, null), false)
+  assert.equal(allReviewFilesTicked(['card.md'], { 'card.md': '2026-10-01 18:00' }, '2026-10-02 09:04'), false)
+  const readiness = reviewVerdictReadiness(new Map([
+    ['old', { paths: ['shared.md'], requested: '2026-10-02 08:00' }],
+    ['new', { paths: ['shared.md'], requested: '2026-10-02 10:00' }],
+  ]), { 'shared.md': '2026-10-02 09:00' })
+  assert.deepEqual([...readiness.values()], [true, false])
+})
+
+test('a review line keeps its date alone when it has no time', () => {
+  assert.equal(parseReviewLine('- 2026-09-28: **Review:** Check `a.md`.\n')?.requested, '2026-09-28')
 })
 
 test('a card with no paths gets its own row, and that row carries the verdict tick', () => {
@@ -169,7 +187,7 @@ test('a card with no paths gets its own row, and that row carries the verdict ti
     assert.deepEqual(presentation.paths, ['card.md'], mode)
     assert.deepEqual(presentation.verdictPaths, ['card.md'], mode)
     assert.equal(allReviewFilesTicked(presentation.verdictPaths, {}), false, mode)
-    assert.equal(allReviewFilesTicked(presentation.verdictPaths, { 'card.md': true }), true, mode)
+    assert.equal(allReviewFilesTicked(presentation.verdictPaths, { 'card.md': '2026-10-02 09:30' }), true, mode)
   }
 })
 
@@ -181,9 +199,9 @@ test('a card with only web paths adds its own row after the web rows, and that r
   for (const mode of ['webviewer', 'browser', 'off'] as const) {
     const presentation = reviewPresentationForMode(web, 'card.md', mode)
     assert.deepEqual(presentation.verdictPaths, ['card.md'], mode)
-    const pathsByCard = new Map([['card', presentation.verdictPaths]])
+    const pathsByCard = new Map([['card', { paths: presentation.verdictPaths, requested: null }]])
     assert.equal(reviewVerdictReadiness(pathsByCard, {}).get('card'), false, mode)
-    assert.equal(reviewVerdictReadiness(pathsByCard, { 'card.md': true }).get('card'), true, mode)
+    assert.equal(reviewVerdictReadiness(pathsByCard, { 'card.md': '2026-10-02 09:30' }).get('card'), true, mode)
   }
 })
 
