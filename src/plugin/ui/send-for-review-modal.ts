@@ -1,13 +1,20 @@
-import { Modal, type App } from 'obsidian'
+import { Modal, setIcon, TFile, type App } from 'obsidian'
+import { isWebAddress } from '../../shared/dashboard.ts'
 
-/** Selects a reviewer and optional vault-relative files for one shared review request. */
+/**
+ * Selects a reviewer and what to review for one shared review request: files from the system file
+ * picker, and web links or vault paths typed in. The picked files reach the vault only on send.
+ */
 export class SendForReviewModal extends Modal {
   private readonly title: string
   private readonly names: string[]
   private readonly currentName: string
-  private readonly submit: (to: string, files: string[]) => void
+  private readonly submit: (to: string, paths: string[], attachments: File[]) => void
 
-  constructor(app: App, title: string, names: string[], currentName: string, submit: (to: string, files: string[]) => void) {
+  constructor(
+    app: App, title: string, names: string[], currentName: string,
+    submit: (to: string, paths: string[], attachments: File[]) => void,
+  ) {
     super(app)
     this.title = title
     this.names = names
@@ -34,11 +41,61 @@ export class SendForReviewModal extends Modal {
       reviewer.createDiv({ cls: 'setting-item-description', text: 'Add a note with type: person, then try again.' })
     }
 
+    const attachments: File[] = []
+    const links: string[] = []
     const field = this.contentEl.createDiv({ cls: 'wi-review-field' })
-    field.createEl('label', { text: 'Files to review (optional, one path per line)' })
-    const files = field.createEl('textarea', {
-      cls: 'wi-review-files',
-      attr: { 'aria-label': 'Files to review', rows: 4, placeholder: 'Work/quote.xlsx' },
+    field.createEl('label', { text: 'What to review (optional)' })
+    const chips = field.createDiv({ cls: 'wi-review-attachments' })
+    const chip = (icon: string, text: string, remove: () => void) => {
+      const box = chips.createDiv({ cls: 'wi-review-attachment' })
+      setIcon(box.createSpan({ cls: 'wi-review-attach-icon' }), icon)
+      box.createSpan({ text })
+      const button = box.createEl('button', { cls: 'clickable-icon', attr: { 'aria-label': `Remove ${text}` } })
+      setIcon(button, 'x')
+      button.addEventListener('click', () => {
+        remove()
+        drawChips()
+      })
+    }
+    const drawChips = () => {
+      chips.empty()
+      attachments.forEach((file, index) => chip('paperclip', file.name, () => attachments.splice(index, 1)))
+      links.forEach((link, index) => chip(isWebAddress(link) ? 'globe-2' : 'file-text', link, () => links.splice(index, 1)))
+    }
+    const picker = field.createEl('input', { type: 'file', attr: { multiple: '', hidden: '' } })
+    picker.addEventListener('change', () => {
+      attachments.push(...Array.from(picker.files ?? []))
+      picker.value = '' // The same file can be picked again after a remove.
+      drawChips()
+    })
+    const attach = field.createEl('button', { text: 'Attach files…' })
+    attach.addEventListener('click', () => picker.click())
+
+    const linkRow = field.createDiv({ cls: 'wi-review-link-row' })
+    const link = linkRow.createEl('input', {
+      type: 'text', cls: 'wi-review-link',
+      attr: { 'aria-label': 'Web link or vault path', placeholder: 'https://example.com or Work/quote.xlsx' },
+    })
+    const addLink = linkRow.createEl('button', { text: 'Add link' })
+    const problem = field.createDiv({ cls: 'setting-item-description' })
+    const add = () => {
+      const value = link.value.trim()
+      if (value === '') return
+      if (!isWebAddress(value) && !(this.app.vault.getAbstractFileByPath(value) instanceof TFile)) {
+        problem.setText(`"${value}" is not a web address that starts with http:// or https://, or a file in this vault.`)
+        return
+      }
+      problem.setText('')
+      if (!links.includes(value)) links.push(value)
+      link.value = ''
+      drawChips()
+      link.focus()
+    }
+    addLink.addEventListener('click', add)
+    link.addEventListener('keydown', (event) => {
+      if (event.key !== 'Enter') return
+      event.preventDefault()
+      add()
     })
     const buttons = this.contentEl.createDiv({ cls: 'modal-button-container' })
     const send = buttons.createEl('button', { text: 'Send for review', cls: 'mod-cta' })
@@ -47,9 +104,8 @@ export class SendForReviewModal extends Modal {
     send.addEventListener('click', () => {
       const to = select.value
       if (to === '') return
-      const paths = files.value.split(/\r?\n/).map((path) => path.trim()).filter((path) => path !== '')
       this.close()
-      this.submit(to, paths)
+      this.submit(to, links, attachments)
     })
     select.focus()
   }

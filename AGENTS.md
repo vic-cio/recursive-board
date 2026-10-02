@@ -5,6 +5,11 @@ writes them. Every work item is one Markdown file.
 
 **Markdown is canonical. The plugin is a view, never the database.**
 
+**A productivity tool first.** Recursive Board organises work for people. It also suits agent
+orchestration, but that is a use, not the core. Give people and agents the same powers, and leave
+each user's agent setup (harness, permission mode, sandbox) to them. Ship no default that only one
+setup wants.
+
 ## Read first
 
 [`README.md`](README.md) says what the product does and how a user installs it.

@@ -12,7 +12,7 @@
  * the metadata cache (docs/adr/0054-edits-from-the-file-at-write-time.md). The cache can be older
  * than the file. It still decides whether a click needs a write at all.
  */
-import { MarkdownView, normalizePath, Notice, TFile, type App } from 'obsidian'
+import { FileSystemAdapter, MarkdownView, normalizePath, Notice, Platform, TFile, type App } from 'obsidian'
 
 import { applyStampedEdits, type EditPlan } from '../shared/edits.ts'
 import { cardState } from '../shared/card-state.ts'
@@ -156,8 +156,10 @@ export class Actions {
   }
 
   /** Sends the card for review through the same shared edit as `wi review`. */
-  async sendForReview(meta: WorkItemMeta, to: string, files: string[]): Promise<boolean> {
+  async sendForReview(meta: WorkItemMeta, to: string, paths: string[], attachments: readonly File[] = []): Promise<boolean> {
     const done = await this.run(`send ${meta.title} for review`, async () => {
+      // An undo puts the card back and leaves the attached files in the vault.
+      const files = [...paths, ...await this.attachFiles(meta, attachments)]
       let before = ''
       const after = await this.app.vault.process(meta.file, (data) => {
         before = data
@@ -168,6 +170,33 @@ export class Actions {
     })
     if (done) this.undoableNotice(`Sent ${meta.title} for review`)
     return done === true
+  }
+
+  /**
+   * Puts files picked from the system into the vault, where a review row can open them, and
+   * returns their vault paths. A file already in the vault keeps its path, where the desktop app
+   * says where the file is. Every other file is copied into Obsidian's attachment folder for the card.
+   */
+  async attachFiles(meta: WorkItemMeta, files: readonly File[]): Promise<string[]> {
+    const adapter = this.app.vault.adapter
+    // The phone has no FileSystemAdapter, so the check runs on the desktop only.
+    const root = Platform.isDesktopApp && adapter instanceof FileSystemAdapter ? adapter.getBasePath().replace(/\\/g, '/').replace(/\/$/, '') : null
+    const paths: string[] = []
+    for (const file of files) {
+      const picked = (file as File & { path?: unknown }).path
+      const absolute = typeof picked === 'string' ? picked.replace(/\\/g, '/') : null
+      if (root !== null && absolute?.startsWith(`${root}/`)) {
+        const inVault = normalizePath(absolute.slice(root.length + 1))
+        if (this.app.vault.getAbstractFileByPath(inVault) instanceof TFile) {
+          paths.push(inVault)
+          continue
+        }
+      }
+      const path = await this.app.fileManager.getAvailablePathForAttachment(file.name, meta.file.path)
+      await this.app.vault.createBinary(path, await file.arrayBuffer())
+      paths.push(path)
+    }
+    return paths
   }
 
   /** Assigns a person or any agent through the same shared step as `wi delegate`. */
