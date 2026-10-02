@@ -11,7 +11,8 @@
 import {
   CORE_FIELDS, OPTIONAL_FIELDS, STATUSES, isStatus, parseWikilink,
 } from '../../shared/schema.ts'
-import type { Vault, WorkItem } from '../vault.ts'
+import { readRoleTaggedNotes, type Vault, type WorkItem } from '../vault.ts'
+import { duplicateProcedures, roleTagFor } from '../../shared/role-tags.ts'
 import { PLUGIN_DATA_FILE } from '../../shared/board-settings.ts'
 import { dependencyCycle } from '../../shared/dependencies.ts'
 import { dependenciesOf, titleOf } from '../dependencies.ts'
@@ -60,6 +61,7 @@ export async function validate(vault: Vault): Promise<Report> {
   checkCycles(vault, report)
   checkDependencies(vault, report)
   await checkPeopleAndRoles(vault, report)
+  await checkRoleProcedures(vault, report)
   problems.sort((a, b) => a.relPath.localeCompare(b.relPath) || a.rule.localeCompare(b.rule))
 
   const errorCount = problems.filter((p) => p.severity === 'error').length
@@ -73,9 +75,9 @@ export async function validate(vault: Vault): Promise<Report> {
 }
 
 /**
- * docs/adr/0042-creator-and-role.md: creator, owner and role hold the plain name of a person or
- * role note. A link draws a graph edge from every card to its creator, so it is a warning. A
- * creator or role with no note of that name is a warning; so is a note of the wrong type. An owner
+ * docs/adr/0042-creator-and-role.md: creator and owner hold the plain name of a person or role
+ * note. A link draws a graph edge from every card to its creator, so it is a warning. A creator
+ * with no note of that name is a warning; so is a note of the wrong type. An owner
  * with no note is fine, because a vault need not keep person notes.
  */
 async function checkPeopleAndRoles(vault: Vault, report: Reporter): Promise<void> {
@@ -92,7 +94,7 @@ async function checkPeopleAndRoles(vault: Vault, report: Reporter): Promise<void
       if (note === undefined) {
         if (field !== 'owner') {
           report(`${field}-unknown`, 'warning', item.relPath, item.id,
-            `names ${name} as its ${field}, and no note has that name. Make a ${field === 'role' ? 'role' : 'person or role'} note called ${name}.`)
+            `names ${name} as its ${field}, and no note has that name. Make a person or role note called ${name}.`)
         }
         continue
       }
@@ -102,6 +104,17 @@ async function checkPeopleAndRoles(vault: Vault, report: Reporter): Promise<void
     if (item.frontmatter.has('creator_model') && !item.frontmatter.has('creator')) {
       report('creator-model-alone', 'warning', item.relPath, item.id, 'has creator_model but no creator. Add the creator it describes.')
     }
+  }
+}
+
+/**
+ * docs/adr/0062-role-tags.md: a role tag that two notes carry names two procedures, and a worker
+ * cannot tell which to follow. A role tag that no note carries is fine.
+ */
+async function checkRoleProcedures(vault: Vault, report: Reporter): Promise<void> {
+  for (const [tag, paths] of duplicateProcedures(await readRoleTaggedNotes(vault.root))) {
+    report('role-procedure-duplicate', 'warning', paths[0]!, undefined,
+      `and ${paths.slice(1).join(', ')} all carry #${tag}, so a worker with that role tag gets every one of them as its procedure. Keep the tag on one note.`)
   }
 }
 
@@ -265,6 +278,13 @@ function checkItem(item: WorkItem, vault: Vault, report: Reporter): void {
 
   for (const key of item.frontmatter.keys()) {
     if (KNOWN_FIELDS.has(key)) continue
+    const role = displayName(item.frontmatter.get('role'))
+    if (key === 'role' && role !== undefined) {
+      const ref = item.id ?? item.stem
+      say('role-field', 'warning',
+        `has role: ${role}. A role is a tag now (docs/adr/0062-role-tags.md): run wi tag ${ref} ${roleTagFor(role)}, then wi set ${ref} --role "".`)
+      continue
+    }
     say('unknown-key', 'warning',
       `carries "${key}", which is outside the schema. It is preserved, not stripped. Use a supported field or remove it.`)
   }

@@ -1,5 +1,6 @@
 ---
-status: accepted
+status: superseded
+superseded_by: docs/adr/0062-role-tags.md
 ---
 # A card reads its role from the tree
 

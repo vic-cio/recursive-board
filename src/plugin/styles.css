@@ -1175,11 +1175,6 @@ button.wi-dash-id.wi-dash-id:hover { color: var(--text-normal); background: var(
   display: none;
 }
 
-.wi-pill.is-role {
-  background: rgba(var(--wi-rgb-agent), var(--wi-tint-pill));
-  color: var(--color-purple);
-}
-
 .wi-pill a {
   color: inherit;
 }

@@ -22,13 +22,15 @@ function seed(extra: Record<string, string> = {}): Fixture {
 }
 const textOf = (f: Fixture) => readFileSync(`${f.root}/Boards/Task.md`, 'utf8')
 
-test('wi set writes owner and role as plain names, and an empty value removes them', async () => {
-  fixture = seed({ owner: '"[[Ana]]"' })
-  const change = await setPeople(await loadVault(fixture.root), 'Task', { owner: 'Ana', role: '[[Checker]]' })
-  assert.deepEqual(change.changed, ['owner', 'role'])
+test('wi set writes the owner as a plain name, and an empty --role removes an old role field', async () => {
+  fixture = seed({ owner: '"[[Ana]]"', role: 'Checker' })
+  const change = await setPeople(await loadVault(fixture.root), 'Task', { owner: 'Ana' })
+  assert.deepEqual(change.changed, ['owner'])
   assert.match(textOf(fixture), /^owner: Ana$/m)
-  assert.match(textOf(fixture), /^role: Checker$/m)
-  await setPeople(await loadVault(fixture.root), 'Task', { role: '' })
+  await assert.rejects(setPeople(await loadVault(fixture.root), 'Task', { role: 'Checker' }),
+    /a role is a tag now\. Run: wi tag Task role\/checker/)
+  assert.match(textOf(fixture), /^role: Checker$/m, 'a refused --role writes nothing')
+  assert.deepEqual((await setPeople(await loadVault(fixture.root), 'Task', { role: '' })).changed, ['role'])
   assert.doesNotMatch(textOf(fixture), /^role:/m)
 })
 

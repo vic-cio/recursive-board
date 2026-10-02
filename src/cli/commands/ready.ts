@@ -2,6 +2,8 @@
 import { dependenciesOf, openDependencies, titleOf } from '../dependencies.ts'
 import { holderOf, isAnyAgent } from '../../shared/holder.ts'
 import type { Vault, WorkItem } from '../vault.ts'
+import { getList } from '../../shared/frontmatter.ts'
+import { roleTags } from '../../shared/role-tags.ts'
 
 export type ExclusionReason = 'claimed' | 'dependency' | 'invalid-dependency' | 'active-child' | 'missing-parent'
 
@@ -45,7 +47,6 @@ function isRequest(item: WorkItem): boolean {
 function summary(item: WorkItem) {
   const due = item.frontmatter.get('due')
   const owner = item.frontmatter.get('owner')
-  const role = item.frontmatter.get('role')
   return {
     id: item.id ?? null, title: titleOf(item), path: item.relPath,
     priority: Number.isFinite(priority(item)) ? priority(item) : null,
@@ -53,7 +54,7 @@ function summary(item: WorkItem) {
     owner: typeof owner === 'string' ? owner : null,
     holder: holder(item) ?? null,
     request: isRequest(item),
-    role: typeof role === 'string' ? role : null,
+    roles: roleTags(getList(item.text, 'tags') ?? []),
     parent: item.parent,
   }
 }

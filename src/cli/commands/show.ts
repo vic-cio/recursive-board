@@ -3,7 +3,7 @@ import { getList } from '../../shared/frontmatter.ts'
 import { holderOf } from '../../shared/holder.ts'
 import { bodyOf, listItems, section } from '../../shared/sections.ts'
 import { dependenciesOf, titleOf } from '../dependencies.ts'
-import { resolveRole } from '../../shared/authorship.ts'
+import { roleTags } from '../../shared/role-tags.ts'
 import type { Vault, WorkItem } from '../vault.ts'
 
 function stringField(item: WorkItem, key: string): string | null {
@@ -57,8 +57,6 @@ export function showCard(vault: Vault, ref: string) {
   const body = bodyOf(item.text)
   const dependencies = dependenciesOf(vault, item)
   const ancestry = ancestryOf(vault, item)
-  const role = resolveRole(item.frontmatter.get('role'), ancestry.ancestors.slice().reverse()
-    .map((ancestor) => ancestor.frontmatter.get('role')))
   const parent = item.parent === null ? undefined : vault.resolveLink(item.parent)
   const children = vault.childrenOf(item)
   return {
@@ -66,8 +64,7 @@ export function showCard(vault: Vault, ref: string) {
     status: item.status ?? null,
     owner: stringField(item, 'owner'),
     holder: holderOf((key) => item.frontmatter.get(key)) ?? null,
-    role: role.role ?? null,
-    roleInherited: role.inherited,
+    roles: roleTags(getList(item.text, 'tags') ?? []),
     creator: stringField(item, 'creator'),
     creatorModel: stringField(item, 'creator_model'),
     priority: numberField(item, 'priority'),

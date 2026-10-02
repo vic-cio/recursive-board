@@ -150,6 +150,31 @@ for (const harness of ['claude', 'codex', 'pi'] as const) {
   })
 }
 
+test('--role adds the role tag with the holder, and the brief names its procedure note, not a parent\'s role', async () => {
+  const f = seed()
+  f.write('Boards/Tools.md', item({
+    type: 'work-item', id: 'wi-0002', title: 'Tools', status: 'doing', parent: '"[[Main]]"', board: true, tags: '[role/coder]',
+  }, '# Tools\n'))
+  f.write('Roles/Checker.md', '---\ntags: [role/checker]\n---\nCheck the sample.\n')
+  f.write('Roles/Coder.md', '---\ntags: [role/coder]\n---\nWrite the code.\n')
+  const root = repo()
+  const launches: Launch[] = []
+  await delegate(await loadVault(f.root), 'wi-0004', { to: 'claude', role: 'Checker' }, deps(root, launches))
+
+  assert.match(card(f), /^tags:\n {2}- role\/checker$/m)
+  const prompt = launches[0]!.spec.stdin ?? ''
+  assert.match(prompt, /role tag #role\/checker\. Read `Roles\/Checker\.md`: it is your procedure\./)
+  assert.doesNotMatch(prompt, /role\/coder/, 'a parent\'s role tag does not reach the card')
+})
+
+test('delegating to a person with --role writes the holder and the role tag together', async () => {
+  const f = seed()
+  await delegate(await loadVault(f.root), 'wi-0004', { to: 'Ana', role: 'role/checker' }, deps('/nowhere', []))
+  assert.match(card(f), /^holder: Ana$/m)
+  assert.match(card(f), /^tags:\n {2}- role\/checker$/m)
+  await assert.rejects(delegate(await loadVault(f.root), 'wi-0004', { to: 'Ana', role: 'a.b' }, deps('/nowhere', [])), /not a tag/)
+})
+
 test('a second delegation reuses the worktree on the card branch', async () => {
   const f = seed()
   const root = repo()

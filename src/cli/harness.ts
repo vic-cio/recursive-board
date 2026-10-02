@@ -24,8 +24,6 @@ export interface WorkerRun {
   agent: string
   /** The card id. */
   card: string
-  /** The card's role, or Worker when it has none. */
-  role?: string | undefined
 }
 
 export interface LaunchSpec {
@@ -99,7 +97,8 @@ export interface BriefContext {
   vault: string
   worktree: string
   branch: string
-  role?: string | undefined
+  /** Each role tag on the card, with the notes that carry it (docs/adr/0062-role-tags.md). */
+  roles?: readonly { tag: string; procedures: readonly string[] }[] | undefined
   /** The card's text below its frontmatter. */
   body: string
 }
@@ -113,11 +112,19 @@ export function workerPrompt(context: BriefContext): string {
     'Use wi for every write to the vault. The WI_ environment variables that wi reads are set for you.',
     `Follow "Working under a dispatcher" in the recursive-board skill, with ${context.agent} as your agent name.`,
     `You hold the card. Run wi claim ${context.card} --agent ${context.agent} before you start: it moves the card to doing.`,
-    ...(context.role?.trim() ? [`Read the role note ${context.role.trim()}: it is your procedure.`] : []),
+    ...(context.roles ?? []).map(roleLine),
     'Work until the card is done without asking questions. Nobody reads your output until you finish.',
     '',
     'The card body is your brief:',
     '',
   ]
   return `${lines.join('\n')}\n${context.body.replace(/^\s*\n/, '')}`
+}
+
+/** One role tag in the brief. A tag that no note carries names no procedure, and that is fine. */
+function roleLine(role: { tag: string; procedures: readonly string[] }): string {
+  const notes = role.procedures.map((path) => `\`${path}\``)
+  if (notes.length === 0) return `Your card has the role tag #${role.tag}. No note carries it, so it names no procedure.`
+  if (notes.length === 1) return `Your card has the role tag #${role.tag}. Read ${notes[0]}: it is your procedure.`
+  return `Your card has the role tag #${role.tag}. Several notes carry it: ${notes.join(', ')}. Read them all.`
 }

@@ -41,6 +41,7 @@ import { sendForReview } from './commands/review.ts'
 import { COMMAND_FLAGS, parseCommandLine, type Values } from './flags.ts'
 import { STATUSES } from '../shared/schema.ts'
 import { authorLabel } from '../shared/authorship.ts'
+import { roleTagFor } from '../shared/role-tags.ts'
 import { holderOf, isAnyAgent } from '../shared/holder.ts'
 
 const HELP = `wi — the Recursive Board CLI
@@ -49,16 +50,16 @@ Usage
   wi setup [--yes] [--vault <path>] [--force]
   wi new <title> [--parent <ref>] [--status <s>] [--template <t>] [--owner <o>] [--agent <holder>]
                  [--priority <n>] [--objective <text>] [--context <text>]... [--criteria <text>]...
-                 [--creator <name>] [--model <id>] [--role <name>] [--strict]
+                 [--tag <tag>]... [--creator <name>] [--model <id>] [--strict]
   wi status <ref> <status>
   wi note <ref> <text> [--agent <name>]
   wi area <ref> [--off]
   wi tag <ref> <tag> [--off]
   wi depend <ref> --on <ref> [--off]
-  wi set <ref> [--owner <name>] [--role <name>] [--creator <name> [--model <id>]]
+  wi set <ref> [--owner <name>] [--role ""] [--creator <name> [--model <id>]]
   wi claim <ref> --agent <name>
   wi delegate <ref> --to <person|agent|claude|codex|pi> [--model <id>] [--agent <name>]
-                 [--permission <mode>]
+                 [--permission <mode>] [--role <name>]
   wi review <ref> --to <name> [--files <path>]...
   wi agents
   wi dashboard [--panel <review|progress|agents|people|attention>]... [--you <name>] [--parent <ref>] [--json]
@@ -97,12 +98,14 @@ Notes
   the new file gets the id's suffix; wi never writes over a file.
   \`wi new\` makes a parent a board when it gives the parent its first child. Set
   "autoPromote": false in the board settings to turn this off. A root or an area is never changed.
-  \`wi new\` writes an explicit --role only. Roles inherit from the nearest ancestor at read time.
+  \`wi new --tag <tag>\` adds a free tag; repeat it for more. A role is a tag such as role/checker:
+  a note that is not a work item and carries the same tag is that role's procedure. Roles do not
+  inherit. --role is retired and names the --tag to use.
   --creator and --model are accepted no-ops for compatibility. --strict checks only the brief.
   \`wi tag <ref> <tag>\` adds a free tag to a card, and --off removes it. Case and a leading # do not
   matter. It refuses old area/ tags, which remain on cards until the owner chooses a cleanup.
-  \`wi set\` changes a card's owner or role (an empty value removes it), and writes its creator and
-  model only when it has none: a creator is set once.
+  \`wi set\` changes a card's owner (an empty value removes it), and writes its creator and model
+  only when it has none: a creator is set once. --role "" removes an old role field; a role is a tag.
   \`wi note\` appends "- <date> <time>, <writer>: <text>" under Notes. It signs WI_AGENT or --agent,
   and adds WI_MODEL when set. It refuses a note with no writer name. The write re-reads the card under a lock, so two notes at once both survive.
   \`wi status <ref> done\` says when that was the parent's last open child. It does not close the parent.
@@ -134,6 +137,8 @@ Notes
   brief. The worker runs \`wi claim\` on its card when it starts, which moves it to doing. The note names the log, <repo>-worktrees/<slug>.log, and the command that resumes the session.
   --permission passes the harness's own mode: claude takes --permission-mode (default auto), codex
   takes --sandbox (default workspace-write), and pi has none. The default never bypasses permissions.
+  --role <name> adds the tag role/<name> to the card in the same write. The worker's brief names each
+  role tag on the card and the note that carries it. With no role tag, the worker follows the skill.
   \`wi objective\` is retired. Use \`wi show <ref> --json\` to read a card and its ancestor objectives.
   \`wi agents\` is retired. Use \`wi dashboard --panel agents\`.
   \`wi dashboard\` prints the same panels as the plugin. Repeat --panel to choose panels; without it,
@@ -300,6 +305,10 @@ async function runNew(vault: Vault, rest: string[], values: Values, json: boolea
     throw new UsageError(`--priority must be a number, not "${values['priority']}".`)
   }
 
+  // A role is a tag (docs/adr/0062-role-tags.md). The old flag names the new way instead of writing a field.
+  if (typeof values['role'] === 'string') {
+    throw new UsageError(`a role is a tag now. Use --tag ${values['role'].trim() === '' ? 'role/<name>' : roleTagFor(values['role'])}.`)
+  }
   const created = await createItem(vault, {
     title,
     parent,
@@ -308,7 +317,7 @@ async function runNew(vault: Vault, rest: string[], values: Values, json: boolea
     ...(typeof values['agent'] === 'string' ? { holder: values['agent'] } : {}),
     ...(typeof values['template'] === 'string' ? { template: values['template'] } : {}),
     ...(priority !== undefined ? { priority } : {}),
-    ...optional('role', typeof values['role'] === 'string' ? values['role'] : undefined),
+    ...(Array.isArray(values['tag']) ? { tags: values['tag'] } : {}),
     brief: {
       objective: typeof values['objective'] === 'string' ? values['objective'] : undefined,
       context: Array.isArray(values['context']) ? values['context'] : undefined,
@@ -498,7 +507,7 @@ async function runDelegate(vault: Vault, rest: string[], values: Values, json: b
   const maxAgents = maxAgentsForRun(vault)
   const active = await activeAgentNames(vault)
   const result = await delegate(vault, ref, {
-    to, model: pick('model'), agent: pick('agent'), permission: pick('permission'),
+    to, model: pick('model'), agent: pick('agent'), permission: pick('permission'), role: pick('role'),
   }, {
     cwd: process.cwd(), git: runGit, launch: spawnWorker, uuid: () => crypto.randomUUID(),
     author: authorLabel(envText('WI_AGENT'), envText('WI_MODEL')),

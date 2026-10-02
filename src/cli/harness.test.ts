@@ -13,7 +13,6 @@ const run = (overrides: Partial<WorkerRun> = {}): WorkerRun => ({
   name: 'wi-a1 Price the job',
   agent: 'claude-price-the-job',
   card: 'wi-a1',
-  role: 'Coder',
   ...overrides,
 })
 
@@ -67,26 +66,33 @@ test('with no model, the harness picks its own and WI_MODEL is removed', () => {
   }
 })
 
-test('the worker environment names the vault, the card, the agent, the role and the model', () => {
+test('the worker environment names the vault, the card, the agent and the model', () => {
   assert.deepEqual(launchSpec(run()).env, {
     WI_VAULT: '/vault', WI_CARD: 'wi-a1', WI_AGENT: 'claude-price-the-job', WI_MODEL: 'm-1',
   })
-  assert.equal('WI_CREATOR' in launchSpec(run({ role: undefined })).env, false)
+  assert.equal('WI_CREATOR' in launchSpec(run()).env, false)
 })
 
-test('workerPrompt names the card, the agent, the worktree and the role, then gives the card body', () => {
+test('workerPrompt names the card, the agent, the worktree and each role tag, then gives the card body', () => {
   const prompt = workerPrompt({
     card: 'wi-a1', title: 'Price the job', agent: 'codex-price-the-job', vault: '/vault',
-    worktree: '/wt/price-the-job', branch: 'card/price-the-job', role: 'Coder',
+    worktree: '/wt/price-the-job', branch: 'card/price-the-job',
+    roles: [
+      { tag: 'role/coder', procedures: ['Roles/Coder.md'] },
+      { tag: 'role/checker', procedures: ['Roles/Checker.md', 'Knowledge/Old checker.md'] },
+      { tag: 'role/unknown', procedures: [] },
+    ],
     body: '## Objective\n\nPrice it.\n',
   })
   assert.match(prompt, /You are codex-price-the-job, a worker on the card wi-a1 "Price the job"/)
   assert.match(prompt, /\/wt\/price-the-job, on the branch card\/price-the-job/)
-  assert.match(prompt, /Read the role note Coder/)
+  assert.match(prompt, /role tag #role\/coder\. Read `Roles\/Coder\.md`: it is your procedure\./)
+  assert.match(prompt, /#role\/checker\. Several notes carry it: `Roles\/Checker\.md`, `Knowledge\/Old checker\.md`\. Read them all\./)
+  assert.match(prompt, /#role\/unknown\. No note carries it, so it names no procedure\./)
   assert.match(prompt, /You hold the card\. Run wi claim wi-a1 --agent codex-price-the-job before you start: it moves the card to doing\./)
   assert.doesNotMatch(prompt, /already claimed/)
   assert.ok(prompt.endsWith('## Objective\n\nPrice it.\n'))
   assert.doesNotMatch(workerPrompt({
     card: 'wi-a1', title: 'Price the job', agent: 'a', vault: '/v', worktree: '/w', branch: 'card/x', body: 'B',
-  }), /role note/)
+  }), /role tag/)
 })

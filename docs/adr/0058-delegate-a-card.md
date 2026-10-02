@@ -53,11 +53,12 @@ same step for a person.
 - The process starts detached in its own process group, with its output in
   `<repo>-worktrees/<slug>.log`. It outlives `wi` and the session that ran it. A prompt for stdin is
   kept beside the log as `<slug>.prompt.md`.
-- The prompt names the card, the worker name, the worktree and the role, and tells the worker to
+- The prompt names the card, the worker name, the worktree and each role tag with its procedure
+  note (amended by 0062), and tells the worker to
   run `wi claim` on its card when it starts. Then it gives the card body as the brief. The worker
   reads the rest from the board.
-- The worker's environment sets `WI_VAULT`, `WI_CARD`, `WI_AGENT`, `WI_CREATOR` and `WI_MODEL`.
-  `WI_CREATOR` is the card's role, from the nearest ancestor that has one, or `Worker`. Without
+- The worker's environment sets `WI_VAULT`, `WI_CARD`, `WI_AGENT` and `WI_MODEL` (0061 and 0062
+  retired `WI_CREATOR` and the role from the tree). Without
   `--model`, `WI_MODEL` is removed, so the worker does not report the delegating agent's model.
 - The note gives the process id, the log path and the command that resumes the session. Claude
   and pi get a session id that `wi` chooses. Codex chooses its own, so the note says `codex resume`.

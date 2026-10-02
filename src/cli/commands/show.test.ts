@@ -16,7 +16,7 @@ test('showCard returns the card, its brief, ancestry, dependencies, and children
   fixture.write('Boards/Main.md', item({ type: 'work-item', id: 'wi-root', title: 'Main' }, '## Objective\n\nDeliver the project.\n'))
   fixture.write('Boards/Build.md', item({
     type: 'work-item', id: 'wi-build', title: 'Build', status: 'doing', parent: '"[[Main]]"',
-    board: true, owner: 'Victor', agent: 'codex', role: 'Worker', priority: 2, due: '2026-10-03',
+    board: true, owner: 'Victor', agent: 'codex', priority: 2, due: '2026-10-03',
     created: '2026-09-01', updated: '2026-09-29',
   }, '## Objective\n\nBuild the app.\n\n## Context\n\nUse the spec.\n\n## Acceptance Criteria\n\n- App starts\n- Tests pass\n\n## Notes\n\n- Work started.\n'))
   fixture.write('Boards/Ship.md', item({
@@ -37,7 +37,6 @@ test('showCard returns the card, its brief, ancestry, dependencies, and children
   assert.equal(build.owner, 'Victor')
   assert.equal(build.holder, 'codex', 'an old card\'s agent is its holder')
   assert.equal('agent' in build, false)
-  assert.equal(build.role, 'Worker')
   assert.equal(build.priority, 2)
   assert.equal(build.due, '2026-10-03')
   assert.equal(build.objective, 'Build the app.')
@@ -77,19 +76,17 @@ test('showCard exposes a broken parent link and unresolved dependencies', async 
   assert.deepEqual(shown.unresolvedDependencies, ['Gone'])
 })
 
-test('showCard returns the nearest effective role and marks inherited roles', async () => {
+test('showCard lists the card\'s own role tags, and a parent\'s role tag does not reach it', async () => {
   fixture = makeVault()
-  fixture.write('Boards/Main.md', item({ type: 'work-item', id: 'wi-root', title: 'Main', role: 'Builder' }))
+  fixture.write('Boards/Main.md', item({ type: 'work-item', id: 'wi-root', title: 'Main' }))
   fixture.write('Boards/Board.md', item({ type: 'work-item', id: 'wi-board', title: 'Board',
-    parent: '"[[Main]]"', role: 'Checker', board: true }))
-  fixture.write('Boards/Inherited.md', item({ type: 'work-item', id: 'wi-child', title: 'Inherited',
-    parent: '"[[Board]]"' }))
-  fixture.write('Boards/Override.md', item({ type: 'work-item', id: 'wi-override', title: 'Override',
-    parent: '"[[Board]]"', role: 'Reviewer' }))
+    parent: '"[[Main]]"', board: true, tags: '[role/checker]' }))
+  fixture.write('Boards/Plain.md', item({ type: 'work-item', id: 'wi-plain', title: 'Plain', parent: '"[[Board]]"' }))
+  fixture.write('Boards/Tagged.md', item({ type: 'work-item', id: 'wi-tagged', title: 'Tagged',
+    parent: '"[[Board]]"', tags: '[web, "#Role/Coder", role/checker]' }))
 
   const vault = await loadVault(fixture.root)
-  assert.equal(showCard(vault, 'Inherited').role, 'Checker')
-  assert.equal(showCard(vault, 'Inherited').roleInherited, true)
-  assert.equal(showCard(vault, 'Override').role, 'Reviewer')
-  assert.equal(showCard(vault, 'Override').roleInherited, false)
+  assert.deepEqual(showCard(vault, 'Plain').roles, [])
+  assert.deepEqual(showCard(vault, 'Tagged').roles, ['Role/Coder', 'role/checker'])
+  assert.equal('role' in showCard(vault, 'Tagged'), false)
 })

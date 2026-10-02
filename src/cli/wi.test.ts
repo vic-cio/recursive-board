@@ -735,14 +735,16 @@ test('wi new writes a brief from flags, and --strict refuses a card without one'
   assert.match(strict.stderr, /no Objective or Acceptance Criteria/)
 })
 
-test('wi new ignores creator and model flags with a note, and only writes an explicit role', async () => {
+test('wi new ignores creator and model flags with a note, and writes tags', async () => {
   fixture = seed()
   const flags = await wi(['new', 'Check rates', '--parent', 'Main', '--objective', 'Check.', '--criteria', 'Done',
-    '--creator', 'Project lead', '--model', 'gpt-6-luna', '--role', '[[Checker]]', '--owner', 'Ana', '--json'])
+    '--creator', 'Project lead', '--model', 'gpt-6-luna', '--tag', 'role/checker', '--tag', '#Web', '--tag', 'web',
+    '--owner', 'Ana', '--json'])
   assert.equal(flags.code, 0, flags.stderr)
   const text = readFileSync(join(fixture.root, JSON.parse(flags.stdout).path), 'utf8')
   assert.match(text, /^owner: Ana$/m)
-  assert.match(text, /^role: Checker$/m)
+  assert.match(text, /^tags:\n {2}- role\/checker\n {2}- Web$/m)
+  assert.doesNotMatch(text, /^role:/m)
   assert.doesNotMatch(text, /^creator(?:_model)?:/m)
   assert.match(flags.stderr, /--creator and --model are accepted but ignored/)
 
@@ -756,30 +758,16 @@ test('wi new ignores creator and model flags with a note, and only writes an exp
   assert.doesNotMatch(strict.stderr, /no creator/)
 })
 
-test('wi new does not copy an ancestor role, and an explicit --role is kept', async () => {
+test('wi new refuses --role and names the --tag to use, and refuses a bad tag before writing', async () => {
   fixture = seed()
-  const base = { type: 'work-item', created: '2026-09-21', updated: '2026-09-21' }
-  fixture.write('Boards/Coding board.md', item({ ...base, id: 'wi-7001', title: 'Coding board', status: 'doing',
-    parent: '"[[Main]]"', role: '"[[Coder]]"', board: true }))
-  fixture.write('Boards/Plain step.md', item({ ...base, id: 'wi-7002', title: 'Plain step', status: 'doing',
-    parent: '"[[Coding board]]"', board: true }))
-  fixture.write('Boards/Check step.md', item({ ...base, id: 'wi-7003', title: 'Check step', status: 'doing',
-    parent: '"[[Plain step]]"', role: 'Checker', board: true }))
-  const roleOf = async (args: string[]): Promise<string | null> => {
-    const brief = args.includes('area') ? [] : ['--objective', 'x', '--criteria', 'y']
-    const result = await wi(['new', ...args, ...brief, '--json'])
-    assert.equal(result.code, 0, result.stderr)
-    const text = readFileSync(join(fixture!.root, JSON.parse(result.stdout).path), 'utf8')
-    return /^role: (.*)$/m.exec(text)?.[1] ?? null
-  }
-
-  assert.equal(await roleOf(['From the parent', '--parent', 'Coding board']), null)
-  assert.equal(await roleOf(['From the grandparent', '--parent', 'Plain step']), null)
-  assert.equal(await roleOf(['From the nearest', '--parent', 'Check step']), null)
-  assert.equal(await roleOf(['No role above', '--parent', 'Build server']), null)
-  assert.equal(await roleOf(['Explicit', '--parent', 'Check step', '--role', 'Reviewer']), 'Reviewer')
-  assert.equal(await roleOf(['Explicitly none', '--parent', 'Check step', '--role', '']), null)
-  assert.equal(await roleOf(['An area', '--parent', 'Coding board', '--template', 'area']), null)
+  const role = await wi(['new', 'Explicit', '--parent', 'Main', '--role', 'Takeoff agent'])
+  assert.equal(role.code, 2)
+  assert.match(role.stderr, /a role is a tag now\. Use --tag role\/takeoff-agent\./)
+  const area = await wi(['new', 'Old area', '--parent', 'Main', '--tag', 'area/x'])
+  assert.notEqual(area.code, 0)
+  assert.match(area.stderr, /reserved for old area tags/)
+  assert.equal(existsSync(join(fixture.root, 'Boards', 'Explicit.md')), false)
+  assert.equal(existsSync(join(fixture.root, 'Boards', 'Old area.md')), false)
 })
 
 test('wi validate checks creator, owner and role names against notes anywhere', async () => {
@@ -788,7 +776,7 @@ test('wi validate checks creator, owner and role names against notes anywhere', 
   fixture.write('Roles/Checker.md', '---\ntype: role\n---\nThe procedure.\n')
   fixture.write('Notes/Loose.md', 'no frontmatter\n')
   const base = { type: 'work-item', status: 'options', parent: '"[[Main]]"', created: '2026-09-21', updated: '2026-09-21' }
-  fixture.write('Boards/Good.md', item({ ...base, id: 'wi-9001', title: 'Good', creator: 'Checker', creator_model: 'gpt-6-luna', owner: 'Ana', role: 'Checker' }))
+  fixture.write('Boards/Good.md', item({ ...base, id: 'wi-9001', title: 'Good', creator: 'Checker', creator_model: 'gpt-6-luna', owner: 'Ana' }))
   fixture.write('Boards/Bad.md', item({ ...base, id: 'wi-9002', title: 'Bad', creator: 'Nobody', owner: 'Checker', role: 'Loose' }))
   fixture.write('Boards/Linked.md', item({ ...base, id: 'wi-9003', title: 'Linked', creator: '"[[Ana]]"', owner: 'sam' }))
   const result = await wi(['validate', '--json'])
@@ -798,9 +786,26 @@ test('wi validate checks creator, owner and role names against notes anywhere', 
   assert.deepEqual(problems, [
     'Boards/Bad.md creator-unknown',
     'Boards/Bad.md owner-type',
-    'Boards/Bad.md role-type',
+    'Boards/Bad.md role-field',
     'Boards/Linked.md creator-link',
   ])
+  const bad = (JSON.parse(result.stdout) as { problems: { relPath: string; rule: string; message: string }[] }).problems
+    .find((problem) => problem.rule === 'role-field')!
+  assert.match(bad.message, /wi tag wi-9002 role\/loose, then wi set wi-9002 --role ""/)
+})
+
+test('wi validate warns when two notes carry one role tag, and not for a role tag no note carries', async () => {
+  fixture = seed()
+  fixture.write('Roles/Checker.md', '---\ntags: [role/checker]\n---\nThe procedure.\n')
+  fixture.write('Knowledge/Old checker.md', '---\ntags:\n  - "#Role/Checker"\n---\nAn older procedure.\n')
+  fixture.write('Roles/Coder.md', '---\ntags: [role/coder]\n---\n')
+  const base = { type: 'work-item', status: 'options', parent: '"[[Main]]"', created: '2026-09-21', updated: '2026-09-21' }
+  fixture.write('Boards/Tagged.md', item({ ...base, id: 'wi-9101', title: 'Tagged', tags: '[role/checker, role/nobody]' }))
+  const result = await wi(['validate', '--json'])
+  const problems = (JSON.parse(result.stdout) as { problems: { relPath: string; rule: string; message: string }[] }).problems
+    .filter((problem) => problem.rule.startsWith('role'))
+  assert.deepEqual(problems.map((problem) => `${problem.relPath} ${problem.rule}`), ['Knowledge/Old checker.md role-procedure-duplicate'])
+  assert.match(problems[0]!.message, /Roles\/Checker\.md all carry #role\/checker/)
 })
 
 test('wi note refuses an unnamed writer and signs WI_AGENT with its model', async () => {

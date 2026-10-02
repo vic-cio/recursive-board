@@ -16,14 +16,15 @@ import { basename, dirname, join } from 'node:path'
 import { promisify } from 'node:util'
 
 import { claimRule } from './claim-release.ts'
-import { ancestorRoles } from './new.ts'
 import { launchSpec, workerPrompt, type LaunchSpec } from '../harness.ts'
-import { readPeople, type Vault, type WorkItem } from '../vault.ts'
+import { readPeople, readRoleTaggedNotes, type Vault, type WorkItem } from '../vault.ts'
 import { editItem } from '../write.ts'
 import { appendNote, noteLine } from '../../shared/notes.ts'
-import { resolveRole } from '../../shared/authorship.ts'
+import { procedureNotes, roleTagFor, roleTags } from '../../shared/role-tags.ts'
+import { freeTagEditsIn } from '../../shared/tags.ts'
+import type { Edit } from '../../shared/edits.ts'
 import { cardState } from '../../shared/card-state.ts'
-import { frontmatterBody } from '../../shared/frontmatter.ts'
+import { frontmatterBody, getList } from '../../shared/frontmatter.ts'
 import { ANY_AGENT } from '../../shared/holder.ts'
 import {
   assignEdits, cardSlug, delegateTarget, delegationNote, withdrawEdits, workerName, type Harness,
@@ -37,6 +38,8 @@ export interface DelegateOptions {
   agent?: string | undefined
   /** The harness's permission mode or sandbox. */
   permission?: string | undefined
+  /** A role name or tag. The card gets the tag `role/<name>` in the same write (docs/adr/0062-role-tags.md). */
+  role?: string | undefined
 }
 
 export interface DelegateDeps {
@@ -70,6 +73,12 @@ export async function delegate(
 ): Promise<DelegateResult> {
   const item = vault.resolve(ref)
   const target = delegateTarget(options.to, await readPeople(vault.root))
+  const roleTag = options.role === undefined ? undefined : roleTagFor(options.role)
+  // The holder and the role tag go in one write.
+  const assign = (text: string, holder: string): Edit[] | null => {
+    const edits = [...(assignEdits(text, holder) ?? []), ...(roleTag ? freeTagEditsIn(text, roleTag, true) ?? [] : [])]
+    return edits.length > 0 ? edits : null
+  }
   const note = (holder: string, harness: Harness) => (text: string) =>
     appendNote(text, noteLine(delegationNote({ holder, harness, model: options.model }), deps.author))
 
@@ -82,7 +91,7 @@ export async function delegate(
     if (item.area) throw new Error(`${item.relPath} is an area, and an area cannot be assigned.`)
     if (item.parent === null) throw new Error(`${item.relPath} is a root, and a root cannot be assigned.`)
     const holder = target.kind === 'any' ? ANY_AGENT : target.name
-    await editItem(item, (text) => assignEdits(text, holder))
+    await editItem(item, (text) => assign(text, holder))
     return { item, holder }
   }
 
@@ -99,12 +108,10 @@ export async function delegate(
   const folder = join(dirname(repo), `${basename(repo)}-worktrees`)
   const worktree = join(folder, slug)
   const log = join(folder, `${slug}.log`)
-  const parent = item.parent === null ? undefined : vault.resolveLink(item.parent)
-  const role = resolveRole(item.frontmatter.get('role'), parent ? ancestorRoles(vault, parent) : []).role
   const sessionId = deps.uuid()
   const run = {
     harness, model: options.model, permission: options.permission, worktree, vault: vault.root,
-    sessionId, name: `${id} ${title}`, agent: holder, card: id, role,
+    sessionId, name: `${id} ${title}`, agent: holder, card: id,
   }
   launchSpec({ ...run, prompt: '' }) // Refuses a permission the harness does not take, before any write.
   const worktreeStep = await planWorktree(deps, repo, worktree, branch)
@@ -113,14 +120,16 @@ export async function delegate(
   await editItem(item, (text) => {
     claimable(text)
     previous = cardState(text).holder
-    return assignEdits(text, holder)
+    return assign(text, holder)
   }, note(holder, harness))
   try {
     await worktreeStep()
-    const body = frontmatterBody(await readFile(item.path, 'utf8'))
+    const text = await readFile(item.path, 'utf8')
+    const tagged = await readRoleTaggedNotes(vault.root)
+    const roles = roleTags(getList(text, 'tags') ?? []).map((tag) => ({ tag, procedures: procedureNotes(tag, tagged) }))
     const spec = launchSpec({
       ...run,
-      prompt: workerPrompt({ card: id, title, agent: holder, vault: vault.root, worktree, branch, role, body }),
+      prompt: workerPrompt({ card: id, title, agent: holder, vault: vault.root, worktree, branch, roles, body: frontmatterBody(text) }),
     })
     const { pid } = await deps.launch(spec, log)
     const started = `Started the worker, process ${pid}, on ${branch} in \`${worktree}\`. Log: \`${log}\`. ` +

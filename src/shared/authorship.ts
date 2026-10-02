@@ -1,7 +1,8 @@
 /**
  * Names for card authorship, ownership and roles (docs/adr/0042-creator-and-role.md).
  *
- * Legacy `creator`, `owner` and `role` fields hold the plain name of a person or role note. A plain name, not a
+ * Legacy `creator` and `owner` fields hold the plain name of a person or role note. A role itself is
+ * a tag now (docs/adr/0062-role-tags.md). A plain name, not a
  * link: a link from every note to its creator turns the graph into one star around each person.
  * The note of that name says which it is by its `type`: `person` or `role`, and lists what it made
  * with a Bases table. The product needs no folder for them. New cards do not write creator fields.
@@ -16,7 +17,6 @@ export const ROLE_TYPE = 'role'
 export const LINK_FIELDS = {
   creator: [PERSON_TYPE, ROLE_TYPE],
   owner: [PERSON_TYPE],
-  role: [ROLE_TYPE],
 } as const
 export type LinkField = keyof typeof LINK_FIELDS
 
@@ -48,15 +48,4 @@ export function linkTypeProblem(field: LinkField, target: string, type: unknown)
   const want = allowed.map((kind) => `type: ${kind}`).join(' or ')
   return `names ${target} as its ${field}, and that note has ${typeof type === 'string' ? `type: ${type}` : 'no type'}. ` +
     `Give that note ${want}.`
-}
-
-/** Resolve a card's own role, or the nearest ancestor role, without writing a copy. */
-export function resolveRole(ownRole: unknown, ancestorRoles: readonly unknown[]): { role: string | undefined; inherited: boolean } {
-  const own = displayName(ownRole)
-  if (own !== undefined) return { role: own, inherited: false }
-  for (const role of ancestorRoles) {
-    const name = displayName(role)
-    if (name !== undefined) return { role: name, inherited: true }
-  }
-  return { role: undefined, inherited: false }
 }

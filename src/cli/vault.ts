@@ -13,7 +13,8 @@ import { existsSync } from 'node:fs'
 import { homedir } from 'node:os'
 import { join, resolve as resolvePath, dirname, basename, sep, isAbsolute } from 'node:path'
 
-import { parseFrontmatter, type Frontmatter } from '../shared/frontmatter.ts'
+import { getList, parseFrontmatter, type Frontmatter } from '../shared/frontmatter.ts'
+import { roleTags, type TaggedNote } from '../shared/role-tags.ts'
 import { type VaultConfig } from '../shared/vault-config.ts'
 import { parsePluginData, PLUGIN_DATA_FILE, readBoardSettings } from '../shared/board-settings.ts'
 import { archiveOwner } from '../shared/archive.ts'
@@ -382,6 +383,25 @@ export async function loadVault(root: string): Promise<Vault> {
     isArchived: (item) => archiveOwner(item, (current) => resolveLink(current.parent) ?? null, (current) => current.archived) !== null,
     resolveNote: noteResolver(root),
   }
+}
+
+/**
+ * Every note in the vault with its tags, for the role-tag lookup (docs/adr/0062-role-tags.md).
+ * Only notes with at least one role tag are kept: the lookup needs no others.
+ */
+export async function readRoleTaggedNotes(root: string): Promise<TaggedNote[]> {
+  const entries = await readdir(root, { withFileTypes: true, recursive: true })
+  const notes = await Promise.all(entries.flatMap((entry) => {
+    if (entry.isDirectory() || !MARKDOWN.test(entry.name)) return []
+    const path = `${(entry.parentPath ?? root).slice(root.length + 1).split(sep).join('/')}/${entry.name}`.replace(/^\//, '')
+    if (path.split('/').some((part) => NOT_NOTES.has(part))) return []
+    return [readFile(join(root, ...path.split('/')), 'utf8').then((text): TaggedNote => ({
+      path,
+      tags: getList(text, 'tags') ?? [],
+      workItem: parseFrontmatter(text)?.get('type') === WORK_ITEM_TYPE,
+    }))]
+  }))
+  return notes.filter((note) => roleTags(note.tags).length > 0)
 }
 
 /**

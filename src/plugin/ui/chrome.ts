@@ -130,7 +130,7 @@ function renderPromoteToggle(group: HTMLElement, ctx: RenderContext, meta: WorkI
 /**
  * The facts of a work item, in words, and the actions on them. It stands in for the raw Properties
  * panel, which a work item hides until the Properties button shows it (docs/adr/0042-creator-and-role.md).
- * A person, role or dependency opens its note, and the id copies itself.
+ * A person or dependency opens its note, and the id copies itself.
  */
 export function renderMetaStrip(host: HTMLElement, meta: WorkItemMeta, ctx?: RenderContext): void {
   const strip = host.createDiv({ cls: 'wi-meta' })
@@ -151,13 +151,6 @@ export function renderMetaStrip(host: HTMLElement, meta: WorkItemMeta, ctx?: Ren
     })
   }
   if (meta.priority !== undefined) strip.createSpan({ cls: 'wi-pill', text: `P${meta.priority}` })
-  if (meta.role !== undefined) {
-    const pill = strip.createSpan({ cls: 'wi-pill is-role', attr: {
-      'aria-label': meta.roleInherited ? 'The inherited role that does this work' : 'The role that does this work',
-    } })
-    namePill(pill, meta.role, meta.roleFile, openFile)
-    if (meta.roleInherited) pill.createSpan({ cls: 'is-quiet', text: ' · inherited' })
-  }
   if (meta.owner !== undefined) {
     const pill = strip.createSpan({ cls: 'wi-pill', attr: { 'aria-label': 'Owner' } })
     namePill(pill, meta.owner, meta.ownerFile, openFile)

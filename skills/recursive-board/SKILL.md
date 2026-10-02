@@ -66,9 +66,9 @@ wi new "<title>" --parent <ref> --objective <text> --context <text> --criteria <
 wi status <ref> <backlog|options|doing|done>
 wi note <ref> "<result>" [--agent <name>]   # signs with --agent or WI_AGENT
 wi depend <ref> --on <ref>            # the card waits on another card; --off removes it
-wi new <title> [--role <role>] [--creator <name>] [--model <id>]
+wi new <title> [--tag <tag>]... [--creator <name>] [--model <id>]
                                                 # creator and model flags are accepted no-ops
-wi set <ref> --owner <name> | --role <role>                   # change who owns it or does it
+wi set <ref> --owner <name>                     # change who owns it; --role "" removes an old role field
 wi area <ref>                         # mark a card as an area
 wi area <ref> --off                   # remove the area mark
 wi tag <ref> <tag>                    # add a free tag; --off removes it
@@ -154,9 +154,10 @@ your own agent name everywhere `<me>` appears.
 
 The dispatcher sets `WI_AGENT` to your name and `WI_MODEL` to your model. `wi note` signs each
 line with your name and model. It refuses to write when `WI_AGENT` and `--agent` are both empty.
-Read the role from the card or its nearest ancestor. A card's own role takes priority. `wi show`
-marks an inherited role, and `wi delegate` gives the worker that procedure. New cards store no
-inherited role. `--role <role>` sets an explicit role. The board's add row also stores no role.
+A role is a tag such as `role/checker` on your card. A note that is not a card and carries the
+same tag is its procedure; your brief names it. Read and follow it. Roles do not pass down from a
+parent, and a card with no role tag has no procedure beyond this section. `wi show` lists the
+card's role tags. `wi delegate --role <name>` and `wi tag <ref> role/<name>` add one.
 `--creator` and `--model` on `wi new` remain accepted no-ops. Old creator fields stay valid.
 
 1. Claim the card: `wi claim <card> --agent <me>`. A delegated card names you as its holder

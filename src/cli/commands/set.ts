@@ -1,19 +1,21 @@
 /**
- * `wi set` — change who is behind a card: its owner, its role, and, once, its creator
- * (docs/adr/0042-creator-and-role.md). One file, one write.
+ * `wi set` — change who is behind a card: its owner and, once, its creator
+ * (docs/adr/0042-creator-and-role.md). One file, one write. A role is a tag now
+ * (docs/adr/0062-role-tags.md); `--role ""` only removes an old `role` field.
  *
  * The creator is set once. `wi set` writes it only when the card has none, so a migration can
  * credit old cards, but no later run can rewrite who made one.
  */
 import { editItem, type Edit } from '../write.ts'
 import { asName, displayName } from '../../shared/authorship.ts'
+import { roleTagFor } from '../../shared/role-tags.ts'
 import { parseFrontmatter, type Scalar } from '../../shared/frontmatter.ts'
 import type { Vault, WorkItem } from '../vault.ts'
 
 export interface SetOptions {
   /** A name or link. An empty string removes the owner. */
   owner?: string
-  /** A name or link. An empty string removes the role. */
+  /** Only an empty string, which removes an old `role` field. A role is a tag: `wi tag`. */
   role?: string
   creator?: string
   model?: string
@@ -26,7 +28,10 @@ export interface SetChange {
 
 export async function setPeople(vault: Vault, ref: string, options: SetOptions): Promise<SetChange> {
   const item = vault.resolve(ref)
-  if (item.parent === null) throw new Error(`${item.relPath} is a root. A root has no owner, role or creator.`)
+  if (item.parent === null) throw new Error(`${item.relPath} is a root. A root has no owner or creator.`)
+  if (options.role !== undefined && options.role.trim() !== '') {
+    throw new Error(`a role is a tag now. Run: wi tag ${ref} ${roleTagFor(options.role)}`)
+  }
   let changed: string[] = []
   // Decided under the lock, from the card as it is then, so a creator set since the load is never
   // replaced (docs/adr/0054-edits-from-the-file-at-write-time.md).
@@ -46,6 +51,7 @@ function peopleEdits(
   const changed: string[] = []
 
   const assign = (key: 'owner' | 'role', value: string | undefined) => {
+    // An empty --role arrives here only to remove an old field; a named role was refused above.
     if (value === undefined) return
     if (value.trim() === '') {
       if (current(key) !== undefined) {

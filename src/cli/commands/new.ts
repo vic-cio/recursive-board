@@ -15,9 +15,10 @@ import { inheritedChildFields, renderWorkItem, type NewWorkItem } from '../../sh
 import { briefGaps, renderBody, requireTemplate, type Brief } from '../../shared/templates.ts'
 import { firstChildPromotion } from '../../shared/transitions.ts'
 import { asName } from '../../shared/authorship.ts'
+import { freeTag, withFreeTag } from '../../shared/tags.ts'
 import { fileNameFor, fileNameStem, isStatus, newId, today, WORK_ITEM_TYPE, type Status } from '../../shared/schema.ts'
 import { parseFrontmatter } from '../../shared/frontmatter.ts'
-import type { Vault, WorkItem } from '../vault.ts'
+import type { Vault } from '../vault.ts'
 
 export interface NewOptions {
   title: string
@@ -27,8 +28,8 @@ export interface NewOptions {
   owner?: string
   /** The person or agent who does the work. `wi new --agent` sets it. */
   holder?: string
-  /** The role that must do the work. */
-  role?: string
+  /** Free tags, such as a role tag `role/checker` (docs/adr/0062-role-tags.md). */
+  tags?: string[]
   priority?: number
   /** A name from the template registry. Omitted uses the default. */
   template?: string
@@ -81,7 +82,7 @@ export async function createItem(vault: Vault, options: NewOptions): Promise<Cre
   const inherited = inheritedChildFields({
     holder: template.area ? undefined : holderOf((key) => parent.frontmatter.get(key)),
   }, status, options)
-  const role = options.role?.trim() ? asName(options.role) : undefined
+  const tags = newTags(options.tags ?? [])
   const render = (id: string): string => {
     const common = {
       id,
@@ -96,7 +97,7 @@ export async function createItem(vault: Vault, options: NewOptions): Promise<Cre
       ? { ...common, ...inherited, area: true, status }
       : { ...common, ...inherited, status }
     if (options.priority !== undefined) fields.priority = options.priority
-    if (role !== undefined) fields.role = role
+    if (tags.length > 0) fields.tags = tags
     if (options.owner?.trim()) fields.owner = asName(options.owner)
     return renderWorkItem(fields, vault.config.extraSections)
   }
@@ -150,14 +151,9 @@ export async function createItem(vault: Vault, options: NewOptions): Promise<Cre
   }
 }
 
-/** The `role` of the item and each ancestor, nearest first. */
-export function ancestorRoles(vault: Vault, parent: WorkItem): unknown[] {
-  const roles: unknown[] = []
-  const seen = new Set<string>()
-  for (let current: WorkItem | undefined = parent; current; current = vault.resolveLink(current.parent)) {
-    if (seen.has(current.relPath)) break
-    seen.add(current.relPath)
-    roles.push(current.frontmatter.get('role'))
-  }
-  return roles
+/** Each tag once, as `wi tag` would store it. Throws before any write for a tag `wi tag` refuses. */
+function newTags(inputs: readonly string[]): string[] {
+  let tags: string[] = []
+  for (const input of inputs) tags = withFreeTag(tags, freeTag(input), true)
+  return tags
 }
