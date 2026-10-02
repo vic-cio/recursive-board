@@ -77,7 +77,13 @@ without a step from the user. A change that breaks a workflow needs Victor's app
 Bump the patch number for fixes and additions. Bump the minor number only for a breaking change that Victor approved.
 
 While Victor is the only user, prefer the right foundation over a compatible tweak. A breaking change
-is fine when it makes the model simpler. Migrate Victor's vaults in the same release.
+is fine when it makes the model simpler. Migrate each of Victor's vaults when its board allows it.
+
+`wi` and the skill are installed once per machine, so a release reaches every vault on it. Before a
+release that changes a command, a flag, or what `wi` writes, put a card on the board of each vault
+that runs `wi` (Victor's global CLAUDE.md names them). The card lists what changes for that vault and
+which of its scripts and notes it affects. A vault whose card says it is on hold keeps its version:
+install the release so that the held vault does not run it, or wait. Never migrate a held vault.
 
 Bump `version` in `manifest.json`, `package.json` and `VERSION` in `src/cli/wi.ts`, update the matching
 `versions.json` entry to the manifest's `minAppVersion`, and update `package-lock.json`.
