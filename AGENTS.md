@@ -10,6 +10,10 @@ orchestration, but that is a use, not the core. Give people and agents the same 
 each user's agent setup (harness, permission mode, sandbox) to them. Ship no default that only one
 setup wants.
 
+**No forced workflow.** Every feature is optional. The product offers it and never makes a workflow
+depend on it. A user who skips a feature, or uses it another way, gets no warning for that choice,
+even when the result is not optimal. Roles, reviews and delegation are tools, not steps.
+
 ## Read first
 
 [`README.md`](README.md) says what the product does and how a user installs it.
