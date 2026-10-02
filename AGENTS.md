@@ -72,6 +72,9 @@ without a step from the user. A change that breaks a workflow needs Victor's app
 
 Bump the patch number for fixes and additions. Bump the minor number only for a breaking change that Victor approved.
 
+While Victor is the only user, prefer the right foundation over a compatible tweak. A breaking change
+is fine when it makes the model simpler. Migrate Victor's vaults in the same release.
+
 Bump `version` in `manifest.json`, `package.json` and `VERSION` in `src/cli/wi.ts`, update the matching
 `versions.json` entry to the manifest's `minAppVersion`, and update `package-lock.json`.
 Commit those files, then create and push a tag that equals the version exactly (no `v` prefix).
