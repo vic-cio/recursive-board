@@ -1029,6 +1029,7 @@
 .wi-dash-head { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: flex-end; gap: var(--size-4-3); margin-bottom: var(--size-4-4); }
 .wi-dash-head h1 { margin: 0; font-size: var(--h2-size); }
 .wi-dash-head-right { display: flex; flex-wrap: wrap; gap: var(--size-4-3); align-items: center; }
+.wi-dash-open-board { display: inline-flex; align-items: center; gap: var(--size-4-2); }
 .wi-dash-muted { color: var(--text-muted); font-size: var(--font-ui-smaller); }
 .wi-dash-lower { display: grid; grid-template-columns: 3fr 2fr; gap: var(--size-4-3); align-items: start; }
 @media (max-width: 1100px) { .wi-dash-lower { grid-template-columns: minmax(0, 1fr); } }

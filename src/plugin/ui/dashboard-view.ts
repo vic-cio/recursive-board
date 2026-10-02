@@ -183,9 +183,14 @@ export class DashboardView extends ItemView {
         await this.render()
       }
     }
-    if (root) {
-      const open = right.createEl('button', { text: 'Open board' })
-      open.onclick = () => void this.openFile(root.file)
+    // The chosen root, else the default root from the board settings, else the only root.
+    const defaultRoot = this.host.index.config.defaultRoot
+    const board = root ?? roots.find((item) => item.file.basename === defaultRoot) ?? (roots.length === 1 ? roots[0]! : null)
+    if (board) {
+      const open = right.createEl('button', { cls: 'mod-cta wi-dash-open-board', attr: { 'aria-label': `Open the ${board.title} board` } })
+      setIcon(open.createSpan('wi-dash-icon'), 'square-kanban')
+      open.createSpan({ text: `Open ${board.title}` })
+      open.onclick = () => void this.openFile(board.file)
     }
   }
 
@@ -488,7 +493,7 @@ export class DashboardView extends ItemView {
     const count = people.reduce((total, person) => total + person.cards.length, 0)
     this.panelHead(panel, 'users', 'People', String(count))
     const details = panel.createEl('details', { cls: 'wi-dash-people-fold' })
-    details.createEl('summary', { text: `${people.length} people holding cards` })
+    details.createEl('summary', { text: `${people.length} ${people.length === 1 ? 'person holds' : 'people hold'} cards` })
     if (people.length === 0) {
       details.createDiv({ cls: 'wi-dash-muted', text: 'No person holds an open card.' })
       return
