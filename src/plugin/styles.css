@@ -1026,7 +1026,7 @@
 /* Dashboard (docs/adr/0040-dashboard-view.md). */
 
 .wi-dash { padding: var(--size-4-5) var(--size-4-6); font-size: var(--font-ui-small); }
-.wi-dash-head { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: flex-end; gap: var(--size-4-3); margin-bottom: var(--size-4-4); }
+.wi-dash-head { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: var(--size-4-3); margin-bottom: var(--size-4-4); }
 .wi-dash-head h1 { margin: 0; font-size: var(--h2-size); }
 .wi-dash-head-right { display: flex; flex-wrap: wrap; gap: var(--size-4-3); align-items: center; }
 .wi-dash-open-board { display: inline-flex; align-items: center; gap: var(--size-4-2); }
@@ -1041,6 +1041,8 @@
 .wi-dash-icon svg { width: var(--icon-s); height: var(--icon-s); }
 /* A filled button sets its own text colour, so the icon takes it in every theme. */
 .wi-dash-open-board .wi-dash-icon { color: inherit; }
+/* Obsidian's mobile buttons are tall pills; on the head they would tower over the title. */
+.is-mobile .wi-dash-open-board { height: auto; padding: var(--size-4-1) var(--size-4-3); font-size: var(--font-ui-small); }
 .wi-dash-table { width: 100%; border-collapse: collapse; margin-top: var(--size-4-2); }
 .wi-dash-table th { text-align: left; font-size: var(--font-ui-smaller); text-transform: uppercase; letter-spacing: .04em; color: var(--text-faint); padding: var(--size-4-1) var(--size-4-2); border-bottom: 1px solid var(--background-modifier-border); }
 .wi-dash-table td { padding: var(--size-4-2); border-bottom: 1px solid var(--background-modifier-border); vertical-align: top; }
