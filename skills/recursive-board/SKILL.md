@@ -115,7 +115,8 @@ In Obsidian, use **Promote** at the top of any child card to give it its own boa
 - `wi status <ref> done` says when that was the parent's last open child. Check the parent's own
   criteria, then close it.
 - Before it starts an agent, a dispatcher reads `wi dashboard --panel agents`. It counts agents, not cards, and lists
-  each agent's doing cards. The dispatcher holds off when `activeAgents` reaches `maxAgents`;
+  each agent's doing cards. A card whose open children are all in doing only waits, so it does not
+  make its agent count. The dispatcher holds off when `activeAgents` reaches `maxAgents`;
   `null` means no limit is set. `WI_MAX_AGENTS` overrides the vault setting for one run. This
   limit is advisory: `wi claim` does not enforce it.
 - To report the state of the boards to a person, run `wi dashboard --you <name> --json`. It

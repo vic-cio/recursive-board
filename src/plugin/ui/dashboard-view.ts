@@ -142,7 +142,7 @@ export class DashboardView extends ItemView {
     this.drawReviews(main.createDiv('wi-dash-panel'), reviews, state)
     const side = lower.createDiv('wi-dash-panel')
     this.drawProgress(side, cards, tree, focus, feed)
-    this.drawAgents(side, feed, state, this.host.index.config.maxAgents, activeAgentCount(all, people),
+    this.drawAgents(side, feed, state, this.host.index.config.maxAgents, activeAgentCount(all, people, tree),
       agentRequests(cards.filter((card) => inFocus(card, focus, tree))))
     this.drawPeople(side.createDiv('wi-dash-panel'), peopleRows)
   }

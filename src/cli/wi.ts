@@ -13,7 +13,7 @@ import { resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 import {
-  loadVault, findVaultRoot, getDefaultVault, maxAgentsForRun, readPeople, readRoleTaggedNotes,
+  loadVault, findVaultRoot, getDefaultVault, maxAgentsForRun, readRoleTaggedNotes,
   type Vault, type WorkItem,
 } from './vault.ts'
 import { createItem } from './commands/new.ts'
@@ -36,13 +36,13 @@ import { setPeople } from './commands/set.ts'
 import { dependenciesOf, openDependencies, titleOf } from './dependencies.ts'
 import { hookStatus, installHook, uninstallHook } from './commands/hook.ts'
 import { runSetup } from './commands/setup.ts'
-import { dashboardPanels, dashboardSummary, renderDashboard, type DashboardPanel } from './commands/dashboard.ts'
+import { activeAgentsOf, dashboardPanels, dashboardSummary, renderDashboard, type DashboardPanel } from './commands/dashboard.ts'
 import { sendForReview } from './commands/review.ts'
 import { COMMAND_FLAGS, parseCommandLine, type Values } from './flags.ts'
 import { STATUSES } from '../shared/schema.ts'
 import { authorLabel } from '../shared/authorship.ts'
 import { roleTagFor } from '../shared/role-tags.ts'
-import { holderOf, isAnyAgent } from '../shared/holder.ts'
+import { isAnyAgent } from '../shared/holder.ts'
 
 const HELP = `wi — the Recursive Board CLI
 
@@ -471,16 +471,21 @@ async function runClaim(vault: Vault, rest: string[], values: Values, json: bool
   const agent = values['holder'] === undefined ? envText('WI_AGENT') : singleLineOption(values, 'holder')
   if (agent === undefined) throw new UsageError('wi claim needs --holder <name>, or WI_AGENT set.')
   const maxAgents = maxAgentsForRun(vault)
-  const active = await activeAgentNames(vault)
-  const person = (await readPeople(vault.root)).has(agent.toLowerCase())
+  const before = maxAgents === null ? new Set<string>() : await activeAgentsOf(vault)
   const change = await claimItem(vault, ref, agent)
   if (json) print({ id: change.item.id, path: change.item.relPath, holder: change.holder,
     from: change.from ?? null, to: change.to, changed: change.changed })
   else process.stdout.write(change.changed
     ? `${label(change.item)}  ${change.from ?? '—'} → doing  (holder: ${agent})\n`
     : `${label(change.item)} is already claimed by ${agent} in doing. Nothing written.\n`)
-  if (change.changed && !person && maxAgents !== null && !active.has(agent) && active.size + 1 > maxAgents) {
-    process.stderr.write(`wi: warning: agent limit is ${maxAgents}; ${active.size + 1} agents now have a doing card.\n`)
+  if (change.changed && maxAgents !== null) {
+    // Count after the claim: it can move a step to doing and leave the parent's agent only waiting.
+    // A person, a request for any agent, and an agent that only waits add no agent.
+    const after = await activeAgentsOf(await loadVault(vault.root))
+    const name = agent.trim().toLowerCase()
+    if (!before.has(name) && after.has(name) && after.size > maxAgents) {
+      process.stderr.write(`wi: warning: agent limit is ${maxAgents}; ${after.size} agents now work a doing card.\n`)
+    }
   }
   return 0
 }
@@ -539,26 +544,6 @@ async function runNote(vault: Vault, rest: string[], values: Values, json: boole
   if (json) print({ id: added.item.id, path: added.item.relPath, line: added.line })
   else process.stdout.write(`${label(added.item)}  ${added.line}\n`)
   return 0
-}
-
-/**
- * Doing cards an agent holds. One agent may hold a card and its current subtask. A card a person
- * holds is not an agent's: a person is a note with type: person. A request for any agent has no
- * agent on it yet.
- */
-async function claimedDoing(vault: Vault): Promise<{ agent: string; item: WorkItem }[]> {
-  const people = await readPeople(vault.root)
-  return vault.items.flatMap((item) => {
-    const agent = holderOf((key) => item.frontmatter.get(key))
-    return item.status === 'doing' && agent !== undefined && !isAnyAgent(agent) &&
-      !people.has(agent.trim().toLowerCase())
-      ? [{ agent, item }]
-      : []
-  })
-}
-
-async function activeAgentNames(vault: Vault): Promise<Set<string>> {
-  return new Set((await claimedDoing(vault)).map((claim) => claim.agent))
 }
 
 async function runAgents(rest: string[]): Promise<number> {

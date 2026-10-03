@@ -1,5 +1,6 @@
 ---
 status: accepted
+amended_by: 0066-count-only-working-agents.md (the active count and waiting claims)
 ---
 # A dashboard view over every board
 

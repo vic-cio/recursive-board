@@ -1,12 +1,13 @@
 ---
 status: accepted
+amended_by: 0066-count-only-working-agents.md (an agent that only waits on its children does not count)
 ---
 
 # Set an advisory concurrent agent limit per vault
 
 The vault config may contain `maxAgents`, a non-negative whole number or `null`. The
 Recursive Board settings tab writes this setting, and the dashboard Agents panel reports it with the number of
-distinct agents that hold a work-item card in `doing` (amended by [0038](0038-nested-claims.md)). `WI_MAX_AGENTS` overrides the file for
+distinct agents that hold a work-item card in `doing` (amended by [0038](0038-nested-claims.md) and [0066](0066-count-only-working-agents.md)). `WI_MAX_AGENTS` overrides the file for
 one CLI run.
 
 The dispatcher reads the count before starting a worker and waits when the count reaches the

@@ -8,7 +8,7 @@ import { stat } from 'node:fs/promises'
 import { displayName } from '../../shared/authorship.ts'
 import { holderOf } from '../../shared/holder.ts'
 import {
-  activeAgentCount, agentFeed, agentRequests, cardsInScope, groupName, groupUnder, inFocus, needsAttention, parseReviewLine, peopleFeed, progress,
+  activeAgentCount, activeAgentNames, agentFeed, agentRequests, cardsInScope, groupName, groupUnder, inFocus, needsAttention, parseReviewLine, peopleFeed, progress,
   waitsForReview, workingBadge, type AgentRow, type DashItem, type DashTree,
 } from '../../shared/dashboard.ts'
 import { dependenciesOf, titleOf } from '../dependencies.ts'
@@ -69,6 +69,16 @@ function treeOf(vault: Vault, cards: Map<WorkItem, Card>): DashTree<Card> {
   }
 }
 
+/**
+ * The agents that count against `maxAgents`, in lower case, by the dashboard's own rule
+ * (docs/adr/0066-count-only-working-agents.md). `wi claim` warns from this set.
+ */
+export async function activeAgentsOf(vault: Vault): Promise<Set<string>> {
+  const cards = await cardsOf(vault)
+  const people = [...(await readPeople(vault.root)).values()]
+  return activeAgentNames([...cards.values()], people, treeOf(vault, cards))
+}
+
 export async function dashboardSummary(vault: Vault, options: DashboardOptions = {}) {
   const now = options.now ?? Date.now()
   const you = options.you?.trim() || null
@@ -124,7 +134,7 @@ export async function dashboardSummary(vault: Vault, options: DashboardOptions =
     })),
     agents: {
       maxAgents: maxAgentsForRun(vault),
-      activeAgents: activeAgentCount([...cards.values()], people),
+      activeAgents: activeAgentCount([...cards.values()], people, tree),
       requests: agentRequests(focused).map((card) => ({ ...identity(card), status: card.status! })),
       working: feed.working.map(claim), idle: feed.idle.map(claim), finished: feed.finished.map(claim),
     },

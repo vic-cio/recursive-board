@@ -2,7 +2,7 @@ import { test } from 'node:test'
 import assert from 'node:assert/strict'
 
 import {
-  activeAgentCount, agentFeed, agentRequests, areaOf, allReviewFilesTicked, cardsInScope, fileReviewPaths, IDLE_MS, isLoopbackWebAddress, isWebAddress, FINISHED_SHOWN, FINISHED_WINDOW_MS, needsAttention, parseReviewLine, parseWebReviewMode, peopleFeed, progress, reviewPathsForMode, reviewPresentationForMode, reviewVerdictReadiness, tickCounts, waitsForReview, workingBadge, type DashItem, type DashTree,
+  activeAgentCount, activeAgentNames, agentFeed, agentRequests, areaOf, allReviewFilesTicked, cardsInScope, fileReviewPaths, IDLE_MS, isLoopbackWebAddress, isWebAddress, FINISHED_SHOWN, FINISHED_WINDOW_MS, needsAttention, parseReviewLine, parseWebReviewMode, peopleFeed, progress, reviewPathsForMode, reviewPresentationForMode, reviewVerdictReadiness, tickCounts, waitsForReview, waitsOnChildren, workingBadge, type DashItem, type DashTree,
 } from './dashboard.ts'
 
 interface Fake extends DashItem { parent: Fake | null; mtime: number }
@@ -64,7 +64,52 @@ test('People lists each named person with their open cards and excludes them fro
     { person: 'Bob', cards: [{ card: bob, status: 'doing' }] },
   ])
   assert.deepEqual(agentFeed([alice, bob, agent], '', tree, 0, null, ['Alice', 'Bob']).working.map((row) => row.card), [agent])
-  assert.equal(activeAgentCount([alice, bob, agent], ['Alice', 'Bob']), 1)
+  assert.equal(activeAgentCount([alice, bob, agent], ['Alice', 'Bob'], tree), 1)
+})
+
+test('a card waits on its children when it has open children and every one is in doing', () => {
+  const { add, tree } = vault()
+  const root = add('Home', null)
+  const parent = add('Parent', root, { status: 'doing', holder: 'lead' })
+  assert.equal(waitsOnChildren(parent, tree), false, 'a card with no children does its own work')
+  const first = add('First', parent, { status: 'doing', holder: 'worker-1' })
+  add('Gone', parent, { status: 'options', effectiveArchived: true })
+  add('Closed', parent, { status: 'done' })
+  assert.equal(waitsOnChildren(parent, tree), true, 'done and archived children are not open')
+  const second = add('Second', parent, { status: 'options' })
+  assert.equal(waitsOnChildren(parent, tree), false, 'a child in options is work the parent can still do')
+  second.status = 'backlog'
+  assert.equal(waitsOnChildren(parent, tree), false)
+  second.status = 'doing'
+  assert.equal(waitsOnChildren(parent, tree), true)
+  first.status = 'done'
+  second.status = 'done'
+  assert.equal(waitsOnChildren(parent, tree), false, 'with every child done, the parent works again')
+})
+
+test('the active count skips a doing card whose open children are all in doing', () => {
+  const { items, add, tree } = vault()
+  const root = add('Home', null)
+  const parent = add('Parent', root, { status: 'doing', holder: 'lead' })
+  add('First', parent, { status: 'doing', holder: 'worker-1' })
+  const second = add('Second', parent, { status: 'doing', holder: 'worker-2' })
+  assert.deepEqual([...activeAgentNames(items, [], tree)].sort(), ['worker-1', 'worker-2'])
+  assert.equal(activeAgentCount(items, [], tree), 2, 'lead only waits on its children')
+
+  second.status = 'options'
+  assert.equal(activeAgentCount(items, [], tree), 2, 'lead has a child left to work, so it counts')
+
+  second.status = 'doing'
+  add('Other', root, { status: 'doing', holder: 'lead' })
+  assert.equal(activeAgentCount(items, [], tree), 3, 'lead counts through a card it works')
+})
+
+test('an agent that holds a card and its current subtask still counts once', () => {
+  const { items, add, tree } = vault()
+  const root = add('Home', null)
+  const parent = add('Parent', root, { status: 'doing', holder: 'claude' })
+  add('Step', parent, { status: 'doing', holder: 'claude' })
+  assert.equal(activeAgentCount(items, [], tree), 1)
 })
 
 test('a card waits for review only after a send, while it is yours and has no open child', () => {
