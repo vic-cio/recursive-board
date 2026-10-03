@@ -773,26 +773,27 @@ test('wi new refuses --role and a bad tag before writing', async () => {
   assert.equal(existsSync(join(fixture.root, 'Boards', 'Old area.md')), false)
 })
 
-test('wi validate checks owner and role names against notes anywhere', async () => {
+test('wi validate checks how owner and role are written, and not the type of the owner note', async () => {
   fixture = seed()
   fixture.write('People/Ana.md', '---\ntype: person\n---\n')
-  fixture.write('Roles/Checker.md', '---\ntype: role\n---\nThe procedure.\n')
+  fixture.write('Roles/Session agent.md', '---\ntype: role\n---\nThe procedure.\n')
   fixture.write('Notes/Loose.md', 'no frontmatter\n')
   const base = { type: 'work-item', status: 'options', parent: '"[[Main]]"', created: '2026-09-21', updated: '2026-09-21' }
   fixture.write('Boards/Good.md', item({ ...base, id: 'wi-9001', title: 'Good', owner: 'Ana' }))
-  fixture.write('Boards/Bad.md', item({ ...base, id: 'wi-9002', title: 'Bad', owner: 'Checker', role: 'Loose' }))
+  fixture.write('Boards/Agent.md', item({ ...base, id: 'wi-9004', title: 'Agent', owner: 'Session agent' }))
+  fixture.write('Boards/Bad.md', item({ ...base, id: 'wi-9002', title: 'Bad', owner: 'Loose', role: 'Loose' }))
   fixture.write('Boards/Linked.md', item({ ...base, id: 'wi-9003', title: 'Linked', owner: '"[[Ana]]"' }))
   const result = await wi(['validate', '--json'])
-  const problems = (JSON.parse(result.stdout) as { problems: { relPath: string; rule: string }[] }).problems
-    .filter((problem) => ['Boards/Good.md', 'Boards/Bad.md', 'Boards/Linked.md'].includes(problem.relPath))
+  const all = (JSON.parse(result.stdout) as { problems: { relPath: string; rule: string; message: string }[] }).problems
+  const problems = all
+    .filter((problem) => ['Boards/Good.md', 'Boards/Agent.md', 'Boards/Bad.md', 'Boards/Linked.md'].includes(problem.relPath))
     .map((problem) => `${problem.relPath} ${problem.rule}`)
   assert.deepEqual(problems, [
-    'Boards/Bad.md owner-type',
     'Boards/Bad.md role-field',
     'Boards/Linked.md owner-link',
   ])
-  const bad = (JSON.parse(result.stdout) as { problems: { relPath: string; rule: string; message: string }[] }).problems
-    .find((problem) => problem.rule === 'role-field')!
+  for (const problem of all) assert.doesNotMatch(problem.message, /type: role|role note/)
+  const bad = all.find((problem) => problem.rule === 'role-field')!
   assert.match(bad.message, /wi tag wi-9002 role\/loose, then wi set wi-9002 --role ""/)
 })
 

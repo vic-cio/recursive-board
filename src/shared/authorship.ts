@@ -1,8 +1,8 @@
 /**
  * Names for card ownership and note signatures (docs/adr/0042-creator-and-role.md).
  *
- * `owner` holds the plain name of a person note, not a link: a link from every card to its owner
- * turns the graph into one star around each person. The product needs no folder for person notes.
+ * `owner` holds a plain name, not a link: a link from every card to its owner turns the graph into
+ * one star around each person. A person note has `type: person`, in any folder.
  * A role is a tag (docs/adr/0062-role-tags.md). Old `creator` fields stay on cards, and nothing
  * writes or checks them (docs/adr/0064-validate-checks-no-creator.md).
  * This module imports nothing from Node.
@@ -10,12 +10,6 @@
 import { parseWikilink } from './schema.ts'
 
 export const PERSON_TYPE = 'person'
-
-/** The note types each field may link to. */
-export const LINK_FIELDS = {
-  owner: [PERSON_TYPE],
-} as const
-export type LinkField = keyof typeof LINK_FIELDS
 
 /** The plain name to write. A link given by habit becomes its target: `[[Ana]]` is `Ana`. */
 export function asName(name: string): string {
@@ -36,13 +30,4 @@ export function authorLabel(name: string | undefined, model: string | undefined)
   if (who === undefined) return undefined
   const runtime = model?.trim()
   return runtime ? `${who} (${runtime})` : who
-}
-
-/** Why a field's note is the wrong kind of note, or null when it is fine. */
-export function linkTypeProblem(field: LinkField, target: string, type: unknown): string | null {
-  const allowed: readonly string[] = LINK_FIELDS[field]
-  if (typeof type === 'string' && allowed.includes(type)) return null
-  const want = allowed.map((kind) => `type: ${kind}`).join(' or ')
-  return `names ${target} as its ${field}, and that note has ${typeof type === 'string' ? `type: ${type}` : 'no type'}. ` +
-    `Give that note ${want}.`
 }
