@@ -1,11 +1,13 @@
 ---
 status: accepted
-amended_by: docs/adr/0062-role-tags.md (the role field is gone; a role is a tag)
+amended_by: docs/adr/0062-role-tags.md (the role field is gone; a role is a tag), docs/adr/0064-validate-checks-no-creator.md (wi validate checks no creator)
 ---
 # Roles guide work, and writers sign notes by name
 
 > **Amended by 0062.** The `role` field below is gone. A role is a free tag such as `role/checker`,
 > and the note that carries the tag is the procedure. The creator and owner rules stand.
+>
+> **Amended by 0064.** `wi validate` no longer checks `creator` or `creator_model`.
 
 `role` names a role note that gives the procedure for the work:
 

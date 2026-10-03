@@ -23,9 +23,8 @@ test('a note line names the role and the model', () => {
   assert.equal(authorLabel(undefined, 'gpt-6-luna'), undefined)
 })
 
-test('each field links to its own kinds of note', () => {
-  assert.equal(linkTypeProblem('creator', 'Checker', 'role'), null)
-  assert.equal(linkTypeProblem('creator', 'Ana', 'person'), null)
+test('an owner links to a person note', () => {
+  assert.equal(linkTypeProblem('owner', 'Ana', 'person'), null)
   assert.match(linkTypeProblem('owner', 'Checker', 'role')!, /names Checker as its owner, and that note has type: role\. Give that note type: person\./)
-  assert.match(linkTypeProblem('creator', 'Ana', undefined)!, /has no type\. Give that note type: person or type: role\./)
+  assert.match(linkTypeProblem('owner', 'Ana', undefined)!, /has no type\. Give that note type: person\./)
 })

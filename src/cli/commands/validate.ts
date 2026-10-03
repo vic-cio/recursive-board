@@ -16,7 +16,7 @@ import { duplicateProcedures, roleTagFor } from '../../shared/role-tags.ts'
 import { PLUGIN_DATA_FILE } from '../../shared/board-settings.ts'
 import { dependencyCycle } from '../../shared/dependencies.ts'
 import { dependenciesOf, titleOf } from '../dependencies.ts'
-import { displayName, LINK_FIELDS, linkTypeProblem, type LinkField } from '../../shared/authorship.ts'
+import { displayName, linkTypeProblem } from '../../shared/authorship.ts'
 
 export type Severity = 'error' | 'warning'
 
@@ -60,7 +60,7 @@ export async function validate(vault: Vault): Promise<Report> {
   checkRoots(vault, report)
   checkCycles(vault, report)
   checkDependencies(vault, report)
-  await checkPeopleAndRoles(vault, report)
+  await checkPeople(vault, report)
   await checkRoleProcedures(vault, report)
   problems.sort((a, b) => a.relPath.localeCompare(b.relPath) || a.rule.localeCompare(b.rule))
 
@@ -75,35 +75,24 @@ export async function validate(vault: Vault): Promise<Report> {
 }
 
 /**
- * docs/adr/0042-creator-and-role.md: creator and owner hold the plain name of a person or role
- * note. A link draws a graph edge from every card to its creator, so it is a warning. A creator
- * with no note of that name is a warning; so is a note of the wrong type. An owner
- * with no note is fine, because a vault need not keep person notes.
+ * docs/adr/0042-creator-and-role.md: owner holds the plain name of a person note. A link draws a
+ * graph edge from every card to its owner, so it is a warning. An owner with no note is fine,
+ * because a vault need not keep person notes. Old creator fields are not checked: nothing writes
+ * or reads them now (docs/adr/0064-validate-checks-no-creator.md).
  */
-async function checkPeopleAndRoles(vault: Vault, report: Reporter): Promise<void> {
+async function checkPeople(vault: Vault, report: Reporter): Promise<void> {
   for (const item of vault.items) {
-    for (const field of Object.keys(LINK_FIELDS) as LinkField[]) {
-      const raw = item.frontmatter.get(field)
-      const name = displayName(raw)
-      if (name === undefined) continue
-      if (parseWikilink(raw) !== null) {
-        report(`${field}-link`, 'warning', item.relPath, item.id,
-          `has ${field} ${JSON.stringify(raw)}. Write the plain name, ${field}: ${name}, so the graph has no edge to it. wi set rewrites it.`)
-      }
-      const note = await vault.resolveNote(name)
-      if (note === undefined) {
-        if (field !== 'owner') {
-          report(`${field}-unknown`, 'warning', item.relPath, item.id,
-            `names ${name} as its ${field}, and no note has that name. Make a person or role note called ${name}.`)
-        }
-        continue
-      }
-      const problem = linkTypeProblem(field, name, note.type)
-      if (problem !== null) report(`${field}-type`, 'warning', item.relPath, item.id, problem)
+    const raw = item.frontmatter.get('owner')
+    const name = displayName(raw)
+    if (name === undefined) continue
+    if (parseWikilink(raw) !== null) {
+      report('owner-link', 'warning', item.relPath, item.id,
+        `has owner ${JSON.stringify(raw)}. Write the plain name, owner: ${name}, so the graph has no edge to it. wi set rewrites it.`)
     }
-    if (item.frontmatter.has('creator_model') && !item.frontmatter.has('creator')) {
-      report('creator-model-alone', 'warning', item.relPath, item.id, 'has creator_model but no creator. Add the creator it describes.')
-    }
+    const note = await vault.resolveNote(name)
+    if (note === undefined) continue
+    const problem = linkTypeProblem('owner', name, note.type)
+    if (problem !== null) report('owner-type', 'warning', item.relPath, item.id, problem)
   }
 }
 

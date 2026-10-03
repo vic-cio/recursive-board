@@ -25,7 +25,7 @@ Each work item is a Markdown file in the configured work-item folder. The defaul
 | `prev_status` | Previous status recorded when an item moves to `done`; cleared when it leaves `done`. |
 | `area` | Set to `true` for an ongoing area. Areas keep a status and have no `prev_status`. |
 
-Optional fields include `owner`, `holder`, `priority`, `due`, `depends_on`, `tags`, and `archived`. `holder` names the person or agent who does the card's work; an old card's `agent` is read as its holder, and `holder: agent` asks for any agent. Unknown frontmatter keys are preserved. `wi validate` reports them as warnings. A leftover `blocked` key is unknown and produces a warning.
+Optional fields include `owner`, `holder`, `priority`, `due`, `depends_on`, `tags`, and `archived`. `holder` names the person or agent who does the card's work; an old card's `agent` is read as its holder, and `holder: agent` asks for any agent. Unknown frontmatter keys are preserved. `wi validate` reports them as warnings. Old cards may keep `creator` and `creator_model`. They are preserved, and `wi validate` does not check them, because no command writes them now (docs/adr/0064-validate-checks-no-creator.md). A leftover `blocked` key is unknown and produces a warning.
 
 An item with `board: true` renders its children in status columns. Any other item renders its children as a checklist. The plugin reads the item's frontmatter and generates the view; the Markdown files remain the source of truth.
 

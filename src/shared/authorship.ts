@@ -1,21 +1,18 @@
 /**
- * Names for card authorship, ownership and roles (docs/adr/0042-creator-and-role.md).
+ * Names for card ownership and note signatures (docs/adr/0042-creator-and-role.md).
  *
- * Legacy `creator` and `owner` fields hold the plain name of a person or role note. A role itself is
- * a tag now (docs/adr/0062-role-tags.md). A plain name, not a
- * link: a link from every note to its creator turns the graph into one star around each person.
- * The note of that name says which it is by its `type`: `person` or `role`, and lists what it made
- * with a Bases table. The product needs no folder for them. New cards do not write creator fields.
+ * `owner` holds the plain name of a person note, not a link: a link from every card to its owner
+ * turns the graph into one star around each person. The product needs no folder for person notes.
+ * A role is a tag (docs/adr/0062-role-tags.md). Old `creator` fields stay on cards, and nothing
+ * writes or checks them (docs/adr/0064-validate-checks-no-creator.md).
  * This module imports nothing from Node.
  */
 import { parseWikilink } from './schema.ts'
 
 export const PERSON_TYPE = 'person'
-export const ROLE_TYPE = 'role'
 
 /** The note types each field may link to. */
 export const LINK_FIELDS = {
-  creator: [PERSON_TYPE, ROLE_TYPE],
   owner: [PERSON_TYPE],
 } as const
 export type LinkField = keyof typeof LINK_FIELDS
