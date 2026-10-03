@@ -73,6 +73,8 @@ wi area <ref> --off                   # remove the area mark
 wi tag <ref> <tag>                    # add a free tag; --off removes it
 wi claim <ref> [--holder <name>]     # you become the holder (WI_AGENT) and the card moves to doing
 wi review <ref> --to <person> [--files <path>]... [--note <text>]  # send the card to a person for review
+wi approve <ref> --you <person>      # the reviewer's verdict: note it and move the card to done
+wi send-back <ref> --you <person> [--comment <text>]  # note it, remove owner; the card stays in doing
 wi delegate <ref> --to <person>      # make a person (a type: person note) the holder; status stays
 wi delegate <ref> --to agent         # leave the card for any agent (holder: agent); starts nothing
 wi show <ref> --json                 # the brief: card, ancestor Objectives, Knowledge, role procedures
@@ -203,6 +205,13 @@ note. Attach files or add links in the menu, or repeat `--files` in the CLI. Bot
 dashboard lists the card under "For review" when its newest review note follows its last verdict
 note, it has no open child, and it is not done. Any other column counts. When the note lists no file, or only
 web addresses, the card's own row carries the tick for the verdict.
+
+The reviewer gives the verdict with **Approve** or **Send back** on the dashboard, or with
+`wi approve <ref> --you <person>` and `wi send-back <ref> --you <person> [--comment <text>]`. Both
+writers make the same one write. `--you` must match the card's `owner`. `wi` refuses a card that
+is not in doing, has no review request after its last verdict, or has an open child. Run a verdict
+command only with the verdict the reviewer gave you. Never give a verdict on your own work. `wi`
+signs the note with `WI_AGENT`, so the card shows who wrote it.
 
 ## Outcomes
 

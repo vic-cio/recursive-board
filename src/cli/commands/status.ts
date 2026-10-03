@@ -75,13 +75,15 @@ function refuseStart(vault: Vault, item: WorkItem, text: string): void {
   if (waiting.length > 0) throw new Error(waitingRefusal(item.relPath, waiting.map(titleOf)))
 }
 
-function unblockedBy(vault: Vault, item: WorkItem): WorkItem[] {
+/** Cards that waited on this one and wait on nothing open now it is done. `wi approve` reports them too. */
+export function unblockedBy(vault: Vault, item: WorkItem): WorkItem[] {
   return dependentsOf(vault, item).filter((dependent) =>
     dependent.status !== 'done' && !vault.isArchived(dependent) &&
     openDependencies(vault, dependent).every((open) => open === item))
 }
 
-function readyParent(vault: Vault, item: WorkItem): WorkItem | undefined {
+/** The open parent whose last open child this card was. */
+export function readyParent(vault: Vault, item: WorkItem): WorkItem | undefined {
   const parent = vault.resolveLink(item.parent)
   if (parent === undefined || !parent.frontmatter.has('parent') || parent.area || parent.status === 'done') return undefined
   const open = vault.childrenOf(parent).filter((child) => !child.archived && child !== item && child.status !== 'done')
