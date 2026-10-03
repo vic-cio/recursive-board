@@ -77,7 +77,9 @@ test('a card waits for review only after a send, while it is yours and has no op
   assert.equal(waitsForReview(card, '', tree, sent), false)
   assert.equal(waitsForReview(card, 'Ana', tree, ''), false)
   card.status = 'backlog'
-  assert.equal(waitsForReview(card, 'Ana', tree, sent), true, 'status does not decide review')
+  assert.equal(waitsForReview(card, 'Ana', tree, sent), true, 'an open card waits in any column')
+  card.status = 'done'
+  assert.equal(waitsForReview(card, 'Ana', tree, sent), false, 'a done card is closed, even with no verdict note')
   card.status = 'doing'
   const step = add('Step', card, { status: 'doing' })
   assert.equal(waitsForReview(card, 'Ana', tree, sent), false)

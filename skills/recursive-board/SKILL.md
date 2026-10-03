@@ -202,7 +202,7 @@ To send a card for review, use **Send for review…** in its card menu, or run `
 <person> [--files <path>]... [--note <text>]`. Choose a person note, and say what to check in the
 note. Attach files or add links in the menu, or repeat `--files` in the CLI. Both writers set `owner` and append a `**Review:**` note in one write. The
 dashboard lists the card under "For review" when its newest review note follows its last verdict
-note and it has no open child. Status does not decide this. When the note lists no file, or only
+note, it has no open child, and it is not done. Any other column counts. When the note lists no file, or only
 web addresses, the card's own row carries the tick for the verdict.
 
 ## Outcomes

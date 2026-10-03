@@ -1039,6 +1039,8 @@
 .wi-dash-count { background: var(--background-modifier-hover); border-radius: var(--radius-l); padding: 0 var(--size-4-2); font-size: var(--font-ui-smaller); }
 .wi-dash-icon { display: inline-flex; color: var(--text-muted); }
 .wi-dash-icon svg { width: var(--icon-s); height: var(--icon-s); }
+/* A filled button sets its own text colour, so the icon takes it in every theme. */
+.wi-dash-open-board .wi-dash-icon { color: inherit; }
 .wi-dash-table { width: 100%; border-collapse: collapse; margin-top: var(--size-4-2); }
 .wi-dash-table th { text-align: left; font-size: var(--font-ui-smaller); text-transform: uppercase; letter-spacing: .04em; color: var(--text-faint); padding: var(--size-4-1) var(--size-4-2); border-bottom: 1px solid var(--background-modifier-border); }
 .wi-dash-table td { padding: var(--size-4-2); border-bottom: 1px solid var(--background-modifier-border); vertical-align: top; }

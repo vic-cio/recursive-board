@@ -12,7 +12,7 @@ Its card-menu action can send a card for review. The dashboard can then record a
 
 - **For review.** A card waits when its `owner` matches the name in the setting "Your name".
   Its newest `**Review:**` line must follow its last verdict note. The card must have no open child.
-  Status does not decide this. The newest `**Review:**` line says
+  The card may sit in any column but done: a done card is closed, with or without a verdict note. The newest `**Review:**` line says
   what to check and lists each file to open as a vault-relative path in backticks. A `wi note`
   prefix before it is fine. When the line lists no file, a row for the card itself opens it and carries the tick. Markdown opens in Obsidian.
   Another file opens in its own app on a desktop, and in Obsidian on a phone.
