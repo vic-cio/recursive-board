@@ -23,7 +23,7 @@ function seed(): Fixture {
 test('wi review sets the chosen person and adds all files to one Review note', async () => {
   fixture = seed()
   const vault = await loadVault(fixture.root)
-  const result = await sendForReview(vault, 'Task', 'Ana', ['Work/a.md', 'Work/b.pdf'], 'Writer', new Date(2026, 8, 28, 15, 4))
+  const result = await sendForReview(vault, 'Task', 'Ana', ['Work/a.md', 'Work/b.pdf'], '', 'Writer', new Date(2026, 8, 28, 15, 4))
   const text = readFileSync(`${fixture.root}/Boards/Task.md`, 'utf8')
   assert.equal(result.item.id, 'wi-task')
   assert.match(text, /^owner: Ana$/m)

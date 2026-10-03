@@ -90,7 +90,7 @@ function buildMenu(ctx: RenderContext, meta: WorkItemMeta): Menu {
       .setTitle('Send for review…')
       .setIcon('send')
       .onClick(() => new SendForReviewModal(ctx.app, meta.title, ctx.personNames(), ctx.yourName(),
-        (to, paths, attachments) => void ctx.actions.sendForReview(meta, to, paths, attachments)).open()))
+        (choice) => void ctx.actions.sendForReview(meta, choice)).open()))
   }
   // Free tags (docs/adr/0057-free-tags.md). The picker never offers old area tags.
   menu.addItem((item) => item

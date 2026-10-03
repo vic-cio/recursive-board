@@ -60,7 +60,7 @@ Usage
   wi claim <ref> --agent <name>
   wi delegate <ref> --to <person|agent|claude|codex|pi> [--model <id>] [--agent <name>]
                  [--permission <mode>] [--role <name>]
-  wi review <ref> --to <name> [--files <path>]...
+  wi review <ref> --to <name> [--files <path>]... [--note <text>]
   wi agents
   wi dashboard [--panel <review|progress|agents|people|attention>]... [--you <name>] [--parent <ref>] [--json]
   wi release <ref> --reason <text> [--where <branch-or-path>]
@@ -144,7 +144,8 @@ Notes
   \`wi dashboard\` prints the same panels as the plugin. Repeat --panel to choose panels; without it,
   wi prints every panel. --parent names a root or an area. It writes nothing.
   \`wi review <ref> --to <name> [--files <path>]...\` sends a card to a person note for review. Each --files
-  adds one vault-relative path. The command sets owner and appends a Review note in one write.
+  adds one vault-relative path. --note says what to check; line breaks become spaces. The command sets
+  owner and appends a Review note in one write.
   The board settings live in the Recursive Board plugin settings, stored in
   .obsidian/plugins/recursive-board/data.json. wi reads them and never writes them.
   \`wi new\` warns when a hidden file sits in the work-item folder, because a new id or filename may clash with it.
@@ -542,7 +543,8 @@ async function runReview(vault: Vault, rest: string[], values: Values, json: boo
   if (files.some((file) => file.trim() === '' || /[\r\n]/.test(file))) {
     throw new UsageError('--files needs a non-empty, one-line path.')
   }
-  const result = await sendForReview(vault, ref, to, files, authorLabel(envText('WI_AGENT'), envText('WI_MODEL')))
+  const note = values['note'] === undefined ? '' : String(values['note'])
+  const result = await sendForReview(vault, ref, to, files, note, authorLabel(envText('WI_AGENT'), envText('WI_MODEL')))
   if (json) print({ id: result.item.id ?? null, path: result.item.relPath, owner: result.to, files: result.files })
   else process.stdout.write(`${label(result.item)}  sent to ${result.to} for review` +
     `${result.files.length ? `  (${result.files.join(', ')})` : ''}\n`)

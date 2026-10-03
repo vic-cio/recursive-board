@@ -128,7 +128,7 @@ test('the table of invocations covers every command', () => {
 })
 
 test('wi review accepts repeated --files values', () => {
-  assert.deepEqual(COMMAND_FLAGS['review'], ['to', 'files', 'vault', 'json'])
+  assert.deepEqual(COMMAND_FLAGS['review'], ['to', 'files', 'note', 'vault', 'json'])
   assert.deepEqual(parseCommandLine(['review', 'Task', '--to', 'Ana', '--files', 'a.pdf', '--files', 'b.md']).values['files'], ['a.pdf', 'b.md'])
 })
 

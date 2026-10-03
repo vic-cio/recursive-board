@@ -28,6 +28,7 @@ import { freeTagEditsIn } from '../shared/tags.ts'
 import { parseFrontmatter } from '../shared/frontmatter.ts'
 import { parseWikilink } from '../shared/schema.ts'
 import { applyReviewRequest, applyVerdict, type Verdict } from '../shared/review.ts'
+import type { ReviewRequestChoice } from './ui/send-for-review-modal.ts'
 import { assignEdits } from '../shared/delegate.ts'
 import type { WorkItemIndex, WorkItemMeta } from './index.ts'
 import { UndoStack } from './undo.ts'
@@ -156,14 +157,14 @@ export class Actions {
   }
 
   /** Sends the card for review through the same shared edit as `wi review`. */
-  async sendForReview(meta: WorkItemMeta, to: string, paths: string[], attachments: readonly File[] = []): Promise<boolean> {
+  async sendForReview(meta: WorkItemMeta, { to, note, paths, attachments }: ReviewRequestChoice): Promise<boolean> {
     const done = await this.run(`send ${meta.title} for review`, async () => {
       // An undo puts the card back and leaves the attached files in the vault.
       const files = [...paths, ...await this.attachFiles(meta, attachments)]
       let before = ''
       const after = await this.app.vault.process(meta.file, (data) => {
         before = data
-        return applyReviewRequest(data, { to, files, writer: this.you() })
+        return applyReviewRequest(data, { to, files, note, writer: this.you() })
       })
       this.undoStack.record({ kind: 'edit', path: meta.file.path, before, after, label: `send ${meta.title} for review` })
       return true

@@ -15,6 +15,8 @@ import { statusEdits } from './transitions.ts'
 export interface ReviewRequestInput {
   to: string
   files?: string[]
+  /** What the reviewer should check. A note is one line, so line breaks become spaces. */
+  note?: string
   writer?: string
   now?: Date
 }
@@ -24,9 +26,14 @@ export function applyReviewRequest(text: string, request: ReviewRequestInput): s
   const owner = request.to.trim()
   if (owner === '') throw new Error('a person is required for review.')
   const paths = (request.files ?? []).map((file) => file.trim()).filter((file) => file !== '')
-  const details = paths.length > 0 ? ` ${paths.map((file) => `\`${file}\``).join(', ')}` : ''
+  const listed = paths.map((file) => `\`${file}\``).join(', ')
+  const note = (request.note ?? '').replace(/\s+/g, ' ').trim()
+  // The dashboard shows the text without the paths as what to check (parseReviewLine).
+  const body = note === ''
+    ? `Please review${listed === '' ? '' : ` ${listed}`}.`
+    : listed === '' ? note : `${note.replace(/[\s.:;,]+$/, '')}: ${listed}`
   const now = request.now ?? new Date()
-  const line = noteLine(`**Review:** Please review${details}.`, request.writer, now)
+  const line = noteLine(`**Review:** ${body}`, request.writer, now)
   return applyStampedEdits(appendNote(text, line), [{ op: 'set', key: 'owner', value: owner }], today(now))
 }
 

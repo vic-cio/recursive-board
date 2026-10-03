@@ -1,6 +1,7 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 
+import { parseReviewLine } from './dashboard.ts'
 import { applyReviewRequest, applyVerdict, awaitsReviewVerdict } from './review.ts'
 
 const card = [
@@ -33,6 +34,14 @@ test('send for review sets the owner and appends a dated Review line with the fi
   assert.ok(after.includes('- 2026-09-28 15:04, Writer: **Review:** Please review `Work/quote.xlsx`, `Docs/check.md`.\n'))
   assert.equal(after.match(/^owner:/gm)?.length, 1)
   assert.match(after, /^agent: codex$/m)
+})
+
+test('send for review puts what to check before the files, on one line', () => {
+  const after = applyReviewRequest(card, { to: 'Ana', files: ['Work/quote.xlsx'], note: 'Check the totals.\nAnd the VAT.', now })
+  assert.ok(after.includes('**Review:** Check the totals. And the VAT: `Work/quote.xlsx`\n'))
+  assert.equal(parseReviewLine(after)?.what, 'Check the totals. And the VAT')
+  assert.ok(applyReviewRequest(card, { to: 'Ana', note: '  Try it on the phone. ', now }).includes('**Review:** Try it on the phone.\n'))
+  assert.ok(applyReviewRequest(card, { to: 'Ana', note: ' ', now }).includes('**Review:** Please review.\n'))
 })
 
 test('send for review needs an owner and makes a one-line note', () => {

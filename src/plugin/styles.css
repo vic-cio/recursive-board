@@ -1051,10 +1051,13 @@
 .wi-dash-verdict { display: flex; flex-wrap: wrap; gap: var(--size-4-2); margin-top: var(--size-4-2); }
 .wi-dash-verdict.wi-dash-hidden { display: none; }
 .wi-send-back-comment { width: 100%; resize: vertical; margin-top: var(--size-4-2); }
-.wi-review-field { display: flex; flex-direction: column; align-items: flex-start; gap: var(--size-4-1); margin-top: var(--size-4-3); }
-.wi-review-link-row { display: flex; gap: var(--size-4-2); width: 100%; }
+.wi-review-card { color: var(--text-muted); font-size: var(--font-ui-small); margin-bottom: var(--size-4-2); overflow-wrap: anywhere; }
+.wi-review-modal .setting-item { border-top: none; padding-top: 0; }
+.wi-review-note { display: block; width: 100%; resize: vertical; margin-top: var(--size-4-2); }
+.wi-review-link-row { display: flex; align-items: center; gap: var(--size-4-1); margin-top: var(--size-4-2); }
 .wi-review-link { flex: 1; min-width: 0; }
-.wi-review-attachments { display: flex; flex-wrap: wrap; gap: var(--size-4-1); }
+.wi-review-problem:empty { display: none; }
+.wi-review-attachments { display: flex; flex-wrap: wrap; gap: var(--size-4-1); margin-top: var(--size-4-2); }
 .wi-review-attachments:empty { display: none; }
 .wi-review-attachment { display: inline-flex; align-items: center; gap: var(--size-4-1); max-width: 100%; padding: 0 0 0 var(--size-4-2); border-radius: var(--radius-s); background: var(--background-modifier-hover); font-size: var(--font-ui-small); }
 .wi-review-attachment > span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }

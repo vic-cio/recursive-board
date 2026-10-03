@@ -73,7 +73,7 @@ wi area <ref>                         # mark a card as an area
 wi area <ref> --off                   # remove the area mark
 wi tag <ref> <tag>                    # add a free tag; --off removes it
 wi claim <ref> --agent <name>        # set the holder and move to doing in one write
-wi review <ref> --to <person> [--files <path>]...  # send the card to a person for review
+wi review <ref> --to <person> [--files <path>]... [--note <text>]  # send the card to a person for review
 wi delegate <ref> --to <person>      # make a person (a type: person note) the holder; status stays
 wi delegate <ref> --to agent         # leave the card for any agent (holder: agent); starts nothing
 wi delegate <ref> --to <claude|codex|pi> [--model <id>]  # name a worker as holder and start it
@@ -199,8 +199,8 @@ is.
    `doing` and stop for review. Merge, push and publish wait for the owner's verdict.
 
 To send a card for review, use **Send for review…** in its card menu, or run `wi review <ref> --to
-<person> [--files <path>]...`. Choose a person note. Add one file path per menu line, or repeat
-`--files` in the CLI. Both writers set `owner` and append a `**Review:**` note in one write. The
+<person> [--files <path>]... [--note <text>]`. Choose a person note, and say what to check in the
+note. Attach files or add links in the menu, or repeat `--files` in the CLI. Both writers set `owner` and append a `**Review:**` note in one write. The
 dashboard lists the card under "For review" when its newest review note follows its last verdict
 note and it has no open child. Status does not decide this. When the note lists no file, or only
 web addresses, the card's own row carries the tick for the verdict.
