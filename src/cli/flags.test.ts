@@ -97,6 +97,8 @@ const INVOCATIONS: Record<string, string[]> = {
   area: ['area', 'Build server'],
   tag: ['tag', 'Build server', 'design'],
   review: ['review', 'Build server', '--to', 'sam'],
+  approve: ['approve', 'Build server', '--you', 'sam'],
+  'send-back': ['send-back', 'Build server', '--you', 'sam', '--comment', 'Redo it.'],
   depend: ['depend', 'Build server', '--on', 'Main'],
   set: ['set', 'Build server', '--owner', 'sam'],
   claim: ['claim', 'Build server', '--holder', 'codex'],
@@ -145,6 +147,43 @@ test('wi review writes owner and a Review note, and returns the files as JSON', 
     const text = readFileSync(join(vault.root, 'Boards/Build server.md'), 'utf8')
     assert.match(text, /^owner: sam$/m)
     assert.match(text, /\*\*Review:\*\* Please review `a\.pdf`, `b\.md`\./)
+  } finally {
+    vault.cleanup()
+    rmSync(home, { recursive: true, force: true })
+  }
+})
+
+test('wi approve and wi send-back give the verdict on a card sent for review', async () => {
+  const vault = seed()
+  vault.write('People/sam.md', '---\ntype: person\n---\n')
+  vault.write('Boards/Build server.md', item({ type: 'work-item', id: 'wi-0004', title: 'Build server',
+    status: 'doing', parent: '"[[Main]]"', created: '2026-09-21', updated: '2026-09-21' }, '# Build server\n'))
+  const home = mkdtempSync(join(tmpdir(), 'wi-home-'))
+  const path = join(vault.root, 'Boards/Build server.md')
+  try {
+    assert.equal((await wi(['review', 'Build server', '--to', 'sam', '--files', 'a.md'], vault, home)).code, 0)
+    const missing = await wi(['approve', 'Build server'], vault, home)
+    assert.equal(missing.code, 2)
+    assert.match(missing.stderr, /--you <name>/)
+
+    const back = await wi(['send-back', 'wi-0004', '--you', 'Sam', '--comment', 'Add the logs.', '--json'], vault, home)
+    assert.equal(back.code, 0, back.stderr)
+    assert.deepEqual(JSON.parse(back.stdout), {
+      id: 'wi-0004', path: 'Boards/Build server.md', verdict: 'send back', you: 'Sam', status: 'doing',
+      parent_ready: null, unblocked: [],
+    })
+    assert.match(readFileSync(path, 'utf8'), /: Sent back by Sam: Add the logs\.\n/)
+    assert.doesNotMatch(readFileSync(path, 'utf8'), /^owner:/m)
+
+    const early = await wi(['approve', 'wi-0004', '--you', 'sam'], vault, home)
+    assert.equal(early.code, 2)
+    assert.match(early.stderr, /Send it for review first/)
+
+    assert.equal((await wi(['review', 'wi-0004', '--to', 'sam'], vault, home)).code, 0)
+    const ok = await wi(['approve', 'wi-0004', '--you', 'sam'], vault, home)
+    assert.equal(ok.code, 0, ok.stderr)
+    assert.match(ok.stdout, /wi-0004 {2}Build server {2}approved by sam {2}doing → done/)
+    assert.match(readFileSync(path, 'utf8'), /^status: done$/m)
   } finally {
     vault.cleanup()
     rmSync(home, { recursive: true, force: true })

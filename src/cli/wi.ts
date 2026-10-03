@@ -37,7 +37,7 @@ import { dependenciesOf, openDependencies, titleOf } from './dependencies.ts'
 import { hookStatus, installHook, uninstallHook } from './commands/hook.ts'
 import { runSetup } from './commands/setup.ts'
 import { dashboardPanels, dashboardSummary, renderDashboard, type DashboardPanel } from './commands/dashboard.ts'
-import { sendForReview } from './commands/review.ts'
+import { giveVerdict, sendForReview } from './commands/review.ts'
 import { COMMAND_FLAGS, parseCommandLine, type Values } from './flags.ts'
 import { STATUSES } from '../shared/schema.ts'
 import { authorLabel } from '../shared/authorship.ts'
@@ -60,6 +60,8 @@ Usage
   wi claim <ref> [--holder <name>]
   wi delegate <ref> --to <person|agent> [--role <name>]
   wi review <ref> --to <name> [--files <path>]... [--note <text>]
+  wi approve <ref> --you <name>
+  wi send-back <ref> --you <name> [--comment <text>]
   wi dashboard [--panel <review|progress|agents|people|attention>]... [--you <name>] [--parent <ref>] [--json]
   wi release <ref> --reason <text> [--where <branch-or-path>]
   wi move <ref> --to <ref>
@@ -139,6 +141,12 @@ Notes
   \`wi review <ref> --to <name> [--files <path>]...\` sends a card to a person note for review. Each --files
   adds one vault-relative path. --note says what to check; line breaks become spaces. The command sets
   owner and appends a Review note in one write.
+  \`wi approve <ref> --you <name>\` and \`wi send-back <ref> --you <name> [--comment <text>]\` give the
+  verdict, as Approve and Send back on the dashboard do. --you names the reviewer: it must match the
+  card's owner. Approve notes "Approved by <name>." and moves the card to done. Send back notes the
+  comment and removes owner; the card stays in doing with its holder. Each is one write. Both refuse
+  a card that is not in doing, has no review request after its last verdict, or has an open child.
+  wi signs the note with WI_AGENT when it is set, so a verdict an agent records names that agent.
   The board settings live in the Recursive Board plugin settings, stored in
   .obsidian/plugins/recursive-board/data.json. wi reads them and never writes them.
   \`wi new\` warns when a hidden file sits in the work-item folder, because a new id or filename may clash with it.
@@ -219,6 +227,9 @@ async function main(argv: string[]): Promise<number> {
       return runDelegate(vault, rest, values, json)
     case 'review':
       return runReview(vault, rest, values, json)
+    case 'approve':
+    case 'send-back':
+      return runVerdict(vault, command, rest, values, json)
     case 'agents':
       return runAgents(rest)
     case 'dashboard':
@@ -515,6 +526,39 @@ async function runReview(vault: Vault, rest: string[], values: Values, json: boo
   if (json) print({ id: result.item.id ?? null, path: result.item.relPath, owner: result.to, files: result.files })
   else process.stdout.write(`${label(result.item)}  sent to ${result.to} for review` +
     `${result.files.length ? `  (${result.files.join(', ')})` : ''}\n`)
+  return 0
+}
+
+async function runVerdict(vault: Vault, command: 'approve' | 'send-back', rest: string[], values: Values, json: boolean): Promise<number> {
+  const ref = rest.join(' ').trim()
+  if (ref === '' || values['you'] === undefined) throw new UsageError(`wi ${command} needs a <ref> and --you <name>, the reviewer the card's owner names.`)
+  const you = singleLineOption(values, 'you')
+  const writer = authorLabel(envText('WI_AGENT'), envText('WI_MODEL'))
+  const signed = writer === undefined ? {} : { writer }
+  let comment = ''
+  if (values['comment'] !== undefined) {
+    comment = String(values['comment'])
+    if (/[\r\n]/.test(comment)) throw new UsageError('--comment must be one line.')
+  }
+  const verdict = command === 'approve'
+    ? { verdict: 'approve' as const, you, ...signed }
+    : { verdict: 'send back' as const, you, comment, ...signed }
+  const result = await giveVerdict(vault, ref, verdict)
+  if (json) {
+    print({
+      id: result.item.id ?? null, path: result.item.relPath, verdict: verdict.verdict, you, status: result.status,
+      parent_ready: result.parentReady?.id ?? null, unblocked: result.unblocked.map((item) => item.id ?? item.stem),
+    })
+    return 0
+  }
+  if (command === 'approve') process.stdout.write(`${label(result.item)}  approved by ${you}  doing → done\n`)
+  else process.stdout.write(`${label(result.item)}  sent back by ${you}  (owner removed; it stays in doing)\n`)
+  for (const item of result.unblocked) process.stdout.write(`${label(item)}  waits on nothing open now. It can start.\n`)
+  const ready = result.parentReady
+  if (ready) {
+    process.stdout.write(`${label(ready)}  every child is done. If its own criteria are met, run: ` +
+      `wi status ${ready.id ?? ready.stem} done\n`)
+  }
   return 0
 }
 

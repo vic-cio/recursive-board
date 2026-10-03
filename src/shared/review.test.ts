@@ -90,3 +90,29 @@ test('a verdict needs your name and a card in doing', () => {
   const done = card.replace('status: doing', 'status: done')
   assert.throws(() => applyVerdict(done, { verdict: 'approve', you: 'Ana' }, now), /in doing/)
 })
+
+test('a verdict comes only from the person the card waits on', () => {
+  assert.throws(() => applyVerdict(card, { verdict: 'approve', you: 'Bo' }, now), /waits for review by Ana, not Bo/)
+  assert.throws(() => applyVerdict(card, { verdict: 'send back', you: 'Bo', comment: '' }, now), /by Ana, not Bo/)
+  // The name matches as the dashboard matches it: case and outer spaces do not count.
+  assert.match(applyVerdict(card, { verdict: 'approve', you: ' ana ' }, now), /Approved by ana\./)
+  const linked = card.replace('owner: Ana', 'owner: "[[Ana]]"')
+  assert.match(applyVerdict(linked, { verdict: 'approve', you: 'Ana' }, now), /^status: done$/m)
+  const noOwner = card.replace('owner: Ana\n', '')
+  assert.throws(() => applyVerdict(noOwner, { verdict: 'approve', you: 'Ana' }, now), /no one is asked to review/)
+})
+
+test('a verdict needs an open review request', () => {
+  const approved = applyVerdict(card, { verdict: 'approve', you: 'Ana' }, now).replace('status: done', 'status: doing')
+  assert.throws(() => applyVerdict(approved, { verdict: 'approve', you: 'Ana' }, now), /no review request waits/)
+  const never = card.replace(/^- .*\*\*Review:\*\*.*\n/m, '')
+  assert.throws(() => applyVerdict(never, { verdict: 'send back', you: 'Ana', comment: '' }, now), /no review request waits/)
+})
+
+test('a verdict note names who wrote it when a writer is given', () => {
+  const after = applyVerdict(card, { verdict: 'approve', you: 'Ana', writer: 'Worker x (model-1)' }, now)
+  assert.ok(after.includes('- 2026-09-28 15:04, Worker x (model-1): Approved by Ana.\n'))
+  assert.equal(awaitsReviewVerdict(after), false)
+  const back = applyVerdict(card, { verdict: 'send back', you: 'Ana', comment: 'Redo it.', writer: 'Worker x' }, now)
+  assert.ok(back.includes('- 2026-09-28 15:04, Worker x: Sent back by Ana: Redo it.\n'))
+})

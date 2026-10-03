@@ -1,5 +1,6 @@
 ---
 status: accepted
+amended_by: 0065-review-verdicts-in-wi.md (wi approve and wi send-back; the shared verdict checks the reviewer and the request)
 ---
 # Approve or send back a review from the dashboard
 
