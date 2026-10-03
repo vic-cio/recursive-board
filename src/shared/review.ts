@@ -3,8 +3,10 @@
  *
  * Approve writes a note and closes the card. Send back writes a note, with your comment if any, and removes
  * the owner, so the card leaves For review and goes back to its agent in doing. Each is one write
- * to the card's own file. This module imports nothing from Node.
+ * to the card's own file. The dashboard and `wi approve` / `wi send-back` call the same function, so
+ * both refuse the same cards (docs/adr/0065-review-verdicts-in-wi.md). This module imports nothing from Node.
  */
+import { displayName } from './authorship.ts'
 import { applyStampedEdits, type Edit } from './edits.ts'
 import { frontmatterBody, parseFrontmatter } from './frontmatter.ts'
 import { scanMarkdown } from './markdown.ts'
@@ -61,23 +63,39 @@ function notesText(text: string): string {
   return body.slice(start, end)
 }
 
+/**
+ * `you` is the reviewer: the person the card's owner names. `writer` signs the note line, as
+ * `wi note` does, when someone other than the reviewer records the verdict, such as an agent the
+ * reviewer told. The dashboard passes no writer.
+ */
 export type Verdict =
-  | { verdict: 'approve'; you: string }
-  | { verdict: 'send back'; you: string; comment: string }
+  | { verdict: 'approve'; you: string; writer?: string }
+  | { verdict: 'send back'; you: string; comment: string; writer?: string }
 
+/**
+ * The verdict's one card write. It refuses a card that does not wait for this reviewer: a card not
+ * in doing, a card whose owner is someone else, and a card with no review request after its last
+ * verdict. The caller checks open children, because they live in other files.
+ */
 export function applyVerdict(text: string, verdict: Verdict, now: Date = new Date()): string {
   const you = verdict.you.trim()
   if (you === '') throw new Error('set your name in the Recursive Board settings first.')
-  const status = parseFrontmatter(text)?.get('status')
+  const frontmatter = parseFrontmatter(text)
+  const status = frontmatter?.get('status')
   if (status !== 'doing') throw new Error(`the card is ${isStatus(status) ? status : 'not a card'}, and a review needs it in doing.`)
+  // The owner may be a link to the person note, as the dashboard reads it.
+  const owner = displayName(frontmatter?.get('owner')) ?? ''
+  if (owner === '') throw new Error('no one is asked to review this card. Send it for review first.')
+  if (owner.toLowerCase() !== you.toLowerCase()) throw new Error(`the card waits for review by ${owner}, not ${you}.`)
+  if (!awaitsReviewVerdict(text)) throw new Error('no review request waits on this card. Send it for review first.')
 
   if (verdict.verdict === 'approve') {
     const edits = statusEdits('doing', 'done', false)!
-    return applyStampedEdits(appendNote(text, noteLine(`Approved by ${you}.`, undefined, now)), edits, today(now))
+    return applyStampedEdits(appendNote(text, noteLine(`Approved by ${you}.`, verdict.writer, now)), edits, today(now))
   }
 
   const comment = verdict.comment.trim()
   const edits: Edit[] = [{ op: 'remove', key: 'owner' }]
   const note = comment === '' ? `Sent back by ${you}.` : `Sent back by ${you}: ${comment}`
-  return applyStampedEdits(appendNote(text, noteLine(note, undefined, now)), edits, today(now))
+  return applyStampedEdits(appendNote(text, noteLine(note, verdict.writer, now)), edits, today(now))
 }
