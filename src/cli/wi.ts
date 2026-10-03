@@ -13,13 +13,13 @@ import { resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 import {
-  loadVault, findVaultRoot, getDefaultVault, maxAgentsForRun, readPeople,
+  loadVault, findVaultRoot, getDefaultVault, maxAgentsForRun, readPeople, readRoleTaggedNotes,
   type Vault, type WorkItem,
 } from './vault.ts'
 import { createItem } from './commands/new.ts'
 import { setStatus } from './commands/status.ts'
 import { claimItem, releaseItem } from './commands/claim-release.ts'
-import { delegate, runGit, spawnWorker } from './commands/delegate.ts'
+import { delegate } from './commands/delegate.ts'
 import { addNote } from './commands/note.ts'
 import { setTag } from './commands/tag.ts'
 import { listChildren, type ChildRow } from './commands/children.ts'
@@ -48,20 +48,18 @@ const HELP = `wi — the Recursive Board CLI
 
 Usage
   wi setup [--yes] [--vault <path>] [--force]
-  wi new <title> [--parent <ref>] [--status <s>] [--template <t>] [--owner <o>] [--agent <holder>]
+  wi new <title> [--parent <ref>] [--status <s>] [--template <t>] [--owner <o>] [--holder <h>]
                  [--priority <n>] [--objective <text>] [--context <text>]... [--criteria <text>]...
-                 [--tag <tag>]... [--creator <name>] [--model <id>] [--strict]
+                 [--tag <tag>]... [--strict]
   wi status <ref> <status>
   wi note <ref> <text> [--agent <name>]
   wi area <ref> [--off]
   wi tag <ref> <tag> [--off]
   wi depend <ref> --on <ref> [--off]
-  wi set <ref> [--owner <name>] [--role ""] [--creator <name> [--model <id>]]
-  wi claim <ref> --agent <name>
-  wi delegate <ref> --to <person|agent|claude|codex|pi> [--model <id>] [--agent <name>]
-                 [--permission <mode>] [--role <name>]
+  wi set <ref> [--owner <name>] [--role ""]
+  wi claim <ref> [--holder <name>]
+  wi delegate <ref> --to <person|agent> [--role <name>]
   wi review <ref> --to <name> [--files <path>]... [--note <text>]
-  wi agents
   wi dashboard [--panel <review|progress|agents|people|attention>]... [--you <name>] [--parent <ref>] [--json]
   wi release <ref> --reason <text> [--where <branch-or-path>]
   wi move <ref> --to <ref>
@@ -70,11 +68,10 @@ Usage
   wi demote <ref>
   wi rm <ref> [--recursive] [--dry-run]
   wi children [<ref>] [--status <s>] [--tree] [--archived]
-  wi ready [--parent <ref>] [--agent <name>] [--json]
+  wi ready [--parent <ref>] [--holder <name>] [--json]
   wi show <ref> [--json]
   wi validate
   wi hook <install|uninstall|status> [--force]
-  wi here         Retired. A project's AGENTS.md names its board.
 
 A <ref> is a work item id, a filename or a title. An id always wins.
 A <status> is one of: ${STATUSES.join(', ')}.
@@ -100,12 +97,11 @@ Notes
   "autoPromote": false in the board settings to turn this off. A root or an area is never changed.
   \`wi new --tag <tag>\` adds a free tag; repeat it for more. A role is a tag such as role/checker:
   a note that is not a work item and carries the same tag is that role's procedure. Roles do not
-  inherit. --role is retired and names the --tag to use.
-  --creator and --model are accepted no-ops for compatibility. --strict checks only the brief.
+  inherit. --holder names who does the work. --strict checks only the brief.
   \`wi tag <ref> <tag>\` adds a free tag to a card, and --off removes it. Case and a leading # do not
   matter. It refuses old area/ tags, which remain on cards until the owner chooses a cleanup.
-  \`wi set\` changes a card's owner (an empty value removes it), and writes its creator and model
-  only when it has none: a creator is set once. --role "" removes an old role field; a role is a tag.
+  \`wi set\` changes a card's owner (an empty value removes it). --role "" removes an old role field;
+  a role is a tag.
   \`wi note\` appends "- <date> <time>, <writer>: <text>" under Notes. It signs WI_AGENT or --agent,
   and adds WI_MODEL when set. It refuses a note with no writer name. The write re-reads the card under a lock, so two notes at once both survive.
   \`wi status <ref> done\` says when that was the parent's last open child. It does not close the parent.
@@ -128,19 +124,16 @@ Notes
   A card's holder field names the person or agent who does its work. An old card's agent field
   is read as its holder. The holder value agent asks for any agent: \`wi ready\` lists those cards
   first, and a claim replaces agent with the claimant's name.
-  \`wi claim\` writes the holder and moves the card to doing. It lets an agent hold a card and its
+  \`wi claim\` writes the holder and moves the card to doing. The holder is --holder, else WI_AGENT.
+  It lets an agent hold a card and its
   subtasks at once. It refuses a board with a child in doing that a different agent or a person works.
   \`wi delegate\` sets the holder and nothing else: the status stays. \`--to <person>\` names a person
-  (a note with type: person) and writes no note. \`--to agent\` writes holder: agent and starts nothing.
-  \`--to claude|codex|pi\` names the worker <model>-<slug> (or <harness>-<slug> with no --model) as holder,
-  makes a worktree of this Git repository on card/<slug> beside it, in <repo>-worktrees/, and starts that harness headless with the card body as its
-  brief. The worker runs \`wi claim\` on its card when it starts, which moves it to doing. The note names the log, <repo>-worktrees/<slug>.log, and the command that resumes the session.
-  --permission passes the harness's own mode: claude takes --permission-mode (default auto), codex
-  takes --sandbox (default workspace-write), and pi has none. The default never bypasses permissions.
-  --role <name> adds the tag role/<name> to the card in the same write. The worker's brief names each
-  role tag on the card and the note that carries it. With no role tag, the worker follows the skill.
+  (a note with type: person). \`--to agent\` writes holder: agent, which asks any agent. wi starts no
+  agent: start one with your harness's own tools, and it runs \`wi claim\` by its own name.
+  --role <name> adds the tag role/<name> to the card in the same write.
+  \`wi show\` lists each role tag on the card with the notes that carry it: the procedure to follow.
   \`wi objective\` is retired. Use \`wi show <ref> --json\` to read a card and its ancestor objectives.
-  \`wi agents\` is retired. Use \`wi dashboard --panel agents\`.
+  \`wi agents\` is retired. Use \`wi dashboard --panel agents\`. \`wi here\` is retired too.
   \`wi dashboard\` prints the same panels as the plugin. Repeat --panel to choose panels; without it,
   wi prints every panel. --parent names a root or an area. It writes nothing.
   \`wi review <ref> --to <name> [--files <path>]...\` sends a card to a person note for review. Each --files
@@ -306,16 +299,12 @@ async function runNew(vault: Vault, rest: string[], values: Values, json: boolea
     throw new UsageError(`--priority must be a number, not "${values['priority']}".`)
   }
 
-  // A role is a tag (docs/adr/0062-role-tags.md). The old flag names the new way instead of writing a field.
-  if (typeof values['role'] === 'string') {
-    throw new UsageError(`a role is a tag now. Use --tag ${values['role'].trim() === '' ? 'role/<name>' : roleTagFor(values['role'])}.`)
-  }
   const created = await createItem(vault, {
     title,
     parent,
     ...(typeof values['status'] === 'string' ? { status: values['status'] as never } : {}),
     ...(typeof values['owner'] === 'string' ? { owner: values['owner'] } : {}),
-    ...(typeof values['agent'] === 'string' ? { holder: values['agent'] } : {}),
+    ...(typeof values['holder'] === 'string' ? { holder: values['holder'] } : {}),
     ...(typeof values['template'] === 'string' ? { template: values['template'] } : {}),
     ...(priority !== undefined ? { priority } : {}),
     ...(Array.isArray(values['tag']) ? { tags: values['tag'] } : {}),
@@ -337,9 +326,6 @@ async function runNew(vault: Vault, rest: string[], values: Values, json: boolea
   if (created.gaps.length > 0) {
     process.stderr.write(`wi: warning: ${created.id} has no ${created.gaps.join(' or ')}. ` +
       `Pass --objective and --criteria, or fill the card before work starts.\n`)
-  }
-  if (values['creator'] !== undefined || values['model'] !== undefined) {
-    process.stderr.write('wi: note: --creator and --model are accepted but ignored. New cards do not record their creator.\n')
   }
   if (created.renamed) {
     process.stderr.write(`wi: note: another item has this filename, so this one is ${created.relPath}. ` +
@@ -393,12 +379,9 @@ async function runStatus(vault: Vault, rest: string[], json: boolean): Promise<n
 async function runSet(vault: Vault, rest: string[], values: Values, json: boolean): Promise<number> {
   const ref = rest.join(' ').trim()
   const pick = (key: string) => typeof values[key] === 'string' ? values[key] as string : undefined
-  const options = {
-    ...optional('owner', pick('owner')), ...optional('role', pick('role')),
-    ...optional('creator', pick('creator')), ...optional('model', pick('model')),
-  }
+  const options = { ...optional('owner', pick('owner')), ...optional('role', pick('role')) }
   if (ref === '' || Object.keys(options).length === 0) {
-    throw new UsageError('wi set needs a <ref> and at least one of --owner, --role, --creator, --model.')
+    throw new UsageError('wi set needs a <ref> and --owner, or --role "" to remove an old role field.')
   }
   const change = await setPeople(vault, ref, options)
   if (json) print({ id: change.item.id, path: change.item.relPath, changed: change.changed })
@@ -483,8 +466,10 @@ function multipleLineOption(values: Values, key: string): string[] {
 
 async function runClaim(vault: Vault, rest: string[], values: Values, json: boolean): Promise<number> {
   const ref = rest.join(' ').trim()
-  if (ref === '') throw new UsageError('wi claim needs a <ref> and --agent <name>.')
-  const agent = singleLineOption(values, 'agent')
+  if (ref === '') throw new UsageError('wi claim needs a <ref> and --holder <name>, or WI_AGENT set.')
+  // An agent claims by its own name, which its session sets in WI_AGENT.
+  const agent = values['holder'] === undefined ? envText('WI_AGENT') : singleLineOption(values, 'holder')
+  if (agent === undefined) throw new UsageError('wi claim needs --holder <name>, or WI_AGENT set.')
   const maxAgents = maxAgentsForRun(vault)
   const active = await activeAgentNames(vault)
   const person = (await readPeople(vault.root)).has(agent.toLowerCase())
@@ -502,32 +487,14 @@ async function runClaim(vault: Vault, rest: string[], values: Values, json: bool
 
 async function runDelegate(vault: Vault, rest: string[], values: Values, json: boolean): Promise<number> {
   const ref = rest.join(' ').trim()
-  if (ref === '') throw new UsageError('wi delegate needs a <ref> and --to <person|agent|claude|codex|pi>.')
-  const pick = (key: string) => values[key] === undefined ? undefined : singleLineOption(values, key)
+  if (ref === '') throw new UsageError('wi delegate needs a <ref> and --to <person|agent>.')
   const to = singleLineOption(values, 'to')
-  const maxAgents = maxAgentsForRun(vault)
-  const active = await activeAgentNames(vault)
-  const result = await delegate(vault, ref, {
-    to, model: pick('model'), agent: pick('agent'), permission: pick('permission'), role: pick('role'),
-  }, {
-    cwd: process.cwd(), git: runGit, launch: spawnWorker, uuid: () => crypto.randomUUID(),
-    author: authorLabel(envText('WI_AGENT'), envText('WI_MODEL')),
-  })
-  if (json) {
-    print({ id: result.item.id ?? null, path: result.item.relPath, holder: result.holder, harness: result.harness ?? null,
-      branch: result.branch ?? null, worktree: result.worktree ?? null, log: result.log ?? null,
-      pid: result.pid ?? null, resume: result.resume ?? null })
-  } else {
-    const what = result.harness ? `delegated to ${result.holder}`
-      : isAnyAgent(result.holder) ? 'any agent may take it' : `assigned to ${result.holder}`
+  const role = values['role'] === undefined ? undefined : singleLineOption(values, 'role')
+  const result = await delegate(vault, ref, { to, role })
+  if (json) print({ id: result.item.id ?? null, path: result.item.relPath, holder: result.holder })
+  else {
+    const what = isAnyAgent(result.holder) ? 'any agent may take it' : `assigned to ${result.holder}`
     process.stdout.write(`${label(result.item)}  ${result.item.status}  (${what})\n`)
-    if (result.harness) {
-      process.stdout.write(`  ${result.harness} worker, process ${result.pid}, on ${result.branch}\n` +
-        `  worktree  ${result.worktree}\n  log       ${result.log}\n  resume    ${result.resume}\n`)
-    }
-  }
-  if (result.harness && maxAgents !== null && !active.has(result.holder) && active.size + 1 > maxAgents) {
-    process.stderr.write(`wi: warning: agent limit is ${maxAgents}; ${active.size + 1} agents now have a doing card.\n`)
   }
   return 0
 }
@@ -622,7 +589,7 @@ function isDashboardPanel(value: string): value is DashboardPanel {
 
 function runReady(vault: Vault, rest: string[], values: Values, json: boolean): number {
   if (rest.length > 0) throw new UsageError('wi ready takes no card reference.')
-  const agent = values['agent'] === undefined ? undefined : singleLineOption(values, 'agent')
+  const agent = values['holder'] === undefined ? undefined : singleLineOption(values, 'holder')
   const parent = typeof values['parent'] === 'string' ? values['parent'] : undefined
   const result = readyCards(vault, { ...(agent === undefined ? {} : { agent }), ...(parent === undefined ? {} : { parent }) })
   if (json) print(result)
@@ -639,7 +606,7 @@ async function runRelease(vault: Vault, rest: string[], values: Values, json: bo
   if (ref === '') throw new UsageError('wi release needs a <ref> and --reason <text>.')
   const reason = singleLineOption(values, 'reason')
   const where = values['where'] === undefined ? undefined : singleLineOption(values, 'where')
-  const change = await releaseItem(vault, ref, reason, where)
+  const change = await releaseItem(vault, ref, reason, where, authorLabel(envText('WI_AGENT'), envText('WI_MODEL')))
   if (json) print({ id: change.item.id, path: change.item.relPath, holder: change.holder,
     from: change.from ?? null, to: change.to, reason: change.reason, where: change.where ?? null,
     changed: change.changed })
@@ -733,10 +700,10 @@ async function runRemove(
   return 0
 }
 
-function runShow(vault: Vault, rest: string[], json: boolean): number {
+async function runShow(vault: Vault, rest: string[], json: boolean): Promise<number> {
   const ref = rest.join(' ').trim()
   if (ref === '') throw new UsageError('wi show needs a <ref>.')
-  const card = showCard(vault, ref)
+  const card = showCard(vault, ref, await readRoleTaggedNotes(vault.root))
   if (json) print(card)
   else process.stdout.write(`${JSON.stringify(card, null, 2)}\n`)
   return 0

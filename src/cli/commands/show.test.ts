@@ -2,7 +2,7 @@ import { test, afterEach } from 'node:test'
 import assert from 'node:assert/strict'
 
 import { showCard } from './show.ts'
-import { loadVault } from '../vault.ts'
+import { loadVault, readRoleTaggedNotes } from '../vault.ts'
 import { makeVault, item, type Fixture } from '../test-helpers.ts'
 
 let fixture: Fixture | undefined
@@ -89,4 +89,20 @@ test('showCard lists the card\'s own role tags, and a parent\'s role tag does no
   assert.deepEqual(showCard(vault, 'Plain').roles, [])
   assert.deepEqual(showCard(vault, 'Tagged').roles, ['Role/Coder', 'role/checker'])
   assert.equal('role' in showCard(vault, 'Tagged'), false)
+})
+
+test('showCard names the procedure notes for each role tag, from the tagged notes it is given', async () => {
+  fixture = makeVault()
+  fixture.write('Boards/Main.md', item({ type: 'work-item', id: 'wi-root', title: 'Main' }))
+  fixture.write('Boards/Tagged.md', item({ type: 'work-item', id: 'wi-tagged', title: 'Tagged',
+    parent: '"[[Main]]"', tags: '[role/checker, role/coder]' }))
+  fixture.write('Roles/Checker.md', '---\ntags: [role/checker]\n---\nCheck the sample.\n')
+
+  const vault = await loadVault(fixture.root)
+  const card = showCard(vault, 'Tagged', await readRoleTaggedNotes(fixture.root))
+  assert.deepEqual(card.procedures, [
+    { tag: 'role/checker', notes: ['Roles/Checker.md'] },
+    { tag: 'role/coder', notes: [] },
+  ])
+  assert.deepEqual(showCard(vault, 'Tagged').procedures.map((role) => role.notes), [[], []])
 })

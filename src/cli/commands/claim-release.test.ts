@@ -152,15 +152,15 @@ test('release clears the holder, moves to options, and appends one dated note be
   assert.equal(fmOf(fixture).get('status'), 'options')
   assert.equal(fmOf(fixture).has('prev_status'), false)
   assert.equal(fmOf(fixture).get('updated'), today())
-  assert.match(textOf(fixture), new RegExp(`Human note\\.\\n- ${today()} Released from codex: usage spent\\. Work: card/task\\.\\n\\n## Next`))
+  assert.match(textOf(fixture), new RegExp(`Human note\\.\\n- ${today()} \\d\\d:\\d\\d, codex: Released from codex: usage spent\\. Work: card/task\\.\\n\\n## Next`))
   assert.ok(textOf(fixture).endsWith('## Next\n\nKeep this.\n'))
   assert.equal(readFileSync(`${fixture.root}/Boards/Main.md`, 'utf8'), rootBefore)
 })
 
 test('release creates a Notes section when absent and accepts no location', async () => {
   fixture = seed({ holder: 'codex', status: 'doing' }, '## Objective\n\nKeep this.\n')
-  await releaseItem(await loadVault(fixture.root), 'wi-0002', 'stopped')
-  assert.ok(textOf(fixture).endsWith(`## Objective\n\nKeep this.\n\n## Notes\n\n- ${today()} Released from codex: stopped.\n`))
+  await releaseItem(await loadVault(fixture.root), 'wi-0002', 'stopped', undefined, 'Session agent')
+  assert.match(textOf(fixture), new RegExp(`## Objective\\n\\nKeep this\\.\\n\\n## Notes\\n\\n- ${today()} \\d\\d:\\d\\d, Session agent: Released from codex: stopped\\.\\n$`))
 })
 
 test('release refuses an unclaimed item without changing the file', async () => {

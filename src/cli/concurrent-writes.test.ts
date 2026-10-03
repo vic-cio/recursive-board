@@ -148,18 +148,6 @@ test('an area conversion refuses a card claimed after the load', async () => {
   assert.equal(fmOf(fixture, 'Task').has('area'), false)
 })
 
-test('a creator set after the load is never replaced', async () => {
-  fixture = seed()
-  const [a, b] = await snapshots(fixture)
-  const results = await Promise.allSettled([
-    setPeople(a, 'Task', { creator: 'Ana' }),
-    setPeople(b, 'Task', { creator: 'Bo' }),
-  ])
-  assert.equal(results.filter((r) => r.status === 'fulfilled').length, 1)
-  const creator = fmOf(fixture, 'Task').get('creator')
-  assert.ok(creator === 'Ana' || creator === 'Bo')
-})
-
 test('an archive reports no change when another process archived the card first', async () => {
   fixture = seed()
   const [a, b] = await snapshots(fixture)

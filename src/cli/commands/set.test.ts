@@ -33,25 +33,3 @@ test('wi set writes the owner as a plain name, and an empty --role removes an ol
   assert.deepEqual((await setPeople(await loadVault(fixture.root), 'Task', { role: '' })).changed, ['role'])
   assert.doesNotMatch(textOf(fixture), /^role:/m)
 })
-
-test('a creator written as a link is rewritten as the same plain name', async () => {
-  fixture = seed({ creator: '"[[Ana]]"' })
-  const change = await setPeople(await loadVault(fixture.root), 'Task', { creator: 'Ana' })
-  assert.deepEqual(change.changed, ['creator'])
-  assert.match(textOf(fixture), /^creator: Ana$/m)
-})
-
-test('the creator is set once and never changes', async () => {
-  fixture = seed()
-  await setPeople(await loadVault(fixture.root), 'Task', { creator: 'Session agent', model: 'claude-opus-5-5' })
-  assert.match(textOf(fixture), /^creator: Session agent\ncreator_model: claude-opus-5-5$/m)
-  const again = await setPeople(await loadVault(fixture.root), 'Task', { creator: 'Session agent', model: 'claude-opus-5-5' })
-  assert.deepEqual(again.changed, [])
-  await assert.rejects(setPeople(await loadVault(fixture.root), 'Task', { creator: 'Ana' }), /set once/)
-  await assert.rejects(setPeople(await loadVault(fixture.root), 'Task', { model: 'gpt-6-luna' }), /set with the creator/)
-})
-
-test('a model needs a creator', async () => {
-  fixture = seed()
-  await assert.rejects(setPeople(await loadVault(fixture.root), 'Task', { model: 'gpt-6-luna' }), /Pass --creator too/)
-})

@@ -66,17 +66,16 @@ wi new "<title>" --parent <ref> --objective <text> --context <text> --criteria <
 wi status <ref> <backlog|options|doing|done>
 wi note <ref> "<result>" [--agent <name>]   # signs with --agent or WI_AGENT
 wi depend <ref> --on <ref>            # the card waits on another card; --off removes it
-wi new <title> [--tag <tag>]... [--creator <name>] [--model <id>]
-                                                # creator and model flags are accepted no-ops
+wi new <title> [--tag <tag>]... [--holder <name>]   # add tags; name who does the work
 wi set <ref> --owner <name>                     # change who owns it; --role "" removes an old role field
 wi area <ref>                         # mark a card as an area
 wi area <ref> --off                   # remove the area mark
 wi tag <ref> <tag>                    # add a free tag; --off removes it
-wi claim <ref> --agent <name>        # set the holder and move to doing in one write
+wi claim <ref> [--holder <name>]     # you become the holder (WI_AGENT) and the card moves to doing
 wi review <ref> --to <person> [--files <path>]... [--note <text>]  # send the card to a person for review
 wi delegate <ref> --to <person>      # make a person (a type: person note) the holder; status stays
 wi delegate <ref> --to agent         # leave the card for any agent (holder: agent); starts nothing
-wi delegate <ref> --to <claude|codex|pi> [--model <id>]  # name a worker as holder and start it
+wi show <ref> --json                 # the brief: card, ancestor Objectives, Knowledge, role procedures
 wi release <ref> --reason <text> [--where <branch-or-path>]
 wi move <ref> --to <new parent ref>
 wi archive <ref>                    # --undo reverses it
@@ -115,20 +114,19 @@ In Obsidian, use **Promote** at the top of any child card to give it its own boa
   agent can hold a card and its current subtask. A repeat by the same agent in doing writes nothing.
 - `wi status <ref> done` says when that was the parent's last open child. Check the parent's own
   criteria, then close it.
-- Before starting a worker, a dispatcher reads `wi dashboard --panel agents`. It counts agents, not cards, and lists
+- Before it starts an agent, a dispatcher reads `wi dashboard --panel agents`. It counts agents, not cards, and lists
   each agent's doing cards. The dispatcher holds off when `activeAgents` reaches `maxAgents`;
   `null` means no limit is set. `WI_MAX_AGENTS` overrides the vault setting for one run. This
   limit is advisory: `wi claim` does not enforce it.
 - To report the state of the boards to a person, run `wi dashboard --you <name> --json`. It
   returns what the person's dashboard shows: review work, progress, claims and attention.
-- To hand a card to a worker, run `wi delegate <card> --to <harness> --model <id>`. The worker
-  reads the card body as its brief, so write the brief on the card first.
-  Delegating sets the holder and nothing else; the status stays. It names the worker
-  `<model>-<slug>` as holder, makes a worktree of the current Git repository on `card/<slug>`,
-  starts the harness with the card body as the brief, and notes the log path. The worker claims
-  the card when it starts, which moves it to doing. Run it in the repository the card works on.
-  To assign a card to a person, use `--to <name>` with a note of `type: person`; the card does not
-  count in the dashboard Agents panel. To leave a card for any agent, use `--to agent`.
+- wi starts no agent. To hand a card to a worker, start the worker with your own harness's tools
+  (a subagent, a background task, another session) and give it the card id. Write the brief on
+  the card first: the worker reads it with `wi show <card> --json`, and claims the card by its own
+  name. In a Git repo, give the worker its own branch or worktree.
+  To assign a card to a person, use `wi delegate <card> --to <name>` with a note of
+  `type: person`; the card does not count in the dashboard Agents panel. To leave a card for any
+  agent, use `--to agent`. Delegating sets the holder and nothing else; the status stays.
 - A dispatcher records each event on the card (start, finish, retry, stop) with
   `wi note <card> "<event>" --agent <its name>`.
 - When a worker stops, its dispatcher runs `wi release` with a reason and, when available, the
@@ -148,25 +146,26 @@ the board shows what is still open.
 
 ## Working under a dispatcher
 
-A worker is an agent that a dispatcher (a script or another agent) started on one card. The owner
+A worker is an agent that a dispatcher (a script or another agent) started on one card, with its
+harness's own tools. The owner
 follows the work on the board, so the board is the live record of what each worker does now. Use
 your own agent name everywhere `<me>` appears.
 
-The dispatcher sets `WI_AGENT` to your name and `WI_MODEL` to your model. `wi note` signs each
-line with your name and model. It refuses to write when `WI_AGENT` and `--agent` are both empty.
+Set `WI_AGENT` to your name and `WI_MODEL` to your model, or pass `--holder` to `wi claim` and
+`--agent` to `wi note`. `wi note` signs each line with your name and model. It refuses to write
+with no writer name.
 A role is a tag such as `role/checker` on your card. A note that is not a card and carries the
-same tag is its procedure; your brief names it. Read and follow it. Roles do not pass down from a
-parent, and a card with no role tag has no procedure beyond this section. `wi show` lists the
-card's role tags. `wi delegate --role <name>` and `wi tag <ref> role/<name>` add one.
-`--creator` and `--model` on `wi new` remain accepted no-ops. Old creator fields stay valid.
+same tag is its procedure: `wi show <card> --json` lists it under `procedures`. Read and follow it.
+Roles do not pass down from a parent, and a card with no role tag has no procedure beyond this
+section. `wi delegate --role <name>` and `wi tag <ref> role/<name>` add one.
 
-1. Claim the card: `wi claim <card> --agent <me>`. A delegated card names you as its holder
-   already; your claim moves it to doing. Read its body and its open children.
+1. Claim the card: `wi claim <card>`. Your claim names you as holder and moves it to doing. Read
+   its brief with `wi show <card> --json`, and its open children.
 2. Split it before you start when it holds more than one deliverable. Make each step a child with
    a full brief: `wi new "<title>" --parent <card> --objective ... --criteria ...`. Set
    `--priority` when the order matters.
 3. Work one child at a time, live:
-   1. `wi claim <child> --agent <me>` before its work starts.
+   1. `wi claim <child>` before its work starts.
    2. Do the work.
    3. `wi note <child> "<result, and where it is>"`.
    4. `wi status <child> done`.
@@ -189,7 +188,7 @@ is.
    and propose a line for `AGENTS.md` that names it.
 2. Read the card body. If Objective or Acceptance Criteria is missing, write a proposed brief in
    the card and ask for approval; wait before doing the work.
-3. Claim it with `wi claim <card> --agent <agent name>`. In a Git repo, work on a new
+3. Claim it with `wi claim <card> --holder <agent name>`. In a Git repo, work on a new
    `card/<slug>` branch, run the repo's tests and commit the result. Track subtasks as in
    "Working under a dispatcher", step 3.
 4. If the work is too large or cannot finish, stop with a split proposal or continuation note in

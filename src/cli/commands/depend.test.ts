@@ -138,7 +138,7 @@ test('the CLI adds a dependency, marks the waiting card, and names what done unb
   assert.match((await wi('children', 'Main')).stdout, /Build  \[waits on 1\]/)
   const json = JSON.parse((await wi('children', 'Main', '--json')).stdout) as { children: { title: string; waits_on: string[] }[] }
   assert.deepEqual(json.children.find((row) => row.title === 'Build')?.waits_on, ['wi-0002'])
-  await assert.rejects(wi('claim', 'Build', '--agent', 'codex'), /waits on Spec/)
+  await assert.rejects(wi('claim', 'Build', '--holder', 'codex'), /waits on Spec/)
   assert.match((await wi('status', 'Spec', 'done')).stdout, /wi-0003  Build  waits on nothing open now/)
   assert.match((await wi('depend', 'Build', '--on', 'Spec', '--off')).stdout, /no longer waits on Spec/)
 })

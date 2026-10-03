@@ -2,7 +2,7 @@ import { openDependencies, titleOf } from '../dependencies.ts'
 import { waitingRefusal } from '../../shared/dependencies.ts'
 import { editItem } from '../write.ts'
 import { claimEdits, releaseEdits } from '../../shared/transitions.ts'
-import { appendNote } from '../../shared/notes.ts'
+import { appendNote, noteLine } from '../../shared/notes.ts'
 import { cardState } from '../../shared/card-state.ts'
 import type { Edit } from '../../shared/edits.ts'
 import { holderOf } from '../../shared/holder.ts'
@@ -77,13 +77,16 @@ export async function releaseItem(
   ref: string,
   reason: string,
   where?: string,
+  /** Who signs the note. Defaults to the holder that gives the card up. */
+  writer?: string,
 ): Promise<ReleaseChange> {
   const item = vault.resolve(ref)
   if (item.parent === null) throw new Error(`${item.relPath} is a root, and a root cannot be released.`)
   let holder = ''
   let from = item.status
-  const note = () => `- ${today()} Released from ${holder}: ${reason.replace(/\.$/, '')}.` +
-    (where === undefined ? '' : ` Work: ${where.replace(/\.$/, '')}.`)
+  // Signed and timed like every wi note, so the hand-over reads like the rest of Notes.
+  const note = () => noteLine(`Released from ${holder}: ${reason.replace(/\.$/, '')}.` +
+    (where === undefined ? '' : ` Work: ${where.replace(/\.$/, '')}.`), writer?.trim() || holder)
   await editItem(item, (text) => {
     const state = cardState(text)
     if (state.holder === undefined) throw new Error(`${item.relPath} has no holder to release.`)

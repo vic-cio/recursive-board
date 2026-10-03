@@ -3,7 +3,7 @@ import { getList } from '../../shared/frontmatter.ts'
 import { holderOf } from '../../shared/holder.ts'
 import { bodyOf, listItems, section } from '../../shared/sections.ts'
 import { dependenciesOf, titleOf } from '../dependencies.ts'
-import { roleTags } from '../../shared/role-tags.ts'
+import { procedureNotes, roleTags, type TaggedNote } from '../../shared/role-tags.ts'
 import type { Vault, WorkItem } from '../vault.ts'
 
 function stringField(item: WorkItem, key: string): string | null {
@@ -52,8 +52,13 @@ function ancestryOf(vault: Vault, item: WorkItem) {
   return { ancestors: ancestors.reverse(), issue }
 }
 
-export function showCard(vault: Vault, ref: string) {
+/**
+ * `tagged` is every note with tags. With it, each role tag on the card names its procedure notes,
+ * so an agent that takes the card reads them (docs/adr/0062-role-tags.md).
+ */
+export function showCard(vault: Vault, ref: string, tagged: readonly TaggedNote[] = []) {
   const item = vault.resolve(ref)
+  const roles = roleTags(getList(item.text, 'tags') ?? [])
   const body = bodyOf(item.text)
   const dependencies = dependenciesOf(vault, item)
   const ancestry = ancestryOf(vault, item)
@@ -64,7 +69,8 @@ export function showCard(vault: Vault, ref: string) {
     status: item.status ?? null,
     owner: stringField(item, 'owner'),
     holder: holderOf((key) => item.frontmatter.get(key)) ?? null,
-    roles: roleTags(getList(item.text, 'tags') ?? []),
+    roles,
+    procedures: roles.map((tag) => ({ tag, notes: procedureNotes(tag, tagged) })),
     creator: stringField(item, 'creator'),
     creatorModel: stringField(item, 'creator_model'),
     priority: numberField(item, 'priority'),

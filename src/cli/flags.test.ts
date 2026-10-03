@@ -99,7 +99,7 @@ const INVOCATIONS: Record<string, string[]> = {
   review: ['review', 'Build server', '--to', 'sam'],
   depend: ['depend', 'Build server', '--on', 'Main'],
   set: ['set', 'Build server', '--owner', 'sam'],
-  claim: ['claim', 'Build server', '--agent', 'codex'],
+  claim: ['claim', 'Build server', '--holder', 'codex'],
   // A person, so a missed refusal could never start an agent.
   delegate: ['delegate', 'Build server', '--to', 'sam'],
   objective: ['objective'],

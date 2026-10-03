@@ -1,7 +1,7 @@
 ---
 status: accepted
 amends: docs/adr/0034-agent-limit.md (who counts), docs/adr/0042-creator-and-role.md (the full list of person notes for delegation)
-amended_by: 0061-holder-names-who-does-the-work.md (the field is `holder`; delegating names the holder only)
+amended_by: 0061-holder-names-who-does-the-work.md (the field is `holder`; delegating names the holder only), 0063-wi-starts-no-agents.md (wi no longer starts a harness)
 ---
 # Delegate a card to a person or a headless agent
 
