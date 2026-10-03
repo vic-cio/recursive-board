@@ -246,6 +246,8 @@ export interface Claim<T> {
 export interface AgentRow<T> extends Claim<T> {
   /** The area one level under the focus that holds the card, or null when it sits directly in the focus. */
   area: T | null
+  /** True when every open step is in doing, so the agent only waits on them and does not count. */
+  waiting: boolean
 }
 
 export interface PersonRow<T> {
@@ -271,15 +273,34 @@ export function agentRequests<T extends DashItem>(cards: T[]): T[] {
   return cards.filter((card) => card.status !== undefined && card.status !== 'done' && isAnyAgent(card.holder))
 }
 
-/** Distinct agent holders with an open or finished doing card, excluding people and requests. */
-export function activeAgentCount<T extends DashItem>(cards: T[], people: string[]): number {
+/**
+ * True when the card has open children and every one is in doing. Its holder only waits on them,
+ * so it does no work of its own (docs/adr/0066-count-only-working-agents.md).
+ */
+export function waitsOnChildren<T extends DashItem>(card: T, tree: DashTree<T>): boolean {
+  const open = tree.childrenOf(card).filter((child) => child.status !== 'done' && !child.effectiveArchived)
+  return open.length > 0 && open.every((child) => child.status === 'doing')
+}
+
+/**
+ * Distinct agent holders, in lower case, that work a doing card. People and requests for any agent
+ * are not agents. A card that only waits on its children does not make its holder active, so a
+ * full tree of agents cannot deadlock on the limit.
+ */
+export function activeAgentNames<T extends DashItem>(cards: T[], people: string[], tree: DashTree<T>): Set<string> {
   const personNames = new Set(people.map((name) => name.trim().toLowerCase()))
   const active = new Set<string>()
   for (const card of cards) {
     const holder = card.holder?.trim().toLowerCase()
-    if (card.status === 'doing' && holder && !isAnyAgent(holder) && !personNames.has(holder)) active.add(holder)
+    if (card.status === 'doing' && holder && !isAnyAgent(holder) && !personNames.has(holder) &&
+      !waitsOnChildren(card, tree)) active.add(holder)
   }
-  return active.size
+  return active
+}
+
+/** The number of agents that count against `maxAgents`. */
+export function activeAgentCount<T extends DashItem>(cards: T[], people: string[], tree: DashTree<T>): number {
+  return activeAgentNames(cards, people, tree).size
 }
 
 /** One flat list of claims in the focus, newest first. Idle claims belong to Needs attention. */
@@ -304,7 +325,7 @@ export function agentFeed<T extends DashItem>(
     .map((card) => {
       const steps = tree.childrenOf(card).filter((child) => !child.effectiveArchived)
       return {
-        card, steps, area: groupUnder(card, focus, tree),
+        card, steps, area: groupUnder(card, focus, tree), waiting: waitsOnChildren(card, tree),
         active: Math.max(tree.mtimeOf(card), ...steps.map((step) => tree.mtimeOf(step))),
       }
     })
@@ -321,9 +342,12 @@ export function agentFeed<T extends DashItem>(
   }
 }
 
-/** The working agents inside one Progress row. It counts the feed's own rows, so the two agree. */
+/**
+ * The working claims inside one Progress row. It counts the feed's own rows, so the two agree. A
+ * claim that only waits on its steps is not work, as in the active count.
+ */
 export function workingBadge<T>(feed: AgentFeed<T>, area: T | null): number {
-  return feed.working.filter((row) => row.area === area).length
+  return feed.working.filter((row) => row.area === area && !row.waiting).length
 }
 
 export function ago(ms: number, now: number): string {

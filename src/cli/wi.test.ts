@@ -200,6 +200,49 @@ test('wi claim remains advisory when the active agent count reaches the limit', 
   assert.match(result.stderr, /agent limit is 0/)
 })
 
+test('the Agents panel skips an agent whose doing card only waits on its children', async () => {
+  fixture = seed()
+  const lead = await wi(['claim', 'wi-0004', '--holder', 'lead'])
+  assert.equal(lead.code, 0, lead.stderr)
+  for (const [id, title, holder] of [['wi-0011', 'Step one', 'worker-1'], ['wi-0012', 'Step two', 'worker-2']] as const) {
+    fixture.write(`Boards/${title}.md`, item({
+      type: 'work-item', id, title, status: 'doing', holder,
+      parent: '"[[Build server]]"', created: '2026-09-21', updated: '2026-09-21',
+    }))
+  }
+  const result = await wi(['dashboard', '--panel', 'agents', '--json'])
+  assert.equal(result.code, 0, result.stderr)
+  assert.equal(JSON.parse(result.stdout).agents.activeAgents, 2, 'lead waits on two steps in doing')
+})
+
+test('wi claim warns at the limit by the same count, after the claim', async () => {
+  fixture = seed()
+  fixture.writeSettings('{"maxAgents":2}')
+  fixture.write('Boards/Step two.md', item({
+    type: 'work-item', id: 'wi-0012', title: 'Step two', status: 'options',
+    parent: '"[[Build server]]"', created: '2026-09-21', updated: '2026-09-21',
+  }))
+  const lead = await wi(['claim', 'wi-0004', '--holder', 'lead'])
+  assert.equal(lead.code, 0, lead.stderr)
+  fixture.write('Boards/Step one.md', item({
+    type: 'work-item', id: 'wi-0011', title: 'Step one', status: 'doing', holder: 'worker-1',
+    parent: '"[[Build server]]"', created: '2026-09-21', updated: '2026-09-21',
+  }))
+
+  // The claim moves Step two to doing, so lead now only waits, and two agents still work.
+  const second = await wi(['claim', 'wi-0012', '--holder', 'worker-2'])
+  assert.equal(second.code, 0, second.stderr)
+  assert.doesNotMatch(second.stderr, /agent limit/)
+
+  fixture.write('Boards/Other.md', item({
+    type: 'work-item', id: 'wi-0013', title: 'Other', status: 'options',
+    parent: '"[[Main]]"', created: '2026-09-21', updated: '2026-09-21',
+  }))
+  const third = await wi(['claim', 'wi-0013', '--holder', 'worker-3'])
+  assert.equal(third.code, 0, third.stderr)
+  assert.match(third.stderr, /agent limit is 2; 3 agents now work a doing card/)
+})
+
 function seed(): Fixture {
   const f = makeVault()
   f.write('Boards/Main.md', item({

@@ -1,5 +1,6 @@
 ---
 status: accepted
+amended_by: 0066-count-only-working-agents.md (the active count and waiting claims)
 ---
 # A dashboard view over every board
 
@@ -31,7 +32,9 @@ Its card-menu action can send a card for review. The dashboard can then record a
   It lists open requests for any agent before the feed. Each agent row shows the card, its age,
   the agent, a chip for the area one level under the focus, and the steps done. A card directly in
   the focused area has no chip. The working badge and the feed count the same claims, so they
-  agree. A card handed to you, or with every child done, counts as finished. Finished claims from
+  agree. A card handed to you, or with every child done, counts as finished. A claim whose open children
+  are all in doing shows an hourglass and "waits on its steps", and neither the badge nor the
+  active count counts it ([0066](0066-count-only-working-agents.md)). Finished claims from
   the last 24 hours, at most ten, sit behind one fold. The fold is closed by default, and its state
   is a device setting. With nothing working and nothing finished, the feed says "No agent is working."
 - **People.** Each person with an open card appears with the cards they hold and each card's status.
