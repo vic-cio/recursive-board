@@ -18,6 +18,16 @@ Agents panel, `wi dashboard --panel agents` and the limit warning in `wi claim` 
   agent stops counting in the same write. The warning fires only when the claim makes the agent
   active and the count then passes the limit. Its text is "N agents now work a doing card".
 
+## How it shows
+
+The Agents feed keeps the row of a waiting claim, so a person sees every claim. The row gets an
+hourglass and "waits on its steps" in place of the working spinner. The working badge on a
+Progress row skips it, as the active count does. `wi dashboard --json` gives each claim
+`waiting: true|false`, and the text output ends a waiting claim's line with "waits on its steps".
+
+The wait is read from the board: the steps' status. Nothing is written, so the mark clears when a
+step leaves doing or closes.
+
 ## Why
 
 The limit is vault-wide (0034), and an agent may split its card and give the children to workers.
@@ -32,6 +42,12 @@ warning and the panel cannot disagree.
 
 - **A per-depth limit or a depth cap.** A second number to tune (design A6, q7 and q10).
 - **Count the parent while any child is in doing.** The parent may still work a child in options.
+- **A `**Waiting:**` note that an agent writes at the limit, listed as a warning (design A6).**
+  Not built. A card that waits on another card already says so with `depends_on` (0041), and a
+  parent that waits on its steps is read from the board, as above. After 0063, wi starts no agent,
+  and the agent that starts workers reads the count before each start. A prose note would be a
+  second wait model that the dashboard must parse and clear. This is a question for Victor on the
+  card wi-cavr.
 
 ## Known gap
 

@@ -110,6 +110,7 @@ export async function dashboardSummary(vault: Vault, options: DashboardOptions =
     holder: row.card.holder!, ...identity(row.card), status: row.card.status!, area: area(row.card),
     active: new Date(row.active).toISOString(),
     steps: { done: row.steps.filter((step) => step.status === 'done').length, total: row.steps.length },
+    waiting: row.waiting,
   })
 
   const attention = needsAttention(focused,
@@ -170,7 +171,8 @@ export function dashboardPanels(summary: DashboardSummary, selected: DashboardPa
 export function renderDashboard(summary: DashboardSummary, selected: DashboardPanel[] = ['review', 'progress', 'agents', 'people', 'attention']): string {
   const { counts } = summary
   const card = (row: { id: string | null; title: string }) => `${row.id ?? '?'}  ${row.title}`
-  const claims = (rows: DashboardSummary['agents']['working']) => rows.map((row) => `  ${row.holder}  ${card(row)}  (${row.area})`)
+  const claims = (rows: DashboardSummary['agents']['working']) => rows.map((row) =>
+    `  ${row.holder}  ${card(row)}  (${row.area})${row.waiting ? '  waits on its steps' : ''}`)
   const lines: string[] = []
   if (selected.includes('review')) lines.push(`review  ${counts.review}`, ...summary.review.map((row) => `  ${card(row)}  ${row.what}`))
   if (selected.includes('progress')) lines.push('progress', ...summary.progress.map((row) => `  ${row.name}  ${row.done}/${row.total} done, ${row.doing} doing, ${row.backlog} in backlog`))

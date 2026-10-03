@@ -108,7 +108,7 @@ test('dashboardSummary splits claims into working, idle and recently finished', 
   assert.deepEqual(ids(summary.agents.finished), ['wi-copy', 'wi-shelf'], 'handed to the reviewer, then done; Paint is too old')
   assert.deepEqual(summary.agents.working[0], {
     holder: 'Builder', id: 'wi-grid', title: 'Grid', path: 'Boards/Grid.md', status: 'doing', area: 'Work',
-    active: new Date(NOW - 10 * MINUTE).toISOString(), steps: { done: 0, total: 0 },
+    active: new Date(NOW - 10 * MINUTE).toISOString(), steps: { done: 0, total: 0 }, waiting: false,
   })
 })
 
@@ -190,6 +190,24 @@ test('wi dashboard --panel selects panels in JSON and text output', async () => 
   assert.match(text.stdout, /^people$/m)
   assert.match(text.stdout, /options  wi-person  People task/)
   assert.doesNotMatch(text.stdout, /^review/m)
+})
+
+test('the Agents panel marks a claim that only waits on its steps, and does not count it', async () => {
+  fixture = seed()
+  const stamp = (path: string, age: number) => { const time = new Date(NOW - age * MINUTE); utimesSync(path, time, time) }
+  stamp(fixture.write('Boards/Lead.md', item({ type: 'work-item', id: 'wi-lead', title: 'Lead', parent: '"[[Site]]"', status: 'doing', holder: 'Lead', board: true })), 5)
+  stamp(fixture.write('Boards/Step.md', item({ type: 'work-item', id: 'wi-step', title: 'Step', parent: '"[[Lead]]"', status: 'doing', holder: 'Helper' })), 5)
+  const summary = await dashboardSummary(await loadVault(fixture.root), { you: 'Ana', now: NOW })
+  assert.deepEqual(summary.agents.working.map((row) => [row.id, row.waiting]),
+    [['wi-lead', true], ['wi-step', false], ['wi-grid', false]])
+  assert.equal(summary.agents.activeAgents, 4, 'Writer, Builder, Clerk and Helper work; Lead only waits')
+  assert.equal(summary.progress.find((row) => row.name === 'Work')!.working, 2, 'the badge skips the waiting claim')
+
+  const { stdout } = await run('node', [CLI, 'dashboard', '--panel', 'agents'], {
+    env: { ...process.env, WI_VAULT: fixture.root },
+  })
+  assert.match(stdout, /^ {2}Lead {2}wi-lead {2}Lead {2}\(Work\) {2}waits on its steps$/m)
+  assert.match(stdout, /^ {2}Helper {2}wi-step {2}Step {2}\(Work\)$/m)
 })
 
 test('the Agents panel marks a request in backlog as not ready', async () => {

@@ -246,6 +246,8 @@ export interface Claim<T> {
 export interface AgentRow<T> extends Claim<T> {
   /** The area one level under the focus that holds the card, or null when it sits directly in the focus. */
   area: T | null
+  /** True when every open step is in doing, so the agent only waits on them and does not count. */
+  waiting: boolean
 }
 
 export interface PersonRow<T> {
@@ -323,7 +325,7 @@ export function agentFeed<T extends DashItem>(
     .map((card) => {
       const steps = tree.childrenOf(card).filter((child) => !child.effectiveArchived)
       return {
-        card, steps, area: groupUnder(card, focus, tree),
+        card, steps, area: groupUnder(card, focus, tree), waiting: waitsOnChildren(card, tree),
         active: Math.max(tree.mtimeOf(card), ...steps.map((step) => tree.mtimeOf(step))),
       }
     })
@@ -340,9 +342,12 @@ export function agentFeed<T extends DashItem>(
   }
 }
 
-/** The working agents inside one Progress row. It counts the feed's own rows, so the two agree. */
+/**
+ * The working claims inside one Progress row. It counts the feed's own rows, so the two agree. A
+ * claim that only waits on its steps is not work, as in the active count.
+ */
 export function workingBadge<T>(feed: AgentFeed<T>, area: T | null): number {
-  return feed.working.filter((row) => row.area === area).length
+  return feed.working.filter((row) => row.area === area && !row.waiting).length
 }
 
 export function ago(ms: number, now: number): string {

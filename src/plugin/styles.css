@@ -1101,6 +1101,7 @@ button.wi-dash-id.wi-dash-id:hover { color: var(--text-normal); background: var(
 .wi-dash-agent.is-working .wi-dash-icon { color: var(--interactive-accent); }
 .wi-dash-agent.is-quiet .wi-dash-icon { color: var(--color-orange); }
 .wi-dash-agent.is-finished .wi-dash-icon { color: var(--color-green); }
+.wi-dash-agent.is-waiting .wi-dash-icon { color: var(--text-muted); }
 .wi-dash-ago { font-size: var(--font-ui-smaller); color: var(--text-faint); flex: none; align-self: center; }
 .wi-dash-fold { margin-top: var(--size-4-2); }
 .wi-dash-fold .wi-dash-agents.wi-dash-hidden { display: none; }

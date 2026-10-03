@@ -511,11 +511,15 @@ export class DashboardView extends ItemView {
     }
   }
 
-  /** Line one: status, card, age. Line two: agent, the area under the focus, and steps done. */
+  /**
+   * Line one: status, card, age. Line two: agent, the area under the focus, and steps done. A
+   * working claim that only waits on its steps gets an hourglass, because it does not count as active.
+   */
   private agentRows(box: HTMLElement, list: AgentRow<WorkItemMeta>[], kind: keyof typeof CLAIM_ICONS): void {
-    for (const { card, steps, active, area } of list) {
-      const row = box.createDiv({ cls: `wi-dash-agent is-${kind}` })
-      setIcon(row.createSpan('wi-dash-icon'), CLAIM_ICONS[kind])
+    for (const { card, steps, active, area, waiting } of list) {
+      const waits = kind === 'working' && waiting
+      const row = box.createDiv({ cls: `wi-dash-agent is-${waits ? 'waiting' : kind}` })
+      setIcon(row.createSpan('wi-dash-icon'), waits ? 'hourglass' : CLAIM_ICONS[kind])
       const body = row.createDiv('wi-dash-agent-body')
       this.link(body, card.title, () => this.openFile(card.file))
       const line = body.createDiv('wi-dash-muted wi-dash-agent-meta')
@@ -524,6 +528,7 @@ export class DashboardView extends ItemView {
       if (steps.length > 0) {
         line.createSpan({ text: `${steps.filter((step) => step.status === 'done').length}/${steps.length} steps` })
       }
+      if (waits) line.createSpan({ text: 'waits on its steps' })
       row.createSpan({ cls: 'wi-dash-ago', text: ago(active, Date.now()), attr: { 'data-mtime': String(active) } })
       this.copyId(row, card)
     }

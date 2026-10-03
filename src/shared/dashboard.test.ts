@@ -369,6 +369,28 @@ test('the working badge counts from the feed, per area row, and ignores idle and
     ['Board 1', 'Directly in Dev 1'])
 })
 
+test('a claim that only waits on its children is marked waiting, and the working badge skips it', () => {
+  const { items, add, tree } = vault()
+  const now = 10 * IDLE_MS
+  const root = add('Home', null)
+  const dev = add('Dev', root, { area: true, status: 'doing' })
+  const lead = add('Lead', dev, { status: 'doing', holder: 'lead', mtime: now })
+  add('Step one', lead, { status: 'doing', holder: 'worker-1', mtime: now })
+  const two = add('Step two', lead, { status: 'doing', holder: 'worker-2', mtime: now })
+  const cards = cardsInScope(items, null, tree)
+
+  let feed = agentFeed(cards, 'Ana', tree, now)
+  assert.deepEqual(feed.working.map((row) => [row.card.title, row.waiting]),
+    [['Lead', true], ['Step one', false], ['Step two', false]])
+  assert.equal(workingBadge(feed, dev), 2, 'the badge counts the agents that work, as the active count does')
+  assert.equal(workingBadge(feed, dev), activeAgentCount(items, [], tree))
+
+  two.status = 'options'
+  feed = agentFeed(cards, 'Ana', tree, now)
+  assert.equal(feed.working.find((row) => row.card === lead)!.waiting, false)
+  assert.equal(workingBadge(feed, dev), 2)
+})
+
 test('the finished fold holds claims finished in the last 24 hours, at most ten, newest first', () => {
   const { items, add, tree } = vault()
   const now = 100 * FINISHED_WINDOW_MS
