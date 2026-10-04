@@ -1,5 +1,6 @@
 ---
 status: accepted
+amended_by: 0069-setup-prints-the-recommended-setup.md (setup ends with the recommended agent setup and gains --json)
 ---
 # `wi setup` installs the agent skill and records a default vault
 
@@ -14,6 +15,10 @@ hook is offered interactively for a Git vault; unattended setup does not prompt 
 
 Agents can run `wi setup --yes --vault <path>` to perform setup without interaction. Setup does
 not edit work item files; the interactive hook offer may write the Git pre-commit hook.
+
+Setup ends by printing the optional recommended agent setup from the playbook, with `--yes` too.
+It writes nothing into the vault for it (amended by 0069). `--json` prints one object and asks no
+questions, so it needs `--vault`, as `--yes` does.
 
 ## Considered options
 

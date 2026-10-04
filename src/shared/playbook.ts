@@ -89,3 +89,25 @@ export function playbookChanges(text: string): PlaybookChange[] {
   close()
   return changes
 }
+
+export interface PlaybookPasteBlock {
+  name: string
+  /** What the block is and where it goes, for a heading above it. */
+  title: string
+  text: string
+}
+
+const PASTE_BLOCKS: ReadonlyArray<{ name: string; title: string }> = [
+  { name: 'agents-and-roles', title: 'Agents and roles: paste into the vault\'s AGENTS.md' },
+  { name: 'role-note', title: 'Example role note: save as Roles/Coder.md' },
+  { name: 'dispatching', title: 'Dispatching procedure: save as Roles/Dispatching.md' },
+]
+
+/** The paste-ready blocks that the text marks, in the order the setup uses them. */
+export function playbookPasteBlocks(text: string): PlaybookPasteBlock[] {
+  const blocks = playbookBlocks(text)
+  return PASTE_BLOCKS.flatMap(({ name, title }) => {
+    const block = blocks.get(name)
+    return block === undefined ? [] : [{ name, title, text: block }]
+  })
+}

@@ -1,7 +1,7 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 
-import { playbookBlock, playbookBlocks, playbookChanges, playbookChecks } from './playbook.ts'
+import { playbookBlock, playbookBlocks, playbookChanges, playbookChecks, playbookPasteBlocks } from './playbook.ts'
 
 const TEXT = [
   '# Playbook',
@@ -89,4 +89,24 @@ test('playbookChanges is empty without a Changes section', () => {
 
 test('CRLF line ends read the same as LF', () => {
   assert.equal(playbookBlock(TEXT.replaceAll('\n', '\r\n'), 'summary'), 'Line one.\n\nLine two.')
+})
+
+test('playbookPasteBlocks lists the paste-ready blocks that the text marks, in a fixed order', () => {
+  assert.deepEqual(playbookPasteBlocks(TEXT).map((block) => [block.name, block.text]), [
+    ['agents-and-roles', '## Agents and roles\n\n```sh\nwi claim <card>\n```'],
+  ])
+  const text = [
+    '```markdown playbook=dispatching', 'D', '```',
+    '```markdown playbook=role-note', 'R', '```',
+    '```markdown playbook=agents-and-roles', 'A', '```',
+  ].join('\n')
+  const blocks = playbookPasteBlocks(text)
+  assert.deepEqual(blocks.map((block) => block.name), ['agents-and-roles', 'role-note', 'dispatching'])
+  assert.deepEqual(blocks.map((block) => block.text), ['A', 'R', 'D'])
+  for (const block of blocks) assert.ok(block.title.length > 0)
+})
+
+test('playbookPasteBlocks leaves out the summary and the checks', () => {
+  assert.ok(playbookPasteBlocks(TEXT).every((block) => block.name !== 'summary' && block.name !== 'checks'))
+  assert.deepEqual(playbookPasteBlocks('No blocks.'), [])
 })

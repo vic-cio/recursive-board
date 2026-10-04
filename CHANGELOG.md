@@ -15,6 +15,17 @@ the agent notes in your vault.
 - The package ships an optional agent playbook, `docs/playbook.md`. It describes one setup that
   works: role notes, a shared Dispatching procedure, headless workers, the agent limit and the
   review loop. Recursive Board works the same without it.
+- `wi setup` ends with the playbook's recommended setup, the path of the installed playbook, and
+  `wi doctor`. An agent that runs setup shows that summary to the user, and says that it is
+  optional. Setup copies no role note and writes no `AGENTS.md`.
+
+### Added
+
+- `wi setup` prints the optional recommended agent setup after the vault choice. `--yes` prints
+  it too. `wi setup --json --vault <path>` prints one object with a `recommendedSetup` field.
+- The command **Show recommended agent setup** shows the same summary in Obsidian, with a copy
+  button for each text to paste. The notice after the first board links to it. It writes nothing
+  to the vault.
 
 ## [0.8.2] - 2026-10-04
 

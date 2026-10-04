@@ -47,7 +47,7 @@ import { isAnyAgent } from '../shared/holder.ts'
 const HELP = `wi — the Recursive Board CLI
 
 Usage
-  wi setup [--yes] [--vault <path>] [--force]
+  wi setup [--yes] [--vault <path>] [--force] [--json]
   wi new <title> [--parent <ref>] [--status <s>] [--template <t>] [--owner <o>] [--holder <h>]
                  [--priority <n>] [--objective <text>] [--context <text>]... [--criteria <text>]...
                  [--tag <tag>]... [--strict]
@@ -87,6 +87,9 @@ Options
 
 Notes
   wi retag and wi graph were removed in 0.8.0. The board tree shows each card's area.
+  \`wi setup\` ends with the optional recommended agent setup: the playbook's summary, the path of the
+  installed docs/playbook.md, and wi doctor to check a vault. It writes nothing into the vault for
+  it. --yes prints it too. --json prints one object and asks no questions; it needs --vault.
   Each command takes only the flags its usage line shows, plus --vault and --json where it reads a
   vault or prints a result. It refuses any other flag with exit 2 and names the flag.
   \`wi new\` writes the brief: --objective once, --context and --criteria once per paragraph or
@@ -180,6 +183,7 @@ async function main(argv: string[]): Promise<number> {
     await runSetup({
       ...(typeof values['vault'] === 'string' ? { vault: values['vault'] } : {}),
       yes: values['yes'] === true,
+      json: values['json'] === true,
       force: values['force'] === true,
       cliEntry: fileURLToPath(import.meta.url),
     })

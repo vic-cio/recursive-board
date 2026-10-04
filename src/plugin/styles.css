@@ -1260,3 +1260,33 @@ button.wi-pill:hover {
 .wi-section-chip-remove:hover {
   color: var(--text-error);
 }
+
+.wi-agent-setup-text {
+  max-height: 40vh;
+  overflow: auto;
+  padding: var(--size-4-2);
+  border-radius: var(--radius-s);
+  background: var(--background-secondary);
+  font-size: var(--font-ui-small);
+  white-space: pre-wrap;
+  user-select: text;
+}
+
+.wi-agent-setup-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--size-4-2);
+}
+
+.wi-agent-setup-head h3 {
+  margin: var(--size-4-3) 0 var(--size-4-1);
+  font-size: var(--font-ui-medium);
+}
+
+.wi-agent-setup-head button {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--size-2-2);
+  flex-shrink: 0;
+}

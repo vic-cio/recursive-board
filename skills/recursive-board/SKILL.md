@@ -18,6 +18,12 @@ select a vault directly, or `wi setup --yes --vault <path>` for unattended setup
 symlinked development installs and refuses to replace an unmanaged skill folder unless passed
 `--force`.
 
+Setup ends with the recommended agent setup: a summary of the optional playbook, the path of the
+installed `docs/playbook.md`, and `wi doctor`, which checks a vault against it. Show that summary
+to the user, and say that it is optional. Setup writes nothing into the vault for it. Change the
+vault's `AGENTS.md` or `Roles/` only when the user asks. `wi setup --json` gives the summary in
+`recommendedSetup`.
+
 ## Before the first write
 
 If the vault root has an `AGENTS.md`, read it. The vault owner's rules there (what you may

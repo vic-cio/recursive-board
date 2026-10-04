@@ -1,6 +1,6 @@
 # Recursive Board
 
-> **Install with your agent.** Paste this prompt into your coding agent: "Check that Node.js 20.12 or later is installed, run `npm install --global recursive-board`, then run `wi setup`."
+> **Install with your agent.** Paste this prompt into your coding agent: "Check that Node.js 20.12 or later is installed, run `npm install --global recursive-board`, then run `wi setup`. Show me the recommended agent setup that `wi setup` prints at the end, and tell me that it is optional."
 
 Recursive Board turns a folder of Markdown files in an Obsidian vault into a hierarchical work board. Each work item is one Markdown file. Its parent link defines where it belongs.
 
@@ -73,6 +73,8 @@ The board hides old `area/` tags. The Tags… picker leaves them out. New cards 
 
 Enable Recursive Board in an empty vault. Use the **Create your first board** button in the notice, or run **Create your first board** from the command palette. Enter a name. The default is `Main`. The plugin creates the board and a starter card. It sets `defaultRoot` in the board settings, then opens the board.
 
+The notice after the new board has a link to the **Recommended agent setup**. The command **Show recommended agent setup** opens the same window. It shows the summary of the optional [agent playbook](docs/playbook.md) and each text to paste, with a copy button for each. The window writes nothing to the vault.
+
 ### Manual fallback
 
 1. Create the file `Boards/Project.md` with this content. A root item has no `parent` and no `status`:
@@ -127,6 +129,8 @@ wi --help
 wi setup
 ```
 
+`wi setup` ends with the optional recommended agent setup. It prints the summary of the [agent playbook](docs/playbook.md), the path of the installed `docs/playbook.md`, and `wi doctor`, the command that checks a vault against it. Setup writes nothing into the vault for it and stores no state. `--yes` prints the same text. `--json` prints one object, with the summary in `recommendedSetup`, and asks no questions, so it needs `--vault <path>`.
+
 Pass `--vault <path>`, set `WI_VAULT`, run `wi` inside a vault, or set `defaultVault` with `wi setup`. Commands accept a work-item id, filename, or title as a reference. An id takes precedence when references are ambiguous. Add `--json` for machine-readable output. The `--vault <path>` and `--json` flags apply to all commands.
 
 ## Use with coding agents
@@ -153,7 +157,7 @@ The pre-commit hook runs `wi validate` and stops a commit when the vault has err
 
 | Command | What it does |
 | --- | --- |
-| `wi setup [--yes] [--vault <path>] [--force]` | Installs the agent skill, selects and saves a default vault, and offers the Git validation hook for a Git vault. `--yes` requires `--vault` and asks no questions. |
+| `wi setup [--yes] [--vault <path>] [--force] [--json]` | Installs the agent skill, selects and saves a default vault, and offers the Git validation hook for a Git vault. It ends with the optional recommended agent setup and writes nothing into the vault for it. `--yes` requires `--vault` and asks no questions. `--json` prints one object, asks no questions, and requires `--vault`. |
 | `wi new <title> [--parent <ref>] [--status <status>] [--template <name>] [--owner <name>] [--holder <name>] [--priority <number>] [--objective <text>] [--context <text>]... [--criteria <text>]... [--strict]` | Creates a work item under the given parent. It does not copy the parent's owner; pass `--owner` to set one. If `--parent` is omitted, uses `defaultRoot` from the board settings. The brief flags fill the body: repeat `--context` for each paragraph and `--criteria` for each criterion. It wraps bare angle placeholders in backticks and preserves code, links, autolinks, and HTML. It warns when the card has no Objective or Acceptance Criteria, and `--strict` refuses the card instead. Unsafe filename characters in the title become hyphens; a filename clash adds the id suffix and never overwrites. See `autoPromote`. |
 | `wi status <ref> <status>` | Changes an item's status. Use `backlog`, `options`, `doing`, or `done`. Leaving `done` clears the recorded previous status. When the item was its parent's last open child, it says so; it does not close the parent. |
 | `wi note <ref> <text> [--agent <name>]` | Adds a dated line under Notes. It signs with `--agent` or `WI_AGENT`. It adds `WI_MODEL` when set, and refuses to write without a writer name. It wraps bare angle placeholders in backticks. It preserves code, links, autolinks, and HTML. A lock keeps two notes from overwriting each other. |
