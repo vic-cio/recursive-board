@@ -28,7 +28,7 @@ the agent (or person) that holds the card, so no script breaks. JSON output name
 
 The holder value `agent` is reserved. It means that any agent may take the card. It is not a name,
 so it is not counted as an active agent and it appears as a request in the dashboard Agents panel;
-the plugin shows it as "Any agent". `wi ready` lists these requests first, ahead of the priority order, while they sit in
+the plugin shows it as "Agent" (2026-10-04, Victor: "agent", not "any agent"). `wi ready` lists these requests first, ahead of the priority order, while they sit in
 options. A claim by any agent replaces `agent` with the claimant's name, so the request ends at the
 first claim. `wi claim --agent agent` is refused, and `wi delegate` refuses a person note called
 `agent`. A doing child does not inherit `holder: agent` from its parent: the request is for the

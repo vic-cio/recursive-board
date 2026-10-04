@@ -27,7 +27,7 @@ test('cardState reads the holder through the same rule', () => {
 test('agent is the reserved holder that means any agent', () => {
   assert.equal(ANY_AGENT, 'agent')
   assert.deepEqual(['agent', ' Agent ', 'agents', undefined].map(isAnyAgent), [true, true, false, false])
-  assert.equal(holderLabel('agent'), 'Any agent')
+  assert.equal(holderLabel('agent'), 'Agent')
   assert.equal(holderLabel('Ana'), 'Ana')
 })
 

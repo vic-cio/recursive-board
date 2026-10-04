@@ -35,7 +35,7 @@ export function clearHolderEdits(): Edit[] {
   return [{ op: 'remove', key: HOLDER }, { op: 'remove', key: LEGACY_HOLDER }]
 }
 
-/** The holder as a person reads it: a request for any agent says so. */
+/** The holder as a person reads it: the reserved holder reads Agent. */
 export function holderLabel(name: string): string {
-  return isAnyAgent(name) ? 'Any agent' : name
+  return isAnyAgent(name) ? 'Agent' : name
 }
