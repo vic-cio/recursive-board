@@ -18,7 +18,8 @@
   "files": [
     "dist/wi/",
     "docs/playbook.md",
-    "skills/"
+    "skills/",
+    "CHANGELOG.md"
   ],
   "scripts": {
     "test": "npm run typecheck && node --test 'src/**/*.test.ts' 'scripts/**/*.test.ts' 'scripts/**/*.test.mjs'",

@@ -56,12 +56,15 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           PLUGIN_DIR: ${{ steps.release_files.outputs.plugin_dir }}
+        # The notes quote the tag's "## [<version>]" section of CHANGELOG.md, then GitHub's generated list.
         run: |
+          awk -v v="$GITHUB_REF_NAME" '/^## \[/ { if (on) exit; on = index($0, "## [" v "]") == 1; next } on && !/^\[[^]]*\]: /' \
+            CHANGELOG.md > release-notes.md
           gh release create "$GITHUB_REF_NAME" \
             "$PLUGIN_DIR/main.js" \
             "$PLUGIN_DIR/manifest.json" \
             "$PLUGIN_DIR/styles.css" \
-            --title "$GITHUB_REF_NAME" --generate-notes --verify-tag
+            --title "$GITHUB_REF_NAME" --notes-file release-notes.md --generate-notes --verify-tag
       # npm trusted publishing: npm authenticates this job through its GitHub OIDC token (id-token: write).
       - name: Publish wi to npm
         run: |

@@ -85,8 +85,15 @@ that runs `wi` (Victor's global CLAUDE.md names them). The card lists what chang
 which of its scripts and notes it affects. A vault whose card says it is on hold keeps its version:
 install the release so that the held vault does not run it, or wait. Never migrate a held vault.
 
+Record each change in `CHANGELOG.md` under "Unreleased" when it merges. Put a change to what agents
+are told to do (the skill, roles, delegation, the review loop) under "Agent setup", the first
+section of the release. `wi update` prints that section.
+
 Bump `version` in `manifest.json`, `package.json` and `VERSION` in `src/cli/wi.ts`, update the matching
 `versions.json` entry to the manifest's `minAppVersion`, and update `package-lock.json`.
+In `CHANGELOG.md`, rename "Unreleased" to the version and date, add an empty "Unreleased" above it,
+and add the compare link. Do the same with the "Unreleased" heading in the Changes section of
+`docs/playbook.md`. The tag workflow quotes the version's `CHANGELOG.md` section in the GitHub release.
 Commit those files, then create and push a tag that equals the version exactly (no `v` prefix).
 The tag workflow tests, builds, creates the GitHub release, and publishes `wi` to npm.
 npm accepts the publish through trusted publishing: npmjs.com lists this repo and `release.yml` as the trusted publisher, so no npm token exists.
