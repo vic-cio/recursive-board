@@ -17,6 +17,7 @@
   },
   "files": [
     "dist/wi/",
+    "docs/playbook.md",
     "skills/"
   ],
   "scripts": {
