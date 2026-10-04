@@ -24,6 +24,7 @@ import { mountAll, unmountAll } from './mount.ts'
 import { ChecklistComponents } from './ui/checklist.ts'
 import type { RenderContext } from './ui/context.ts'
 import { MoveModal } from './ui/move-modal.ts'
+import { openLinkTarget } from './ui/open-link.ts'
 import { OpenModal } from './ui/open-modal.ts'
 import { CreateBoardModal } from './ui/create-board-modal.ts'
 import { createFirstBoard } from './first-board.ts'
@@ -212,6 +213,11 @@ export default class RecursiveBoardPlugin extends Plugin {
       this.actions.undoStack.rename(oldPath, file.path)
     }))
 
+    // obsidian://recursive-board?vault=<vault>&id=wi-xxxx opens the card, from any app.
+    this.registerObsidianProtocolHandler('recursive-board', (params) => {
+      this.app.workspace.onLayoutReady(() => void this.openLink(params.id))
+    })
+
     this.app.workspace.onLayoutReady(() => {
       if (!this.unloaded) {
         this.rememberActiveEditor()
@@ -232,6 +238,36 @@ export default class RecursiveBoardPlugin extends Plugin {
     this.firstBoardNotice = null
     unmountAll(this.app)
     this.checklistComponents.releaseAll()
+  }
+
+  /**
+   * Opens the card a link names. On a cold start the metadata cache may still be resolving when
+   * the layout is ready, so an id not found yet waits for the cache once before its notice.
+   */
+  private async openLink(id: string | undefined): Promise<void> {
+    if (this.unloaded) return
+    let target = openLinkTarget(this.index.all(), id)
+    if (target.item === null && id?.trim()) {
+      await this.cacheResolved()
+      if (this.unloaded) return
+      this.index.invalidate()
+      target = openLinkTarget(this.index.all(), id)
+    }
+    if (target.notice !== null) new Notice(target.notice)
+    if (target.item !== null) await this.actions.open(target.item)
+  }
+
+  /** Resolves on the next metadata cache `resolved` event, or after two seconds with none. */
+  private cacheResolved(): Promise<void> {
+    return new Promise((resolve) => {
+      const done = () => {
+        window.clearTimeout(timer)
+        this.app.metadataCache.offref(ref)
+        resolve()
+      }
+      const ref = this.app.metadataCache.on('resolved', done)
+      const timer = window.setTimeout(done, 2000)
+    })
   }
 
   private stale(): void {

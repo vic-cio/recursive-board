@@ -31,6 +31,8 @@ An item with `board: true` renders its children in status columns. Any other ite
 
 Every child card has a **Promote** control at the top, even before it has children. Promote it to give its own children a board. A one-line child count at the top jumps to the checklist below the note.
 
+A link of the form `obsidian://recursive-board?vault=<vault>&id=wi-xxxx` opens the card with that id, on desktop and mobile. Scripts and agents can print it. The id works with or without `wi-`. An unknown id shows a notice. When two cards share the id, the link opens the first and the notice names both.
+
 ## Vault configuration
 
 Set the board settings in **Settings → Recursive Board → Board**. The section sets the card folder, the default parent (`defaultRoot`), the extra sections (one chip per heading), and first-child promotion. The agent limit is under **Dispatcher**.
