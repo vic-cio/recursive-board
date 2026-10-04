@@ -410,7 +410,7 @@ export async function readPeople(root: string): Promise<Map<string, string>> {
 }
 
 /** Folders a vault keeps for tools, never for notes. */
-const NOT_NOTES = new Set(['.obsidian', '.git', '.trash', 'node_modules'])
+export const NOT_NOTES = new Set(['.obsidian', '.git', '.trash', 'node_modules'])
 
 function isMissingFile(error: unknown): boolean {
   return typeof error === 'object' && error !== null && 'code' in error && error.code === 'ENOENT'

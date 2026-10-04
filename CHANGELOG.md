@@ -26,6 +26,9 @@ the agent notes in your vault.
 - The command **Show recommended agent setup** shows the same summary in Obsidian, with a copy
   button for each text to paste. The notice after the first board links to it. It writes nothing
   to the vault.
+- `wi doctor` checks the install and the optional agent setup on request. Each check prints pass,
+  note or fix, and a fix prints the text to paste from the playbook. It writes nothing, and it
+  exits 1 only when the install is broken.
 
 ## [0.8.2] - 2026-10-04
 

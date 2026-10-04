@@ -9,6 +9,7 @@
  *
  * Exit codes: 0 fine, 1 the vault has errors, 2 the command could not run.
  */
+import { homedir } from 'node:os'
 import { resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
@@ -36,6 +37,7 @@ import { setPeople } from './commands/set.ts'
 import { dependenciesOf, openDependencies, titleOf } from './dependencies.ts'
 import { hookStatus, installHook, uninstallHook } from './commands/hook.ts'
 import { runSetup } from './commands/setup.ts'
+import { npmLatestVersion, renderDoctor, runDoctor } from './commands/doctor.ts'
 import { activeAgentsOf, dashboardPanels, dashboardSummary, renderDashboard, type DashboardPanel } from './commands/dashboard.ts'
 import { giveVerdict, sendForReview } from './commands/review.ts'
 import { COMMAND_FLAGS, parseCommandLine, type Values } from './flags.ts'
@@ -48,6 +50,7 @@ const HELP = `wi — the Recursive Board CLI
 
 Usage
   wi setup [--yes] [--vault <path>] [--force] [--json]
+  wi doctor [--json]
   wi new <title> [--parent <ref>] [--status <s>] [--template <t>] [--owner <o>] [--holder <h>]
                  [--priority <n>] [--objective <text>] [--context <text>]... [--criteria <text>]...
                  [--tag <tag>]... [--strict]
@@ -90,6 +93,10 @@ Notes
   \`wi setup\` ends with the optional recommended agent setup: the playbook's summary, the path of the
   installed docs/playbook.md, and wi doctor to check a vault. It writes nothing into the vault for
   it. --yes prints it too. --json prints one object and asks no questions; it needs --vault.
+  \`wi doctor\` checks the install and the optional agent setup from the playbook. Each check prints
+  pass, note or fix, and a fix prints the text to paste. It writes nothing. It exits 1 only when
+  the install is broken: Node is too old, the package is incomplete, the vault wi would use is
+  missing, or the plugin data cannot be read.
   Each command takes only the flags its usage line shows, plus --vault and --json where it reads a
   vault or prints a result. It refuses any other flag with exit 2 and names the flag.
   \`wi new\` writes the brief: --objective once, --context and --criteria once per paragraph or
@@ -188,6 +195,22 @@ async function main(argv: string[]): Promise<number> {
       cliEntry: fileURLToPath(import.meta.url),
     })
     return 0
+  }
+
+  if (command === 'doctor') {
+    if (rest.length > 0) throw new UsageError('wi doctor takes options only. Run wi --help for usage.')
+    const report = await runDoctor({
+      version: VERSION,
+      ...(typeof values['vault'] === 'string' ? { vaultFlag: values['vault'] } : {}),
+      env: process.env,
+      cwd: process.cwd(),
+      home: homedir(),
+      nodeVersion: process.versions.node,
+      latestVersion: () => npmLatestVersion(process.env),
+    })
+    if (values.json === true) print(report)
+    else process.stdout.write(renderDoctor(report))
+    return report.broken ? 1 : 0
   }
 
   if (command === 'here') return runHere()

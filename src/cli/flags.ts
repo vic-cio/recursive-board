@@ -53,6 +53,7 @@ const ALWAYS: Flag[] = ['help', 'version']
 /** The flags each command takes, besides --help and --version. */
 export const COMMAND_FLAGS: Record<string, Flag[]> = {
   setup: ['vault', 'yes', 'force', 'json'],
+  doctor: ['vault', 'json'],
   new: ['parent', 'status', 'template', 'owner', 'holder', 'priority', 'objective', 'context', 'criteria',
     'tag', 'strict', 'vault', 'json'],
   status: ['vault', 'json'],

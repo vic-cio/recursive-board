@@ -70,8 +70,16 @@ function isMissingFile(error: unknown): boolean {
   return isRecord(error) && error['code'] === 'ENOENT'
 }
 
-const MANAGED_MARKER = '.recursive-board-managed'
-const MANAGED_TEXT = 'Installed by wi setup.\n'
+export const MANAGED_MARKER = '.recursive-board-managed'
+export const MANAGED_TEXT = 'Installed by wi setup.\n'
+
+/** The two folders that wi setup copies the skill into. wi doctor checks the same two. */
+export function skillDestinations(home: string): string[] {
+  return [
+    join(home, '.claude', 'skills', 'recursive-board'),
+    join(home, '.agents', 'skills', 'recursive-board'),
+  ]
+}
 
 async function installSkillCopy(source: string, destination: string, force: boolean): Promise<'installed' | 'already-installed' | 'dev-link'> {
   let existing
@@ -220,10 +228,7 @@ export async function runSetup(options: SetupOptions): Promise<void> {
     }
   }
   if (!packagedSkill) throw new Error('the recursive-board skill is missing from this installation.')
-  const destinations = [
-    join(home, '.claude', 'skills', 'recursive-board'),
-    join(home, '.agents', 'skills', 'recursive-board'),
-  ]
+  const destinations = skillDestinations(home)
   const outcomes = await Promise.all(destinations.map((destination) =>
     installSkillCopy(packagedSkill, destination, options.force)))
   const configPath = await writeDefaultVault(vault)

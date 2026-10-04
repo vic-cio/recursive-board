@@ -24,6 +24,9 @@ to the user, and say that it is optional. Setup writes nothing into the vault fo
 vault's `AGENTS.md` or `Roles/` only when the user asks. `wi setup --json` gives the summary in
 `recommendedSetup`.
 
+When `wi` or the skill seems out of date, run `wi doctor`. It checks the install and prints a
+fix for each problem. It writes nothing.
+
 ## Before the first write
 
 If the vault root has an `AGENTS.md`, read it. The vault owner's rules there (what you may

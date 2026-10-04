@@ -91,6 +91,7 @@ test('wi template is a retired command and points to wi new --template without w
 /** Arguments that would make each command run, so a refusal must come before the work. */
 const INVOCATIONS: Record<string, string[]> = {
   setup: ['setup', '--yes'],
+  doctor: ['doctor'],
   new: ['new', 'Another card', '--parent', 'Main'],
   status: ['status', 'Build server', 'doing'],
   note: ['note', 'Build server', 'A note.'],

@@ -235,6 +235,7 @@ role-notes        Each role tag on an open card has a note that carries it.
 person-note       At least one note has type: person, so wi review has a reviewer.
 max-agents        The board settings set maxAgents to a whole number.
 skill             The recursive-board skill is installed for the agent harness.
+background-wait   No role or procedure note tells a worker to wait in a background task.
 ```
 
 ## Markers
@@ -250,3 +251,4 @@ Code reads this file. Keep these markers when you change it. `docs/adr/0067-the-
 ### Unreleased
 
 - First version: the recommended setup, the Agents and roles section, an example Coder role note, the Dispatching procedure, bypass permissions and their risk, lessons from runs, and the checks.
+- The `background-wait` check finds a role or procedure note that still tells a worker to wait in a background task.
