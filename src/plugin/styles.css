@@ -133,6 +133,8 @@
 
 .wi-breadcrumbs {
   display: flex;
+  /* On a narrow pane the controls wrap below the path, so neither squeezes the other. */
+  flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
   gap: 8px;
@@ -144,6 +146,7 @@
 
 .wi-crumb-trail {
   display: flex;
+  flex: 1 1 14em;
   flex-wrap: wrap;
   align-items: center;
   gap: 4px;
@@ -299,6 +302,17 @@
 .wi-peek:hover {
   background: var(--background-modifier-hover);
   color: var(--text-normal);
+}
+
+/* Obsidian's mobile buttons are tall pills; keep these as thin as the dashboard's Open board. */
+.is-mobile .wi-control {
+  height: auto;
+  padding: var(--size-4-1) var(--size-4-3);
+  font-size: var(--font-ui-small);
+}
+
+.is-mobile .wi-controls {
+  gap: 12px;
 }
 
 /* Only the durable control is accented. */
