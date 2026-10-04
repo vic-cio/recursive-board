@@ -46,8 +46,8 @@ warning and the panel cannot disagree.
   Not built. A card that waits on another card already says so with `depends_on` (0041), and a
   parent that waits on its steps is read from the board, as above. After 0063, wi starts no agent,
   and the agent that starts workers reads the count before each start. A prose note would be a
-  second wait model that the dashboard must parse and clear. This is a question for Victor on the
-  card wi-cavr.
+  second wait model that the dashboard must parse and clear. Victor rejected the note on
+  2026-10-04.
 
 ## Known gap
 
