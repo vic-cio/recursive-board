@@ -8,32 +8,32 @@ type Item = { id: string | undefined; title: string; status: 'backlog' | 'option
 const item = (id: string | undefined, title: string, extra: Partial<Item> = {}): Item =>
   ({ id, title, status: 'options', effectiveArchived: false, ...extra })
 
-const target = item('wi-td4p', 'Add an open-by-id command to the plugin')
+const target = item('wi-k7m3', 'Add an open-by-id command to the plugin')
 const items = [
   item('wi-a1b2', 'Price the demolition lines'),
-  item('wi-td4x', 'Tidy the dashboard head'),
+  item('wi-k7mx', 'Tidy the dashboard head'),
   target,
-  item('wi-zz99', 'Write the release notes for td4p'),
+  item('wi-zz99', 'Write the release notes for k7m3'),
   item(undefined, 'Main'),
 ]
 
 const titles = (found: readonly Item[]) => found.map((found) => found.title)
 
 test('an exact id ranks the card first', () => {
-  assert.equal(matchWorkItems(items, 'wi-td4p')[0], target)
+  assert.equal(matchWorkItems(items, 'wi-k7m3')[0], target)
 })
 
 test('a bare suffix ranks the card first, before a title that mentions it', () => {
-  const found = matchWorkItems(items, 'td4p')
+  const found = matchWorkItems(items, 'k7m3')
   assert.equal(found[0], target)
-  assert.deepEqual(titles(found), [target.title, 'Write the release notes for td4p'])
+  assert.deepEqual(titles(found), [target.title, 'Write the release notes for k7m3'])
 })
 
 test('an id prefix, with or without wi-, ranks the card first', () => {
-  for (const query of ['wi-td', 'td4', 'td4p'.slice(0, 2)]) {
+  for (const query of ['wi-k7', 'k7m', 'k7m3'.slice(0, 2)]) {
     assert.equal(matchWorkItems([items[0]!, items[3]!, target], query)[0], target, query)
   }
-  assert.deepEqual(titles(matchWorkItems(items, 'wi-td')), [target.title, 'Tidy the dashboard head'])
+  assert.deepEqual(titles(matchWorkItems(items, 'wi-k7')), [target.title, 'Tidy the dashboard head'])
 })
 
 test('part of a title ranks the card first', () => {
@@ -66,8 +66,8 @@ test('open cards rank before done and archived cards at the same match strength'
 })
 
 test('a stronger match on a done card still ranks before a weaker match on an open card', () => {
-  const found = matchWorkItems([item('wi-0001', 'Notes for td4p'), item('wi-td4p', 'Done work', { status: 'done' })], 'td4p')
-  assert.deepEqual(titles(found), ['Done work', 'Notes for td4p'])
+  const found = matchWorkItems([item('wi-0001', 'Notes for k7m3'), item('wi-k7m3', 'Done work', { status: 'done' })], 'k7m3')
+  assert.deepEqual(titles(found), ['Done work', 'Notes for k7m3'])
 })
 
 test('an empty query lists the open cards by title', () => {
@@ -89,18 +89,18 @@ test('wi- alone is not an id prefix of every card', () => {
 })
 
 test('findById returns the card for an id or a bare suffix, in any case', () => {
-  assert.deepEqual(findById(items, 'wi-td4p'), { item: target, duplicates: [] })
-  assert.deepEqual(findById(items, ' TD4P '), { item: target, duplicates: [] })
+  assert.deepEqual(findById(items, 'wi-k7m3'), { item: target, duplicates: [] })
+  assert.deepEqual(findById(items, ' K7M3 '), { item: target, duplicates: [] })
 })
 
 test('findById returns null for an unknown, partial or empty id', () => {
   assert.equal(findById(items, 'wi-nope'), null)
-  assert.equal(findById(items, 'td4'), null)
+  assert.equal(findById(items, 'k7m'), null)
   assert.equal(findById(items, ''), null)
   assert.equal(findById(items, 'wi-'), null)
 })
 
 test('findById names the other cards that hold a duplicate id', () => {
-  const copy = item('wi-td4p', 'A copied card', { status: 'done' })
-  assert.deepEqual(findById([...items, copy], 'wi-td4p'), { item: target, duplicates: [copy] })
+  const copy = item('wi-k7m3', 'A copied card', { status: 'done' })
+  assert.deepEqual(findById([...items, copy], 'wi-k7m3'), { item: target, duplicates: [copy] })
 })

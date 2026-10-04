@@ -36,7 +36,7 @@ function strength(item: Matchable, query: string, suffix: string, words: readonl
 
 /**
  * The items that match the query, best first. An empty query lists the open items by title.
- * The query may be a full id (`wi-td4p`), a bare suffix (`td4p`), an id prefix, or part of a title.
+ * The query may be a full id (`wi-k7m3`), a bare suffix (`k7m3`), an id prefix, or part of a title.
  */
 export function matchWorkItems<T extends Matchable>(items: readonly T[], query: string): T[] {
   const typed = normalise(query)

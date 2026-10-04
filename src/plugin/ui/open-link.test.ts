@@ -7,15 +7,15 @@ type Item = { id: string | undefined; title: string; status: 'backlog' | 'option
 
 const item = (id: string | undefined, title: string): Item => ({ id, title, status: 'options', effectiveArchived: false })
 
-const target = item('wi-td4p', 'Add an open-by-id command to the plugin')
+const target = item('wi-k7m3', 'Add an open-by-id command to the plugin')
 const items = [item('wi-a1b2', 'Price the demolition lines'), target, item(undefined, 'Main')]
 
 test('a full id opens the card with no notice', () => {
-  assert.deepEqual(openLinkTarget(items, 'wi-td4p'), { item: target, notice: null })
+  assert.deepEqual(openLinkTarget(items, 'wi-k7m3'), { item: target, notice: null })
 })
 
 test('a bare suffix, in any case and with spaces, opens the card', () => {
-  assert.deepEqual(openLinkTarget(items, ' TD4P '), { item: target, notice: null })
+  assert.deepEqual(openLinkTarget(items, ' K7M3 '), { item: target, notice: null })
 })
 
 test('a missing or empty id opens nothing and says the link names no id', () => {
@@ -31,9 +31,9 @@ test('an unknown id opens nothing and the notice names the id', () => {
 })
 
 test('a duplicate id opens the first card and the notice names the clash', () => {
-  const copy = item('wi-td4p', 'Copied card')
-  const found = openLinkTarget([...items, copy], 'td4p')
+  const copy = item('wi-k7m3', 'Copied card')
+  const found = openLinkTarget([...items, copy], 'k7m3')
   assert.equal(found.item, target)
   assert.equal(found.notice,
-    '2 cards have the id wi-td4p: Add an open-by-id command to the plugin, Copied card. Opened the first. Run wi validate to find them.')
+    '2 cards have the id wi-k7m3: Add an open-by-id command to the plugin, Copied card. Opened the first. Run wi validate to find them.')
 })
