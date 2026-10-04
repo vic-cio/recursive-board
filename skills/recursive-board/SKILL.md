@@ -99,8 +99,8 @@ In Obsidian, use **Promote** at the top of any child card to give it its own boa
   source or fact, a `--criteria` per checkable result. `wi` warns when the brief is missing.
 - A new card does not inherit its parent's owner. Pass `--owner` to set an owner on a `wi new` card.
 - The board's add row also creates a child without an owner. Accountability follows the parent tree.
-- Record progress with `wi note`. It locks the card, so a dispatcher and its worker can write
-  at the same moment. Set `WI_AGENT` or pass `--agent` before writing. Leave the frontmatter to `wi`.
+- Record progress with `wi note`. It locks the card, so a parent worker and its child worker can
+  write at the same moment. Set `WI_AGENT` or pass `--agent` before writing. Leave the frontmatter to `wi`.
 - The first child a card gets turns the card into a board, unless the vault sets
   `autoPromote: false`.
 - To untick a done item, set it back to its `prev_status`.
@@ -108,7 +108,7 @@ In Obsidian, use **Promote** at the top of any child card to give it its own boa
 - A card's `holder` names the person or agent who does its work. An old card's `agent` is read as
   its holder. `holder: agent` asks for any agent: `wi ready` lists those cards first, and your
   claim replaces `agent` with your name.
-- A dispatcher claims cards from options for its workers. `wi claim` refuses a card held by a
+- `wi claim` refuses a card held by a
   different holder, a done card, or a board with a child in doing that someone else works. `wi claim`
   and `wi status <ref> doing` refuse a card with an open dependency. `wi children` marks it
   `[waits on N]`, and `wi status <ref> done` names each card it unblocks. When work must wait for
@@ -116,9 +116,9 @@ In Obsidian, use **Promote** at the top of any child card to give it its own boa
   agent can hold a card and its current subtask. A repeat by the same agent in doing writes nothing.
 - `wi status <ref> done` says when that was the parent's last open child. Check the parent's own
   criteria, then close it.
-- Before it starts an agent, a dispatcher reads `wi dashboard --panel agents`. It counts agents, not cards, and lists
+- Before it starts an agent, a worker reads `wi dashboard --panel agents`. It counts agents, not cards, and lists
   each agent's doing cards. A card whose open children are all in doing only waits, so it does not
-  make its agent count. The dispatcher holds off when `activeAgents` reaches `maxAgents`;
+  make its agent count. The worker holds off when `activeAgents` reaches `maxAgents`;
   `null` means no limit is set. `WI_MAX_AGENTS` overrides the vault setting for one run. This
   limit is advisory: `wi claim` does not enforce it.
 - To report the state of the boards to a person, run `wi dashboard --you <name> --json`. It
@@ -130,9 +130,9 @@ In Obsidian, use **Promote** at the top of any child card to give it its own boa
   To assign a card to a person, use `wi delegate <card> --to <name>` with a note of
   `type: person`; the card does not count in the dashboard Agents panel. To leave a card for any
   agent, use `--to agent`. Delegating sets the holder and nothing else; the status stays.
-- A dispatcher records each event on the card (start, finish, retry, stop) with
-  `wi note <card> "<event>" --agent <its name>`.
-- When a worker stops, its dispatcher runs `wi release` with a reason and, when available, the
+- A worker that starts workers records each event on the child card (start, finish, retry, stop)
+  with `wi note <child> "<event>"`.
+- When a worker stops early, the worker that started it runs `wi release` with a reason and, when available, the
   branch or worktree path. Release clears the holder, returns the card to options, and records the
   continuation location in Notes.
 - Old `area/...` tags stay on existing cards. The board hides them, and Tags… leaves them out.
@@ -147,11 +147,11 @@ worker start it. The children are the todo list: move each child to done when it
 parent is done when every child is done. A worker reads its card's open children as its scope, so
 the board shows what is still open.
 
-## Working under a dispatcher
+## Working as a worker
 
-A worker is an agent that a dispatcher (a script or another agent) started on one card, with its
-harness's own tools. The owner
-follows the work on the board, so the board is the live record of what each worker does now. Use
+A worker is an agent that works one card. A person, a script or another worker started it, with a
+harness's own tools. Any worker may start workers on its own children. The owner follows the work
+on the board, so the board is the live record of what each worker does now. Use
 your own agent name everywhere `<me>` appears.
 
 Set `WI_AGENT` to your name and `WI_MODEL` to your model, or pass `--holder` to `wi claim` and
@@ -167,15 +167,19 @@ section. `wi delegate --role <name>` and `wi tag <ref> role/<name>` add one.
 2. Split it before you start when it holds more than one deliverable. Make each step a child with
    a full brief: `wi new "<title>" --parent <card> --objective ... --criteria ...`. Set
    `--priority` when the order matters.
-3. Work one child at a time, live:
+3. When a child is big enough for its own agent, you may start a worker on it with your harness's
+   tools, as "wi starts no agent" above says. Read the agent limit first, give the worker its own
+   branch or worktree, wait for it, and merge its result into yours. Your vault's `AGENTS.md` may
+   name a procedure for this, with the launch line to use.
+4. Work each other child yourself, one at a time, live:
    1. `wi claim <child>` before its work starts.
    2. Do the work.
    3. `wi note <child> "<result, and where it is>"`.
    4. `wi status <child> done`.
-4. Note a decision or a blocker on the card as it happens, with `wi note`.
-5. When the card's criteria are met, note the result and run `wi status <card> done`. When you
+5. Note a decision or a blocker on the card as it happens, with `wi note`.
+6. When the card's criteria are met, note the result and run `wi status <card> done`. When you
    cannot go on, run `wi release <card> --reason <why> --where <location>`.
-6. Run `wi validate`.
+7. Run `wi validate`.
 
 The board is the log of the work, not a report written after it. Each claim comes before its
 work, so a card sits in doing for as long as its work takes.
@@ -193,10 +197,10 @@ is.
    the card and ask for approval; wait before doing the work.
 3. Claim it with `wi claim <card> --holder <agent name>`. In a Git repo, work on a new
    `card/<slug>` branch, run the repo's tests and commit the result. Track subtasks as in
-   "Working under a dispatcher", step 3.
+   "Working as a worker", steps 3 and 4.
 4. If the work is too large or cannot finish, stop with a split proposal or continuation note in
    your report, then run `wi release <card> --reason <reason> --where <branch-or-path>`. Let the
-   dispatcher decide whether to create child cards.
+   owner decide whether to create child cards.
 5. When finished, run `wi note <card> "<result, and its branch or location>"`. Leave the card in
    `doing` and stop for review. Merge, push and publish wait for the owner's verdict.
 
