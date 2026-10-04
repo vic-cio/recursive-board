@@ -91,3 +91,9 @@ test('the README links the playbook as optional', () => {
   const readme = readFileSync(new URL('../README.md', import.meta.url), 'utf8')
   assert.match(readme, /optional \[agent playbook\]\(docs\/playbook\.md\)/i)
 })
+
+test('the shared parser reads every marked block and check of the shipped playbook', async () => {
+  const { playbookBlocks, playbookChecks } = await import('../src/shared/playbook.ts')
+  assert.deepEqual([...playbookBlocks(playbook).keys()].sort(), [...BLOCKS].sort())
+  assert.equal(playbookChecks(playbook).length, block('checks').split('\n').length)
+})

@@ -10,6 +10,12 @@ the agent notes in your vault.
 
 ## [Unreleased]
 
+### Agent setup
+
+- The package ships an optional agent playbook, `docs/playbook.md`. It describes one setup that
+  works: role notes, a shared Dispatching procedure, headless workers, the agent limit and the
+  review loop. Recursive Board works the same without it.
+
 ## [0.8.2] - 2026-10-04
 
 ### Added

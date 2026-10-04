@@ -42,7 +42,9 @@ against it. Code finds each part by these markers. A change to them is a change 
   the playbook, newest first. A heading is a version number, such as `0.9.0`, or `Unreleased` for
   the next release. The release step renames `Unreleased` to the version.
 
-`scripts/playbook.test.ts` holds a reader for this grammar and checks the file against it.
+`src/shared/playbook.ts` reads this grammar for `wi` and the plugin alike. It imports nothing
+from Node, so the plugin can read a playbook bundled into it. `scripts/playbook.test.ts` checks
+the shipped file against the grammar.
 
 ## Rejected
 
