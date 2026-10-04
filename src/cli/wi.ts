@@ -38,6 +38,8 @@ import { dependenciesOf, openDependencies, titleOf } from './dependencies.ts'
 import { hookStatus, installHook, uninstallHook } from './commands/hook.ts'
 import { runSetup } from './commands/setup.ts'
 import { npmLatestVersion, renderDoctor, runDoctor } from './commands/doctor.ts'
+import { realUpdateSeams, runUpdate } from './commands/update.ts'
+import { packageRoot } from './package-files.ts'
 import { activeAgentsOf, dashboardPanels, dashboardSummary, renderDashboard, type DashboardPanel } from './commands/dashboard.ts'
 import { giveVerdict, sendForReview } from './commands/review.ts'
 import { COMMAND_FLAGS, parseCommandLine, type Values } from './flags.ts'
@@ -51,6 +53,7 @@ const HELP = `wi — the Recursive Board CLI
 Usage
   wi setup [--yes] [--vault <path>] [--force] [--json]
   wi doctor [--json]
+  wi update [--dry-run] [--from <version>] [--vault <path>] [--json]
   wi new <title> [--parent <ref>] [--status <s>] [--template <t>] [--owner <o>] [--holder <h>]
                  [--priority <n>] [--objective <text>] [--context <text>]... [--criteria <text>]...
                  [--tag <tag>]... [--strict]
@@ -161,6 +164,10 @@ Notes
   .obsidian/plugins/recursive-board/data.json. wi reads them and never writes them.
   \`wi new\` warns when a hidden file sits in the work-item folder, because a new id or filename may clash with it.
   \`wi here\` is retired and changes nothing. A project's AGENTS.md names its board: pass it as --parent.
+  \`wi update\` installs the newest recursive-board with npm, then runs the new wi to refresh both skill
+  copies and the vault's plugin files, and prints the changelog's Agent setup changes. It leaves a
+  symlinked development copy alone, and does not create a missing plugin folder. --dry-run writes
+  nothing. --from <version> skips the install and names the old version.
   \`wi trace\` was removed in 0.8.0. Use \`wi show <ref> --json\` to read a card's Knowledge links.
 `
 
@@ -195,6 +202,15 @@ async function main(argv: string[]): Promise<number> {
       cliEntry: fileURLToPath(import.meta.url),
     })
     return 0
+  }
+  if (command === 'update') {
+    if (rest.length > 0) throw new UsageError('wi update takes options only. Run wi --help for usage.')
+    return runUpdate({
+      dryRun: values['dry-run'] === true,
+      json: values.json === true,
+      ...(typeof values['from'] === 'string' ? { from: values['from'] } : {}),
+      ...(typeof values['vault'] === 'string' ? { vault: values['vault'] } : {}),
+    }, realUpdateSeams(packageRoot(), VERSION))
   }
 
   if (command === 'doctor') {

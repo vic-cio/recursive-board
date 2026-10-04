@@ -18,6 +18,7 @@ the agent notes in your vault.
 - `wi setup` ends with the playbook's recommended setup, the path of the installed playbook, and
   `wi doctor`. An agent that runs setup shows that summary to the user, and says that it is
   optional. Setup copies no role note and writes no `AGENTS.md`.
+- The skill tells agents to update with `wi update`, and to run `wi update --dry-run` first.
 
 ### Added
 
@@ -29,6 +30,11 @@ the agent notes in your vault.
 - `wi doctor` checks the install and the optional agent setup on request. Each check prints pass,
   note or fix, and a fix prints the text to paste from the playbook. It writes nothing, and it
   exits 1 only when the install is broken.
+- `wi update` installs the newest package, then refreshes both skill copies and the default
+  vault's plugin files from it. It prints the Agent setup changes since the old version.
+  `--dry-run` writes nothing.
+- The npm package ships the plugin build: `dist/main.js`, `dist/manifest.json` and
+  `dist/styles.css`.
 
 ## [0.8.2] - 2026-10-04
 

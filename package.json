@@ -17,6 +17,9 @@
   },
   "files": [
     "dist/wi/",
+    "dist/main.js",
+    "dist/manifest.json",
+    "dist/styles.css",
     "docs/playbook.md",
     "skills/",
     "CHANGELOG.md"
@@ -34,7 +37,7 @@
     "install:vault": "node build/install.mjs",
     "link:dev": "node build/install.mjs --vault test --link",
     "install:skill": "node scripts/install-skill.mjs",
-    "prepack": "npm run build:wi"
+    "prepack": "npm run build"
   },
   "devDependencies": {
     "@types/node": "^26.6.2",

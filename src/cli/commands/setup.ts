@@ -81,7 +81,7 @@ export function skillDestinations(home: string): string[] {
   ]
 }
 
-async function installSkillCopy(source: string, destination: string, force: boolean): Promise<'installed' | 'already-installed' | 'dev-link'> {
+export async function installSkillCopy(source: string, destination: string, force: boolean): Promise<'installed' | 'already-installed' | 'dev-link'> {
   let existing
   try {
     existing = await lstat(destination)

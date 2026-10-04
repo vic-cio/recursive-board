@@ -119,6 +119,8 @@ Before listing, you can install a release manually:
 
 Reload Obsidian after replacing plugin files. If your vault syncs its `.obsidian` folder, the sync client can copy the installed plugin to your other devices. Sync behavior depends on that client's settings.
 
+`wi update` replaces these three files in the default vault from the `wi` package. It does not create the folder.
+
 ## Install `wi`
 
 `wi` is the CLI package `recursive-board`. It requires Node.js 20.12 or later and installs the `wi` binary:
@@ -130,6 +132,22 @@ wi setup
 ```
 
 `wi setup` ends with the optional recommended agent setup. It prints the summary of the [agent playbook](docs/playbook.md), the path of the installed `docs/playbook.md`, and `wi doctor`, the command that checks a vault against it. Setup writes nothing into the vault for it and stores no state. `--yes` prints the same text. `--json` prints one object, with the summary in `recommendedSetup`, and asks no questions, so it needs `--vault <path>`.
+
+To update, run `wi update`:
+
+```sh
+wi update --dry-run
+wi update
+```
+
+It does four steps, and reports each one:
+
+1. It installs the newest `recursive-board` with npm.
+2. It replaces both skill copies, as `wi setup` installs them.
+3. It replaces `main.js`, `manifest.json`, and `styles.css` in the default vault's plugin folder. Then it says to reload Obsidian, and to force-quit and open it again on the phone.
+4. It prints the changelog's Agent setup changes since your old version, and suggests `wi doctor`.
+
+At the current version, it installs nothing and still refreshes the skill and plugin copies. It leaves symlinked development installs alone. It does not create a missing plugin folder: install the plugin as [Install the Obsidian plugin](#install-the-obsidian-plugin) says. `--dry-run` writes nothing.
 
 Pass `--vault <path>`, set `WI_VAULT`, run `wi` inside a vault, or set `defaultVault` with `wi setup`. Commands accept a work-item id, filename, or title as a reference. An id takes precedence when references are ambiguous. Add `--json` for machine-readable output. The `--vault <path>` and `--json` flags apply to all commands.
 
@@ -159,6 +177,7 @@ The pre-commit hook runs `wi validate` and stops a commit when the vault has err
 | --- | --- |
 | `wi setup [--yes] [--vault <path>] [--force] [--json]` | Installs the agent skill, selects and saves a default vault, and offers the Git validation hook for a Git vault. It ends with the optional recommended agent setup and writes nothing into the vault for it. `--yes` requires `--vault` and asks no questions. `--json` prints one object, asks no questions, and requires `--vault`. |
 | `wi doctor [--json]` | Checks the install and the optional agent setup, and prints each check as pass, note or fix. A fix prints the command to run or the text to paste. It writes nothing. It exits 1 only when the install is broken (docs/adr/0070-wi-doctor-checks-on-request.md). |
+| `wi update [--dry-run] [--from <version>] [--vault <path>]` | Installs the newest package with npm, then runs the new `wi` to refresh both skill copies and the vault's plugin files. It prints the changelog's Agent setup changes and suggests `wi doctor`. `--dry-run` writes nothing. `--from <version>` skips the install and names the old version. |
 | `wi new <title> [--parent <ref>] [--status <status>] [--template <name>] [--owner <name>] [--holder <name>] [--priority <number>] [--objective <text>] [--context <text>]... [--criteria <text>]... [--strict]` | Creates a work item under the given parent. It does not copy the parent's owner; pass `--owner` to set one. If `--parent` is omitted, uses `defaultRoot` from the board settings. The brief flags fill the body: repeat `--context` for each paragraph and `--criteria` for each criterion. It wraps bare angle placeholders in backticks and preserves code, links, autolinks, and HTML. It warns when the card has no Objective or Acceptance Criteria, and `--strict` refuses the card instead. Unsafe filename characters in the title become hyphens; a filename clash adds the id suffix and never overwrites. See `autoPromote`. |
 | `wi status <ref> <status>` | Changes an item's status. Use `backlog`, `options`, `doing`, or `done`. Leaving `done` clears the recorded previous status. When the item was its parent's last open child, it says so; it does not close the parent. |
 | `wi note <ref> <text> [--agent <name>]` | Adds a dated line under Notes. It signs with `--agent` or `WI_AGENT`. It adds `WI_MODEL` when set, and refuses to write without a writer name. It wraps bare angle placeholders in backticks. It preserves code, links, autolinks, and HTML. A lock keeps two notes from overwriting each other. |

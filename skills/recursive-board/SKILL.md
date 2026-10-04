@@ -27,6 +27,10 @@ vault's `AGENTS.md` or `Roles/` only when the user asks. `wi setup --json` gives
 When `wi` or the skill seems out of date, run `wi doctor`. It checks the install and prints a
 fix for each problem. It writes nothing.
 
+To update, run `wi update`. It installs the newest package, refreshes both skill copies and the
+vault's plugin files, and prints the changelog's Agent setup changes. Run `wi update --dry-run`
+first to see what it would change.
+
 ## Before the first write
 
 If the vault root has an `AGENTS.md`, read it. The vault owner's rules there (what you may

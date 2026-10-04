@@ -29,6 +29,7 @@ const OPTIONS = {
   files: { type: 'string', multiple: true },
   note: { type: 'string' },
   comment: { type: 'string' },
+  from: { type: 'string' },
   strict: { type: 'boolean' },
   vault: { type: 'string' },
   board: { type: 'string' },
@@ -54,6 +55,7 @@ const ALWAYS: Flag[] = ['help', 'version']
 export const COMMAND_FLAGS: Record<string, Flag[]> = {
   setup: ['vault', 'yes', 'force', 'json'],
   doctor: ['vault', 'json'],
+  update: ['from', 'dry-run', 'vault', 'json'],
   new: ['parent', 'status', 'template', 'owner', 'holder', 'priority', 'objective', 'context', 'criteria',
     'tag', 'strict', 'vault', 'json'],
   status: ['vault', 'json'],
