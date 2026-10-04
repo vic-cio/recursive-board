@@ -185,11 +185,21 @@ test('wi dashboard --panel selects panels in JSON and text output', async () => 
   assert.equal(report.people[0].person, 'Ana')
   assert.deepEqual(report.people[0].cards.map((card: { status: string }) => card.status), ['options'])
   assert.equal(report.agents.maxAgents, null)
-  assert.equal(report.agents.activeAgents, 3)
+  assert.equal(report.agents.activeAgents, 2, 'Builder and Clerk work; Writer waits for a verdict')
   const text = await run('node', [CLI, 'dashboard', '--panel', 'people'], { env })
   assert.match(text.stdout, /^people$/m)
   assert.match(text.stdout, /options  wi-person  People task/)
   assert.doesNotMatch(text.stdout, /^review/m)
+})
+
+test('the agent count skips a claim that waits for a review verdict', async () => {
+  fixture = seed()
+  const before = (await dashboardSummary(await loadVault(fixture.root), { you: 'Ana', now: NOW })).agents.activeAgents
+  fixture.write('Boards/Sent.md', item({ type: 'work-item', id: 'wi-sent', title: 'Sent', parent: '"[[Work]]"', status: 'doing', holder: 'Reviewer bot', owner: 'Ana' },
+    '## Notes\n\n- 2026-09-30 11:00, Reviewer bot: **Review:** Check it.\n'))
+  fixture.write('Boards/Busy.md', item({ type: 'work-item', id: 'wi-busy', title: 'Busy', parent: '"[[Work]]"', status: 'doing', holder: 'Busy bot' }))
+  const after = (await dashboardSummary(await loadVault(fixture.root), { you: 'Ana', now: NOW })).agents.activeAgents
+  assert.equal(after, before + 1, 'Busy bot counts; Reviewer bot only waits for the verdict')
 })
 
 test('the Agents panel marks a claim that only waits on its steps, and does not count it', async () => {
@@ -200,7 +210,7 @@ test('the Agents panel marks a claim that only waits on its steps, and does not 
   const summary = await dashboardSummary(await loadVault(fixture.root), { you: 'Ana', now: NOW })
   assert.deepEqual(summary.agents.working.map((row) => [row.id, row.waiting]),
     [['wi-lead', true], ['wi-step', false], ['wi-grid', false]])
-  assert.equal(summary.agents.activeAgents, 4, 'Writer, Builder, Clerk and Helper work; Lead only waits')
+  assert.equal(summary.agents.activeAgents, 3, 'Builder, Clerk and Helper work; Writer waits for a verdict; Lead only waits')
   assert.equal(summary.progress.find((row) => row.name === 'Work')!.working, 2, 'the badge skips the waiting claim')
 
   const { stdout } = await run('node', [CLI, 'dashboard', '--panel', 'agents'], {

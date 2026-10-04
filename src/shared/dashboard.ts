@@ -285,22 +285,27 @@ export function waitsOnChildren<T extends DashItem>(card: T, tree: DashTree<T>):
 /**
  * Distinct agent holders, in lower case, that work a doing card. People and requests for any agent
  * are not agents. A card that only waits on its children does not make its holder active, so a
- * full tree of agents cannot deadlock on the limit.
+ * full tree of agents cannot deadlock on the limit. Nor does a card that waits for a review
+ * verdict: `awaitsReview` says which, because only the caller has the card's text.
  */
-export function activeAgentNames<T extends DashItem>(cards: T[], people: string[], tree: DashTree<T>): Set<string> {
+export function activeAgentNames<T extends DashItem>(
+  cards: T[], people: string[], tree: DashTree<T>, awaitsReview: (card: T) => boolean = () => false,
+): Set<string> {
   const personNames = new Set(people.map((name) => name.trim().toLowerCase()))
   const active = new Set<string>()
   for (const card of cards) {
     const holder = card.holder?.trim().toLowerCase()
     if (card.status === 'doing' && holder && !isAnyAgent(holder) && !personNames.has(holder) &&
-      !waitsOnChildren(card, tree)) active.add(holder)
+      !waitsOnChildren(card, tree) && !awaitsReview(card)) active.add(holder)
   }
   return active
 }
 
 /** The number of agents that count against `maxAgents`. */
-export function activeAgentCount<T extends DashItem>(cards: T[], people: string[], tree: DashTree<T>): number {
-  return activeAgentNames(cards, people, tree).size
+export function activeAgentCount<T extends DashItem>(
+  cards: T[], people: string[], tree: DashTree<T>, awaitsReview: (card: T) => boolean = () => false,
+): number {
+  return activeAgentNames(cards, people, tree, awaitsReview).size
 }
 
 /** One flat list of claims in the focus, newest first. Idle claims belong to Needs attention. */

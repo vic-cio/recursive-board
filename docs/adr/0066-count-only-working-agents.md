@@ -49,6 +49,14 @@ warning and the panel cannot disagree.
   second wait model that the dashboard must parse and clear. Victor rejected the note on
   2026-10-04.
 
+## Amendment 2026-10-04: a claim that waits for a verdict
+
+A doing card whose newest `**Review:**` note follows its last verdict does not make its holder
+active either. Its agent has finished and waits for the reviewer. Before this, cards sent for review
+kept their holders in the count, and concierge read 9 of 8 with 5 agents working. Only the caller
+has the card's text, so `activeAgentNames` takes an `awaitsReview` predicate: the CLI reads the
+text it has loaded, and the plugin reads each claimed doing card with `cachedRead`.
+
 ## Known gap
 
 A parent that works on its own while every child runs is not counted. The rule reads the board,

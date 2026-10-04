@@ -11,6 +11,7 @@ import {
   activeAgentCount, activeAgentNames, agentFeed, agentRequests, cardsInScope, groupName, groupUnder, inFocus, needsAttention, parseReviewLine, peopleFeed, progress,
   waitsForReview, workingBadge, type AgentRow, type DashItem, type DashTree,
 } from '../../shared/dashboard.ts'
+import { awaitsReviewVerdict } from '../../shared/review.ts'
 import { dependenciesOf, titleOf } from '../dependencies.ts'
 import { maxAgentsForRun, readPeople, type Vault, type WorkItem } from '../vault.ts'
 
@@ -69,6 +70,11 @@ function treeOf(vault: Vault, cards: Map<WorkItem, Card>): DashTree<Card> {
   }
 }
 
+/** A card that waits for a review verdict does not make its holder an active agent. */
+function awaitsVerdict(card: { item: { text: string } }): boolean {
+  return awaitsReviewVerdict(card.item.text)
+}
+
 /**
  * The agents that count against `maxAgents`, in lower case, by the dashboard's own rule
  * (docs/adr/0066-count-only-working-agents.md). `wi claim` warns from this set.
@@ -76,7 +82,7 @@ function treeOf(vault: Vault, cards: Map<WorkItem, Card>): DashTree<Card> {
 export async function activeAgentsOf(vault: Vault): Promise<Set<string>> {
   const cards = await cardsOf(vault)
   const people = [...(await readPeople(vault.root)).values()]
-  return activeAgentNames([...cards.values()], people, treeOf(vault, cards))
+  return activeAgentNames([...cards.values()], people, treeOf(vault, cards), awaitsVerdict)
 }
 
 export async function dashboardSummary(vault: Vault, options: DashboardOptions = {}) {
@@ -135,7 +141,7 @@ export async function dashboardSummary(vault: Vault, options: DashboardOptions =
     })),
     agents: {
       maxAgents: maxAgentsForRun(vault),
-      activeAgents: activeAgentCount([...cards.values()], people, tree),
+      activeAgents: activeAgentCount([...cards.values()], people, tree, awaitsVerdict),
       requests: agentRequests(focused).map((card) => ({ ...identity(card), status: card.status! })),
       working: feed.working.map(claim), idle: feed.idle.map(claim), finished: feed.finished.map(claim),
     },

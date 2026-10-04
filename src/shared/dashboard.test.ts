@@ -104,6 +104,17 @@ test('the active count skips a doing card whose open children are all in doing',
   assert.equal(activeAgentCount(items, [], tree), 3, 'lead counts through a card it works')
 })
 
+test('the active count skips a doing card that waits for a review verdict', () => {
+  const { items, add, tree } = vault()
+  const root = add('Home', null)
+  const sent = add('Sent', root, { status: 'doing', holder: 'worker-1', owner: 'Ana' })
+  add('Working', root, { status: 'doing', holder: 'worker-2' })
+  assert.equal(activeAgentCount(items, [], tree), 2, 'with no review rule, both count')
+  const awaits = (card: typeof sent) => card === sent
+  assert.deepEqual([...activeAgentNames(items, [], tree, awaits)], ['worker-2'])
+  assert.equal(activeAgentCount(items, [], tree, awaits), 1, 'worker-1 only waits for the verdict')
+})
+
 test('an agent that holds a card and its current subtask still counts once', () => {
   const { items, add, tree } = vault()
   const root = add('Home', null)

@@ -9,7 +9,7 @@ import { ItemView, Notice, Platform, setIcon, TFile, type WorkspaceLeaf } from '
 import type { Actions } from '../actions.ts'
 import type { WorkItemIndex, WorkItemMeta } from '../index.ts'
 import { noteStamp } from '../../shared/notes.ts'
-import type { Verdict } from '../../shared/review.ts'
+import { awaitsReviewVerdict, type Verdict } from '../../shared/review.ts'
 import { SendBackModal } from './send-back-modal.ts'
 import {
   activeAgentCount, ago, agentFeed, agentRequests, areaPath, cardsInScope, groupName, groupUnder, inFocus, isLoopbackWebAddress, isWebAddress, needsAttention, parseReviewLine, peopleFeed, progress, reviewPresentationForMode, reviewVerdictReadiness, tickCounts, waitsForReview, workingBadge,
@@ -121,6 +121,7 @@ export class DashboardView extends ItemView {
     const cards = cardsInScope(all, root, tree)
     const focus = all.find((item) => item.area && item.file.path === state.focus) ?? null
     const reviews = await this.reviews(cards, state.you, state.webReviewMode, tree, focus)
+    const awaiting = await this.awaitingVerdict(all)
     if (generation !== this.generation) return
 
     const el = this.contentEl
@@ -142,7 +143,7 @@ export class DashboardView extends ItemView {
     this.drawReviews(main.createDiv('wi-dash-panel'), reviews, state)
     const side = lower.createDiv('wi-dash-panel')
     this.drawProgress(side, cards, tree, focus, feed)
-    this.drawAgents(side, feed, state, this.host.index.config.maxAgents, activeAgentCount(all, people, tree),
+    this.drawAgents(side, feed, state, this.host.index.config.maxAgents, activeAgentCount(all, people, tree, (card) => awaiting.has(card)),
       agentRequests(cards.filter((card) => inFocus(card, focus, tree))))
     this.drawPeople(side.createDiv('wi-dash-panel'), peopleRows)
   }
@@ -192,6 +193,16 @@ export class DashboardView extends ItemView {
       open.createSpan({ text: `Open ${board.title}` })
       open.onclick = () => void this.openFile(board.file)
     }
+  }
+
+  /** Claimed doing cards whose newest review request has no verdict yet. They do not count as agents. */
+  private async awaitingVerdict(cards: WorkItemMeta[]): Promise<Set<WorkItemMeta>> {
+    const awaiting = new Set<WorkItemMeta>()
+    for (const card of cards) {
+      if (card.status !== 'doing' || card.holder === undefined) continue
+      if (awaitsReviewVerdict(await this.app.vault.cachedRead(card.file))) awaiting.add(card)
+    }
+    return awaiting
   }
 
   private async reviews(
