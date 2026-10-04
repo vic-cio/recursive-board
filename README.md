@@ -31,7 +31,7 @@ An item with `board: true` renders its children in status columns. Any other ite
 
 Every child card has a **Promote** control at the top, even before it has children. Promote it to give its own children a board. A one-line child count at the top jumps to the checklist below the note.
 
-The command **Open work item…** finds a card by part of its id or its title, and opens it. Type a full id (`wi-k7m3`), the part after `wi-` (`k7m3`), the start of an id, or words from the title. An id match comes before a title match, and open cards come before done and archived cards. Each row shows the title, the id, and the parent path. To use it on a phone, pin it to the toolbar in **Settings → Mobile → Manage toolbar options**.
+The command **Open work item…** finds a card by part of its id or its title, and opens it. Type a full id (`wi-k7m3`), the part after `wi-` (`k7m3`), the start of an id, or words from the title. An id match comes before a title match, and open cards come before done and archived cards. Each row shows the title, the id, and the parent path. On a phone it is in the ribbon menu, beside **Open dashboard**. You can also add it to the toolbar.
 
 A link of the form `obsidian://recursive-board?vault=<vault>&id=<id>` opens the card with that id, on desktop and mobile. Scripts and agents can print it. The id works with or without `wi-`. An unknown id shows a notice. When two cards share the id, the link opens the first and the notice names both.
 

@@ -10,6 +10,9 @@ import type { Actions } from '../actions.ts'
 import { opensAsBoard, type WorkItemIndex, type WorkItemMeta } from '../index.ts'
 import { matchWorkItems } from './open-match.ts'
 
+/** The icon for the command, its toolbar button and its ribbon entry. */
+export const OPEN_WORK_ITEM_ICON = 'file-search'
+
 export class OpenModal extends SuggestModal<WorkItemMeta> {
   private readonly index: WorkItemIndex
   private readonly actions: Actions

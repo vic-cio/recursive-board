@@ -25,7 +25,7 @@ import { ChecklistComponents } from './ui/checklist.ts'
 import type { RenderContext } from './ui/context.ts'
 import { MoveModal } from './ui/move-modal.ts'
 import { openLinkTarget } from './ui/open-link.ts'
-import { OpenModal } from './ui/open-modal.ts'
+import { OPEN_WORK_ITEM_ICON, OpenModal } from './ui/open-modal.ts'
 import { CreateBoardModal } from './ui/create-board-modal.ts'
 import { createFirstBoard } from './first-board.ts'
 import { replaceChangedSpan, stampObservedChange } from './updated.ts'
@@ -115,6 +115,7 @@ export default class RecursiveBoardPlugin extends Plugin {
     this.addCommand({
       id: 'open-dashboard',
       name: 'Open dashboard',
+      icon: DASHBOARD_ICON,
       callback: () => void this.openDashboard(),
     })
 
@@ -148,10 +149,14 @@ export default class RecursiveBoardPlugin extends Plugin {
       }).open(),
     })
 
+    // The ribbon icon also lists it in the phone's ribbon menu, beside Open dashboard.
+    const openWorkItem = () => new OpenModal(this.app, this.index, this.actions).open()
+    this.addRibbonIcon(OPEN_WORK_ITEM_ICON, 'Open work item…', openWorkItem)
     this.addCommand({
       id: 'open-work-item',
       name: 'Open work item…',
-      callback: () => new OpenModal(this.app, this.index, this.actions).open(),
+      icon: OPEN_WORK_ITEM_ICON,
+      callback: openWorkItem,
     })
 
     this.addCommand({
