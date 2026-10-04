@@ -24,6 +24,7 @@ import { mountAll, unmountAll } from './mount.ts'
 import { ChecklistComponents } from './ui/checklist.ts'
 import type { RenderContext } from './ui/context.ts'
 import { MoveModal } from './ui/move-modal.ts'
+import { OpenModal } from './ui/open-modal.ts'
 import { CreateBoardModal } from './ui/create-board-modal.ts'
 import { createFirstBoard } from './first-board.ts'
 import { replaceChangedSpan, stampObservedChange } from './updated.ts'
@@ -144,6 +145,12 @@ export default class RecursiveBoardPlugin extends Plugin {
       callback: () => new CreateBoardModal(this.app, (title) => {
         void createFirstBoard(this.app, this.index, title, (defaultRoot) => this.updateBoard({ defaultRoot }))
       }).open(),
+    })
+
+    this.addCommand({
+      id: 'open-work-item',
+      name: 'Open work item…',
+      callback: () => new OpenModal(this.app, this.index, this.actions).open(),
     })
 
     this.addCommand({
