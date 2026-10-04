@@ -10,6 +10,8 @@ the agent notes in your vault.
 
 ## [Unreleased]
 
+## [0.8.3] - 2026-10-04
+
 ### Agent setup
 
 - The package ships an optional agent playbook, `docs/playbook.md`. It describes one setup that
@@ -24,9 +26,6 @@ the agent notes in your vault.
 
 - `wi setup` prints the optional recommended agent setup after the vault choice. `--yes` prints
   it too. `wi setup --json --vault <path>` prints one object with a `recommendedSetup` field.
-- The command **Show recommended agent setup** shows the same summary in Obsidian, with a copy
-  button for each text to paste. The notice after the first board links to it. It writes nothing
-  to the vault.
 - `wi doctor` checks the install and the optional agent setup on request. Each check prints pass,
   note or fix, and a fix prints the text to paste from the playbook. It writes nothing, and it
   exits 1 only when the install is broken.
@@ -35,6 +34,10 @@ the agent notes in your vault.
   `--dry-run` writes nothing.
 - The npm package ships the plugin build: `dist/main.js`, `dist/manifest.json` and
   `dist/styles.css`.
+
+### Changed
+
+- A card whose holder is the reserved value `agent` now reads **Agent**, not "Any agent".
 
 ## [0.8.2] - 2026-10-04
 
@@ -126,7 +129,8 @@ This release changes commands and flags. Read "Removed" before you update a scri
   `role` field.
 - `wi` and the plugin no longer read `.wi.json` or `Recursive Board config.md`.
 
-[Unreleased]: https://github.com/vic-cio/recursive-board/compare/0.8.2...HEAD
+[Unreleased]: https://github.com/vic-cio/recursive-board/compare/0.8.3...HEAD
+[0.8.3]: https://github.com/vic-cio/recursive-board/compare/0.8.2...0.8.3
 [0.8.2]: https://github.com/vic-cio/recursive-board/compare/0.8.1...0.8.2
 [0.8.1]: https://github.com/vic-cio/recursive-board/compare/0.8.0...0.8.1
 [0.8.0]: https://github.com/vic-cio/recursive-board/compare/0.7.1...0.8.0

@@ -250,5 +250,7 @@ Code reads this file. Keep these markers when you change it. `docs/adr/0067-the-
 
 ### Unreleased
 
+### 0.8.3
+
 - First version: the recommended setup, the Agents and roles section, an example Coder role note, the Dispatching procedure, bypass permissions and their risk, lessons from runs, and the checks.
 - The `background-wait` check finds a role or procedure note that still tells a worker to wait in a background task.
