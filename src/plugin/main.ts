@@ -27,7 +27,6 @@ import { MoveModal } from './ui/move-modal.ts'
 import { openLinkTarget } from './ui/open-link.ts'
 import { OPEN_WORK_ITEM_ICON, OpenModal } from './ui/open-modal.ts'
 import { CreateBoardModal } from './ui/create-board-modal.ts'
-import { AGENT_SETUP_ICON, AgentSetupModal } from './ui/agent-setup-modal.ts'
 import { createFirstBoard } from './first-board.ts'
 import { replaceChangedSpan, stampObservedChange } from './updated.ts'
 import { parseStatusColors, StatusColorSettingTab, type StatusColorKey, type StatusColors } from './settings.ts'
@@ -148,13 +147,6 @@ export default class RecursiveBoardPlugin extends Plugin {
       callback: () => new CreateBoardModal(this.app, (title) => {
         void createFirstBoard(this.app, this.index, title, (defaultRoot) => this.updateBoard({ defaultRoot }))
       }).open(),
-    })
-
-    this.addCommand({
-      id: 'show-agent-setup',
-      name: 'Show recommended agent setup',
-      icon: AGENT_SETUP_ICON,
-      callback: () => new AgentSetupModal(this.app).open(),
     })
 
     // The ribbon icon also lists it in the phone's ribbon menu, beside Open dashboard.

@@ -73,7 +73,7 @@ The board hides old `area/` tags. The Tags… picker leaves them out. New cards 
 
 Enable Recursive Board in an empty vault. Use the **Create your first board** button in the notice, or run **Create your first board** from the command palette. Enter a name. The default is `Main`. The plugin creates the board and a starter card. It sets `defaultRoot` in the board settings, then opens the board.
 
-The notice after the new board has a link to the **Recommended agent setup**. The command **Show recommended agent setup** opens the same window. It shows the summary of the optional [agent playbook](docs/playbook.md) and each text to paste, with a copy button for each. The window writes nothing to the vault.
+Agents and people who read the repo find the optional [agent playbook](docs/playbook.md) here. The plugin does not show it.
 
 ### Manual fallback
 

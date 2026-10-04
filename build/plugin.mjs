@@ -30,8 +30,6 @@ const options = {
   treeShaking: true,
   // Obsidian provides its own API at runtime. Nothing else may be external, so the guard sees it.
   external: ['obsidian'],
-  // docs/playbook.md is bundled as text (src/plugin/playbook.ts).
-  loader: { '.md': 'text' },
   plugins: [forbiddenImports()],
 }
 

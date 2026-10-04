@@ -24,11 +24,10 @@ setup is optional (AGENTS.md, "No forced workflow"), so setup only shows it.
   the playbook or its block is missing.
 - When the installed playbook or its `summary` block is missing, the text output leaves the summary
   out. A missing optional text does not stop the setup.
-- The plugin shows the same setup from the playbook bundled into it (`PLAYBOOK`). The command
-  **Show recommended agent setup** opens a window with the summary and each paste-ready block
-  (`agents-and-roles`, `role-note`, `dispatching`), with a copy button for each. The notice after
-  the first board links to it. The window writes nothing to the vault. `playbookPasteBlocks` in
-  `src/shared/playbook.ts` lists those blocks for both sides.
+- The plugin shows nothing of it. Victor, 2026-10-04: the recommended setup is CLI tooling that
+  helps agents configure a user's workspace, and a document that people find in the repo on
+  GitHub. It is not a feature for people in Obsidian. `playbookPasteBlocks` in
+  `src/shared/playbook.ts` lists the paste-ready blocks for `wi`.
 
 ## Rejected
 

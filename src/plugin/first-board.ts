@@ -2,7 +2,6 @@ import { Notice, normalizePath, type App } from 'obsidian'
 
 import { firstBoardNameStem, firstBoardPlan } from '../shared/first-board.ts'
 import type { WorkItemIndex } from './index.ts'
-import { AgentSetupModal } from './ui/agent-setup-modal.ts'
 
 /** Creates the board files, then sets the new board as the default root in the board settings. */
 export async function createFirstBoard(
@@ -49,23 +48,10 @@ export async function createFirstBoard(
     if (!rootFile) throw new Error('The new board file could not be opened.')
     index.invalidate()
     await app.workspace.getLeaf(false).openFile(rootFile)
-    createdNotice(app, title)
+    new Notice(`Created “${title}”. Add cards from the board columns.`)
   } catch (error) {
     new Notice(`Could not create the board: ${error instanceof Error ? error.message : String(error)}`)
   }
-}
-
-/** Names the next step, and offers the optional agent setup without opening it. */
-function createdNotice(app: App, title: string): void {
-  const notice = new Notice(createFragment((el) => {
-    el.createSpan({ text: `Created “${title}”. Add cards from the board columns. ` })
-    const link = el.createEl('a', { text: 'Recommended agent setup (optional)' })
-    link.addEventListener('click', (event) => {
-      event.preventDefault()
-      notice.hide()
-      new AgentSetupModal(app).open()
-    })
-  }), 15_000)
 }
 
 async function ensureFolder(app: App, path: string): Promise<void> {
