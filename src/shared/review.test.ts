@@ -99,7 +99,7 @@ test('a verdict needs your name and a card in doing', () => {
 test('a verdict comes only from the person the card waits on', () => {
   assert.throws(() => applyVerdict(card, { verdict: 'approve', you: 'Bo' }, now), /waits for review by Ana, not Bo/)
   assert.throws(() => applyVerdict(card, { verdict: 'send back', you: 'Bo', comment: '' }, now), /by Ana, not Bo/)
-  // The name matches as the dashboard matches it: case and outer spaces do not count.
+  // Case and outer spaces in the name do not count.
   assert.match(applyVerdict(card, { verdict: 'approve', you: ' ana ' }, now), /Approved by ana\./)
   const linked = card.replace('owner: Ana', 'owner: "[[Ana]]"')
   assert.match(applyVerdict(linked, { verdict: 'approve', you: 'Ana' }, now), /^status: done$/m)

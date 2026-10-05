@@ -78,6 +78,12 @@ test('wi agents prints no limit as none, and null in JSON', async () => {
   assert.equal(text.stdout, '0 active, limit none\n')
 })
 
+test('wi dashboard is retired: it exits 0, reads no vault and names wi agents', async () => {
+  const result = await wi(['dashboard', '--panel', 'agents', '--json'], '/no/such/vault')
+  assert.equal(result.code, 0, result.stderr)
+  assert.match(result.stdout, /wi dashboard is retired\. Use wi agents/)
+})
+
 test('wi agents takes no card reference', async () => {
   fixture = seed()
   const result = await wi(['agents', 'wi-0004'])

@@ -6,7 +6,7 @@
  * reserved holder `agent`, which asks any agent; the agent that takes it claims it by its own name.
  * wi starts no agent: each harness starts its own with its own tools. There is no reason to give:
  * the brief is on the card, and people explain where they talk. The card refuses a second holder.
- * The dashboard tells a person from an agent by a note with `type: person`. This module imports
+ * `wi agents` tells a person from an agent by a note with `type: person`. This module imports
  * nothing from Node.
  */
 import { PERSON_TYPE } from './authorship.ts'
@@ -41,7 +41,7 @@ export type DelegateTarget =
 /**
  * What `--to` names. `agent` asks any agent; a person note of that name is refused, because the
  * name is reserved. Any other name must be a person note, because a holder with no note counts as
- * an agent in the dashboard. An agent takes a card with `wi claim`, by its own name.
+ * an agent in `wi agents`. An agent takes a card with `wi claim`, by its own name.
  */
 export function delegateTarget(to: string, people: Map<string, string>): DelegateTarget {
   const name = to.trim()

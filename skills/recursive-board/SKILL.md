@@ -134,8 +134,8 @@ In Obsidian, use **Promote** at the top of any child card to give it its own boa
   are all in doing, only waits, so it does not make its agent count. The worker holds off when
   `activeAgents` reaches `maxAgents`; `null` means no limit is set. `WI_MAX_AGENTS` overrides the vault setting for one run. This
   limit is advisory: `wi claim` does not enforce it.
-- To report the state of the boards to a person, run `wi dashboard --you <name> --json`. It
-  returns what the person's dashboard shows: review work, progress, claims and attention.
+- To report the state of the boards to a person, read them with `wi children <root> --tree`,
+  `wi agents` and `wi show <ref> --json`. `wi dashboard` is retired.
 - wi starts no agent. To hand a card to a worker, start the worker with your own harness's tools
   (a subagent, a background task, another session) and give it the card id. Write the brief on
   the card first: the worker reads it with `wi show <card> --json`, and claims the card by its own
@@ -219,14 +219,14 @@ is.
 
 To send a card for review, use **Send for review…** in its card menu, or run `wi review <ref> --to
 <person> [--files <path>]... [--note <text>]`. Choose a person note, and say what to check in the
-note. Attach files or add links in the menu, or repeat `--files` in the CLI. Both writers set `owner` and append a `**Review:**` note in one write. The
-dashboard lists the card under "For review" when its newest review note follows its last verdict
-note, it has no open child, and it is not done. Any other column counts. When the note lists no file, or only
-web addresses, the card's own row carries the tick for the verdict.
+note. Attach files or add links in the menu, or repeat `--files` in the CLI. Both writers set
+`owner` and append a `**Review:**` note in one write. The card waits for review when its newest
+review note follows its last verdict note, it has no open child, and it is not done. Any other
+column counts.
 
-The reviewer gives the verdict with **Approve** or **Send back** on the dashboard, or with
-`wi approve <ref> --you <person>` and `wi send-back <ref> --you <person> [--comment <text>]`. Both
-writers make the same one write. `--you` must match the card's `owner`. `wi` refuses a card that
+The reviewer gives the verdict with `wi approve <ref> --you <person>` or `wi send-back <ref> --you
+<person> [--comment <text>]`, or with **Approve** or **Send back** in a dashboard plugin that
+copies these rules. Each makes one write. `--you` must match the card's `owner`. `wi` refuses a card that
 is not in doing, has no review request after its last verdict, or has an open child. Run a verdict
 command only with the verdict the reviewer gave you. Never give a verdict on your own work. `wi`
 signs the note with `WI_AGENT`, so the card shows who wrote it.

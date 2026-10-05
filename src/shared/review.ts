@@ -2,9 +2,9 @@
  * Your verdict on a card that waits for your review (docs/adr/0043-review-verdicts.md).
  *
  * Approve writes a note and closes the card. Send back writes a note, with your comment if any, and removes
- * the owner, so the card leaves For review and goes back to its agent in doing. Each is one write
- * to the card's own file. The dashboard and `wi approve` / `wi send-back` call the same function, so
- * both refuse the same cards (docs/adr/0065-review-verdicts-in-wi.md). This module imports nothing from Node.
+ * the owner, so the card no longer waits for review and goes back to its agent in doing. Each is one
+ * write to the card's own file. `wi approve` / `wi send-back` and any dashboard that copies this rule
+ * refuse the same cards (docs/adr/0065-review-verdicts-in-wi.md). This module imports nothing from Node.
  */
 import { displayName } from './authorship.ts'
 import { applyStampedEdits, type Edit } from './edits.ts'
@@ -30,7 +30,7 @@ export function applyReviewRequest(text: string, request: ReviewRequestInput): s
   const paths = (request.files ?? []).map((file) => file.trim()).filter((file) => file !== '')
   const listed = paths.map((file) => `\`${file}\``).join(', ')
   const note = (request.note ?? '').replace(/\s+/g, ' ').trim()
-  // The dashboard shows the text without the paths as what to check (parseReviewLine).
+  // What to check comes first, then the paths, so a reader can split the two.
   const body = note === ''
     ? `Please review${listed === '' ? '' : ` ${listed}`}.`
     : listed === '' ? note : `${note.replace(/[\s.:;,]+$/, '')}: ${listed}`
@@ -71,7 +71,7 @@ function notesText(text: string): string {
 /**
  * `you` is the reviewer: the person the card's owner names. `writer` signs the note line, as
  * `wi note` does, when someone other than the reviewer records the verdict, such as an agent the
- * reviewer told. The dashboard passes no writer.
+ * reviewer told. A dashboard button passes no writer.
  */
 export type Verdict =
   | { verdict: 'approve'; you: string; writer?: string }
@@ -88,7 +88,7 @@ export function applyVerdict(text: string, verdict: Verdict, now: Date = new Dat
   const frontmatter = parseFrontmatter(text)
   const status = frontmatter?.get('status')
   if (status !== 'doing') throw new Error(`the card is ${isStatus(status) ? status : 'not a card'}, and a review needs it in doing.`)
-  // The owner may be a link to the person note, as the dashboard reads it.
+  // The owner may be a link to the person note.
   const owner = displayName(frontmatter?.get('owner')) ?? ''
   if (owner === '') throw new Error('no one is asked to review this card. Send it for review first.')
   if (owner.toLowerCase() !== you.toLowerCase()) throw new Error(`the card waits for review by ${owner}, not ${you}.`)

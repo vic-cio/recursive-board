@@ -40,7 +40,6 @@ import { runSetup } from './commands/setup.ts'
 import { npmLatestVersion, renderDoctor, runDoctor } from './commands/doctor.ts'
 import { realUpdateSeams, runUpdate } from './commands/update.ts'
 import { packageRoot } from './package-files.ts'
-import { dashboardPanels, dashboardSummary, renderDashboard, type DashboardPanel } from './commands/dashboard.ts'
 import { activeAgentsOf, agentsReport, renderAgents } from './commands/agents.ts'
 import { giveVerdict, sendForReview } from './commands/review.ts'
 import { COMMAND_FLAGS, parseCommandLine, type Values } from './flags.ts'
@@ -70,7 +69,6 @@ Usage
   wi approve <ref> --you <name>
   wi send-back <ref> --you <name> [--comment <text>]
   wi agents [--json]
-  wi dashboard [--panel <review|progress|agents|people|attention>]... [--you <name>] [--parent <ref>] [--json]
   wi release <ref> --reason <text> [--where <branch-or-path>]
   wi move <ref> --to <ref>
   wi archive <ref> [--undo]
@@ -154,13 +152,13 @@ Notes
   the count and the limit. An agent counts while it works a doing card. A card whose open children
   are all in doing, or that waits for a review verdict, does not count. The limit is none (null in
   JSON) when no limit is set. It writes nothing.
-  \`wi dashboard\` prints the same panels as the plugin. Repeat --panel to choose panels; without it,
-  wi prints every panel. --parent names a root or an area. It writes nothing.
+  \`wi dashboard\` is retired and reads nothing. Use \`wi agents\` for the agent count and limit. A
+  dashboard is a separate plugin that reads the card files; the README names an example.
   \`wi review <ref> --to <name> [--files <path>]...\` sends a card to a person note for review. Each --files
   adds one vault-relative path. --note says what to check; line breaks become spaces. The command sets
   owner and appends a Review note in one write.
   \`wi approve <ref> --you <name>\` and \`wi send-back <ref> --you <name> [--comment <text>]\` give the
-  verdict, as Approve and Send back on the dashboard do. --you names the reviewer: it must match the
+  verdict. --you names the reviewer: it must match the
   card's owner. Approve notes "Approved by <name>." and moves the card to done. Send back notes the
   comment and removes owner; the card stays in doing with its holder. Each is one write. Both refuse
   a card that is not in doing, has no review request after its last verdict, or has an open child.
@@ -246,6 +244,11 @@ async function main(argv: string[]): Promise<number> {
     return 0
   }
 
+  if (command === 'dashboard') {
+    process.stdout.write('wi dashboard is retired. Use wi agents for the agent count and limit. A dashboard is a separate plugin; the README names an example.\n')
+    return 0
+  }
+
   if (command === 'retag' || command === 'graph') {
     process.stdout.write('wi retag and wi graph were removed in 0.8.0. The board tree shows each card\'s area.\n')
     return 0
@@ -280,8 +283,6 @@ async function main(argv: string[]): Promise<number> {
       return runVerdict(vault, command, rest, values, json)
     case 'agents':
       return runAgents(vault, rest, json)
-    case 'dashboard':
-      return runDashboard(vault, rest, values, json)
     case 'ready':
       return runReady(vault, rest, values, json)
     case 'release':
@@ -516,13 +517,6 @@ function singleLineOption(values: Values, key: string): string {
   return value.trim()
 }
 
-function multipleLineOption(values: Values, key: string): string[] {
-  const value = values[key]
-  if (typeof value === 'string') return [value]
-  if (Array.isArray(value) && value.every((part) => typeof part === 'string')) return value
-  throw new UsageError(`--${key} needs one or more values.`)
-}
-
 async function runClaim(vault: Vault, rest: string[], values: Values, json: boolean): Promise<number> {
   const ref = rest.join(' ').trim()
   if (ref === '') throw new UsageError('wi claim needs a <ref> and --holder <name>, or WI_AGENT set.')
@@ -644,26 +638,6 @@ async function runAgents(vault: Vault, rest: string[], json: boolean): Promise<n
   if (json) print(report)
   else process.stdout.write(renderAgents(report))
   return 0
-}
-
-async function runDashboard(vault: Vault, rest: string[], values: Values, json: boolean): Promise<number> {
-  if (rest.length > 0) throw new UsageError('wi dashboard takes no card reference. Use --parent <ref>.')
-  const allPanels: DashboardPanel[] = ['review', 'progress', 'agents', 'people', 'attention']
-  const rawPanels = values['panel'] === undefined ? allPanels : multipleLineOption(values, 'panel')
-  const panels = [...new Set(rawPanels.map((panel) => {
-    if (!isDashboardPanel(panel)) throw new UsageError(`wi dashboard --panel needs one of: ${allPanels.join(', ')}.`)
-    return panel
-  }))]
-  const you = values['you'] === undefined ? undefined : singleLineOption(values, 'you')
-  if (you === undefined && panels.includes('review')) process.stderr.write('wi: warning: no --you <name>, so no card waits for review.\n')
-  const summary = await dashboardSummary(vault, { ...(you === undefined ? {} : { you }), ...(typeof values['parent'] === 'string' ? { parent: values['parent'] } : {}) })
-  if (json) print(dashboardPanels(summary, panels))
-  else process.stdout.write(renderDashboard(summary, panels))
-  return 0
-}
-
-function isDashboardPanel(value: string): value is DashboardPanel {
-  return value === 'review' || value === 'progress' || value === 'agents' || value === 'people' || value === 'attention'
 }
 
 function runReady(vault: Vault, rest: string[], values: Values, json: boolean): number {

@@ -39,9 +39,9 @@ export interface VerdictResult {
 }
 
 /**
- * Approve or send back a card, as the dashboard's buttons do. The shared edit refuses a card that
- * does not wait for this reviewer. This adds the dashboard's other rule: For review leaves out a
- * card with an open child, so a verdict on one is refused here too.
+ * Approve or send back a card. The shared edit refuses a card that does not wait for this
+ * reviewer. This adds one more rule: a card with an open child does not wait for review, so a
+ * verdict on one is refused here too.
  */
 export async function giveVerdict(vault: Vault, ref: string, verdict: Verdict, now: Date = new Date()): Promise<VerdictResult> {
   const item = vault.resolve(ref)
