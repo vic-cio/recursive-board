@@ -153,8 +153,8 @@ child, and each child may do the same. The session agent is the top worker.
    worker must not touch.
 2. Choose the harness and the model for each worker. Use what the child card or its role note
    names. Otherwise use your own.
-3. Read the agent limit: `wi dashboard --panel agents --json`. When `activeAgents` reaches
-   `maxAgents`, wait until a worker finishes before you start the next one. `null` means no limit.
+3. Read the agent limit: `wi agents --json`. When `activeAgents` reaches `maxAgents`, wait until a
+   worker finishes before you start the next one. `null` means no limit.
 4. Start each worker as a headless process in the background. wi starts no agent. For Claude Code
    with bypass permissions:
    `WI_AGENT=<name> WI_MODEL=<model> claude -p --permission-mode bypassPermissions --model <model> "<prompt>" < /dev/null > <run folder>/<child id>.log 2>&1 & echo $!`
@@ -236,6 +236,7 @@ person-note       At least one note has type: person, so wi review has a reviewe
 max-agents        The board settings set maxAgents to a whole number.
 skill             The recursive-board skill is installed for the agent harness.
 background-wait   No role or procedure note tells a worker to wait in a background task.
+agent-count       No role or procedure note reads the agent limit from wi dashboard.
 ```
 
 ## Markers
@@ -249,6 +250,9 @@ Code reads this file. Keep these markers when you change it. `docs/adr/0067-the-
 ## Changes
 
 ### Unreleased
+
+- The Dispatching procedure reads the agent limit with `wi agents --json`. `wi dashboard` is retired.
+- The `agent-count` check finds a role or procedure note that still reads the agent limit from `wi dashboard`.
 
 ### 0.8.3
 

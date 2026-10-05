@@ -41,7 +41,7 @@ function byId(results: CheckResult[], id: string): CheckResult {
 test('one result per check id in the playbook, in its order, each with the playbook text', () => {
   const results = agentSetupChecks(followed())
   assert.deepEqual(results.map((result) => result.id),
-    ['agents-md', 'dispatching-note', 'role-notes', 'person-note', 'max-agents', 'skill', 'background-wait'])
+    ['agents-md', 'dispatching-note', 'role-notes', 'person-note', 'max-agents', 'skill', 'background-wait', 'agent-count'])
   for (const result of results) {
     assert.equal(result.level, 'pass', `${result.id}: ${result.message}`)
     assert.ok(result.title.length > 0)
@@ -155,6 +155,25 @@ test('background-wait: a line that says never wait in the background, or starts 
     text: 'Start each worker in the background.\nNever wait in a background task.\n',
   })
   const result = byId(agentSetupChecks({ ...followed(), notes: [...followed().notes, ok] }), 'background-wait')
+  assert.equal(result.level, 'pass')
+})
+
+test('agent-count: a role or procedure note that reads the limit from wi dashboard prints step 3', () => {
+  const old = note('Roles/Dispatching.md', {
+    type: 'procedure',
+    text: '3. Read the agent limit: `wi dashboard --panel agents --json`.\n',
+  })
+  const notes = [...followed().notes.filter((n) => n.path !== 'Roles/Dispatching.md'), old]
+  const result = byId(agentSetupChecks({ ...followed(), notes }), 'agent-count')
+  assert.equal(result.level, 'fix')
+  assert.match(result.message, /Roles\/Dispatching\.md/)
+  assert.match(result.paste ?? '', /^3\. Read the agent limit: `wi agents --json`/)
+  assert.doesNotMatch(result.paste ?? '', /^4\./m)
+})
+
+test('agent-count: a note that reads the limit with wi agents passes', () => {
+  const current = note('Roles/Coder.md', { tags: ['role/coder'], text: 'Read the limit with `wi agents --json`.\n' })
+  const result = byId(agentSetupChecks({ ...followed(), notes: [...followed().notes, current] }), 'agent-count')
   assert.equal(result.level, 'pass')
 })
 

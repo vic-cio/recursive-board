@@ -129,11 +129,10 @@ In Obsidian, use **Promote** at the top of any child card to give it its own boa
   agent can hold a card and its current subtask. A repeat by the same agent in doing writes nothing.
 - `wi status <ref> done` says when that was the parent's last open child. Check the parent's own
   criteria, then close it.
-- Before it starts an agent, a worker reads `wi dashboard --panel agents`. It counts agents, not cards, and lists
-  each agent's doing cards. A card that waits for a review verdict, or whose open children are all
-  in doing, only waits, so it does not
-  make its agent count. The worker holds off when `activeAgents` reaches `maxAgents`;
-  `null` means no limit is set. `WI_MAX_AGENTS` overrides the vault setting for one run. This
+- Before it starts an agent, a worker reads `wi agents --json`. It counts agents, not cards, and
+  lists each agent's doing cards. A card that waits for a review verdict, or whose open children
+  are all in doing, only waits, so it does not make its agent count. The worker holds off when
+  `activeAgents` reaches `maxAgents`; `null` means no limit is set. `WI_MAX_AGENTS` overrides the vault setting for one run. This
   limit is advisory: `wi claim` does not enforce it.
 - To report the state of the boards to a person, run `wi dashboard --you <name> --json`. It
   returns what the person's dashboard shows: review work, progress, claims and attention.
@@ -142,7 +141,7 @@ In Obsidian, use **Promote** at the top of any child card to give it its own boa
   the card first: the worker reads it with `wi show <card> --json`, and claims the card by its own
   name. In a Git repo, give the worker its own branch or worktree.
   To assign a card to a person, use `wi delegate <card> --to <name>` with a note of
-  `type: person`; the card does not count in the dashboard Agents panel. To leave a card for any
+  `type: person`; a person does not count in `wi agents`. To leave a card for any
   agent, use `--to agent`. Delegating sets the holder and nothing else; the status stays.
 - A worker that starts workers records each event on the child card (start, finish, retry, stop)
   with `wi note <child> "<event>"`.

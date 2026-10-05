@@ -105,7 +105,7 @@ test('a vault that follows each recommendation passes every check, and doctor wr
     assert.equal(result(report, 'hook').level, 'note')
     assert.deepEqual(report.agentSetup.map((r) => [r.id, r.level]), [
       ['agents-md', 'pass'], ['dispatching-note', 'pass'], ['role-notes', 'pass'], ['person-note', 'pass'],
-      ['max-agents', 'pass'], ['skill', 'pass'], ['background-wait', 'pass'],
+      ['max-agents', 'pass'], ['skill', 'pass'], ['background-wait', 'pass'], ['agent-count', 'pass'],
     ])
   } finally {
     s.cleanup()

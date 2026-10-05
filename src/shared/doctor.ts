@@ -149,6 +149,16 @@ const CHECKS: Record<string, Check> = {
       message: `${stale.join(', ')} ${stale.length === 1 ? 'tells' : 'tell'} a worker to wait in a background task. A headless worker then ends early. Replace that step with this one.`,
     }, procedureStep(playbookBlock(input.playbook, 'dispatching'), 7))
   },
+
+  'agent-count': (input, title) => {
+    const id = 'agent-count'
+    const stale = input.notes.filter((note) => isSetupNote(note) && /\bwi dashboard\b/.test(note.text ?? '')).map((note) => note.path).sort()
+    if (stale.length === 0) return { id, level: 'pass', title, message: 'No role or procedure note reads the agent limit from wi dashboard.' }
+    return withPaste({
+      id, level: 'fix', title,
+      message: `${stale.join(', ')} ${stale.length === 1 ? 'runs' : 'run'} wi dashboard, which is retired. Replace that step with this one.`,
+    }, procedureStep(playbookBlock(input.playbook, 'dispatching'), 3))
+  },
 }
 
 /** The agent setup results, one per check id in the playbook's `checks` block, in its order. */

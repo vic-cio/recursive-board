@@ -40,7 +40,8 @@ import { runSetup } from './commands/setup.ts'
 import { npmLatestVersion, renderDoctor, runDoctor } from './commands/doctor.ts'
 import { realUpdateSeams, runUpdate } from './commands/update.ts'
 import { packageRoot } from './package-files.ts'
-import { activeAgentsOf, dashboardPanels, dashboardSummary, renderDashboard, type DashboardPanel } from './commands/dashboard.ts'
+import { dashboardPanels, dashboardSummary, renderDashboard, type DashboardPanel } from './commands/dashboard.ts'
+import { activeAgentsOf, agentsReport, renderAgents } from './commands/agents.ts'
 import { giveVerdict, sendForReview } from './commands/review.ts'
 import { COMMAND_FLAGS, parseCommandLine, type Values } from './flags.ts'
 import { STATUSES } from '../shared/schema.ts'
@@ -68,6 +69,7 @@ Usage
   wi review <ref> --to <name> [--files <path>]... [--note <text>]
   wi approve <ref> --you <name>
   wi send-back <ref> --you <name> [--comment <text>]
+  wi agents [--json]
   wi dashboard [--panel <review|progress|agents|people|attention>]... [--you <name>] [--parent <ref>] [--json]
   wi release <ref> --reason <text> [--where <branch-or-path>]
   wi move <ref> --to <ref>
@@ -148,7 +150,10 @@ Notes
   --role <name> adds the tag role/<name> to the card in the same write.
   \`wi show\` lists each role tag on the card with the notes that carry it: the procedure to follow.
   \`wi objective\` is retired. Use \`wi show <ref> --json\` to read a card and its ancestor objectives.
-  \`wi agents\` is retired. Use \`wi dashboard --panel agents\`. \`wi here\` is retired too.
+  \`wi agents\` prints the agents that count against maxAgents, each with the doing cards it works,
+  the count and the limit. An agent counts while it works a doing card. A card whose open children
+  are all in doing, or that waits for a review verdict, does not count. The limit is none (null in
+  JSON) when no limit is set. It writes nothing.
   \`wi dashboard\` prints the same panels as the plugin. Repeat --panel to choose panels; without it,
   wi prints every panel. --parent names a root or an area. It writes nothing.
   \`wi review <ref> --to <name> [--files <path>]...\` sends a card to a person note for review. Each --files
@@ -274,7 +279,7 @@ async function main(argv: string[]): Promise<number> {
     case 'send-back':
       return runVerdict(vault, command, rest, values, json)
     case 'agents':
-      return runAgents(rest)
+      return runAgents(vault, rest, json)
     case 'dashboard':
       return runDashboard(vault, rest, values, json)
     case 'ready':
@@ -633,9 +638,11 @@ async function runNote(vault: Vault, rest: string[], values: Values, json: boole
   return 0
 }
 
-async function runAgents(rest: string[]): Promise<number> {
-  if (rest.length > 0) throw new UsageError('wi agents takes no arguments.')
-  process.stdout.write('wi agents is retired. Use wi dashboard --panel agents.\n')
+async function runAgents(vault: Vault, rest: string[], json: boolean): Promise<number> {
+  if (rest.length > 0) throw new UsageError('wi agents takes no card reference.')
+  const report = await agentsReport(vault)
+  if (json) print(report)
+  else process.stdout.write(renderAgents(report))
   return 0
 }
 
