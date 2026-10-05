@@ -1,6 +1,6 @@
 ---
 status: accepted
-amended_by: 0066-count-only-working-agents.md (an agent that only waits on its children does not count)
+amended_by: 0066-count-only-working-agents.md (an agent that only waits on its children does not count), 0072-the-dashboard-is-a-separate-example-plugin.md (wi agents reports the count and the limit)
 ---
 
 # Set an advisory concurrent agent limit per vault

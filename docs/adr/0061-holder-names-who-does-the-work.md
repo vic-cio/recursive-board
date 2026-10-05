@@ -1,6 +1,7 @@
 ---
 status: accepted
 amends: docs/adr/0014-agent-claims.md (the field name), docs/adr/0038-nested-claims.md (the field name), docs/adr/0052-ready-cards-for-dispatch.md (requests first), docs/adr/0058-delegate-a-card.md (the field name and what delegating writes)
+amended_by: 0072-the-dashboard-is-a-separate-example-plugin.md (wi agents is a command again)
 ---
 # The holder field names who does a card's work
 
@@ -36,3 +37,9 @@ parent card.
 
 A note line such as "Delegated to an agent." was rejected: state would live in note text. No
 marker at all was rejected: it cannot tell Victor's own options from work he handed off.
+
+## Amendment 2026-10-05: wi agents
+
+`wi agents` is a command again ([0072](0072-the-dashboard-is-a-separate-example-plugin.md)). It
+prints the agents that count against `maxAgents` and the limit. `wi dashboard` is the retired
+command now. A request for any agent (`holder: agent`) is no agent, so `wi agents` leaves it out.

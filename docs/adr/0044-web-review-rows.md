@@ -1,7 +1,10 @@
 ---
-status: accepted
+status: superseded
+superseded_by: docs/adr/0072-the-dashboard-is-a-separate-example-plugin.md
 ---
 # Web rows in For review
+
+> Superseded by [0072](0072-the-dashboard-is-a-separate-example-plugin.md). Recursive Board ships no dashboard; the example dashboard plugin carries this design.
 
 This amends [0040](0040-dashboard-view.md) and [0043](0043-review-verdicts.md).
 

@@ -10,6 +10,35 @@ the agent notes in your vault.
 
 ## [Unreleased]
 
+### Agent setup
+
+- Read the agent limit with `wi agents --json`, not `wi dashboard --panel agents --json`. The
+  Dispatching procedure in the playbook says so in step 3. Change step 3 in your own Dispatching
+  note. `wi doctor` finds a role or procedure note that still runs `wi dashboard`, and prints the
+  new step.
+- To report the boards to a person, use `wi children <root> --tree`, `wi agents` and
+  `wi show <ref> --json`.
+
+### Added
+
+- `wi agents` prints the agents that count against `maxAgents`, each with the doing cards it
+  works, the count and the limit. `--json` gives `activeAgents`, `maxAgents` and `agents`.
+- `wi doctor` has an `agent-count` check.
+
+### Removed
+
+- The plugin has no dashboard. The dashboard view, its ribbon icon, the **Open dashboard**
+  command, and the settings "Your name" and "Web pages in For review" are gone. The example
+  dashboard is a separate plugin: [recursive-board-dashboard](https://github.com/vic-cio/recursive-board-dashboard).
+  It copies the review ticks from the plugin data on its first load.
+- `wi dashboard` is retired. It exits 0, reads nothing, and names `wi agents`. Use `wi approve`
+  and `wi send-back` for a verdict.
+
+### Changed
+
+- **Send for review…** lists the reviewers in name order, and it signs no writer, because the
+  "Your name" setting is gone.
+
 ## [0.8.3] - 2026-10-04
 
 ### Agent setup

@@ -1,6 +1,7 @@
 ---
 status: accepted
 amends: docs/adr/0034-agent-limit.md (the count), docs/adr/0038-nested-claims.md (the count), docs/adr/0040-dashboard-view.md (the Agents panel)
+amended_by: 0072-the-dashboard-is-a-separate-example-plugin.md (the rule lives in src/shared/agents.ts)
 ---
 # Count only working agents
 
@@ -61,3 +62,10 @@ text it has loaded, and the plugin reads each claimed doing card with `cachedRea
 
 A parent that works on its own while every child runs is not counted. The rule reads the board,
 and the board cannot tell that apart from waiting.
+
+## Amendment 2026-10-05: the rule moved
+
+The rule lives in `src/shared/agents.ts` (`waitsOnChildren`, `activeAgents`), and `wi agents`
+reports it ([0072](0072-the-dashboard-is-a-separate-example-plugin.md)). `wi claim` warns from the
+same rule. The dashboard rows that marked a waiting claim moved to the example dashboard plugin,
+which keeps its own copy of the rule.

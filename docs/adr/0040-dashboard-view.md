@@ -1,8 +1,11 @@
 ---
-status: accepted
+status: superseded
 amended_by: 0066-count-only-working-agents.md (the active count and waiting claims)
+superseded_by: docs/adr/0072-the-dashboard-is-a-separate-example-plugin.md
 ---
 # A dashboard view over every board
+
+> Superseded by [0072](0072-the-dashboard-is-a-separate-example-plugin.md). Recursive Board ships no dashboard; the example dashboard plugin carries this design.
 
 The plugin registers one view of its own, the dashboard. A ribbon icon and the command "Open
 dashboard" open it in a tab, and a second call reuses that tab, like the graph view. It reads the

@@ -1,7 +1,10 @@
 ---
-status: accepted
+status: superseded
+superseded_by: docs/adr/0072-the-dashboard-is-a-separate-example-plugin.md
 ---
 # The dashboard summary in the CLI
+
+> Superseded by [0072](0072-the-dashboard-is-a-separate-example-plugin.md). Recursive Board ships no dashboard; the example dashboard plugin carries this design.
 
 `wi dashboard` gives an agent the dashboard ([0040](0040-dashboard-view.md)) in one call. It
 returns every panel by default. Repeat `--panel` to select `review`, `progress`, `agents`, `people`,

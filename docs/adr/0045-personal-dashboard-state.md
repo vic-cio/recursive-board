@@ -1,7 +1,10 @@
 ---
-status: accepted
+status: superseded
+superseded_by: docs/adr/0072-the-dashboard-is-a-separate-example-plugin.md
 ---
 # Personal dashboard state
+
+> Superseded by [0072](0072-the-dashboard-is-a-separate-example-plugin.md). Recursive Board ships no dashboard; the example dashboard plugin carries this design.
 
 The dashboard has choices that belong to one device and ticks that follow a person.
 

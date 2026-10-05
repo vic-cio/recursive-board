@@ -14,6 +14,11 @@ setup wants.
 depend on it. A user who skips a feature, or uses it another way, gets no warning for that choice,
 even when the result is not optimal. Roles, reviews and delegation are tools, not steps.
 
+**A bare core.** The plugin stays as small as it can be, so that once it is complete it changes
+only when the tools around it change. An extra feature goes to a companion plugin or stays a `wi`
+command. The dashboard is the first case
+([0072](docs/adr/0072-the-dashboard-is-a-separate-example-plugin.md)).
+
 ## Read first
 
 [`README.md`](README.md) says what the product does and how a user installs it.
@@ -57,7 +62,8 @@ at its first child.
 
 People use the plugin; agents and scripts use `wi`. A person never types a `wi` command, so each
 command needs a plugin feature that calls the same `src/shared/` step, as the add row does for
-`wi new`. When you add a command, add its plugin feature, or a card for it.
+`wi new`. When you add a command, add its plugin feature, or a card for it. A command that only a dashboard
+uses, such as `wi approve`, has its feature in the dashboard plugin, not in the core.
 
 Node 26 runs the TypeScript directly, so there is no build step for the CLI. `npm test`
 typechecks both projects and runs every test; `npm run build` produces the plugin.
