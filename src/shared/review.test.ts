@@ -1,8 +1,7 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 
-import { parseReviewLine } from './dashboard.ts'
-import { applyReviewRequest, applyVerdict, awaitsReviewVerdict } from './review.ts'
+import { applyReviewRequest, applyVerdict, awaitsReviewVerdict, isWebAddress } from './review.ts'
 
 const card = [
   '---',
@@ -39,9 +38,15 @@ test('send for review sets the owner and appends a dated Review line with the fi
 test('send for review puts what to check before the files, on one line', () => {
   const after = applyReviewRequest(card, { to: 'Ana', files: ['Work/quote.xlsx'], note: 'Check the totals.\nAnd the VAT.', now })
   assert.ok(after.includes('**Review:** Check the totals. And the VAT: `Work/quote.xlsx`\n'))
-  assert.equal(parseReviewLine(after)?.what, 'Check the totals. And the VAT')
   assert.ok(applyReviewRequest(card, { to: 'Ana', note: '  Try it on the phone. ', now }).includes('**Review:** Try it on the phone.\n'))
   assert.ok(applyReviewRequest(card, { to: 'Ana', note: ' ', now }).includes('**Review:** Please review.\n'))
+})
+
+test('isWebAddress tells a web address from a vault path', () => {
+  assert.equal(isWebAddress('https://example.com/page'), true)
+  assert.equal(isWebAddress('http://localhost:4000'), true)
+  assert.equal(isWebAddress('Work/quote.xlsx'), false)
+  assert.equal(isWebAddress('https://has space'), false)
 })
 
 test('send for review needs an owner and makes a one-line note', () => {

@@ -39,6 +39,11 @@ export function applyReviewRequest(text: string, request: ReviewRequestInput): s
   return applyStampedEdits(appendNote(text, line), [{ op: 'set', key: 'owner', value: owner }], today(now))
 }
 
+/** An http or https address, not a vault path. A review request may list one. */
+export function isWebAddress(path: string): boolean {
+  return /^https?:\/\/\S+$/.test(path)
+}
+
 /** True when the newest review request follows the newest verdict in the card's Notes. */
 export function awaitsReviewVerdict(text: string): boolean {
   let latest: 'review' | 'verdict' | undefined

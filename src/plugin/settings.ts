@@ -1,5 +1,4 @@
 import { AbstractInputSuggest, PluginSettingTab, Setting, TFolder, type App, type Plugin } from 'obsidian'
-import type { WebReviewMode } from './dashboard-model.ts'
 import type { VaultConfig } from '../shared/vault-config.ts'
 import { cleanSections } from '../shared/board-settings.ts'
 
@@ -82,11 +81,6 @@ export class StatusColorSettingTab extends PluginSettingTab {
   private readonly changeColor: (key: StatusColorKey, color: string | undefined) => Promise<void>
   private readonly maxAgents: () => number | null
   private readonly changeMaxAgents: (maxAgents: number | null) => Promise<void>
-  private readonly you: () => string
-  private readonly changeYou: (you: string) => Promise<void>
-  private readonly webReviewMode: () => WebReviewMode
-  private readonly changeWebReviewMode: (mode: WebReviewMode) => Promise<void>
-  private readonly personNames: () => string[]
   private readonly board: BoardSettingsHost
 
   constructor(
@@ -96,11 +90,6 @@ export class StatusColorSettingTab extends PluginSettingTab {
     changeColor: (key: StatusColorKey, color: string | undefined) => Promise<void>,
     maxAgents: () => number | null,
     changeMaxAgents: (maxAgents: number | null) => Promise<void>,
-    you: () => string,
-    changeYou: (you: string) => Promise<void>,
-    webReviewMode: () => WebReviewMode,
-    changeWebReviewMode: (mode: WebReviewMode) => Promise<void>,
-    personNames: () => string[],
     board: BoardSettingsHost,
   ) {
     super(app, plugin)
@@ -108,11 +97,6 @@ export class StatusColorSettingTab extends PluginSettingTab {
     this.changeColor = changeColor
     this.maxAgents = maxAgents
     this.changeMaxAgents = changeMaxAgents
-    this.you = you
-    this.changeYou = changeYou
-    this.webReviewMode = webReviewMode
-    this.changeWebReviewMode = changeWebReviewMode
-    this.personNames = personNames
     this.board = board
   }
 
@@ -144,7 +128,7 @@ export class StatusColorSettingTab extends PluginSettingTab {
     containerEl.createEl('h3', { text: 'Dispatcher' })
     new Setting(containerEl)
       .setName('Concurrent agent limit')
-      .setDesc('Maximum agents with a claimed card in doing for this vault. Dispatchers read this in the dashboard Agents panel. WI_MAX_AGENTS overrides it for one run.')
+      .setDesc('Maximum agents with a claimed card in doing for this vault. Dispatchers read it with wi agents. WI_MAX_AGENTS overrides it for one run.')
       .addText((text) => {
         text.inputEl.type = 'number'
         text.inputEl.min = '0'
@@ -160,32 +144,6 @@ export class StatusColorSettingTab extends PluginSettingTab {
             if (Number.isSafeInteger(parsed) && parsed >= 0) void this.changeMaxAgents(parsed)
           })
       })
-
-    containerEl.createEl('h3', { text: 'Dashboard' })
-    new Setting(containerEl)
-      .setName('Your name')
-      .setDesc('The owner name on cards that wait for your review. The dashboard lists a card in doing with this owner and no open child.')
-      .addText((text) => {
-        const list = containerEl.createEl('datalist')
-        list.id = 'recursive-board-person-names'
-        for (const name of this.personNames()) list.createEl('option', { attr: { value: name } })
-        text.inputEl.setAttribute('list', list.id)
-        text.setPlaceholder('Name')
-          .setValue(this.you())
-          .onChange((value) => void this.changeYou(value.trim()))
-      })
-    new Setting(containerEl)
-      .setName('Web pages in For review')
-      .addDropdown((dropdown) => dropdown
-        .addOption('webviewer', 'Open in a Web viewer tab')
-        .addOption('browser', 'Open in the browser')
-        .addOption('off', 'Off')
-        .setValue(this.webReviewMode())
-        .onChange((value) => {
-          if (value === 'webviewer' || value === 'browser' || value === 'off') {
-            void this.changeWebReviewMode(value)
-          }
-        }))
   }
 
   /** Board settings shape every card, so they come first. wi reads them from the plugin data. */

@@ -30,13 +30,7 @@ import { CreateBoardModal } from './ui/create-board-modal.ts'
 import { createFirstBoard } from './first-board.ts'
 import { replaceChangedSpan, stampObservedChange } from './updated.ts'
 import { parseStatusColors, StatusColorSettingTab, type StatusColorKey, type StatusColors } from './settings.ts'
-import { DASHBOARD_ICON, DASHBOARD_VIEW, DashboardView, type DashboardState } from './ui/dashboard-view.ts'
-import {
-  applyTickChanges, mergeTicks, parseDeviceDashboardState, parsePersonTicks, personTicks, safePersonFileName, splitLegacyDashboardState, withPersonTicks,
-  type DashboardTicks,
-} from './personal-state.ts'
 
-const DASHBOARD_STORAGE_KEY = 'recursive-board:dashboard'
 /** Set on a device once it has shown the notice about missing board settings. */
 const NO_BOARD_NOTICE_KEY = 'recursive-board:no-board-settings-notice'
 
@@ -61,7 +55,6 @@ export default class RecursiveBoardPlugin extends Plugin {
   private firstBoardDismissed = false
   private storedData: Record<string, unknown> = {}
   private statusColors: StatusColors = {}
-  private dashboard!: DashboardState
 
   override async onload(): Promise<void> {
     const storedData: unknown = await this.loadData()
@@ -69,7 +62,6 @@ export default class RecursiveBoardPlugin extends Plugin {
       this.storedData = Object.fromEntries(Object.entries(storedData))
     }
     this.statusColors = parseStatusColors(this.storedData.statusColors)
-    await this.loadDashboardState()
     this.applyStatusColors()
     this.addSettingTab(new StatusColorSettingTab(
       this.app,
@@ -78,11 +70,6 @@ export default class RecursiveBoardPlugin extends Plugin {
       (key, color) => this.updateStatusColor(key, color),
       () => this.index?.config.maxAgents ?? null,
       (maxAgents) => this.updateBoard({ maxAgents }),
-      () => this.dashboard.you,
-      (you) => this.saveDashboard({ you }),
-      () => this.dashboard.webReviewMode,
-      (webReviewMode) => this.saveDashboard({ webReviewMode }),
-      () => this.personNames(),
       {
         config: () => this.index.config,
         update: (patch) => this.updateBoard(patch),
@@ -101,23 +88,7 @@ export default class RecursiveBoardPlugin extends Plugin {
       new Notice(`Recursive Board could not read the board settings: ${reason}`)
       throw error
     }
-    this.actions = new Actions(this.app, this.index, () => this.dashboard.you)
-
-    this.registerView(DASHBOARD_VIEW, (leaf) => new DashboardView(leaf, {
-      index: this.index,
-      actions: this.actions,
-      state: () => this.dashboard,
-      save: (patch) => this.saveDashboard(patch),
-      personNames: () => this.personNames(),
-      reloadTicks: () => this.loadPersonTicks(),
-    }))
-    this.addRibbonIcon(DASHBOARD_ICON, 'Open dashboard', () => void this.openDashboard())
-    this.addCommand({
-      id: 'open-dashboard',
-      name: 'Open dashboard',
-      icon: DASHBOARD_ICON,
-      callback: () => void this.openDashboard(),
-    })
+    this.actions = new Actions(this.app, this.index)
 
     this.rememberActiveEditor()
     this.registerEvent(this.app.workspace.on('editor-change', (editor) => this.editorChanged(editor)))
@@ -149,7 +120,7 @@ export default class RecursiveBoardPlugin extends Plugin {
       }).open(),
     })
 
-    // The ribbon icon also lists it in the phone's ribbon menu, beside Open dashboard.
+    // The ribbon icon also lists it in the phone's ribbon menu.
     const openWorkItem = () => new OpenModal(this.app, this.index, this.actions).open()
     this.addRibbonIcon(OPEN_WORK_ITEM_ICON, 'Open work item…', openWorkItem)
     this.addCommand({
@@ -326,89 +297,19 @@ export default class RecursiveBoardPlugin extends Plugin {
     await this.saveData(this.storedData)
   }
 
-  private async saveDashboard(patch: Partial<DashboardState>): Promise<void> {
-    const previousTicks = this.dashboard.ticks
-    this.dashboard = { ...this.dashboard, ...patch, ...('you' in patch ? { ticks: {} } : {}) }
-    if ('ticks' in patch) await this.savePersonTicks(patch.ticks ?? {}, previousTicks)
-    const { you, root, focus, webReviewMode, finishedOpen, foldedGroups } = this.dashboard
-    this.app.saveLocalStorage(DASHBOARD_STORAGE_KEY, { you, root, focus, webReviewMode, finishedOpen, foldedGroups })
-    // These change what the dashboard draws or how a row opens, so it redraws at once.
-    if ('you' in patch || 'webReviewMode' in patch) this.refreshDashboards()
-  }
-
-  /**
-   * Loads device state, and moves older state into place once: the `dashboard` key of the first
-   * dashboard, and the `people/<name>.json` file of the first per-person build, which Obsidian
-   * Sync did not carry. Ticks live in the plugin data, per person (docs/adr/0045-personal-dashboard-state.md).
-   */
-  private async loadDashboardState(): Promise<void> {
-    const local = this.app.loadLocalStorage(DASHBOARD_STORAGE_KEY)
-    let device = parseDeviceDashboardState(local)
-    let changed = false
-    const legacy = this.storedData.dashboard
-    if (legacy !== undefined) {
-      const migration = splitLegacyDashboardState(legacy, local)
-      device = migration.device
-      if (migration.personName.trim() !== '') {
-        const ticks = mergeTicks(personTicks(this.storedData, migration.personName), migration.ticks)
-        this.storedData = withPersonTicks(this.storedData, migration.personName, ticks)
-      }
-      delete this.storedData.dashboard
-      this.app.saveLocalStorage(DASHBOARD_STORAGE_KEY, device)
-      changed = true
-    }
-    const fileName = safePersonFileName(device.you)
-    if (fileName) {
-      const adapter = this.app.vault.adapter
-      const folder = normalizePath(`${this.manifest.dir}/people`)
-      const path = `${folder}/${fileName}.json`
-      if (await adapter.exists(path)) {
-        const ticks = mergeTicks(personTicks(this.storedData, device.you), parsePersonTicks(await adapter.read(path)))
-        this.storedData = withPersonTicks(this.storedData, device.you, ticks)
-        // Save before the file goes, so a failed clean-up never loses a tick.
-        await this.saveData(this.storedData)
-        changed = false
-        try {
-          await adapter.remove(path)
-          if ((await adapter.list(folder)).files.length === 0) await adapter.rmdir(folder, false)
-        } catch (error) {
-          console.warn('Recursive Board could not remove the old person file', error)
-        }
-      }
-    }
-    if (changed) await this.saveData(this.storedData)
-    this.dashboard = { ...device, ticks: personTicks(this.storedData, device.you) }
-  }
-
-  /** Reads the plugin data from disk again, so ticks synced from another device are current. */
+  /** Reads the plugin data from disk again, so a change synced from another device is current. */
   private async freshData(): Promise<Record<string, unknown>> {
     const data: unknown = await this.loadData()
     this.storedData = typeof data === 'object' && data !== null && !Array.isArray(data) ? { ...data as Record<string, unknown> } : {}
     return this.storedData
   }
 
-  private async loadPersonTicks(): Promise<DashboardTicks> {
-    this.dashboard.ticks = personTicks(await this.freshData(), this.dashboard.you)
-    return this.dashboard.ticks
-  }
-
-  /** Applies only this device's change to the stored ticks, so a tick made elsewhere survives. */
-  private async savePersonTicks(ticks: DashboardTicks, previous: DashboardTicks): Promise<void> {
-    const name = this.dashboard.you
-    if (name.trim() === '') return
-    const data = await this.freshData()
-    this.storedData = withPersonTicks(data, name, applyTickChanges(personTicks(data, name), previous, ticks))
-    await this.saveData(this.storedData)
-  }
-
-  /** Obsidian calls this when Sync changes the plugin data, for example a tick made on the phone. */
+  /** Obsidian calls this when Sync changes the plugin data, for example a setting changed on the phone. */
   override async onExternalSettingsChange(): Promise<void> {
     await this.freshData()
     this.reloadConfig()
     this.statusColors = parseStatusColors(this.storedData.statusColors)
     this.applyStatusColors()
-    this.dashboard.ticks = personTicks(this.storedData, this.dashboard.you)
-    this.refreshDashboards()
   }
 
   private personNames(): string[] {
@@ -418,26 +319,9 @@ export default class RecursiveBoardPlugin extends Plugin {
       .sort((a, b) => a.localeCompare(b))
   }
 
-  /** Reuses an open dashboard tab, like the graph view. */
-  private async openDashboard(): Promise<void> {
-    const { workspace } = this.app
-    let leaf = workspace.getLeavesOfType(DASHBOARD_VIEW)[0]
-    if (!leaf) {
-      leaf = workspace.getLeaf('tab')
-      await leaf.setViewState({ type: DASHBOARD_VIEW, active: true })
-    }
-    await workspace.revealLeaf(leaf)
-  }
-
-  private refreshDashboards(): void {
-    for (const leaf of this.app.workspace.getLeavesOfType(DASHBOARD_VIEW)) {
-      if (leaf.view instanceof DashboardView) leaf.view.refresh()
-    }
-  }
-
   /**
    * Writes the board settings into the plugin data, the one place they live
-   * (docs/adr/0050-board-settings-in-plugin-data.md). Reads the file first, so a tick synced
+   * (docs/adr/0050-board-settings-in-plugin-data.md). Reads the file first, so a change synced
    * from another device survives.
    */
   private async updateBoard(patch: Partial<VaultConfig>): Promise<void> {
@@ -557,7 +441,6 @@ export default class RecursiveBoardPlugin extends Plugin {
     this.pending = window.setTimeout(() => {
       this.pending = null
       mountAll(this.app, this.context())
-      this.refreshDashboards()
     }, 30)
   }
 
@@ -568,7 +451,6 @@ export default class RecursiveBoardPlugin extends Plugin {
       index: this.index,
       actions: this.actions,
       personNames: () => this.personNames(),
-      yourName: () => this.dashboard.you,
       checklistComponents: this.checklistComponents,
       mobile: Platform.isMobile,
       expandedPath: this.expandedPath,

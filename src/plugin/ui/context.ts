@@ -14,8 +14,6 @@ export interface RenderContext {
   actions: Actions
   /** Person notes that can review a card. */
   personNames(): string[]
-  /** The current person from the "Your name" setting. */
-  yourName(): string
   checklistComponents: ChecklistComponents
   /** True on a phone or tablet. A board uses status tabs there (docs/adr/0022-phone-board-navigation.md). */
   mobile: boolean

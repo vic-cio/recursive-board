@@ -1,5 +1,5 @@
 import { Modal, Setting, setIcon, TFile, type App } from 'obsidian'
-import { isWebAddress } from '../../shared/dashboard.ts'
+import { isWebAddress } from '../../shared/review.ts'
 
 export interface ReviewRequestChoice {
   to: string
@@ -17,14 +17,12 @@ export interface ReviewRequestChoice {
 export class SendForReviewModal extends Modal {
   private readonly title: string
   private readonly names: string[]
-  private readonly currentName: string
   private readonly submit: (choice: ReviewRequestChoice) => void
 
-  constructor(app: App, title: string, names: string[], currentName: string, submit: (choice: ReviewRequestChoice) => void) {
+  constructor(app: App, title: string, names: string[], submit: (choice: ReviewRequestChoice) => void) {
     super(app)
     this.title = title
     this.names = names
-    this.currentName = currentName
     this.submit = submit
   }
 
@@ -35,9 +33,6 @@ export class SendForReviewModal extends Modal {
     this.contentEl.createDiv({ cls: 'wi-review-card', text: this.title })
 
     const names = [...this.names].sort((a, b) => a.localeCompare(b))
-    const current = names.find((name) => name.toLowerCase() === this.currentName.trim().toLowerCase())
-    if (current) names.splice(names.indexOf(current), 1)
-    if (current) names.unshift(current)
     let to = names[0] ?? ''
     new Setting(this.contentEl)
       .setName('Reviewer')

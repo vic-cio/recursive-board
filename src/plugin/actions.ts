@@ -27,7 +27,7 @@ import { dependencyEdit, dependencyEditIn, dependencyPathByKey } from '../shared
 import { freeTagEditsIn } from '../shared/tags.ts'
 import { parseFrontmatter } from '../shared/frontmatter.ts'
 import { parseWikilink } from '../shared/schema.ts'
-import { applyReviewRequest, applyVerdict, type Verdict } from '../shared/review.ts'
+import { applyReviewRequest } from '../shared/review.ts'
 import type { ReviewRequestChoice } from './ui/send-for-review-modal.ts'
 import { assignEdits } from '../shared/delegate.ts'
 import type { WorkItemIndex, WorkItemMeta } from './index.ts'
@@ -40,13 +40,9 @@ export class Actions {
   /** Every board write, so it can be reversed. Session only (see `undo.ts`). */
   readonly undoStack = new UndoStack()
 
-  /** "Your name": who signs a write made on this device. */
-  private readonly you: () => string
-
-  constructor(app: App, index: WorkItemIndex, you: () => string = () => '') {
+  constructor(app: App, index: WorkItemIndex) {
     this.app = app
     this.index = index
-    this.you = you
   }
 
   /** Applies a plan to the file's current text. Returns the text written, or null when nothing changed. */
@@ -137,25 +133,6 @@ export class Actions {
     }
   }
 
-  /**
-   * Approve or send back a card that waits for your review (docs/adr/0043-review-verdicts.md).
-   * The note and the frontmatter change are one write to the card. Returns true when it was written.
-   */
-  async review(meta: WorkItemMeta, verdict: Verdict): Promise<boolean> {
-    const what = verdict.verdict === 'approve' ? `approve ${meta.title}` : `send back ${meta.title}`
-    const done = await this.run(what, async () => {
-      let before = ''
-      const after = await this.app.vault.process(meta.file, (data) => {
-        before = data
-        return applyVerdict(data, verdict)
-      })
-      this.undoStack.record({ kind: 'edit', path: meta.file.path, before, after, label: what })
-      return true
-    })
-    if (done) this.undoableNotice(verdict.verdict === 'approve' ? `Approved ${meta.title}` : `Sent back ${meta.title}`)
-    return done === true
-  }
-
   /** Sends the card for review through the same shared edit as `wi review`. */
   async sendForReview(meta: WorkItemMeta, { to, note, paths, attachments }: ReviewRequestChoice): Promise<boolean> {
     const done = await this.run(`send ${meta.title} for review`, async () => {
@@ -164,7 +141,7 @@ export class Actions {
       let before = ''
       const after = await this.app.vault.process(meta.file, (data) => {
         before = data
-        return applyReviewRequest(data, { to, files, note, writer: this.you() })
+        return applyReviewRequest(data, { to, files, note })
       })
       this.undoStack.record({ kind: 'edit', path: meta.file.path, before, after, label: `send ${meta.title} for review` })
       return true
