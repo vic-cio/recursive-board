@@ -251,6 +251,8 @@ Code reads this file. Keep these markers when you change it. `docs/adr/0067-the-
 
 ### Unreleased
 
+### 0.9.0
+
 - The Dispatching procedure reads the agent limit with `wi agents --json`. `wi dashboard` is retired.
 - The `agent-count` check finds a role or procedure note that still reads the agent limit from `wi dashboard`.
 

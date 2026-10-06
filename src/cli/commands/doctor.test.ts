@@ -132,7 +132,7 @@ test('wi-version: offline is a note, an older wi is a fix with the update comman
     assert.equal(result(offline, 'wi-version').level, 'note')
     assert.equal(offline.broken, false)
 
-    const old = await runDoctor(s.options({ latestVersion: async () => '0.9.0' }))
+    const old = await runDoctor(s.options({ latestVersion: async () => '99.0.0' }))
     assert.equal(result(old, 'wi-version').level, 'fix')
     assert.match(result(old, 'wi-version').paste ?? '', /npm install --global recursive-board@latest/)
     assert.equal(old.broken, false)
@@ -205,7 +205,7 @@ test('plugin-version: a missing plugin, an older plugin and an older wi are fixe
     assert.equal(older.level, 'fix')
     assert.match(older.message, /Update the plugin/)
 
-    s.vault.write(PLUGIN_MANIFEST, JSON.stringify({ version: '0.9.0' }))
+    s.vault.write(PLUGIN_MANIFEST, JSON.stringify({ version: '99.0.0' }))
     const newer = result(await runDoctor(s.options()), 'plugin-version')
     assert.equal(newer.level, 'fix')
     assert.match(newer.message, /Update wi/)

@@ -174,7 +174,7 @@ Notes
   \`wi trace\` was removed in 0.8.0. Use \`wi show <ref> --json\` to read a card's Knowledge links.
 `
 
-const VERSION = '0.8.3'
+const VERSION = '0.9.0'
 
 class UsageError extends Error {}
 
