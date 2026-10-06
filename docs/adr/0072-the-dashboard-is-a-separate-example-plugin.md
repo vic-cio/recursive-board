@@ -1,7 +1,7 @@
 ---
 status: accepted
 supersedes: docs/adr/0040-dashboard-view.md, docs/adr/0044-web-review-rows.md, docs/adr/0045-personal-dashboard-state.md, docs/adr/0055-dashboard-summary-in-the-cli.md
-amends: docs/adr/0034-agent-limit.md (where the count shows), docs/adr/0043-review-verdicts.md (where the buttons live), docs/adr/0061-holder-names-who-does-the-work.md (wi agents), docs/adr/0066-count-only-working-agents.md (where the rule lives)
+amends: docs/adr/0041-card-dependencies.md (where the dashboard lives), docs/adr/0058-delegate-a-card.md (where the dashboard lives), docs/adr/0034-agent-limit.md (where the count shows), docs/adr/0043-review-verdicts.md (where the buttons live), docs/adr/0061-holder-names-who-does-the-work.md (wi agents), docs/adr/0066-count-only-working-agents.md (where the rule lives)
 ---
 # The dashboard is a separate example plugin
 

@@ -100,7 +100,7 @@ Use **Send for review…** in a card's menu to choose a person, say what to chec
 
 ## Dashboard
 
-Recursive Board ships no dashboard. The recommended dashboard is [Recursive Board Dashboard](https://github.com/vic-cio/recursive-board-dashboard), a separate Obsidian plugin. It shows what waits for your review, progress per area, the agents, the people and the cards that need attention, and it gives **Approve** and **Send back**. It is an example to copy: it has no releases and no community listing. It reads the card files through Obsidian, so it works on a phone.
+Recursive Board ships no dashboard. The example dashboard is [Recursive Board Dashboard](https://github.com/vic-cio/recursive-board-dashboard), a separate Obsidian plugin. It shows what waits for your review, progress per area, the agents, the people and the cards that need attention, and it gives **Approve** and **Send back**. It is an example to copy: it has no releases and no community listing. It reads the card files through Obsidian, so it works on a phone.
 
 To build your own dashboard, read the card files, or use these `wi` commands:
 
