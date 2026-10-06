@@ -28,14 +28,16 @@ Change only the key you mean to change.
 The valid statuses are `backlog`, `options`, `doing`, and `done`. A root has no status.
 `prev_status` stores the status to restore when an item is unticked from done.
 
-A dispatcher assigns a card with `wi claim <ref> --agent <name>`. The command records the agent
+A dispatcher assigns a card with `wi claim <ref> --holder <name>`. The command records the holder
 and doing status in one file write. If that worker stops, its dispatcher runs `wi release` with
-`--reason <text>` and optionally `--where <branch-or-path>`. Release clears the agent, returns
+`--reason <text>` and optionally `--where <branch-or-path>`. Release clears the holder, returns
 the card to options, and adds a dated line to Notes so the next worker can continue.
 
-To start a headless worker on a card, run `wi delegate <ref> --to <claude|codex|pi>` in the Git
-repository the card works on. It claims the card and starts the worker in a worktree. A card
-given to a person with `wi delegate <ref> --to <name>` needs a note with `type: person`.
+`wi delegate <ref> --to <person|agent>` sets the card's `holder` and nothing else. The status
+stays. `--to agent` writes `holder: agent`, which asks any agent to take the card. A card given to
+a person with `wi delegate <ref> --to <name>` needs a note with `type: person`. `wi` starts no
+agent. Start a worker with your harness's own tools, such as a subagent or a background task. The
+worker then runs `wi claim <ref>`.
 
 ## Identity
 
