@@ -1,7 +1,7 @@
 ---
 status: accepted
 amends: docs/adr/0034-agent-limit.md (who counts), docs/adr/0042-creator-and-role.md (the full list of person notes for delegation)
-amended_by: 0061-holder-names-who-does-the-work.md (the field is `holder`; delegating names the holder only), 0063-wi-starts-no-agents.md (wi no longer starts a harness)
+amended_by: 0061-holder-names-who-does-the-work.md (the field is `holder`; delegating names the holder only), 0063-wi-starts-no-agents.md (wi no longer starts a harness), 0072-the-dashboard-is-a-separate-example-plugin.md (the dashboard is a separate example plugin)
 ---
 # Delegate a card to a person or a headless agent
 
@@ -21,8 +21,8 @@ change, the delegator moves the card, or the holder does when they start. A work
 `wi claim <card> --agent <its name>` when it starts, and that claim moves the card to doing
 ([0014](0014-agent-claims.md)). Victor decided this on 2026-10-01: "a worker wouldn't want you
 messing with their priority list". Until the worker claims it, the card sits in its old status
-with the worker as holder. `owner` is not used: on the dashboard, a doing card that you own waits
-for your review, which is a different thing.
+with the worker as holder. `owner` is not used: on the example dashboard (ADR 0072), a doing card that you own
+waits for your review, which is a different thing.
 
 For a person and for `agent`, `wi delegate` writes only the holder. It writes no note. There is no `--reason`: a worker reads the
 card body as its brief, and a person explains a hand-off on the platform they talk on. Victor

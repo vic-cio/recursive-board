@@ -1,5 +1,6 @@
 ---
 status: accepted
+amended_by: 0072-the-dashboard-is-a-separate-example-plugin.md (the dashboard is a separate example plugin)
 ---
 # A card can wait on other cards
 
@@ -15,15 +16,16 @@ nothing is written when a dependency closes, and the card that waits needs no ed
 external wait becomes a card of its own, and the waiting card depends on it.
 
 An archived card that is not done stays open. Archiving drops the work, and the card that needed
-it must not start without a decision. `wi validate` warns (`depends-archived`), and the dashboard
-lists it under "Needs attention".
+it must not start without a decision. `wi validate` warns (`depends-archived`), and the example dashboard
+(ADR 0072) lists it under "Needs attention".
 
 ## Who enforces it
 
 - `wi claim` and `wi status <ref> doing` refuse a card with an open dependency. The same agent
   that already holds the card in doing passes `wi claim`, as before.
 - The board lets a person move a waiting card to doing. It shows a notice that names the open
-  dependencies, and the dashboard lists the card under "Needs attention" while it stays in doing.
+  dependencies, and the example dashboard (ADR 0072) lists the card under "Needs attention" while it
+  stays in doing.
   A person can judge that a dependency does not matter; an agent cannot.
 - `wi status <ref> done` names each card that now waits on nothing open, so a dispatcher can start
   it.
