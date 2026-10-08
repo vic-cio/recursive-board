@@ -28,9 +28,8 @@ export function renderSelfCard(stack: HTMLElement, ctx: RenderContext, board: Wo
 
   const face = card.createDiv({ cls: 'wi-card-face' })
   const head = face.createDiv({ cls: 'wi-card-head' })
-  head.createSpan({ cls: 'wi-self-mark', text: 'This board' })
+  head.createSpan({ cls: 'wi-area-mark', text: 'Area', attr: { 'aria-label': 'Area' } })
   const title = head.createDiv({ cls: 'wi-card-title', text: board.title })
-  card.setAttr('aria-label', `${board.title}, this board`)
 
   if (expanded) {
     title.addClass('is-link')
