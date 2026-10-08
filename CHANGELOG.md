@@ -10,6 +10,12 @@ the agent notes in your vault.
 
 ## [Unreleased]
 
+### Added
+
+- An area's board shows the area as a quiet self-card in its own status column. It is render
+  only: nothing is written, and no count changes. Open it from its preview to zoom into the same
+  board.
+
 ### Changed
 
 - The area bar shows on a root board only. It holds a chip for every area in options or doing

@@ -19,6 +19,7 @@ import { toAreas, toColumns, type AreaSummary, type Column, type WorkItemMeta } 
 import { renderAddRow, renderHiddenNote } from './add-row.ts'
 import { renderArchiveNote, showingArchived } from './archive-note.ts'
 import { renderCard } from './card.ts'
+import { renderSelfCard } from './self-card.ts'
 import { attachMenu } from './menu.ts'
 import type { RenderContext } from './context.ts'
 import { statusLabel } from './status-label.ts'
@@ -113,6 +114,7 @@ function renderColumn(
 
   const stack = column.createDiv({ cls: 'wi-stack' })
   for (const meta of cards) renderCard(stack, ctx, meta, { draggable: true })
+  renderSelfCard(stack, ctx, parent, status)
   if (hidden > 0) renderHiddenNote(stack, hidden)
 
   if (!Platform.isMobile) acceptDrops(column, stack, ctx, status)

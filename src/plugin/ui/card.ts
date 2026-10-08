@@ -194,7 +194,7 @@ function renderDoneFold(host: HTMLElement, ctx: RenderContext, meta: WorkItemMet
   })
 }
 
-async function renderExpansion(
+export async function renderExpansion(
   host: HTMLElement,
   ctx: RenderContext,
   meta: WorkItemMeta,

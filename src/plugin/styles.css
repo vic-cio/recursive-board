@@ -573,6 +573,28 @@
   line-height: 1.5;
 }
 
+/* An area's self-card (docs/adr/0074-an-area-shows-itself-in-its-own-board.md): a reflection of
+   the board, not a task, so it is drawn as an outline with muted text and no status tint. */
+.wi-card.wi-self-card {
+  border-style: dashed;
+  border-left-width: 1px;
+  background: transparent;
+}
+
+.wi-self-card .wi-card-title:not(.is-link) {
+  color: var(--text-muted);
+}
+
+.wi-self-mark {
+  flex: none;
+  border: 1px dashed var(--text-faint);
+  border-radius: 8px;
+  padding: 0 5px;
+  color: var(--text-faint);
+  font-size: 10px;
+  line-height: 1.5;
+}
+
 .wi-card-body {
   margin-top: 8px;
   padding-top: 8px;
