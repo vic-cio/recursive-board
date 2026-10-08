@@ -1,5 +1,6 @@
 ---
 status: accepted
+amended_by: 0073-area-chips-live-on-the-root-board.md (the bar shows on a root board only, lists every live area below it, and the phone draws the same strip)
 ---
 # Mark ongoing areas with `area: true`
 
@@ -22,3 +23,10 @@ Doing cards.
 A special `type: area` would split areas from the work item identity and parent graph, while a
 template name is not stored in generated files. The marker keeps areas in the existing hierarchy
 and makes the distinction explicit in canonical frontmatter.
+
+## Amendment 2026-10-08: the bar moved to the root board
+
+The area bar shows on a root board only. It lists every live area below the root, at any depth, in
+tree order ([0073](0073-area-chips-live-on-the-root-board.md)). A board that is not a root shows
+no bar, because a live area is also a card in its status column. The phone draws the same strip of
+small chips, with no ⋯ button. The rules above for which areas are live, and for the count, stay.

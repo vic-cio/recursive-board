@@ -10,6 +10,17 @@ the agent notes in your vault.
 
 ## [Unreleased]
 
+### Changed
+
+- The area bar shows on a root board only. It holds a chip for every area in options or doing
+  anywhere below the root, at any depth, in tree order. A board that is not a root shows no area
+  bar, because a live area is also a card in its status column. A chip's count is still the
+  area's own Doing cards. An area deeper in the tree has a hover title with the board that holds
+  it ([0073](docs/adr/0073-area-chips-live-on-the-root-board.md)).
+- The phone shows the same strip of small chips as the desktop, in one row that scrolls sideways.
+  It replaces the collapsible Areas group of full-width rows. A chip has no ⋯ button, because the
+  area's own card on its parent board has one.
+
 ## [0.9.0] - 2026-10-06
 
 ### Agent setup
