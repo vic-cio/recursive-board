@@ -158,7 +158,8 @@ function acceptDrops(
     if (!path) return
     const file = ctx.app.vault.getFileByPath(path)
     const meta = ctx.index.get(file)
-    // A drop changes the child's status. Nothing else, and never the parent.
+    // A drop changes the dropped card's status and nothing else. The parent changes only when
+    // its own self-card is the card dropped (docs/adr/0074-an-area-shows-itself-in-its-own-board.md).
     if (meta) void ctx.actions.setStatus(meta, status)
   })
   void stack

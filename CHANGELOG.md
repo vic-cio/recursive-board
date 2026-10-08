@@ -12,9 +12,9 @@ the agent notes in your vault.
 
 ### Added
 
-- An area's board shows the area as a quiet self-card in its own status column. It is render
-  only: nothing is written, and no count changes. Open it from its preview to zoom into the same
-  board.
+- An area's board shows the area as a self-card in its own status column, the same as its card on
+  the parent board. It adds no file and no count. Drag it to another column to set the area's
+  status. Open it from its preview to zoom into the same board.
 
 ### Changed
 

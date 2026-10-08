@@ -13,8 +13,10 @@ apart too much).
 
 The self-card is render only. Nothing is written to Markdown, so `wi`, agents and `wi validate`
 never see it, and parents stay acyclic. It adds nothing to a column count or a phone tab count.
-It has no menu and no remove button, and it cannot be dragged, so no action on it writes. It
-shows on desktop and on the phone, and it obeys the archive toggle like any card.
+It has no menu and no remove button. On desktop it can be dragged like any card: a drop in another
+column sets the area's own status, the same single write as a drag of the area's card on its
+parent board (Victor, 2026-10-08). It shows on desktop and on the phone, and it obeys the archive
+toggle like any card.
 
 A click expands its preview in place like any card ([0016](0016-cards-expand-in-place.md)). The
 title of the expanded self-card opens the area, which is the board you are on. That open plays a

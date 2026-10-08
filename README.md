@@ -220,7 +220,7 @@ Each command takes only the flags its row shows, plus `--vault` and `--json` whe
 `wi new --template area` creates an area in `backlog` by default. Pass `--status` to choose its
 starting status. Areas appear in their status column. A root board also shows a chip for every area in options or doing anywhere below it, in one row above its columns. The phone shows the same row of small chips. A backlog or done area stays in its column only, and a board that is not a root shows no area bar.
 
-An area's own board also shows the area as a self-card in its status column, the same as the area's card on its parent board. The plugin only draws it: nothing is written, no count changes, and `wi` never sees it. Its preview opens the same board with a short zoom.
+An area's own board also shows the area as a self-card in its status column, the same as the area's card on its parent board. The plugin only draws it: it adds no file and no count, and `wi` never sees it. A drag to another column sets the area's status. Its preview opens the same board with a short zoom.
 
 `wi move`, `wi rm`, and `wi archive` refuse to run when a hidden non-Markdown file is in the work-item folder. The index cannot read that file, so it may be missing a work item. Let the sync client finish downloading it or remove the stray file, then retry. There is no force option. `wi new` still creates the item and warns on stderr because a new id or filename may clash with an unread file. `wi validate` reports a warning if `defaultRoot` names no root item.
 

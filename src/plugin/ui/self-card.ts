@@ -3,10 +3,12 @@
  * (docs/adr/0074-an-area-shows-itself-in-its-own-board.md).
  *
  * Render only. Nothing reaches Markdown, so `wi`, agents and `wi validate` never see it, and
- * parents stay acyclic. The self-card adds nothing to a column count, carries no menu, and cannot
- * be dragged: it is a reflection, not a task. A click expands its preview like any card; its title
- * then plays a short zoom into the card that lands on the same board.
+ * parents stay acyclic. The self-card adds nothing to a column count and carries no menu. A drag
+ * to another column sets the area's own status, as a drag of its card on the parent board does.
+ * A click expands its preview like any card; its title then plays a short zoom into the card that
+ * lands on the same board.
  */
+import { Platform } from 'obsidian'
 import type { Status } from '../../shared/schema.ts'
 import type { WorkItemMeta } from '../index.ts'
 import { showingArchived } from './archive-note.ts'
@@ -51,6 +53,17 @@ export function renderSelfCard(stack: HTMLElement, ctx: RenderContext, board: Wo
     }
     ctx.expand(expanded ? null : key)
   })
+
+  // The column's drop handler sets the status of the dropped path, here the area itself.
+  if (!Platform.isMobile) {
+    card.draggable = true
+    card.addEventListener('dragstart', (event) => {
+      card.addClass('is-dragging')
+      event.dataTransfer?.setData('text/plain', board.file.path)
+      if (event.dataTransfer) event.dataTransfer.effectAllowed = 'move'
+    })
+    card.addEventListener('dragend', () => card.removeClass('is-dragging'))
+  }
 
   if (expanded) void renderExpansion(card.createDiv({ cls: 'wi-card-body' }), ctx, board)
 }
