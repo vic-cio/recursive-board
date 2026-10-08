@@ -1,7 +1,7 @@
 /**
  * `wi validate` — the schema and layout checker described in docs/adr/0004-wi-is-the-programmatic-write-interface.md.
  *
- * It runs from a Git pre-commit hook on the vault repo, which is the moment damage becomes
+ * It can run from an optional Git pre-commit hook on the vault repo: the moment damage becomes
  * permanent and the diff is still visible. It catches what the plugin cannot: a hand edit on the
  * phone, an agent rewriting YAML, a sync layer resurrecting a stale copy.
  *

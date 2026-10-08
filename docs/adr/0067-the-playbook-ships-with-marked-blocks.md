@@ -1,5 +1,6 @@
 ---
 status: accepted
+amended_by: 0073-git-versioning-is-advice.md (a git-hook block holds the pre-commit snippet)
 ---
 # The agent playbook ships in the package, with marked blocks
 
@@ -38,6 +39,8 @@ against it. Code finds each part by these markers. A change to them is a change 
   - `dispatching`: the Dispatching procedure note, with frontmatter, for `Roles/Dispatching.md`.
   - `checks`: one recommendation per line: a check id (lowercase words joined by hyphens), two or
     more spaces, and the text. `wi doctor` reports by these ids.
+  - `git-hook`: a shell script for `.git/hooks/pre-commit` that names three absolute paths in
+    double quotes: Node, `wi.js` and the vault (0073). It is advice, and no command needs it.
 - **Changes.** The last section is `## Changes`. It has one `###` heading per version that changed
   the playbook, newest first. A heading is a version number, such as `0.9.0`, or `Unreleased` for
   the next release. The release step renames `Unreleased` to the version.

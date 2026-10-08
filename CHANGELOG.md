@@ -10,11 +10,20 @@ the agent notes in your vault.
 
 ## [Unreleased]
 
+### Agent setup
+
+- Git versioning is optional advice, with an optional pre-commit hook snippet, in the new "Git
+  versioning" section of the playbook. If a note in your vault tells an agent to run `wi hook
+  install`, remove that line. `wi hook` is removed
+  ([0075](docs/adr/0075-git-versioning-is-advice.md)).
+
 ### Added
 
 - An area's board shows the area as a self-card in its own status column, the same as its card on
   the parent board. It adds no file and no count. Drag it to another column to set the area's
   status. Open it from its preview to zoom into the same board.
+- The playbook has a "Git versioning" section, and a `git-hook` block with a pre-commit snippet
+  that names absolute paths, so a Git GUI client can run it. The README shows the same snippet.
 
 ### Changed
 
@@ -26,6 +35,15 @@ the agent notes in your vault.
 - The phone shows the same strip of small chips as the desktop, in one row that scrolls sideways.
   It replaces the collapsible Areas group of full-width rows. A chip has no ⋯ button, because the
   area's own card on its parent board has one.
+- `wi setup` no longer offers the Git validation hook, and asks no question after the vault choice.
+- The `hook` check of `wi doctor` reads the pre-commit file and reports whether it runs
+  validation. It is a note, never a fix, and it prints nothing to paste.
+
+### Removed
+
+- `wi hook` is removed, with `install`, `uninstall` and `status`. `wi hook` is now an unknown
+  command. A hook that `wi hook install` wrote earlier keeps working. Delete
+  `.git/hooks/pre-commit` to remove it.
 
 ## [0.9.0] - 2026-10-06
 

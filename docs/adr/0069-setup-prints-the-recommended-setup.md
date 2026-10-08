@@ -1,6 +1,7 @@
 ---
 status: accepted
 amends: docs/adr/0025-agent-setup.md (setup ends with the recommended agent setup and gains --json)
+amended_by: 0073-git-versioning-is-advice.md (setup offers no hook)
 ---
 # `wi setup` prints the recommended setup and writes no workflow file
 
@@ -10,7 +11,7 @@ setup is optional (AGENTS.md, "No forced workflow"), so setup only shows it.
 
 ## The decision
 
-- After the vault choice, the skill copies and the hook offer, `wi setup` prints the playbook's
+- After the vault choice and the skill copies, `wi setup` prints the playbook's
   `summary` block as plain text, like `--help` output. Below it, setup prints the path of the
   installed `docs/playbook.md` and names `wi doctor` as the way to check a vault against it.
 - Setup copies no role note, writes no `AGENTS.md` and asks no question about the setup. It stores
@@ -20,8 +21,8 @@ setup is optional (AGENTS.md, "No forced workflow"), so setup only shows it.
   README's install prompt and the skill's Setup section tell it.
 - `wi setup --json` prints one object: `vault`, `config`, `skills` (each path and its outcome) and
   `recommendedSetup` (`summary`, `playbook` path and `check` command). It asks no questions, so it
-  needs `--vault`, as `--yes` does, and it does not offer the hook. `recommendedSetup` is null when
-  the playbook or its block is missing.
+  needs `--vault`, as `--yes` does. `recommendedSetup` is null when the playbook or its block is
+  missing.
 - When the installed playbook or its `summary` block is missing, the text output leaves the summary
   out. A missing optional text does not stop the setup.
 - The plugin shows nothing of it. Victor, 2026-10-04: the recommended setup is CLI tooling that

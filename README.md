@@ -162,23 +162,25 @@ The optional [agent playbook](docs/playbook.md) describes one agent setup that w
 
 The optional [refocus hook](docs/refocus-hook.md) sends a card's Objective chain after compaction or Claude transcript growth. Add its settings entries yourself to enable it.
 
-## Install the Git validation hook
+## Version the vault with Git (optional)
 
-Git is optional. Recursive Board works without it, and the hook only adds a check for vaults that are Git repositories.
+Git is optional. Recursive Board works without it, and a solo user with no agents does not need it. It pays off when a team grows or when agents write to the vault, because each commit is a point that you can go back to.
 
-If your vault is a Git repository, use the installed `wi` command:
+If your vault is a Git repository, a pre-commit hook can run `wi validate` and stop a commit when the vault has errors. The hook needs Node and `wi`. Save this snippet as `.git/hooks/pre-commit`, replace the three paths with absolute paths, and run `chmod +x .git/hooks/pre-commit`:
 
 ```sh
-wi hook install --vault <vault-path>
+#!/bin/sh
+# Check the vault before each commit. To skip the check once: git commit --no-verify
+exec "/absolute/path/to/node" "/absolute/path/to/wi.js" validate --vault "/absolute/path/to/vault"
 ```
 
-The pre-commit hook runs `wi validate` and stops a commit when the vault has errors. It calls the Node binary and `wi` entry point used to install it, so keep that `wi` installation available. Use `wi hook status --vault <vault-path>` to inspect the hook and `wi hook uninstall --vault <vault-path>` to remove it. Installation refuses to replace another pre-commit hook unless you pass `--force`.
+The [Git versioning](docs/playbook.md#git-versioning) section of the playbook says how to find the paths, and what to do when the hook cannot run. `wi doctor` reports whether a pre-commit hook runs validation. `wi hook` is retired: a hook that it installed earlier keeps working.
 
 ## Commands
 
 | Command | What it does |
 | --- | --- |
-| `wi setup [--yes] [--vault <path>] [--force] [--json]` | Installs the agent skill, selects and saves a default vault, and offers the Git validation hook for a Git vault. It ends with the optional recommended agent setup and writes nothing into the vault for it. `--yes` requires `--vault` and asks no questions. `--json` prints one object, asks no questions, and requires `--vault`. |
+| `wi setup [--yes] [--vault <path>] [--force] [--json]` | Installs the agent skill and saves a default vault. It ends with the optional recommended agent setup and writes nothing into the vault for it. `--yes` requires `--vault` and asks no questions. `--json` prints one object, asks no questions, and requires `--vault`. |
 | `wi doctor [--json]` | Checks the install and the optional agent setup, and prints each check as pass, note or fix. A fix prints the command to run or the text to paste. It writes nothing. It exits 1 only when the install is broken (docs/adr/0070-wi-doctor-checks-on-request.md). |
 | `wi update [--dry-run] [--from <version>] [--vault <path>]` | Installs the newest package with npm, then runs the new `wi` to refresh both skill copies and the vault's plugin files. It prints the changelog's Agent setup changes and suggests `wi doctor`. `--dry-run` writes nothing. `--from <version>` skips the install and names the old version. |
 | `wi new <title> [--parent <ref>] [--status <status>] [--template <name>] [--owner <name>] [--holder <name>] [--priority <number>] [--objective <text>] [--context <text>]... [--criteria <text>]... [--strict]` | Creates a work item under the given parent. It does not copy the parent's owner; pass `--owner` to set one. If `--parent` is omitted, uses `defaultRoot` from the board settings. The brief flags fill the body: repeat `--context` for each paragraph and `--criteria` for each criterion. It wraps bare angle placeholders in backticks and preserves code, links, autolinks, and HTML. It warns when the card has no Objective or Acceptance Criteria, and `--strict` refuses the card instead. Unsafe filename characters in the title become hyphens; a filename clash adds the id suffix and never overwrites. See `autoPromote`. |
@@ -206,9 +208,8 @@ The pre-commit hook runs `wi validate` and stops a commit when the vault has err
 | `wi show <ref> --json` | Reads one complete card as JSON. It includes the brief, Notes, Knowledge lines, assignment, ancestor objectives, dependencies, and child summary. Broken links appear as issues; the command changes no files. |
 | `wi objective [<ref>]` | Retired command. Exits 0 and names `wi show <ref> --json`. |
 | `wi validate` | Checks work-item structure and reports errors and warnings. Exits with code 1 when it finds errors. |
-| `wi hook install\|uninstall\|status [--vault <path>]` | Installs, removes, or inspects the Git pre-commit validation hook. `install --force` replaces an unrelated hook. |
+| `wi hook` | Retired. It exits 0, changes nothing, and names the playbook's Git versioning section. A hook that it installed earlier keeps working. See [Version the vault with Git](#version-the-vault-with-git-optional). |
 | `wi here` | Retired. Exits 0 and changes nothing. A project's `AGENTS.md` names its board; pass it to `wi new` as `--parent`. |
-
 | `wi template` | Retired command. Prints a message that names `wi new --template` and exits with code 0. |
 | `wi --help` or `wi help` | Prints usage, options, and notes. |
 | `wi --version` | Prints the installed CLI version. |

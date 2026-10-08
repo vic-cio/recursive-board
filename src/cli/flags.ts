@@ -91,7 +91,7 @@ export const COMMAND_FLAGS: Record<string, Flag[]> = {
 
 /** How the refusal names the commands that take a flag, where the command name alone is too broad. */
 const TAKEN_BY: Partial<Record<Flag, string>> = {
-  force: 'wi hook install and wi setup',
+  force: 'wi setup',
 }
 
 export type Values = Record<string, string | string[] | boolean | undefined>

@@ -7,7 +7,7 @@ import { fileURLToPath } from 'node:url'
 const root = fileURLToPath(new URL('..', import.meta.url))
 const playbook = readFileSync(new URL('../docs/playbook.md', import.meta.url), 'utf8')
 
-const BLOCKS = ['summary', 'agents-and-roles', 'role-note', 'dispatching', 'checks']
+const BLOCKS = ['summary', 'agents-and-roles', 'role-note', 'dispatching', 'checks', 'git-hook']
 
 // The marker grammar of docs/adr/0067-the-playbook-ships-with-marked-blocks.md.
 function blocks(text: string): Map<string, string[]> {
@@ -90,6 +90,20 @@ test('the playbook carries no personal details', () => {
 test('the README links the playbook as optional', () => {
   const readme = readFileSync(new URL('../README.md', import.meta.url), 'utf8')
   assert.match(readme, /optional \[agent playbook\]\(docs\/playbook\.md\)/i)
+})
+
+test('the playbook gives Git versioning as optional advice with a copyable pre-commit snippet', () => {
+  assert.match(playbook, /^## Git versioning\n/m)
+  const section = playbook.split(/^## Git versioning\n/m)[1]!.split(/^## /m)[0]!
+  assert.match(section, /optional/i)
+  assert.match(section, /--no-verify/)
+  assert.match(block('git-hook'), /^#!\/bin\/sh\n/)
+})
+
+test('the README shows the same pre-commit snippet as the playbook, and no hook command to run', () => {
+  const readme = readFileSync(new URL('../README.md', import.meta.url), 'utf8')
+  assert.ok(readme.includes(block('git-hook')), 'the README carries the git-hook block verbatim')
+  assert.doesNotMatch(readme, /wi hook (install|uninstall|status) --vault/, 'the README tells nobody to run wi hook')
 })
 
 test('the shared parser reads every marked block and check of the shipped playbook', async () => {

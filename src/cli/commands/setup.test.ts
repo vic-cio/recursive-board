@@ -1,7 +1,7 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { execFile } from 'node:child_process'
-import { mkdtempSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
+import { existsSync, mkdtempSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join, relative } from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -143,6 +143,26 @@ test('setup --yes asks nothing, even for a Git vault', async () => {
     assert.equal(code, 0)
     assert.doesNotMatch(stdout, /\?/, 'no question is printed')
     assert.match(stdout, /Recommended agent setup/)
+  } finally {
+    rmSync(home, { recursive: true, force: true })
+    rmSync(vault, { recursive: true, force: true })
+  }
+})
+
+test('setup makes no git hook offer, even when a person answers yes', async () => {
+  const home = mkdtempSync(join(tmpdir(), 'wi-setup-home-'))
+  const vault = mkdtempSync(join(tmpdir(), 'wi-setup-vault-'))
+  const entry = fileURLToPath(new URL('../wi.ts', import.meta.url))
+  await run('git', ['init', '-q', vault])
+  try {
+    const child = execFile('node', [entry, 'setup', '--vault', vault], { env: setupEnv(home), timeout: 20_000 })
+    child.stdin?.end('yes\nyes\n')
+    let stdout = ''
+    child.stdout?.on('data', (chunk: string) => { stdout += chunk })
+    const code = await new Promise((resolve) => child.on('close', resolve))
+    assert.equal(code, 0)
+    assert.doesNotMatch(stdout, /\?|hook/i, 'setup asks nothing and names no hook')
+    assert.equal(existsSync(join(vault, '.git', 'hooks', 'pre-commit')), false, 'setup writes no pre-commit hook')
   } finally {
     rmSync(home, { recursive: true, force: true })
     rmSync(vault, { recursive: true, force: true })

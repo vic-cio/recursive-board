@@ -11,7 +11,6 @@
  */
 import { homedir } from 'node:os'
 import { resolve } from 'node:path'
-import { fileURLToPath } from 'node:url'
 
 import {
   loadVault, findVaultRoot, getDefaultVault, maxAgentsForRun, readRoleTaggedNotes,
@@ -35,7 +34,6 @@ import { setArea } from './commands/area.ts'
 import { setDependency } from './commands/depend.ts'
 import { setPeople } from './commands/set.ts'
 import { dependenciesOf, openDependencies, titleOf } from './dependencies.ts'
-import { hookStatus, installHook, uninstallHook } from './commands/hook.ts'
 import { runSetup } from './commands/setup.ts'
 import { npmLatestVersion, renderDoctor, runDoctor } from './commands/doctor.ts'
 import { realUpdateSeams, runUpdate } from './commands/update.ts'
@@ -79,14 +77,13 @@ Usage
   wi ready [--parent <ref>] [--holder <name>] [--json]
   wi show <ref> [--json]
   wi validate
-  wi hook <install|uninstall|status> [--force]
 
 A <ref> is a work item id, a filename or a title. An id always wins.
 A <status> is one of: ${STATUSES.join(', ')}.
 Options
   --vault <path>   The vault root. Defaults to $WI_VAULT, the vault this folder is in, then defaultVault.
   --json           Machine-readable output.
-  --force          Replace an unrelated hook, or an unmanaged skill during setup.
+  --force          Replace an unmanaged skill during setup.
   --yes            Run setup without prompts; requires --vault <path>.
   -h, --help       This text.
   -V, --version    Print the version.
@@ -121,7 +118,10 @@ Notes
   and adds WI_MODEL when set. It refuses a note with no writer name. The write re-reads the card under a lock, so two notes at once both survive.
   \`wi status <ref> done\` says when that was the parent's last open child. It does not close the parent.
   Unticking a done item is \`wi status <ref> <its prev_status>\`, which also clears the record.
-  \`wi validate\` exits 1 when the vault has errors, so it works as a pre-commit hook.
+  \`wi validate\` exits 1 when the vault has errors, so it works as a pre-commit hook. The playbook's
+  Git versioning section has an optional hook snippet to copy.
+  \`wi hook\` is retired and changes nothing. A hook that it installed earlier keeps working; delete
+  .git/hooks/pre-commit to remove it. See Git versioning in docs/playbook.md.
   \`wi template\` is retired. Use \`wi new --template\` to choose a template when you create a work item.
   \`wi rm\` moves a file to the vault's .trash. It refuses an item that has children
   unless you pass --recursive, because removing a parent leaves its children on no board.
@@ -202,7 +202,6 @@ async function main(argv: string[]): Promise<number> {
       yes: values['yes'] === true,
       json: values['json'] === true,
       force: values['force'] === true,
-      cliEntry: fileURLToPath(import.meta.url),
     })
     return 0
   }
@@ -246,6 +245,11 @@ async function main(argv: string[]): Promise<number> {
 
   if (command === 'dashboard') {
     process.stdout.write('wi dashboard is retired. Use wi agents for the agent count and limit. A dashboard is a separate plugin; the README names an example.\n')
+    return 0
+  }
+
+  if (command === 'hook') {
+    process.stdout.write('wi hook is retired and changes nothing. A Git pre-commit hook is optional advice: copy the snippet from "Git versioning" in docs/playbook.md. A hook that wi installed earlier keeps working. To remove it, delete .git/hooks/pre-commit.\n')
     return 0
   }
 
@@ -304,8 +308,6 @@ async function main(argv: string[]): Promise<number> {
       return runShow(vault, rest, json)
     case 'validate':
       return runValidate(vault, json)
-    case 'hook':
-      return runHook(vault, rest, values, json)
     default:
       throw new UsageError(`unknown command "${command}". Run wi --help.`)
   }
@@ -838,48 +840,6 @@ async function runValidate(vault: Vault, json: boolean): Promise<number> {
   const counts = `${report.itemCount} work items, ${report.errorCount} errors, ${report.warningCount} warnings`
   process.stdout.write(report.ok ? `ok: ${counts}\n` : `FAILED: ${counts}\n`)
   return report.ok ? 0 : 1
-}
-
-async function runHook(vault: Vault, rest: string[], values: Values, json: boolean): Promise<number> {
-  const [action, ...extra] = rest
-  if (extra.length > 0 || (action !== 'install' && action !== 'uninstall' && action !== 'status')) {
-    throw new UsageError('wi hook needs install, uninstall, or status. Run wi --help.')
-  }
-  if (values['force'] === true && action !== 'install') {
-    throw new UsageError('--force applies only to wi hook install.')
-  }
-
-  if (action === 'status') {
-    const status = await hookStatus(vault.root)
-    if (json) print(status)
-    else {
-      process.stdout.write(`vault        ${status.vault}\n`)
-      process.stdout.write(`git repo     ${status.gitRepo ?? 'none — run git init in the vault'}\n`)
-      if (status.gitRepo) process.stdout.write(`pre-commit   ${status.preCommit}\n`)
-    }
-    return 0
-  }
-
-  if (action === 'uninstall') {
-    const removed = await uninstallHook(vault.root)
-    if (json) print({ removed })
-    else process.stdout.write(removed ? `removed ${removed}\n` : 'done\n')
-    return 0
-  }
-
-  const path = await installHook(vault.root, fileURLToPath(import.meta.url), values['force'] === true)
-  if (json) print({ installed: path })
-  else {
-    process.stdout.write(`installed ${path}\n`)
-    process.stdout.write('a commit that would record an invalid vault is now refused\n')
-    process.stdout.write('bypass with: git commit --no-verify\n')
-  }
-  const report = await validate(vault)
-  if (!report.ok && !json) {
-    process.stdout.write('\nheads up: the vault does not validate right now, so the next commit will be refused:\n')
-    for (const problem of report.problems) process.stdout.write(`${line(problem)}\n`)
-  }
-  return 0
 }
 
 function line(problem: Problem): string {

@@ -9,7 +9,6 @@ import { stdin, stdout } from 'node:process'
 import { loadVault, wiConfigDir } from '../vault.ts'
 import { packageRoot, readPackageFile } from '../package-files.ts'
 import { playbookBlock } from '../../shared/playbook.ts'
-import { hookStatus, installHook } from './hook.ts'
 
 export interface RegistryLocation {
   platform: NodeJS.Platform | string
@@ -173,15 +172,6 @@ async function selectVault(vaults: string[]): Promise<string> {
   }
 }
 
-async function confirmHook(): Promise<boolean> {
-  const io = createInterface({ input: stdin, output: stdout })
-  try {
-    return /^(y|yes)$/i.test((await io.question('This vault is a Git repository. Install the wi validation hook? [y/N] ')).trim())
-  } finally {
-    io.close()
-  }
-}
-
 const PLAYBOOK_PATH = 'docs/playbook.md'
 const CHECK_COMMAND = 'wi doctor'
 
@@ -201,7 +191,6 @@ export interface SetupOptions {
   yes: boolean
   json: boolean
   force: boolean
-  cliEntry: string
 }
 
 export async function runSetup(options: SetupOptions): Promise<void> {
@@ -249,14 +238,6 @@ export async function runSetup(options: SetupOptions): Promise<void> {
   stdout.write(`wi setup: default vault ${vault}\n`)
   stdout.write(`wi setup: config ${configPath}\n`)
   destinations.forEach((destination, index) => stdout.write(`wi setup: ${outcomes[index]} ${destination}\n`))
-
-  if (!options.yes) {
-    const status = await hookStatus(vault)
-    if (status.gitRepo && await confirmHook()) {
-      const hook = await installHook(vault, options.cliEntry, false)
-      stdout.write(`wi setup: installed validation hook ${hook}\n`)
-    }
-  }
 
   const summary = setupSummary(playbook, playbookPath)
   if (summary !== null) stdout.write(`\n${summary}`)

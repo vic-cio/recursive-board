@@ -88,6 +88,25 @@ test('wi template is a retired command and points to wi new --template without w
   }
 })
 
+test('--force is refused outside wi setup, and the help names the retired wi hook', async () => {
+  const vault = seed()
+  const home = mkdtempSync(join(tmpdir(), 'wi-home-'))
+  try {
+    const refused = await wi(['validate', '--force'], vault, home)
+    assert.equal(refused.code, 2)
+    assert.match(refused.stderr, /--force applies only to wi setup\./)
+
+    const help = await wi(['--help'], vault, home)
+    assert.equal(help.code, 0)
+    assert.doesNotMatch(help.stdout, /wi hook <install/, 'the usage list no longer offers hook management')
+    assert.match(help.stdout, /`wi hook` is retired/)
+    assert.match(help.stdout, /Replace an unmanaged skill during setup\./)
+  } finally {
+    vault.cleanup()
+    rmSync(home, { recursive: true, force: true })
+  }
+})
+
 /** Arguments that would make each command run, so a refusal must come before the work. */
 const INVOCATIONS: Record<string, string[]> = {
   setup: ['setup', '--yes'],

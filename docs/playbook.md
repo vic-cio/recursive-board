@@ -187,6 +187,37 @@ To give a card to a person instead, run `wi delegate <card> --to <person>`. The 
 with `type: person`.
 ```
 
+## Git versioning
+
+Git versioning is optional advice. Recursive Board and `wi` work the same without it, and a solo user with no agents does not need it. It pays off when a team grows or when agents write to the vault: each commit is a point that you can go back to after a bad write.
+
+To version the vault, run `git init` in the vault folder. Commit by hand, at the end of an agent session, or on a timer.
+
+### Pre-commit hook
+
+A pre-commit hook runs `wi validate` before each commit. It stops the commit when the vault has errors. The hook needs Node and the `wi` package on the machine that commits. If you do not use `wi`, skip the hook.
+
+```sh playbook=git-hook
+#!/bin/sh
+# Check the vault before each commit. To skip the check once: git commit --no-verify
+exec "/absolute/path/to/node" "/absolute/path/to/wi.js" validate --vault "/absolute/path/to/vault"
+```
+
+To set it up:
+
+1. Find the path of Node: `command -v node`.
+2. Find the path of the `wi` entry point: `echo "$(npm root -g)/recursive-board/dist/wi/wi.js"`.
+3. Save the snippet as `.git/hooks/pre-commit` in the repository. Replace the three paths. When the vault is a subfolder of the repository, name the subfolder.
+4. Make the file executable: `chmod +x .git/hooks/pre-commit`.
+5. Run `wi doctor`. Its `hook` check reads the file and writes nothing.
+
+Keep these points in mind:
+
+- **Absolute paths.** A Git GUI client starts the hook without your shell `PATH`, so a bare `node` or `wi` may not be found. The snippet runs the `wi.js` file with Node, and not the `wi` command, because the `wi` command starts with `#!/usr/bin/env node`, which needs `node` on the `PATH`.
+- **A path that changes.** An upgrade of Node can change its path. Use the path that `command -v node` prints. Do not use the folder that this path links to, because a package manager can put the version in that folder name.
+- **A hook that cannot run.** Git refuses every commit while the hook fails. Skip it once with `git commit --no-verify`, then correct the paths.
+- **Remove it.** Delete `.git/hooks/pre-commit`.
+
 ## Bypass permissions
 
 In this setup every worker is a headless process, so no person is there to answer a permission prompt. The launch line above uses Claude Code's `bypassPermissions` mode, which runs every command with no prompt. Other harnesses have similar modes.
@@ -200,7 +231,7 @@ These steps make the risk smaller. They do not remove it.
 
 - Give each code worker its own Git worktree and branch. Review the diff before you merge it.
 - Name the files that a worker must not touch in its brief, and check the diff for them.
-- Keep tests and scripts on fixtures and temporary folders. Keep the vault under version control, so you can undo a bad write.
+- Keep tests and scripts on fixtures and temporary folders. Keep the vault under version control ([Git versioning](#git-versioning)), so you can undo a bad write.
 - Tell each worker in its prompt what it must never do, such as push, tag, publish or touch shared machine state.
 - Run workers in a container or a sandbox when your harness supports one.
 
@@ -243,13 +274,15 @@ agent-count       No role or procedure note reads the agent limit from wi dashbo
 
 Code reads this file. Keep these markers when you change it. `docs/adr/0067-the-playbook-ships-with-marked-blocks.md` records them.
 
-- A paste-ready text is a fenced code block. The info string of its opening fence holds a word `playbook=<name>`. The names are `summary`, `agents-and-roles`, `role-note`, `dispatching` and `checks`. Each name appears once.
+- A paste-ready text is a fenced code block. The info string of its opening fence holds a word `playbook=<name>`. The names are `summary`, `agents-and-roles`, `role-note`, `dispatching`, `checks` and `git-hook`. Each name appears once.
 - A check line in the `checks` block is a check id, two or more spaces, and the text.
 - The `Changes` section has one `###` heading for each version that changed the playbook, newest first. The next release is `Unreleased` until the release names it.
 
 ## Changes
 
 ### Unreleased
+
+- Added the Git versioning section: optional advice, with a `git-hook` block that holds a pre-commit hook snippet to copy. `wi hook` is retired, and `wi setup` no longer offers a hook.
 
 ### 0.9.0
 

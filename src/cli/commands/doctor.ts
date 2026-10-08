@@ -6,9 +6,12 @@
  * prints the text to paste. The agent setup checks are pure functions in src/shared/doctor.ts.
  * Only an install that is broken, where a wi command cannot run, makes the exit code 1.
  */
+import { execFile } from 'node:child_process'
 import { existsSync } from 'node:fs'
-import { lstat, readdir, readFile } from 'node:fs/promises'
+import { lstat, readdir, readFile, stat } from 'node:fs/promises'
+import { platform } from 'node:os'
 import { join, resolve, sep } from 'node:path'
+import { promisify } from 'node:util'
 
 import { agentSetupChecks, isSetupNote, type CheckResult, type SetupNote, type SkillCopy } from '../../shared/doctor.ts'
 import { boardSettingsIn, parsePluginData, PLUGIN_DATA_FILE } from '../../shared/board-settings.ts'
@@ -17,10 +20,10 @@ import { roleTags } from '../../shared/role-tags.ts'
 import { WORK_ITEM_TYPE } from '../../shared/schema.ts'
 import { packageRoot, readPackageFile } from '../package-files.ts'
 import { findVaultRoot, getDefaultVault, loadVault, NOT_NOTES, type Vault } from '../vault.ts'
-import { hookStatus } from './hook.ts'
 import { MANAGED_MARKER, MANAGED_TEXT, skillDestinations } from './setup.ts'
 import { validate } from './validate.ts'
 
+const run = promisify(execFile)
 const PACKAGE = 'recursive-board'
 const PLUGIN_MANIFEST = '.obsidian/plugins/recursive-board/manifest.json'
 const UPDATE_WI = `npm install --global ${PACKAGE}@latest`
@@ -204,15 +207,34 @@ async function boardSettingsCheck(root: string): Promise<CheckResult> {
   }
 }
 
+/** The vault's Git repository and its pre-commit file, found as Git finds them. Null outside Git. */
+async function gitPreCommit(vault: string): Promise<{ top: string; path: string } | null> {
+  const git = async (args: string[]) => (await run('git', ['-C', vault, ...args])).stdout.trim()
+  try {
+    return { top: await git(['rev-parse', '--show-toplevel']), path: resolve(vault, await git(['rev-parse', '--git-path', 'hooks/pre-commit'])) }
+  } catch {
+    return null
+  }
+}
+
+/** A pre-commit file runs validation when a line that is not a comment names validate. */
+function runsValidation(body: string): boolean {
+  return body.split('\n').some((line) => !/^\s*#/.test(line) && /\bvalidate\b/.test(line))
+}
+
+/** The hook is advice (docs/adr/0073-git-versioning-is-advice.md), so this check only reads and is never a fix. */
 async function hookCheck(root: string): Promise<CheckResult> {
   const base = { id: 'hook', title: 'The Git hook validates each commit.' }
-  const status = await hookStatus(root)
-  if (status.gitRepo === null) return { ...base, level: 'note', message: 'The vault is not in a Git repository, so it has no hook.' }
-  if (status.preCommit === 'installed') return { ...base, level: 'pass', message: `The pre-commit hook in ${status.gitRepo} runs wi validate.` }
-  if (status.preCommit === 'present, not ours') {
-    return { ...base, level: 'note', message: 'Another pre-commit hook is installed. Read it, then add wi validate to it, or replace it with wi hook install --force.' }
+  const advice = 'It is optional: see "Git versioning" in docs/playbook.md.'
+  const git = await gitPreCommit(root)
+  if (git === null) return { ...base, level: 'note', message: 'The vault is not in a Git repository, so it has no hook.' }
+  const body = await readIfPresent(git.path)
+  if (body === null) return { ...base, level: 'note', message: `The vault is a Git repository with no pre-commit hook. ${advice}` }
+  if (!runsValidation(body)) return { ...base, level: 'note', message: `The pre-commit hook in ${git.top} does not run validation. ${advice}` }
+  if (platform() !== 'win32' && ((await stat(git.path)).mode & 0o111) === 0) {
+    return { ...base, level: 'note', message: `The pre-commit hook in ${git.top} is not executable, so Git skips it. Run chmod +x ${git.path}.` }
   }
-  return { ...base, level: 'note', message: 'The vault is a Git repository with no validation hook. It is optional.', paste: 'wi hook install' }
+  return { ...base, level: 'pass', message: `The pre-commit hook in ${git.top} runs validation.` }
 }
 
 async function validateCheck(vault: Vault): Promise<CheckResult> {

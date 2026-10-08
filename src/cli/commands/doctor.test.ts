@@ -1,7 +1,7 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { execFile } from 'node:child_process'
-import { mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, statSync, symlinkSync, writeFileSync } from 'node:fs'
+import { chmodSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, statSync, symlinkSync, writeFileSync } from 'node:fs'
 import { createServer } from 'node:http'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
@@ -9,7 +9,6 @@ import { fileURLToPath } from 'node:url'
 import { promisify } from 'node:util'
 
 import { item, makeVault, type Fixture } from '../test-helpers.ts'
-import { installHook } from './hook.ts'
 import { compareVersions, npmLatestVersion, renderDoctor, runDoctor, type DoctorOptions, type DoctorReport } from './doctor.ts'
 import { MANAGED_MARKER, MANAGED_TEXT, skillDestinations } from './setup.ts'
 
@@ -234,19 +233,38 @@ test('board-settings: no data file is a note with the Sync caveat; a data file t
   }
 })
 
-test('hook: no Git is a note, Git without the hook prints the install command, the installed hook passes', async () => {
+test('hook: it reads the pre-commit file and never writes one', async () => {
   const s = setup()
   try {
     healthy(s)
     assert.match(result(await runDoctor(s.options()), 'hook').message, /not in a Git repository/)
 
     await run('git', ['init', '--quiet', s.vault.root])
+    const hook = join(s.vault.root, '.git', 'hooks', 'pre-commit')
     const without = result(await runDoctor(s.options()), 'hook')
     assert.equal(without.level, 'note')
-    assert.equal(without.paste, 'wi hook install')
+    assert.equal(without.paste, undefined, 'a hook is advice, so the check pastes nothing')
+    assert.match(without.message, /optional/)
+    assert.match(without.message, /docs\/playbook\.md/)
+    assert.throws(() => statSync(hook), 'doctor wrote no hook')
 
-    await installHook(s.vault.root, ENTRY, false)
+    // A hook that an older wi hook install wrote runs validation.
+    writeFileSync(hook, `#!/bin/sh\n# installed by scripts/vault-git.mjs\nexec '/bin/node' '${ENTRY}' validate --vault '${s.vault.root}'\n`)
+    chmodSync(hook, 0o755)
     assert.equal(result(await runDoctor(s.options()), 'hook').level, 'pass')
+
+    // A hook that does not validate is a note, not a fix.
+    writeFileSync(hook, '#!/bin/sh\n# validate the vault later\nexit 0\n')
+    const other = result(await runDoctor(s.options()), 'hook')
+    assert.equal(other.level, 'note')
+    assert.match(other.message, /does not run validation/)
+
+    // A hook that Git cannot run does nothing.
+    writeFileSync(hook, '#!/bin/sh\nexec wi validate\n')
+    chmodSync(hook, 0o644)
+    const inert = result(await runDoctor(s.options()), 'hook')
+    assert.equal(inert.level, 'note')
+    assert.match(inert.message, /not executable/)
   } finally {
     s.cleanup()
   }
