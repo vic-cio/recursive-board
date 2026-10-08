@@ -273,23 +273,39 @@ export function opensAsBoard(meta: Pick<WorkItemMeta, 'board' | 'area'>): boolea
 
 export interface AreaSummary {
   meta: WorkItemMeta
+  /** The item the area sits in, so a chip can say where a nested area lives. */
+  parent: WorkItemMeta
   doingCount: number
 }
 
-/** Live areas (options or doing) belong in the bar above the status groups; their count is their active Doing cards. */
+/**
+ * The area bar of a root board: every live area (options or doing) anywhere below the root, in tree
+ * order, depth first, so an area comes just before the areas inside it. Any other board has no bar
+ * (docs/adr/0073-area-chips-live-on-the-root-board.md). A chip's count is its area's own active Doing cards.
+ */
 export function toAreas(
-  children: WorkItemMeta[],
-  childrenOf: (area: WorkItemMeta) => WorkItemMeta[],
+  root: WorkItemMeta,
+  childrenOf: (item: WorkItemMeta) => WorkItemMeta[],
   showArchived = false,
 ): AreaSummary[] {
-  return children
-    .filter((child) => child.area && (child.status === 'options' || child.status === 'doing') && (showArchived || !child.effectiveArchived))
-    .map((meta) => ({
-      meta,
-      doingCount: childrenOf(meta).filter((child) =>
-        !child.area && child.status === 'doing' && (showArchived || !child.effectiveArchived),
-      ).length,
-    }))
+  if (root.parentLink !== null) return []
+  const areas: AreaSummary[] = []
+  const seen = new Set<WorkItemMeta>([root])
+  const visit = (parent: WorkItemMeta): void => {
+    for (const child of childrenOf(parent)) {
+      if (seen.has(child)) continue // Integrity rule 3. Never loop, even on a broken vault.
+      seen.add(child)
+      if (child.area && (child.status === 'options' || child.status === 'doing') && (showArchived || !child.effectiveArchived)) {
+        const doingCount = childrenOf(child).filter((card) =>
+          !card.area && card.status === 'doing' && (showArchived || !card.effectiveArchived),
+        ).length
+        areas.push({ meta: child, parent, doingCount })
+      }
+      visit(child)
+    }
+  }
+  visit(root)
+  return areas
 }
 
 /**

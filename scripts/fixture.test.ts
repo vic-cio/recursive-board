@@ -48,6 +48,15 @@ test('the generated fixture contains a valid area', async () => {
   assert.equal(area.parent, 'Main')
 })
 
+test('the fixture has live areas at two depths, for the root area chips', async () => {
+  const vault = await generated()
+  const home = vault.resolve('wi-0022')
+  const content = vault.resolve('wi-0024')
+  assert.deepEqual([home.area, home.status, home.parent], [true, 'doing', 'Main'])
+  assert.deepEqual([content.area, content.status, content.parent], [true, 'options', 'Marketing site'])
+  assert.equal(vault.resolveLink(content.parent)?.parent, 'Main')
+})
+
 test('the Done window has an item inside it and one outside, whatever today is', async () => {
   const vault = await generated()
   const app = vault.resolve('Ship the mobile app')

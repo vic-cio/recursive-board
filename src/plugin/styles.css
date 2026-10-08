@@ -330,8 +330,10 @@
   align-items: start;
 }
 
-/* Areas are navigable boards in their own right, so they sit above status columns. */
+/* A root board lists every live area below it as a chip above its status columns. The phone shows the
+   same strip: small chips in one row that scrolls sideways (docs/adr/0073-area-chips-live-on-the-root-board.md). */
 .wi-area-strip {
+  flex: none;
   display: flex;
   gap: 6px;
   overflow-x: auto;
@@ -365,8 +367,7 @@
   white-space: nowrap;
 }
 
-.wi-area-count,
-.wi-area-group-count {
+.wi-area-count {
   flex: none;
   color: var(--text-faint);
   font-variant-numeric: tabular-nums;
@@ -841,54 +842,6 @@
   gap: 10px;
 }
 
-.wi-area-group {
-  flex: none;
-  border-radius: var(--wi-radius);
-  background: var(--background-secondary);
-}
-
-.wi-area-heading {
-  display: flex;
-  align-items: center;
-  gap: 7px;
-  min-height: 38px;
-  padding: 6px 10px;
-  color: var(--text-muted);
-  font-size: var(--font-ui-smaller);
-  cursor: pointer;
-  list-style: none;
-}
-
-.wi-area-heading::-webkit-details-marker {
-  display: none;
-}
-
-.wi-area-heading::before {
-  content: '›';
-  display: inline-block;
-  color: var(--text-faint);
-  transition: transform 100ms ease-out;
-}
-
-.wi-area-group[open] > .wi-area-heading::before {
-  transform: rotate(90deg);
-}
-
-.wi-area-list {
-  display: flex;
-  flex-direction: column;
-  gap: 5px;
-  padding: 0 8px 8px;
-}
-
-.wi-area-list .wi-area-chip {
-  width: 100%;
-  max-width: none;
-  justify-content: space-between;
-  min-width: 0;
-  text-align: left;
-}
-
 .wi-tabs {
   flex: none;
   display: grid;
@@ -1035,19 +988,6 @@
   color: var(--text-muted);
   font-size: var(--font-ui-smaller);
   cursor: pointer;
-}
-
-/* On the phone, an area row holds its chip and the ⋯ button that opens the area's menu. */
-.wi-area-row {
-  display: flex;
-  gap: 6px;
-  align-items: center;
-  min-width: 0;
-}
-
-.wi-area-row > .wi-area-chip {
-  flex: 1 1 auto;
-  min-width: 0;
 }
 
 /* The Send for review modal (docs/adr/0043-review-verdicts.md). */

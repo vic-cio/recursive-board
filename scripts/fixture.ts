@@ -17,7 +17,8 @@
  * - a title long enough to wrap;
  * - a done item outside the window, and one inside it;
  * - a waiting item, a held item, a request for any agent, an old card that names its holder in
- *   agent, labels, priorities and two promoted boards.
+ *   agent, labels, priorities and two promoted boards;
+ * - a backlog area, and live areas at two depths, for the root board's area chips.
  *
  * Usage: node scripts/fixture.ts [--vault test]
  */
@@ -125,6 +126,13 @@ write untouched.
     updated: 1, holder: 'agent' },
   { id: 'wi-0021', title: 'Operations', parent: 'Main', area: true, status: 'backlog', created: 5, updated: 2,
     body: OBJECTIVE('An ongoing space for work that does not have a definition of done.') },
+  // Live areas at two depths, so the root board draws a row of chips: one directly under the root,
+  // one inside a project board, which shows no chip of its own.
+  { id: 'wi-0022', title: 'Home', parent: 'Main', area: true, status: 'doing', created: 5, updated: 1,
+    body: OBJECTIVE('A live area that is a direct child of the root.') },
+  { id: 'wi-0023', title: 'Fix the gutter', parent: 'Home', status: 'doing', created: 3, updated: 1 },
+  { id: 'wi-0024', title: 'Content', parent: 'Marketing site', area: true, status: 'options', created: 5,
+    updated: 2, body: OBJECTIVE('A live area two levels below the root.') },
 ]
 
 function daysAgo(days: number, now: Date): string {
