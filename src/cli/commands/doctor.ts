@@ -222,7 +222,7 @@ function runsValidation(body: string): boolean {
   return body.split('\n').some((line) => !/^\s*#/.test(line) && /\bvalidate\b/.test(line))
 }
 
-/** The hook is advice (docs/adr/0073-git-versioning-is-advice.md), so this check only reads and is never a fix. */
+/** The hook is advice (docs/adr/0075-git-versioning-is-advice.md), so this check only reads and is never a fix. */
 async function hookCheck(root: string): Promise<CheckResult> {
   const base = { id: 'hook', title: 'The Git hook validates each commit.' }
   const advice = 'It is optional: see "Git versioning" in docs/playbook.md.'

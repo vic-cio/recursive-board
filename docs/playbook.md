@@ -282,7 +282,7 @@ Code reads this file. Keep these markers when you change it. `docs/adr/0067-the-
 
 ### Unreleased
 
-- Added the Git versioning section: optional advice, with a `git-hook` block that holds a pre-commit hook snippet to copy. `wi hook` is retired, and `wi setup` no longer offers a hook.
+- Added the Git versioning section: optional advice, with a `git-hook` block that holds a pre-commit hook snippet to copy. `wi hook` is removed, and `wi setup` no longer offers a hook.
 
 ### 0.9.0
 

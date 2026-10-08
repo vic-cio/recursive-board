@@ -1,6 +1,6 @@
 ---
 status: accepted
-amended_by: 0073-git-versioning-is-advice.md (the hook check reads the pre-commit file)
+amended_by: 0075-git-versioning-is-advice.md (the hook check reads the pre-commit file)
 ---
 # wi doctor checks the install and the agent setup, on request
 
@@ -33,7 +33,7 @@ blocks in the installed package, so the advice changes with the playbook.
 | `vault` | `wi` finds a vault, and the folder is a vault. |
 | `plugin-version` | The vault's `.obsidian/plugins/recursive-board/manifest.json` has the version of `wi`. |
 | `board-settings` | The plugin data holds the board settings (0060). |
-| `hook` | Whether the Git pre-commit hook runs validation (0073). It only reads the file. The hook is optional, so this check is never a fix. |
+| `hook` | Whether the Git pre-commit hook runs validation (0075). It only reads the file. The hook is optional, so this check is never a fix. |
 | `validate` | A one-line `wi validate` summary. |
 
 The registry lookup has a 3-second timeout and honours `npm_config_registry`. When the registry does

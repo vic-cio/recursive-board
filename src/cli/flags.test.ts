@@ -88,7 +88,7 @@ test('wi template is a retired command and points to wi new --template without w
   }
 })
 
-test('--force is refused outside wi setup, and the help names the retired wi hook', async () => {
+test('--force is refused outside wi setup, and the help says an old hook keeps working', async () => {
   const vault = seed()
   const home = mkdtempSync(join(tmpdir(), 'wi-home-'))
   try {
@@ -99,7 +99,7 @@ test('--force is refused outside wi setup, and the help names the retired wi hoo
     const help = await wi(['--help'], vault, home)
     assert.equal(help.code, 0)
     assert.doesNotMatch(help.stdout, /wi hook <install/, 'the usage list no longer offers hook management')
-    assert.match(help.stdout, /`wi hook` is retired/)
+    assert.match(help.stdout, /removed `wi hook install` wrote keeps working/)
     assert.match(help.stdout, /Replace an unmanaged skill during setup\./)
   } finally {
     vault.cleanup()
@@ -141,7 +141,6 @@ const INVOCATIONS: Record<string, string[]> = {
   retag: ['retag'],
   graph: ['graph'],
   template: ['template', 'write'],
-  hook: ['hook', 'status'],
   here: ['here', '--board', 'Main'],
 }
 

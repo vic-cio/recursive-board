@@ -120,8 +120,8 @@ Notes
   Unticking a done item is \`wi status <ref> <its prev_status>\`, which also clears the record.
   \`wi validate\` exits 1 when the vault has errors, so it works as a pre-commit hook. The playbook's
   Git versioning section has an optional hook snippet to copy.
-  \`wi hook\` is retired and changes nothing. A hook that it installed earlier keeps working; delete
-  .git/hooks/pre-commit to remove it. See Git versioning in docs/playbook.md.
+  A hook that the removed \`wi hook install\` wrote keeps working; delete .git/hooks/pre-commit to
+  remove it. See Git versioning in docs/playbook.md.
   \`wi template\` is retired. Use \`wi new --template\` to choose a template when you create a work item.
   \`wi rm\` moves a file to the vault's .trash. It refuses an item that has children
   unless you pass --recursive, because removing a parent leaves its children on no board.
@@ -245,11 +245,6 @@ async function main(argv: string[]): Promise<number> {
 
   if (command === 'dashboard') {
     process.stdout.write('wi dashboard is retired. Use wi agents for the agent count and limit. A dashboard is a separate plugin; the README names an example.\n')
-    return 0
-  }
-
-  if (command === 'hook') {
-    process.stdout.write('wi hook is retired and changes nothing. A Git pre-commit hook is optional advice: copy the snippet from "Git versioning" in docs/playbook.md. A hook that wi installed earlier keeps working. To remove it, delete .git/hooks/pre-commit.\n')
     return 0
   }
 

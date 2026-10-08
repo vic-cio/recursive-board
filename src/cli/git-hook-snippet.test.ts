@@ -1,7 +1,7 @@
 /**
  * Run the pre-commit snippet from docs/playbook.md against a temporary Git repository.
  *
- * Git versioning is advice (docs/adr/0073-git-versioning-is-advice.md). The snippet is the only
+ * Git versioning is advice (docs/adr/0075-git-versioning-is-advice.md). The snippet is the only
  * code the advice carries, so these tests hold it to what the playbook says it does.
  */
 import { test, afterEach } from 'node:test'
@@ -150,12 +150,13 @@ test('the snippet runs the bundled wi that npm installs', async () => {
   assert.equal(accepted.code, 0, accepted.stdout + accepted.stderr)
 })
 
-test('a retired wi hook command installs nothing', async () => {
+test('wi hook is an unknown command and installs nothing', async () => {
   fixture = await vaultRepo()
   for (const args of [['install'], ['install', '--force'], ['uninstall'], ['status']]) {
-    const { stdout } = await run(process.execPath, [tool, 'hook', ...args, '--vault', fixture.root], { cwd: repo })
-    assert.match(stdout, /wi hook is retired/)
-    assert.match(stdout, /docs\/playbook\.md/, 'it names the new way')
+    await assert.rejects(
+      run(process.execPath, [tool, 'hook', ...args, '--vault', fixture.root], { cwd: repo }),
+      (error: { code?: number; stderr?: string }) => error.code === 2 && /unknown command "hook"/.test(error.stderr ?? ''),
+    )
     assert.equal(existsSync(join(fixture.root, '.git/hooks/pre-commit')), false, `wi hook ${args.join(' ')} wrote a hook`)
   }
 })

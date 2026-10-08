@@ -1,6 +1,6 @@
 ---
 status: accepted
-amended_by: 0069-setup-prints-the-recommended-setup.md (setup ends with the recommended agent setup and gains --json), 0073-git-versioning-is-advice.md (setup offers no hook)
+amended_by: 0069-setup-prints-the-recommended-setup.md (setup ends with the recommended agent setup and gains --json), 0075-git-versioning-is-advice.md (setup offers no hook)
 ---
 # `wi setup` installs the agent skill and records a default vault
 
@@ -11,7 +11,7 @@ respects `XDG_CONFIG_HOME` and otherwise uses `~/.config/wi/config.json`.
 
 An existing skill directory is replaced only when it carries the marker written by setup, or
 when the user passes `--force`. Symlinked development installs are left alone. Setup offers no
-Git validation hook (amended by 0073).
+Git validation hook (amended by 0075).
 
 Agents can run `wi setup --yes --vault <path>` to perform setup without interaction. Setup does
 not edit work item files.

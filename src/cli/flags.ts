@@ -85,7 +85,6 @@ export const COMMAND_FLAGS: Record<string, Flag[]> = {
   retag: ['dry-run', 'vault', 'json'],
   graph: ['vault', 'json'],
   template: ['vault', 'json'],
-  hook: ['force', 'vault', 'json'],
   here: ['board', 'vault', 'json'],
 }
 

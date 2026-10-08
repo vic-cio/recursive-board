@@ -174,7 +174,7 @@ If your vault is a Git repository, a pre-commit hook can run `wi validate` and s
 exec "/absolute/path/to/node" "/absolute/path/to/wi.js" validate --vault "/absolute/path/to/vault"
 ```
 
-The [Git versioning](docs/playbook.md#git-versioning) section of the playbook says how to find the paths, and what to do when the hook cannot run. `wi doctor` reports whether a pre-commit hook runs validation. `wi hook` is retired: a hook that it installed earlier keeps working.
+The [Git versioning](docs/playbook.md#git-versioning) section of the playbook says how to find the paths, and what to do when the hook cannot run. `wi doctor` reports whether a pre-commit hook runs validation. `wi hook` is removed: a hook that it installed earlier keeps working.
 
 ## Commands
 

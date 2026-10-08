@@ -14,11 +14,11 @@ Node optional. Git versioning moves out of the commands and into the docs.
 
 - **`wi setup` makes no hook offer.** After the vault choice and the skill copies it asks nothing.
   `--yes` and `--json` are unchanged.
-- **`wi hook` is retired.** It exits 0, changes nothing, and names the playbook's Git versioning
-  section, as the other retired commands do. An old script that runs `wi hook install` keeps
-  running. A hook that `wi hook install` wrote earlier keeps working, because it calls `validate`
-  directly. Deleting `.git/hooks/pre-commit` removes it. `--force`, `--vault` and `--json` still
-  parse on `wi hook`, so an old command line does not fail.
+- **`wi hook` is removed.** `wi hook` is an unknown command, and an old script that runs
+  `wi hook install` fails. Victor chose a full removal over a retired stub on 2026-10-08: he is the
+  only user, and a stub would keep a command that does nothing in the help. A hook that
+  `wi hook install` wrote earlier keeps working, because it calls `validate` directly. Deleting
+  `.git/hooks/pre-commit` removes it.
 - **The playbook and the README give the advice.** The playbook has a "Git versioning" section:
   when versioning pays off, a pre-commit snippet to copy, and the points that make a hook fail
   (0067 lists the `git-hook` block). The README shows the same snippet, and a test checks that the
