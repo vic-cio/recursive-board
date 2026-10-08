@@ -350,10 +350,14 @@
   align-items: center;
   gap: 7px;
   max-width: 260px;
-  min-height: 30px;
-  padding: 3px 9px;
+  /* A chip is a button: drop Obsidian's button height, and keep the line height of the .wi-pill
+     beside it, so it sits close to its text. */
+  height: auto;
+  min-height: 0;
+  line-height: 1.6;
+  padding: 0 9px;
   border: 1px solid var(--background-modifier-border);
-  border-radius: 15px;
+  border-radius: 11px;
   box-shadow: none;
   background: var(--background-secondary);
   color: var(--text-normal);
