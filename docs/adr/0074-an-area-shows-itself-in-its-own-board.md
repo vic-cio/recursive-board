@@ -6,6 +6,9 @@ status: accepted
 The board of an area shows the area once more, as a self-card in the column of the area's own
 status. The plugin draws it at the end of that column, after the real cards. It is a
 reflection that suits the name Recursive Board, and it says which area you are in.
+It is drawn like any card in that column, with its status tint and edge. A small This board
+mark is the only sign that it is the board you are on (Victor, 2026-10-08: a dashed outline
+looked unlike a card).
 
 The self-card is render only. Nothing is written to Markdown, so `wi`, agents and `wi validate`
 never see it, and parents stay acyclic. It adds nothing to a column count or a phone tab count.
