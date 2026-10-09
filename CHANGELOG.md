@@ -25,6 +25,10 @@ the agent notes in your vault.
   the two paths where the agent saves it. `cmd=doctor` checks the vault, and `cmd=update` says
   how to update the plugin. On the plugin, the three write nothing
   ([0080](docs/adr/0080-the-plugin-serves-setup-doctor-and-update-and-writes-nothing.md)).
+- The Dispatching procedure in the playbook has a "When to split" rule. A worker keeps the steps
+  that one agent can do in its own card. It makes a child card only for a part that needs its own
+  brief, can run in parallel, or is too big for one sitting, and it starts a headless worker on
+  each child card. Copy the rule into your own Dispatching note.
 
 ### Added
 

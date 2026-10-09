@@ -52,6 +52,15 @@ test('the Agents and roles block is a section that a vault AGENTS.md can take wh
   assert.match(block('agents-and-roles'), /^## Agents and roles\n/)
 })
 
+test('the Dispatching block says when to split, before its numbered steps', () => {
+  const dispatching = block('dispatching')
+  const split = dispatching.indexOf('\n### When to split\n')
+  assert.ok(split !== -1, 'the Dispatching block has a When to split section')
+  assert.ok(split < dispatching.indexOf('\n## Procedure\n'))
+  assert.match(dispatching, /One agent can do every step/)
+  assert.match(block('role-note'), /When to split/)
+})
+
 test('each check line is an id, two spaces, and a text', () => {
   const ids = block('checks').split('\n').map((line) => {
     const m = /^([a-z][a-z-]*) {2,}\S/.exec(line)

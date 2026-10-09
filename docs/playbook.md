@@ -102,7 +102,8 @@ branch reaches the main branch.
 ## Procedure
 
 1. Follow the recursive-board skill's "Working as a worker" section: claim, split into children,
-   claim each child before its work, note, close.
+   claim each child before its work, note, close. Decide first as the Dispatching procedure's
+   "When to split" says.
 2. Work in the worktree and on the `card/<slug>` branch that your parent gave you. With none, make
    a worktree from your parent card's branch, else from the main branch.
 3. Change only the files your card needs. Leave the files the brief names as off limits. Note a gap
@@ -144,6 +145,18 @@ description: "Dispatching: the shared procedure any worker follows to split its 
 Split a card into child cards, give each child to a worker, and follow them to done. Any worker may
 start workers. A worker whose card is too big for one agent splits it and starts one worker per
 child, and each child may do the same. The session agent is the top worker.
+
+### When to split
+
+Decide at the start of each card:
+
+- **One agent can do every step.** Keep the steps in your own card, as a list in your note. Make
+  no child cards. The card stays a card.
+- **A part needs its own brief, can run in parallel, or is too big for one sitting.** Make it a
+  child card with a full brief. The first child makes your card a board (the "Promote parent on
+  first child" setting). Every child card on a board gets its own headless worker (Procedure,
+  steps 1 to 4), and that worker decides the same way for its own card. Never work a child card
+  yourself.
 
 ## Procedure
 
@@ -304,6 +317,7 @@ Code reads this file. Keep these markers when you change it. `docs/adr/0067-the-
 ### Unreleased
 
 - Added the plugin CLI section: the four rules for an agent that runs a `wi` command line through `obsidian recursive-board`.
+- The Dispatching procedure has a "When to split" rule: steps that one agent can do stay in its own card, and every child card gets its own headless worker.
 - Added the Git versioning section: optional advice, with a `git-hook` block that holds a pre-commit hook snippet to copy. `wi hook` is removed, and `wi setup` no longer offers a hook.
 
 ### 0.9.0
