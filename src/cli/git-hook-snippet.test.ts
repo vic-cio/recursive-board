@@ -1,8 +1,8 @@
 /**
- * Run the pre-commit snippet from docs/playbook.md against a temporary Git repository.
+ * Run the pre-commit snippet from the README against a temporary Git repository.
  *
  * Git versioning is advice (docs/adr/0075-git-versioning-is-advice.md). The snippet is the only
- * code the advice carries, so these tests hold it to what the playbook says it does.
+ * code the advice carries, so these tests hold it to what the README says it does.
  */
 import { test, afterEach } from 'node:test'
 import assert from 'node:assert/strict'
@@ -14,12 +14,12 @@ import { join, dirname } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 import { makeVault, item, type Fixture } from './test-helpers.ts'
-import { playbookBlock } from '../shared/playbook.ts'
 
 const run = promisify(execFile)
 const repo = join(dirname(fileURLToPath(import.meta.url)), '..', '..')
 const tool = join(repo, 'src', 'cli', 'wi.ts')
-const snippet = playbookBlock(readFileSync(join(repo, 'docs', 'playbook.md'), 'utf8'), 'git-hook')
+const gitSection = readFileSync(join(repo, 'README.md'), 'utf8').split(/^## Version the vault with Git \(optional\)\n/m)[1]?.split(/^## /m)[0] ?? ''
+const snippet = /```sh\n(#!\/bin\/sh\n[\s\S]*?)\n```/.exec(gitSection)?.[1]
 
 const NODE = '/absolute/path/to/node'
 const WI = '/absolute/path/to/wi.js'
@@ -63,7 +63,7 @@ async function vaultRepo(): Promise<Fixture> {
 
 /** The snippet with its three placeholder paths filled in, saved as the repo's pre-commit hook. */
 function installSnippet(f: Fixture, paths: { node: string; wi: string; vault: string }): void {
-  assert.ok(snippet, 'the playbook has a git-hook block')
+  assert.ok(snippet, 'the README has the pre-commit snippet')
   const body = snippet.replaceAll(NODE, paths.node).replaceAll(WI, paths.wi).replaceAll(VAULT, paths.vault)
   const hook = f.write('.git/hooks/pre-commit', `${body}\n`)
   chmodSync(hook, 0o755)
@@ -77,8 +77,8 @@ const breakTheVault = (f: Fixture) =>
     parent: '"[[Main]]"', created: '2026-09-21', updated: '2026-09-21',
   }))
 
-test('the playbook marks a git-hook snippet: a shell script that validates with three absolute paths', () => {
-  assert.ok(snippet, 'the playbook has a git-hook block')
+test('the README gives a pre-commit snippet: a shell script that validates with three absolute paths', () => {
+  assert.ok(snippet, 'the README has the pre-commit snippet')
   assert.match(snippet, /^#!\/bin\/sh\n/)
   assert.match(snippet, /\bvalidate\b/)
   assert.match(snippet, /git commit --no-verify/, 'it says how to skip the check once')

@@ -51,14 +51,10 @@ function setup(): Setup {
   }
 }
 
-/** A vault that follows the recommendations, with both skill copies installed. */
+/** A bare vault: no AGENTS.md and no Roles folder. Both skill copies are installed. */
 function healthy(s: Setup): void {
   s.vault.write(PLUGIN_DATA_FILE, JSON.stringify({ board: { maxAgents: 2 }, rulesVersion: RULES_VERSION }))
   s.vault.write(PLUGIN_MANIFEST, JSON.stringify({ id: 'recursive-board', version: VERSION }))
-  s.vault.write('AGENTS.md', '# Rules\n\n## Agents and roles\n\nEvery agent is a worker.\n')
-  s.vault.write('Roles/Dispatching.md', '---\ntype: procedure\n---\n\n7. Wait in the foreground. Never wait in a background task.\n')
-  s.vault.write('Roles/Coder.md', '---\ntags: [role/coder]\n---\n\n1. Claim the card.\n')
-  s.vault.write('People/Ada.md', '---\ntype: person\n---\n')
   s.vault.write('Boards/Main.md', item({ type: 'work-item', id: 'wi-0001', title: 'Main', created: '2026-09-21', updated: '2026-09-21' }))
   s.vault.write('Boards/Task.md', item({
     type: 'work-item', id: 'wi-0002', title: 'Task', status: 'options', parent: '"[[Main]]"', tags: '[role/coder]',
@@ -74,7 +70,7 @@ function installSkill(folder: string, skill: string): void {
 }
 
 function result(report: DoctorReport, id: string) {
-  const found = [...report.install, ...report.agentSetup].find((r) => r.id === id)
+  const found = report.install.find((r) => r.id === id)
   assert.ok(found, `a ${id} result`)
   return found
 }
@@ -90,7 +86,7 @@ function snapshot(root: string): Map<string, string> {
   return files
 }
 
-test('a vault that follows each recommendation passes every check, and doctor writes nothing', async () => {
+test('a vault with no AGENTS.md and no Roles folder passes every check, and doctor writes nothing', async () => {
   const s = setup()
   try {
     healthy(s)
@@ -101,13 +97,9 @@ test('a vault that follows each recommendation passes every check, and doctor wr
     assert.equal(report.broken, false)
     assert.equal(report.vault, s.vault.root)
     assert.deepEqual(report.install.map((r) => r.id),
-      ['node', 'package', 'wi-version', 'vault', 'plugin-version', 'rules', 'board-settings', 'hook', 'validate'])
+      ['node', 'package', 'wi-version', 'vault', 'plugin-version', 'rules', 'board-settings', 'hook', 'validate', 'skill'])
     for (const r of report.install.filter((r) => r.id !== 'hook')) assert.equal(r.level, 'pass', `${r.id}: ${r.message}`)
     assert.equal(result(report, 'hook').level, 'note')
-    assert.deepEqual(report.agentSetup.map((r) => [r.id, r.level]), [
-      ['agents-md', 'pass'], ['dispatching-note', 'pass'], ['role-notes', 'pass'], ['person-note', 'pass'],
-      ['max-agents', 'pass'], ['skill', 'pass'], ['background-wait', 'pass'], ['agent-count', 'pass'],
-    ])
   } finally {
     s.cleanup()
   }
@@ -168,7 +160,7 @@ test('vault: no vault found is a fix that is not broken; a named vault that does
     assert.equal(result(none, 'vault').level, 'fix')
     assert.equal(none.broken, false)
     assert.equal(none.vault, null)
-    assert.deepEqual(none.agentSetup.map((r) => r.id), ['skill'])
+    assert.equal(none.install.some((r) => r.id === 'validate'), false)
 
     const missing = await runDoctor(s.options({ vaultFlag: join(s.home, 'no-such-vault') }))
     assert.equal(result(missing, 'vault').level, 'fix')
@@ -270,7 +262,7 @@ test('hook: it reads the pre-commit file and never writes one', async () => {
     assert.equal(without.level, 'note')
     assert.equal(without.paste, undefined, 'a hook is advice, so the check pastes nothing')
     assert.match(without.message, /optional/)
-    assert.match(without.message, /docs\/playbook\.md/)
+    assert.doesNotMatch(without.message, /playbook/)
     assert.throws(() => statSync(hook), 'doctor wrote no hook')
 
     // A hook that an older wi hook install wrote runs validation.
@@ -336,48 +328,16 @@ test('skill: missing, other-version, unmanaged and dev-link copies', async () =>
   }
 })
 
-test('agent setup: the checks read AGENTS.md, the notes and the role tags of open cards from disk', async () => {
+test('renderDoctor prints one line per check and a Run line for a command', async () => {
   const s = setup()
   try {
     healthy(s)
-    s.vault.write('AGENTS.md', '# Rules\n')
-    s.vault.write('Roles/Dispatching.md', '---\ntype: procedure\n---\n\n7. In one background command, wait for each worker.\n')
-    s.vault.write('Boards/Check.md', item({
-      type: 'work-item', id: 'wi-0004', title: 'Check', status: 'options', parent: '"[[Main]]"', tags: '[role/checker]',
-      created: '2026-09-21', updated: '2026-09-21',
-    }))
-    s.vault.write('Boards/Done.md', item({
-      type: 'work-item', id: 'wi-0005', title: 'Done', status: 'done', parent: '"[[Main]]"', tags: '[role/writer]',
-      created: '2026-09-21', updated: '2026-09-21',
-    }))
-    s.vault.writeSettings('{}')
-    const report = await runDoctor(s.options())
-    assert.equal(result(report, 'agents-md').level, 'fix')
-    assert.equal(result(report, 'background-wait').level, 'fix')
-    assert.match(result(report, 'background-wait').message, /Roles\/Dispatching\.md/)
-    assert.equal(result(report, 'max-agents').level, 'fix')
-    const roles = result(report, 'role-notes')
-    assert.equal(roles.level, 'fix')
-    assert.match(roles.message, /role\/checker/)
-    assert.doesNotMatch(roles.message, /role\/writer/)
-    assert.equal(report.broken, false)
-  } finally {
-    s.cleanup()
-  }
-})
-
-test('renderDoctor prints one line per check, a Run line for a command and a Paste block for a text', async () => {
-  const s = setup()
-  try {
-    healthy(s)
-    s.vault.write('AGENTS.md', '# Rules\n')
     const text = renderDoctor(await runDoctor(s.options({ latestVersion: async () => '1.0.0' })))
     assert.match(text, /^Install$/m)
-    assert.match(text, /^Agent setup \(optional/m)
+    assert.doesNotMatch(text, /Agent setup|docs\/playbook/i)
     assert.match(text, /^ {2}fix {3}wi-version/m)
     assert.match(text, /^ {8}Run:\n {10}npm install --global recursive-board@latest$/m)
-    assert.match(text, /^ {8}Paste:\n {10}## Agents and roles$/m)
-    assert.match(text, /^2 fixes, 1 note\. The install works\.$/m)
+    assert.match(text, /^1 fix, 1 note\. The install works\.$/m)
   } finally {
     s.cleanup()
   }

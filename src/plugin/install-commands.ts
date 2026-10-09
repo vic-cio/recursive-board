@@ -4,19 +4,16 @@
  *
  * wi's versions work on the machine: they copy the skill, write the wi config, run npm and check
  * Node. The plugin has no Node and writes nothing outside the vault, so its versions only print:
- * setup prints what the plugin CLI needs, the bundled skill and the playbook summary; doctor runs
+ * setup prints what the plugin CLI needs and the bundled skill; doctor runs
  * the vault checks through the port and lists the install checks it skipped; update prints the
  * versions and where to update. None of them writes a file.
  */
-import { agentSetupChecks, checkScope, countLine, installChecks, renderCheckSection, rulesCheck, type CheckResult } from '../shared/doctor.ts'
-import { boardSettingsCheck, openRoleTags, readSetupNotes, validateCheck } from '../shared/doctor-vault.ts'
-import { playbookBlock } from '../shared/playbook.ts'
+import { countLine, installChecks, renderCheckSection, rulesCheck, type CheckResult } from '../shared/doctor.ts'
+import { boardSettingsCheck, validateCheck } from '../shared/doctor-vault.ts'
 import { RULES_VERSION, readRulesMarker, versionLine } from '../shared/rules-version.ts'
-import { readIfPresent } from '../shared/storage.ts'
 import type { CommandContext, CommandLine, RunFunction } from '../shared/runner.ts'
 import { UsageError } from '../shared/runner.ts'
-import type { Vault } from '../shared/vault.ts'
-import { PLAYBOOK, SKILL } from './bundled-texts.ts'
+import { SKILL } from './bundled-texts.ts'
 
 /** The installer that prints no warning line before a reply and starts a closed Obsidian (ADR 0078). */
 export const MIN_INSTALLER = '1.12.7'
@@ -38,29 +35,21 @@ export const CLI_NEEDS = [
 
 const UPDATE_STEP = 'Update the plugin in Obsidian: Settings > Community plugins > Check for updates.'
 
-/** The playbook of this plugin's version on GitHub. A release tag equals the version. */
-function playbookUrl(version: string): string {
-  return `https://github.com/vic-cio/recursive-board/blob/${version}/docs/playbook.md`
-}
-
 function takesNoWords(line: CommandLine): void {
   if (line.positionals.length > 1) throw new UsageError(`wi ${line.command} takes options only. Run cmd=help for usage.`)
 }
 
 const print = (context: CommandContext, value: unknown) => context.out(`${JSON.stringify(value, null, 2)}\n`)
 
-/** setup: what the plugin CLI needs, where the skill goes, the playbook summary, then the skill text. */
+/** setup: what the plugin CLI needs, where the skill goes, then the skill text. */
 const runSetup: RunFunction = async (context, line) => {
   takesNoWords(line)
-  const summary = playbookBlock(PLAYBOOK, 'summary')
-  const playbook = playbookUrl(context.version)
   if (line.values.json === true) {
     print(context, {
       plugin: context.version,
       rules: RULES_VERSION,
       needs: CLI_NEEDS,
       skill: { paths: SKILL_PATHS, text: SKILL },
-      recommendedSetup: summary === null ? null : { summary, playbook, check: 'cmd=doctor' },
     })
     return 0
   }
@@ -74,7 +63,6 @@ const runSetup: RunFunction = async (context, line) => {
     ...SKILL_PATHS.map((path) => `  ${path}`),
     'Run cmd=setup again after a plugin update, to read the skill of the new version.',
     '',
-    ...(summary === null ? [] : [summary, '', `Playbook: ${playbook}`, 'Check a vault against it: cmd=doctor', '']),
     '--- skills/recursive-board/SKILL.md ---',
     SKILL.replace(/\n$/, ''),
     '--- end of SKILL.md ---',
@@ -89,7 +77,6 @@ export interface PluginDoctorReport {
   /** True when a vault check found the plugin data broken. */
   broken: boolean
   vault: CheckResult[]
-  agentSetup: CheckResult[]
   /** The install checks wi doctor runs, which the plugin cannot. */
   skipped: { id: string; title: string }[]
   needs: string[]
@@ -102,26 +89,13 @@ export async function pluginDoctor(context: CommandContext): Promise<PluginDocto
     { ...rules, message: rules.message.replace(/(^|\. )this plugin/g, '$1This plugin') },
     await boardSettingsCheck(context.port),
   ]
-  let index: Vault | null = null
-  if (vault[1]!.broken !== true) {
-    index = await context.vault()
-    vault.push(await validateCheck(index, 'cmd=validate'))
-  }
-  const agentSetup = index === null ? [] : agentSetupChecks({
-    playbook: PLAYBOOK,
-    agentsMd: await readIfPresent(context.port, 'AGENTS.md'),
-    notes: await readSetupNotes(context.port),
-    openRoleTags: openRoleTags(index),
-    maxAgents: index.config.maxAgents,
-    skill: null,
-  }).filter((result) => checkScope(result.id) === 'vault')
+  if (vault[1]!.broken !== true) vault.push(await validateCheck(await context.vault(), 'cmd=validate'))
   return {
     plugin: context.version,
     rules: RULES_VERSION,
     broken: vault.some((result) => result.broken === true),
     vault,
-    agentSetup,
-    skipped: installChecks(PLAYBOOK).map(({ id, title }) => ({ id, title })),
+    skipped: installChecks().map(({ id, title }) => ({ id, title })),
     needs: CLI_NEEDS,
   }
 }
@@ -129,12 +103,11 @@ export async function pluginDoctor(context: CommandContext): Promise<PluginDocto
 export function renderPluginDoctor(report: PluginDoctorReport): string {
   const out = [`Recursive Board doctor ${versionLine(report.plugin)}, the plugin in this vault`, '']
   out.push(...renderCheckSection('Vault', report.vault))
-  if (report.agentSetup.length > 0) out.push(...renderCheckSection('Agent setup (optional, from docs/playbook.md in the plugin)', report.agentSetup))
   out.push('Skipped install checks: run wi doctor where Node is installed')
   const width = Math.max(0, ...report.skipped.map((check) => check.id.length))
   for (const check of report.skipped) out.push(`  ${check.id.padEnd(width)}  ${check.title}`)
   out.push('', 'The plugin CLI needs:', ...report.needs.map((need) => `- ${need}`), '')
-  out.push(`${countLine([...report.vault, ...report.agentSetup])} ${report.broken ? 'The plugin data is broken.' : 'The vault checks ran.'}`)
+  out.push(`${countLine(report.vault)} ${report.broken ? 'The plugin data is broken.' : 'The vault checks ran.'}`)
   return `${out.join('\n')}\n`
 }
 

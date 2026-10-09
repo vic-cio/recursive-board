@@ -143,11 +143,10 @@ const HELP_OPTIONS: [label: string, text: string][] = [
  */
 const HELP_NOTES: { about: string[]; text: string }[] = [
   { about: ['retag', 'graph'], text: 'wi retag and wi graph were removed in 0.8.0. The board tree shows each card\'s area.' },
-  { about: ['setup'], text: `\`wi setup\` ends with the optional recommended agent setup: the playbook's summary, the path of the
-installed docs/playbook.md, and wi doctor to check a vault. It writes nothing into the vault for
-it. --yes prints it too. --json prints one object and asks no questions; it needs --vault.` },
-  { about: ['doctor'], text: `\`wi doctor\` checks the install and the optional agent setup from the playbook. Each check prints
-pass, note or fix, and a fix prints the text to paste. It writes nothing. It exits 1 only when
+  { about: ['setup'], text: `\`wi setup\` copies the skill and saves a default vault. It writes nothing into the vault. --yes asks
+no questions. --json prints one object and asks no questions; it needs --vault.` },
+  { about: ['doctor'], text: `\`wi doctor\` checks the install and the vault. Each check prints pass, note or fix, and a fix
+prints the command to run. It writes nothing. It exits 1 only when
 the install is broken: Node is too old, the package is incomplete, the vault wi would use is
 missing, or the plugin data cannot be read.` },
   { about: ['setup', 'doctor', 'update'], text: `On the plugin CLI, setup, doctor and update write nothing. setup prints what the plugin CLI
@@ -174,10 +173,10 @@ a role is a tag.` },
 and adds WI_MODEL when set. It refuses a note with no writer name. The write re-reads the card under a lock, so two notes at once both survive.` },
   { about: ['status'], text: '`wi status <ref> done` says when that was the parent\'s last open child. It does not close the parent.' },
   { about: ['status'], text: 'Unticking a done item is `wi status <ref> <its prev_status>`, which also clears the record.' },
-  { about: ['validate'], text: `\`wi validate\` exits 1 when the vault has errors, so it works as a pre-commit hook. The playbook's
-Git versioning section has an optional hook snippet to copy.` },
+  { about: ['validate'], text: `\`wi validate\` exits 1 when the vault has errors, so it works as a pre-commit hook. The README's
+"Version the vault with Git" section has an optional hook snippet to copy.` },
   { about: [], text: `A hook that the removed \`wi hook install\` wrote keeps working; delete .git/hooks/pre-commit to
-remove it. See Git versioning in docs/playbook.md.` },
+remove it.` },
   { about: ['template'], text: '`wi template` is retired. Use `wi new --template` to choose a template when you create a work item.' },
   { about: ['rm'], text: `\`wi rm\` moves a file to the vault's .trash. It refuses an item that has children
 unless you pass --recursive, because removing a parent leaves its children on no board.` },

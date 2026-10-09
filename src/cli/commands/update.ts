@@ -74,7 +74,6 @@ export interface ChangesStep {
   /** Null when the changes are in a package that is not installed yet (a dry run). */
   changes: ChangelogSection[] | null
   message: string
-  suggest: string
 }
 export type UpdateStep = InstallStep | SkillStep | PluginStep | ChangesStep
 
@@ -86,7 +85,6 @@ export interface UpdateReport {
 }
 
 const RELOAD = 'Reload Obsidian to load the new plugin. On the phone, force-quit Obsidian and open it again.'
-const SUGGEST = 'wi doctor'
 
 function isMissing(error: unknown): boolean {
   return (error as NodeJS.ErrnoException | null)?.code === 'ENOENT'
@@ -269,7 +267,7 @@ async function pluginStep(root: string, vault: string | null, checkout: boolean,
 }
 
 async function changesStep(root: string, from: string, to: string, installed: boolean): Promise<ChangesStep> {
-  const base = { step: 'changes' as const, from, to, suggest: SUGGEST }
+  const base = { step: 'changes' as const, from, to }
   if (!installed) {
     return { ...base, changes: null, message: `would print the Agent setup changes after ${from}, up to ${to}` }
   }
@@ -312,7 +310,6 @@ export function renderSteps(steps: UpdateStep[]): string {
     if (step.step === 'changes') {
       for (const change of step.changes ?? []) out.push('', `## ${change.version}`, '', change.text)
       if (step.changes?.length) out.push('')
-      out.push(`Run ${step.suggest} to compare your vault with the agent playbook.`)
     }
   }
   return `${out.join('\n')}\n`

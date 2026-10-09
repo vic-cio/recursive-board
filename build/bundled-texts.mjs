@@ -1,6 +1,6 @@
 /**
- * Writes src/plugin/bundled-texts.ts: the skill and the playbook as string constants, so the
- * plugin's setup and doctor read them with no Node and no file in the vault. The build runs it
+ * Writes src/plugin/bundled-texts.ts: the skill as a string constant, so the
+ * plugin's setup reads it with no Node and no file in the vault. The build runs it
  * first; src/plugin/bundled-texts.test.ts fails when the module and the files differ.
  * Run it alone with: node build/bundled-texts.mjs
  */
@@ -12,7 +12,6 @@ const root = join(dirname(fileURLToPath(import.meta.url)), '..')
 
 export const BUNDLED = [
   ['SKILL', 'skills/recursive-board/SKILL.md'],
-  ['PLAYBOOK', 'docs/playbook.md'],
 ]
 
 export async function bundledTextsModule() {

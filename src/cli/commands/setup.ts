@@ -7,8 +7,6 @@ import { createInterface } from 'node:readline/promises'
 import { stdin, stdout } from 'node:process'
 
 import { loadVault, wiConfigDir } from '../vault.ts'
-import { packageRoot, readPackageFile } from '../package-files.ts'
-import { playbookBlock } from '../../shared/playbook.ts'
 
 export interface RegistryLocation {
   platform: NodeJS.Platform | string
@@ -172,20 +170,6 @@ async function selectVault(vaults: string[]): Promise<string> {
   }
 }
 
-const PLAYBOOK_PATH = 'docs/playbook.md'
-const CHECK_COMMAND = 'wi doctor'
-
-/**
- * The text setup prints last: the playbook's summary block, the path of the installed playbook,
- * and the command that checks a vault against it. Null when the playbook or its block is missing.
- * Setup only prints it, and writes nothing into the vault (docs/adr/0069).
- */
-export function setupSummary(playbook: string | null, path: string): string | null {
-  const summary = playbook === null ? null : playbookBlock(playbook, 'summary')
-  if (summary === null) return null
-  return `${summary}\n\nPlaybook: ${path}\nCheck a vault against it: ${CHECK_COMMAND}\n`
-}
-
 export interface SetupOptions {
   vault?: string
   yes: boolean
@@ -221,16 +205,12 @@ export async function runSetup(options: SetupOptions): Promise<void> {
   const outcomes = await Promise.all(destinations.map((destination) =>
     installSkillCopy(packagedSkill, destination, options.force)))
   const configPath = await writeDefaultVault(vault)
-  const playbookPath = resolve(packageRoot(), PLAYBOOK_PATH)
-  const playbook = await readPackageFile(PLAYBOOK_PATH)
 
   if (options.json) {
-    const summary = playbook === null ? null : playbookBlock(playbook, 'summary')
     stdout.write(`${JSON.stringify({
       vault,
       config: configPath,
       skills: destinations.map((path, index) => ({ path, outcome: outcomes[index] })),
-      recommendedSetup: summary === null ? null : { summary, playbook: playbookPath, check: CHECK_COMMAND },
     }, null, 2)}\n`)
     return
   }
@@ -238,7 +218,4 @@ export async function runSetup(options: SetupOptions): Promise<void> {
   stdout.write(`wi setup: default vault ${vault}\n`)
   stdout.write(`wi setup: config ${configPath}\n`)
   destinations.forEach((destination, index) => stdout.write(`wi setup: ${outcomes[index]} ${destination}\n`))
-
-  const summary = setupSummary(playbook, playbookPath)
-  if (summary !== null) stdout.write(`\n${summary}`)
 }

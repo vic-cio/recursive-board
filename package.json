@@ -20,7 +20,6 @@
     "dist/main.js",
     "dist/manifest.json",
     "dist/styles.css",
-    "docs/playbook.md",
     "skills/",
     "CHANGELOG.md"
   ],

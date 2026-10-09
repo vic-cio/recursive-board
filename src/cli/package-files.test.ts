@@ -9,8 +9,8 @@ test('packageRoot is the folder that holds package.json', () => {
   assert.ok(existsSync(join(packageRoot(), 'package.json')))
 })
 
-test('readPackageFile reads the playbook and the changelog that the package ships', async () => {
-  assert.match((await readPackageFile('docs/playbook.md')) ?? '', /playbook=summary/)
+test('readPackageFile reads the skill and the changelog that the package ships', async () => {
+  assert.match((await readPackageFile('skills/recursive-board/SKILL.md')) ?? '', /^name: recursive-board$/m)
   assert.match((await readPackageFile('CHANGELOG.md')) ?? '', /^# Changelog/)
 })
 

@@ -22,7 +22,7 @@ const CHANGELOG = (version: string) => `# Changelog
 
 ### Agent setup
 
-- Agents read the new playbook in ${version}.
+- Agents read the new skill text in ${version}.
 
 ### Added
 
@@ -157,9 +157,9 @@ test('a newer version installs, then the new wi refreshes the skill and the plug
     assert.match(text, /skill replaced at .*\.claude/)
     assert.match(text, /plugin replaced at .* \(0\.8\.2 → 0\.9\.0\)\. Reload Obsidian/)
     assert.match(text, /force-quit Obsidian/)
-    assert.match(text, /Agent setup changes since 0\.8\.2:\n\n## 0\.9\.0\n\n- Agents read the new playbook in 0\.9\.0\./)
+    assert.match(text, /Agent setup changes since 0\.8\.2:\n\n## 0\.9\.0\n\n- Agents read the new skill text in 0\.9\.0\./)
     assert.doesNotMatch(text, /Old news/)
-    assert.match(text, /Run wi doctor/)
+    assert.doesNotMatch(text, /wi doctor|playbook/)
 
     for (const copy of w.skillCopies) assert.match(readFileSync(join(copy, 'SKILL.md'), 'utf8'), /skill 0\.9\.0/)
     assert.equal(readFileSync(join(w.plugin, 'main.js'), 'utf8'), '// plugin 0.9.0\n')
@@ -188,8 +188,8 @@ test('--json merges the install step with the new wi report into one document', 
     assert.equal(stepOf(report, 'install').outcome, 'installed')
     assert.deepEqual(stepOf(report, 'skill').copies.map((copy) => copy.outcome), ['replaced', 'replaced'])
     assert.equal(stepOf(report, 'plugin').outcome, 'replaced')
-    assert.deepEqual(stepOf(report, 'changes').changes, [{ version: '0.9.0', text: '- Agents read the new playbook in 0.9.0.' }])
-    assert.equal(stepOf(report, 'changes').suggest, 'wi doctor')
+    assert.deepEqual(stepOf(report, 'changes').changes, [{ version: '0.9.0', text: '- Agents read the new skill text in 0.9.0.' }])
+    assert.equal('suggest' in stepOf(report, 'changes'), false)
   } finally {
     w.cleanup()
   }

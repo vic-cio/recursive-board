@@ -24,7 +24,7 @@ Intro text.
 
 ### Agent setup
 
-- Workers read the playbook.
+- Workers read the skill.
 - A second line.
 
 ### Added
@@ -49,13 +49,13 @@ test('changelogSections reads each version section, and stops at the compare lin
 
 test('agentSetupPart takes the Agent setup part up to the next heading', () => {
   const section = changelogSections(SAMPLE).find((s) => s.version === '0.9.0')!
-  assert.equal(agentSetupPart(section.text), '- Workers read the playbook.\n- A second line.')
+  assert.equal(agentSetupPart(section.text), '- Workers read the skill.\n- A second line.')
   assert.equal(agentSetupPart('### Fixed\n\n- A fix.'), null)
 })
 
 test('agentSetupSince lists the released versions after the old one, newest first', () => {
   assert.deepEqual(agentSetupSince(SAMPLE, '0.8.2', '0.9.1'), [
-    { version: '0.9.0', text: '- Workers read the playbook.\n- A second line.' },
+    { version: '0.9.0', text: '- Workers read the skill.\n- A second line.' },
   ])
   assert.deepEqual(agentSetupSince(SAMPLE, '0.8.1', '0.9.1').map((s) => s.version), ['0.9.0', '0.8.2'])
   assert.deepEqual(agentSetupSince(SAMPLE, '0.9.1', '0.9.1'), [])

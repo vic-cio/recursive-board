@@ -6,8 +6,7 @@ import { tmpdir } from 'node:os'
 import { join, relative } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { promisify } from 'node:util'
-import { detectObsidianRegistryPath, rankObsidianVaults, readObsidianVaults, setupSummary } from './setup.ts'
-import { playbookBlock } from '../../shared/playbook.ts'
+import { detectObsidianRegistryPath, rankObsidianVaults, readObsidianVaults } from './setup.ts'
 
 const run = promisify(execFile)
 
@@ -90,20 +89,17 @@ function setupEnv(home: string): NodeJS.ProcessEnv {
   return { ...process.env, HOME: home, XDG_CONFIG_HOME: join(home, '.config') }
 }
 
-test('setup prints the recommended setup, the playbook path and wi doctor', async () => {
+test('setup prints the vault, the config and the skill copies, and no agent setup', async () => {
   const home = mkdtempSync(join(tmpdir(), 'wi-setup-home-'))
   const vault = mkdtempSync(join(tmpdir(), 'wi-setup-vault-'))
   const entry = fileURLToPath(new URL('../wi.ts', import.meta.url))
-  const playbook = fileURLToPath(new URL('../../../docs/playbook.md', import.meta.url))
-  const summary = playbookBlock(readFileSync(playbook, 'utf8'), 'summary')
-  assert.ok(summary)
   try {
     for (const args of [['--yes', '--vault', vault], ['--vault', vault]]) {
       const { stdout } = await run('node', [entry, 'setup', ...args], { env: setupEnv(home), timeout: 20_000 })
-      assert.ok(stdout.includes(summary), `wi setup ${args.join(' ')} prints the summary block`)
-      assert.ok(stdout.includes(`Playbook: ${playbook}`), 'it names the installed playbook')
-      assert.match(stdout, /wi doctor/)
-      assert.ok(stdout.indexOf('wi setup: default vault') < stdout.indexOf(summary), 'the summary follows the vault choice')
+      assert.match(stdout, /^wi setup: default vault /m)
+      assert.match(stdout, /^wi setup: config /m)
+      assert.equal(stdout.split('\n').filter((line) => /^wi setup: (installed|already-installed) /.test(line)).length, 2)
+      assert.doesNotMatch(stdout, /playbook|recommended|wi doctor/i)
     }
   } finally {
     rmSync(home, { recursive: true, force: true })
@@ -142,7 +138,7 @@ test('setup --yes asks nothing, even for a Git vault', async () => {
     const code = await new Promise((resolve) => child.on('close', resolve))
     assert.equal(code, 0)
     assert.doesNotMatch(stdout, /\?/, 'no question is printed')
-    assert.match(stdout, /Recommended agent setup/)
+    assert.match(stdout, /^wi setup: installed /m)
   } finally {
     rmSync(home, { recursive: true, force: true })
     rmSync(vault, { recursive: true, force: true })
@@ -169,20 +165,17 @@ test('setup makes no git hook offer, even when a person answers yes', async () =
   }
 })
 
-test('setup --json prints one object with the recommended setup, and needs --vault', async () => {
+test('setup --json prints one object, and needs --vault', async () => {
   const home = mkdtempSync(join(tmpdir(), 'wi-setup-home-'))
   const vault = mkdtempSync(join(tmpdir(), 'wi-setup-vault-'))
   const entry = fileURLToPath(new URL('../wi.ts', import.meta.url))
-  const playbook = fileURLToPath(new URL('../../../docs/playbook.md', import.meta.url))
   try {
     const { stdout } = await run('node', [entry, 'setup', '--json', '--vault', vault], { env: setupEnv(home), timeout: 20_000 })
     const result = JSON.parse(stdout)
     assert.equal(result.vault, vault)
     assert.equal(result.config, join(home, '.config', 'wi', 'config.json'))
     assert.deepEqual(result.skills.map((skill: { outcome: string }) => skill.outcome), ['installed', 'installed'])
-    assert.equal(result.recommendedSetup.summary, playbookBlock(readFileSync(playbook, 'utf8'), 'summary'))
-    assert.equal(result.recommendedSetup.playbook, playbook)
-    assert.equal(result.recommendedSetup.check, 'wi doctor')
+    assert.deepEqual(Object.keys(result), ['vault', 'config', 'skills'])
 
     await assert.rejects(run('node', [entry, 'setup', '--json'], { env: setupEnv(home), timeout: 20_000 }),
       (error: { code: number; stderr: string }) => error.code === 2 && /--json needs --vault/.test(error.stderr))
@@ -190,12 +183,4 @@ test('setup --json prints one object with the recommended setup, and needs --vau
     rmSync(home, { recursive: true, force: true })
     rmSync(vault, { recursive: true, force: true })
   }
-})
-
-test('the setup summary is the playbook block, the path and the check, or nothing without a playbook', () => {
-  const text = 'Intro.\n\n```text playbook=summary\nLine one.\nLine two.\n```\n'
-  assert.equal(setupSummary(text, '/pkg/docs/playbook.md'),
-    'Line one.\nLine two.\n\nPlaybook: /pkg/docs/playbook.md\nCheck a vault against it: wi doctor\n')
-  assert.equal(setupSummary(null, '/pkg/docs/playbook.md'), null)
-  assert.equal(setupSummary('No blocks here.\n', '/pkg/docs/playbook.md'), null)
 })

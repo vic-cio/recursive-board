@@ -1,9 +1,9 @@
 /**
- * `wi doctor`: checks the install and the agent setup, on request
+ * `wi doctor`: checks the install and the vault, on request
  * (docs/adr/0070-wi-doctor-checks-on-request.md).
  *
  * It needs no stored state and writes nothing. Each check prints pass, note or fix, and a fix
- * prints the text to paste. The agent setup checks are pure functions in src/shared/doctor.ts.
+ * prints the command to run. The checks are pure functions in src/shared/doctor.ts.
  * Only an install that is broken, where a wi command cannot run, makes the exit code 1.
  */
 import { execFile } from 'node:child_process'
@@ -13,12 +13,12 @@ import { platform } from 'node:os'
 import { join, resolve } from 'node:path'
 import { promisify } from 'node:util'
 
-import { agentSetupChecks, checkBase, countLine, renderCheckSection, rulesCheck, type CheckResult, type SkillCopy } from '../../shared/doctor.ts'
-import { boardSettingsCheck, openRoleTags, readSetupNotes, validateCheck } from '../../shared/doctor-vault.ts'
+import { checkBase, countLine, renderCheckSection, rulesCheck, skillCheck, type CheckResult, type SkillCopy } from '../../shared/doctor.ts'
+import { boardSettingsCheck, validateCheck } from '../../shared/doctor-vault.ts'
 import { readRulesMarker } from '../../shared/rules-version.ts'
 import { packageRoot, readPackageFile } from '../package-files.ts'
 import { nodePort } from '../node-port.ts'
-import { findVaultRoot, getDefaultVault, loadVault, type Vault } from '../vault.ts'
+import { findVaultRoot, getDefaultVault, loadVault } from '../vault.ts'
 import { MANAGED_MARKER, MANAGED_TEXT, skillDestinations } from './setup.ts'
 
 const run = promisify(execFile)
@@ -45,7 +45,6 @@ export interface DoctorReport {
   /** True when a check found the install broken. */
   broken: boolean
   install: CheckResult[]
-  agentSetup: CheckResult[]
 }
 
 /** Asks the npm registry for the newest version, with a short timeout. Offline gives null. */
@@ -65,16 +64,14 @@ export async function npmLatestVersion(env: NodeJS.ProcessEnv = process.env, tim
 export async function runDoctor(options: DoctorOptions): Promise<DoctorReport> {
   const install: CheckResult[] = []
   install.push(await nodeCheck(options.nodeVersion))
-  const playbook = await readPackageFile('docs/playbook.md')
   const packagedSkill = await readPackageFile('skills/recursive-board/SKILL.md')
-  install.push(packageCheck(playbook, packagedSkill))
+  install.push(packageCheck(packagedSkill))
   install.push(versionCheck(options.version, await options.latestVersion()))
 
   const located = await locateVault(options)
   install.push(vaultCheck(located))
   const root = located?.isVault ? located.root : null
 
-  let vault: Vault | null = null
   const port = root === null ? null : nodePort(root)
   if (root !== null && port !== null) {
     install.push(await pluginVersionCheck(root, options.version))
@@ -83,29 +80,16 @@ export async function runDoctor(options: DoctorOptions): Promise<DoctorReport> {
     install.push(settings)
     install.push(await hookCheck(root))
     if (!settings.broken) {
-      vault = await loadVault(root)
-      install.push(await validateCheck(vault))
+      install.push(await validateCheck(await loadVault(root)))
     }
   }
-
-  const skill = packagedSkill === null ? null : await skillCopies(options.home, packagedSkill)
-  const agentSetup = playbook === null ? [] : agentSetupChecks({
-    playbook,
-    agentsMd: root === null ? null : await readIfPresent(join(root, 'AGENTS.md')),
-    notes: port === null ? [] : await readSetupNotes(port),
-    openRoleTags: vault === null ? [] : openRoleTags(vault),
-    maxAgents: vault?.config.maxAgents ?? null,
-    skill,
-  })
-  // Without a vault, only the skill check means anything.
-  const shown = root === null || vault === null ? agentSetup.filter((result) => result.id === 'skill') : agentSetup
+  install.push(skillCheck(packagedSkill === null ? null : await skillCopies(options.home, packagedSkill)))
 
   return {
     version: options.version,
     vault: root,
     broken: install.some((result) => result.broken === true),
     install,
-    agentSetup: shown,
   }
 }
 
@@ -119,14 +103,12 @@ async function nodeCheck(running: string): Promise<CheckResult> {
   return { ...base, level: 'fix', broken: true, message: `Node ${running} is older than ${engines}. Install a newer Node.` }
 }
 
-function packageCheck(playbook: string | null, skill: string | null): CheckResult {
+function packageCheck(skill: string | null): CheckResult {
   const base = checkBase('package')
-  const missing = [playbook === null ? 'docs/playbook.md' : null, skill === null ? 'skills/recursive-board/SKILL.md' : null]
-    .filter((path): path is string => path !== null)
-  if (missing.length === 0) return { ...base, level: 'pass', message: `${packageRoot()} has the playbook and the skill.` }
+  if (skill !== null) return { ...base, level: 'pass', message: `${packageRoot()} has the skill.` }
   return {
     ...base, level: 'fix', broken: true, paste: UPDATE_WI,
-    message: `${packageRoot()} has no ${missing.join(' and no ')}. Install the package again.`,
+    message: `${packageRoot()} has no skills/recursive-board/SKILL.md. Install the package again.`,
   }
 }
 
@@ -210,7 +192,7 @@ function runsValidation(body: string): boolean {
 /** The hook is advice (docs/adr/0075-git-versioning-is-advice.md), so this check only reads and is never a fix. */
 async function hookCheck(root: string): Promise<CheckResult> {
   const base = checkBase('hook')
-  const advice = 'It is optional: see "Git versioning" in docs/playbook.md.'
+  const advice = 'It is optional: see "Version the vault with Git" in the README.'
   const git = await gitPreCommit(root)
   if (git === null) return { ...base, level: 'note', message: 'The vault is not in a Git repository, so it has no hook.' }
   const body = await readIfPresent(git.path)
@@ -259,11 +241,10 @@ async function readIfPresent(path: string): Promise<string | null> {
   }
 }
 
-/** The report as text: one line per check, and the text to paste under each fix. */
+/** The report as text: one line per check, and the command to run under each fix. */
 export function renderDoctor(report: DoctorReport): string {
   const out: string[] = [`wi doctor ${report.version}`, '']
   out.push(...renderCheckSection('Install', report.install))
-  if (report.agentSetup.length > 0) out.push(...renderCheckSection('Agent setup (optional, from docs/playbook.md in the package)', report.agentSetup))
-  out.push(`${countLine([...report.install, ...report.agentSetup])} ${report.broken ? 'The install is broken.' : 'The install works.'}`)
+  out.push(`${countLine(report.install)} ${report.broken ? 'The install is broken.' : 'The install works.'}`)
   return `${out.join('\n')}\n`
 }

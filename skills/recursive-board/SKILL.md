@@ -18,14 +18,11 @@ select a vault directly, or `wi setup --yes --vault <path>` for unattended setup
 symlinked development installs and refuses to replace an unmanaged skill folder unless passed
 `--force`.
 
-Setup ends with the recommended agent setup: a summary of the optional playbook, the path of the
-installed `docs/playbook.md`, and `wi doctor`, which checks a vault against it. Show that summary
-to the user, and say that it is optional. Setup writes nothing into the vault for it. Change the
-vault's `AGENTS.md` or `Roles/` only when the user asks. `wi setup --json` gives the summary in
-`recommendedSetup`.
+Setup writes nothing into the vault. `wi setup --json --vault <path>` prints one object with the
+vault, the config path and the outcome for each skill copy.
 
-When `wi` or the skill seems out of date, run `wi doctor`. It checks the install and prints a
-fix for each problem. It writes nothing.
+When `wi` or the skill seems out of date, run `wi doctor`. It checks the install and the vault,
+and prints a fix for each problem. It writes nothing.
 
 To update, run `wi update`. It installs the newest package, refreshes both skill copies and the
 vault's plugin files, and prints the changelog's Agent setup changes. Run `wi update --dry-run`
@@ -68,7 +65,7 @@ obsidian vault=<name> recursive-board cmd="status wi-1 done" agent=<your name> m
   `cmd="new \"Ana's card\" --parent wi-1"`.
 - `cmd=help` prints the same help as `wi --help`. The plugin serves every `wi` command.
 - `cmd=setup`, `cmd=doctor` and `cmd=update` write nothing. `cmd=setup` prints what the plugin
-  CLI needs, the playbook summary and this skill's text: save that text as
+  CLI needs and this skill's text: save that text as
   `~/.claude/skills/recursive-board/SKILL.md` or `~/.agents/skills/recursive-board/SKILL.md`.
   `cmd=doctor` runs the vault checks and lists the install checks that need `wi doctor`.
   `cmd=update` prints the plugin and rules versions and says to update the plugin in Obsidian.

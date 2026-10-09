@@ -1,5 +1,5 @@
 /**
- * Files that ship in the npm package: the playbook, the changelog, the skill.
+ * Files that ship in the npm package: the changelog and the skill.
  *
  * This module sits two folders below the package root both in the source (`src/cli/`) and in the
  * bundle (`dist/wi/`), so one relative path finds the root in a checkout and in an install.
