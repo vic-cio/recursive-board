@@ -41,7 +41,7 @@ test('doctor lists the vault checks with results, then the skipped install check
   assert.equal(lines[0], 'ok')
   assert.equal(lines[1], 'Recursive Board doctor 1.2.3 (rules 1), the plugin in this vault')
   const vault = lines.indexOf('Vault')
-  assert.match(lines[vault + 1]!, /^ {2}pass {2}rules {11}The plugin and this plugin both have rules version 1\.$/)
+  assert.match(lines[vault + 1]!, /^ {2}pass {2}rules {11}The vault and this plugin both have rules version 1\.$/)
   assert.match(lines[vault + 2]!, /^ {2}pass {2}board-settings {2}\.obsidian\/plugins\/recursive-board\/data\.json holds the board settings\.$/)
   assert.match(lines[vault + 3]!, /^ {2}pass {2}validate {8}2 work items, 0 errors, 0 warnings\.$/)
 

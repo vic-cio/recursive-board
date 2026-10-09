@@ -29,7 +29,8 @@ export const SKILL_PATHS = [
 
 /** What the plugin CLI needs, one line each. */
 export const CLI_NEEDS = [
-  `The Obsidian installer ${MIN_INSTALLER} or later. An older one prints a warning line before every reply, and hangs when Obsidian is closed. The plugin cannot read the installer version: compare it in Settings > General.`,
+  `Obsidian must be running. If not, the CLI exits at once with 'The CLI is unable to find Obsidian...', and an agent falls back to wi or asks for input.`,
+  `The Obsidian installer ${MIN_INSTALLER} or later. An older one prints a warning line before every reply and hangs when Obsidian is closed. The plugin cannot read the installer version: compare it in Settings > General.`,
   'The command line interface turned on in Settings > General > Advanced.',
   'vault=<name> as the first argument of every call: obsidian vault=<name> recursive-board cmd="<wi command line>".',
   'A reply succeeded only when its first line is exactly ok. Any other first line is a failure, and the exit code is always 0.',

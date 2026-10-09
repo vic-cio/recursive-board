@@ -196,7 +196,7 @@ do not read the skill:
 
 - A reply succeeded only when its first line is exactly `ok`. The exit code is always 0.
 - Every call passes `vault=<name>` as the first argument.
-- The Obsidian installer must be 1.12.7 or later.
+- Obsidian must be running. If not, the CLI exits with 'The CLI is unable to find Obsidian...', and an agent falls back to `wi` or asks. The installer must be 1.12.7 or later.
 - A title with an apostrophe goes in escaped double quotes: `cmd="new \"Ana's card\" --parent wi-1"`.
 
 The plugin serves every `wi` command. `setup`, `doctor` and `update` write nothing on the plugin:

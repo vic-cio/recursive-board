@@ -72,7 +72,8 @@ obsidian vault=<name> recursive-board cmd="status wi-1 done" agent=<your name> m
   `~/.claude/skills/recursive-board/SKILL.md` or `~/.agents/skills/recursive-board/SKILL.md`.
   `cmd=doctor` runs the vault checks and lists the install checks that need `wi doctor`.
   `cmd=update` prints the plugin and rules versions and says to update the plugin in Obsidian.
-- The Obsidian installer must be 1.12.7 or later. An older one prints a warning line before
+- Obsidian must be running. If not, the CLI exits with 'The CLI is unable to find Obsidian...',
+  and an agent falls back to `wi` or asks for input. The installer must be 1.12.7 or later. An older one prints a warning line before
   every reply, and hangs when Obsidian is closed.
 
 ## Vault config

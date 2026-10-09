@@ -282,7 +282,7 @@ export function rulesCheck(marker: number | null, writer: string, rules: number 
   if (marker === null) {
     return { ...base, level: 'note', message: `The plugin data has no rules version, so a newer plugin is not known. ${writer} has rules version ${rules}.` }
   }
-  if (marker === rules) return { ...base, level: 'pass', message: `The plugin and ${writer} both have rules version ${rules}.` }
+  if (marker === rules) return { ...base, level: 'pass', message: `The vault and ${writer} both have rules version ${rules}.` }
   if (marker > rules) {
     return { ...base, level: 'fix', message: `A plugin with rules version ${marker} works on this vault, and ${writer} has rules version ${rules}. Each write warns. Update ${writer}.` }
   }

@@ -164,7 +164,7 @@ The optional [refocus hook](docs/refocus-hook.md) sends a card's Objective chain
 
 ### Run commands through the Obsidian CLI
 
-On a desktop, an agent may run a `wi` command line through the plugin, with no Node. Obsidian must be open, its installer must be 1.12.7 or later, and the command line interface must be on in Settings, General, Advanced.
+On a desktop, an agent may run a `wi` command line through the plugin, with no Node. Obsidian must be running. If it is not, the CLI exits with 'The CLI is unable to find Obsidian...', and an agent falls back to `wi` or asks for input. The Obsidian installer must be 1.12.7 or later. An older one prints a warning line before every reply and hangs when Obsidian is closed. The command line interface must be on in Settings, General, Advanced.
 
 ```sh
 obsidian vault=<name> recursive-board cmd="status wi-1 done" agent=<name> model=<model>
