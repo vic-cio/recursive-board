@@ -7,10 +7,10 @@ import { fileURLToPath } from 'node:url'
 
 import { setDependency } from './depend.ts'
 import { claimItem } from './claim-release.ts'
-import { setStatus } from './status.ts'
+import { setStatus } from '../../shared/commands/status.ts'
 import { validate } from './validate.ts'
 import { loadVault } from '../vault.ts'
-import { openDependencies } from '../dependencies.ts'
+import { openDependencies } from '../../shared/item-dependencies.ts'
 import { getList } from '../../shared/frontmatter.ts'
 import { makeVault, item, type Fixture } from '../test-helpers.ts'
 

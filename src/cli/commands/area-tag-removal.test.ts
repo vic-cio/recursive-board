@@ -27,7 +27,7 @@ function seed(): Fixture {
 test('wi new never writes area tags when a legacy setting is present', async () => {
   fixture = seed()
   const created = await createItem(await loadVault(fixture.root), { title: 'New task', parent: 'Work' })
-  assert.equal(getList(readFileSync(created.path, 'utf8'), 'tags'), undefined)
+  assert.equal(getList(readFileSync(join(fixture!.root, created.relPath), 'utf8'), 'tags'), undefined)
 })
 
 test('validate ignores stale area tags on legacy cards', async () => {

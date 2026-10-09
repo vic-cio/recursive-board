@@ -3,7 +3,7 @@
  *
  * The edit rules themselves live in `shared/edits.ts` and `shared/transitions.ts`, so the plugin
  * applies the same ones. This module is only the part that touches a filesystem, which is exactly
- * the part the plugin must not carry to iOS.
+ * the part the plugin must not carry to iOS. `node-port.ts` puts it behind the storage port.
  */
 import { writeFile, rename, readFile, rm, stat, link, chmod } from 'node:fs/promises'
 import { createHash } from 'node:crypto'
@@ -11,8 +11,7 @@ import { tmpdir } from 'node:os'
 import { dirname, join } from 'node:path'
 import { setTimeout as sleep } from 'node:timers/promises'
 
-import { applyEdits, editsFor, withStamp, type Edit, type EditPlan } from '../shared/edits.ts'
-import type { WorkItem } from './vault.ts'
+import { applyEdits, withStamp, type Edit, type EditPlan } from '../shared/edits.ts'
 
 export { applyEdits, withStamp, type Edit, type EditPlan }
 
@@ -159,27 +158,4 @@ export async function withFileLock<T>(path: string, fn: () => Promise<T>, hooks:
   } finally {
     await release(lock, token)
   }
-}
-
-/**
- * Applies edits to one work item on disk. Returns the new text.
- * It re-reads the file under the lock and computes the edits from that text when `plan` is a
- * rule (docs/adr/0054-edits-from-the-file-at-write-time.md), so an edit made since the vault was
- * loaded survives. The body edit runs on the same text, after the plan.
- * Stamps `updated` only when the frontmatter edits or the body edit change the file.
- */
-export async function editItem(
-  item: WorkItem,
-  plan: EditPlan,
-  editBody: (text: string) => string = (text) => text,
-): Promise<string> {
-  return withFileLock(item.path, async () => {
-    const current = await readFile(item.path, 'utf8')
-    const edits = editsFor(current, plan)
-    const body = editBody(applyEdits(current, edits))
-    if (body === current) return current
-    const text = editBody(applyEdits(current, withStamp(edits)))
-    await writeAtomic(item.path, text)
-    return text
-  })
 }

@@ -5,10 +5,9 @@
  * rather than writing a plan into a chat transcript. It is also the board's add row (docs/adr/0017-inline-status-capture.md),
  * which is why a status can be given and why the holder follows the shared status rule.
  */
-import { readFile } from 'node:fs/promises'
-import { join } from 'node:path'
 
-import { editItem, writeNew } from '../write.ts'
+import { editItem } from '../../shared/edit-item.ts'
+import { isPathExists } from '../../shared/storage.ts'
 import { cardState } from '../../shared/card-state.ts'
 import { holderOf } from '../../shared/holder.ts'
 import { inheritedChildFields, renderWorkItem, type NewWorkItem } from '../../shared/work-item.ts'
@@ -18,7 +17,7 @@ import { asName } from '../../shared/authorship.ts'
 import { freeTag, withFreeTag } from '../../shared/tags.ts'
 import { fileNameFor, fileNameStem, isStatus, newId, today, WORK_ITEM_TYPE, type Status } from '../../shared/schema.ts'
 import { parseFrontmatter } from '../../shared/frontmatter.ts'
-import type { Vault } from '../vault.ts'
+import type { Vault } from '../../shared/vault.ts'
 
 export interface NewOptions {
   title: string
@@ -42,7 +41,6 @@ export interface Created {
   id: string
   stem: string
   relPath: string
-  path: string
   parentStem: string
   /** True when this child was the parent's first and the parent became a board. */
   promotedParent: boolean
@@ -78,7 +76,7 @@ export async function createItem(vault: Vault, options: NewOptions): Promise<Cre
   // Render the body first, so a brief the template cannot hold fails before a file exists.
   renderBody(template, vault.config.extraSections, options.brief)
 
-  const stamp = today()
+  const stamp = today(vault.seams.now())
   const inherited = inheritedChildFields({
     holder: template.area ? undefined : holderOf((key) => parent.frontmatter.get(key)),
   }, status, options)
@@ -111,18 +109,16 @@ export async function createItem(vault: Vault, options: NewOptions): Promise<Cre
   let id = ''
   let stem = ''
   let relPath = ''
-  let path = ''
   for (let attempt = 0; ; attempt++) {
-    id = newId(takenIds)
+    id = newId(takenIds, vault.seams.random)
     stem = fileNameFor(title, id, takenStems)
     relPath = `${vault.config.workItemFolder}/${stem}.md`
-    path = join(vault.root, ...vault.config.workItemFolder.split('/'), `${stem}.md`)
     try {
-      await writeNew(path, render(id))
+      await vault.port.create(relPath, render(id))
       break
     } catch (error) {
-      if ((error as NodeJS.ErrnoException).code !== 'EEXIST') throw error
-      const existing = await readFile(path, 'utf8').catch(() => '')
+      if (!isPathExists(error)) throw error
+      const existing = await vault.port.read(relPath).catch(() => '')
       if (attempt >= 4 || parseFrontmatter(existing)?.get('type') !== WORK_ITEM_TYPE) {
         throw new Error(`${relPath} already exists. Refusing to overwrite it.`)
       }
@@ -134,7 +130,7 @@ export async function createItem(vault: Vault, options: NewOptions): Promise<Cre
   // A second file write, after the child exists: see docs/adr/0035-promote-a-parent-on-its-first-child.md.
   // The board key is read under the lock; the child count comes from the loaded vault.
   let promotedParent = false
-  await editItem(parent, (text) => {
+  await editItem(vault, parent, (text) => {
     const promotion = firstChildPromotion({
       isRoot: parent.parent === null && !parent.frontmatter.has('parent'),
       area: cardState(text).area,
@@ -146,7 +142,7 @@ export async function createItem(vault: Vault, options: NewOptions): Promise<Cre
   })
 
   return {
-    id, stem, relPath, path, parentStem: parent.stem,
+    id, stem, relPath, parentStem: parent.stem,
     promotedParent, gaps, renamed: stem !== fileNameStem(title),
   }
 }

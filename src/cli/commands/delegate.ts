@@ -7,8 +7,8 @@
  * harness starts its own with its own tools, and that agent runs `wi claim` by its own name.
  * `--role` adds the role tag in the same write.
  */
-import { readPeople, type Vault, type WorkItem } from '../vault.ts'
-import { editItem } from '../write.ts'
+import { readPeople, type Vault, type WorkItem } from '../../shared/vault.ts'
+import { editItem } from '../../shared/edit-item.ts'
 import { roleTagFor } from '../../shared/role-tags.ts'
 import { freeTagEditsIn } from '../../shared/tags.ts'
 import type { Edit } from '../../shared/edits.ts'
@@ -29,13 +29,13 @@ export interface DelegateResult {
 
 export async function delegate(vault: Vault, ref: string, options: DelegateOptions): Promise<DelegateResult> {
   const item = vault.resolve(ref)
-  const target = delegateTarget(options.to, await readPeople(vault.root))
+  const target = delegateTarget(options.to, await readPeople(vault.port))
   const roleTag = options.role === undefined ? undefined : roleTagFor(options.role)
   if (item.area) throw new Error(`${item.relPath} is an area, and an area cannot be assigned.`)
   if (item.parent === null) throw new Error(`${item.relPath} is a root, and a root cannot be assigned.`)
   const holder = target.kind === 'any' ? ANY_AGENT : target.name
   // The holder and the role tag go in one write.
-  await editItem(item, (text): Edit[] | null => {
+  await editItem(vault, item, (text): Edit[] | null => {
     const edits = [...(assignEdits(text, holder) ?? []), ...(roleTag ? freeTagEditsIn(text, roleTag, true) ?? [] : [])]
     return edits.length > 0 ? edits : null
   })

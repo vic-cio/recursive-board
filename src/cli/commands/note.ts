@@ -5,10 +5,10 @@
  * can lose one of two writes that land together; this goes through the locked `editItem`, which
  * re-reads the file, so both lines survive.
  */
-import { editItem } from '../write.ts'
+import { editItem } from '../../shared/edit-item.ts'
 import { appendNote, noteLine } from '../../shared/notes.ts'
 import { authorLabel } from '../../shared/authorship.ts'
-import type { Vault, WorkItem } from '../vault.ts'
+import type { Vault, WorkItem } from '../../shared/vault.ts'
 
 export interface NoteAdded {
   item: WorkItem
@@ -36,6 +36,6 @@ export async function addNote(
   const who = authorLabel(author.agent, author.model)
   if (who === undefined) throw new Error('wi note needs a writer name. Set WI_AGENT or pass --agent.')
   const line = noteLine(text, who, now)
-  await editItem(item, [], (body) => appendNote(body, line))
+  await editItem(vault, item, [], (body) => appendNote(body, line))
   return { item, line }
 }

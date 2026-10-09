@@ -13,7 +13,7 @@ import { join } from 'node:path'
 import { claimItem, releaseItem } from './commands/claim-release.ts'
 import { setDependency } from './commands/depend.ts'
 import { createItem } from './commands/new.ts'
-import { setStatus } from './commands/status.ts'
+import { setStatus } from '../shared/commands/status.ts'
 import { moveItem } from './commands/move.ts'
 import { setArea } from './commands/area.ts'
 import { setPeople } from './commands/set.ts'
@@ -101,7 +101,7 @@ test('two concurrent creates with one title keep both cards', async () => {
     createItem(a, { title: 'Streaming', parent: 'Task' }),
     createItem(b, { title: 'Streaming', parent: 'Task' }),
   ])
-  assert.notEqual(one.path, two.path)
+  assert.notEqual(one.relPath, two.relPath)
   const files = readdirSync(join(fixture.root, 'Boards')).filter((name) => name.startsWith('Streaming'))
   assert.equal(files.length, 2)
   assert.deepEqual([one.id, two.id].sort(), files.map((name) => fmOf(fixture!, name.replace(/\.md$/, '')).get('id')).sort())

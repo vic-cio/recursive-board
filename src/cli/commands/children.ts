@@ -6,7 +6,7 @@
  * order is `priority` then `updated`, computed by the vault index.
  */
 import { STATUSES, isStatus, type Status } from '../../shared/schema.ts'
-import type { Vault, WorkItem } from '../vault.ts'
+import type { Vault, WorkItem } from '../../shared/vault.ts'
 
 export interface ChildRow {
   item: WorkItem

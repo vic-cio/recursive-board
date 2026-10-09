@@ -6,8 +6,8 @@
 import { activeAgents, type AgentItem, type AgentTree } from '../../shared/agents.ts'
 import { holderOf } from '../../shared/holder.ts'
 import { awaitsReviewVerdict } from '../../shared/review.ts'
-import { titleOf } from '../dependencies.ts'
-import { maxAgentsForRun, readPeople, type Vault, type WorkItem } from '../vault.ts'
+import { titleOf } from '../../shared/item-dependencies.ts'
+import { maxAgentsForRun, readPeople, type Env, type Vault, type WorkItem } from '../../shared/vault.ts'
 
 interface Card extends AgentItem {
   item: WorkItem
@@ -21,7 +21,7 @@ async function activeIn(vault: Vault) {
     effectiveArchived: vault.isArchived(item),
   }]))
   const tree: AgentTree<Card> = { childrenOf: (card) => vault.childrenOf(card.item).map((child) => cards.get(child)!) }
-  const people = [...(await readPeople(vault.root)).values()]
+  const people = [...(await readPeople(vault.port)).values()]
   // A card that waits for a review verdict does not make its holder an active agent.
   return activeAgents([...cards.values()], people, tree, (card) => awaitsReviewVerdict(card.item.text))
 }
@@ -31,11 +31,12 @@ export async function activeAgentsOf(vault: Vault): Promise<Set<string>> {
   return new Set((await activeIn(vault)).map((agent) => agent.name.toLowerCase()))
 }
 
-export async function agentsReport(vault: Vault) {
+/** `env` may override the vault's limit with WI_MAX_AGENTS. */
+export async function agentsReport(vault: Vault, env: Env) {
   const agents = await activeIn(vault)
   return {
     activeAgents: agents.length,
-    maxAgents: maxAgentsForRun(vault),
+    maxAgents: maxAgentsForRun(vault, env),
     agents: agents.map((agent) => ({
       name: agent.name,
       cards: agent.cards.map((card) => ({ id: card.item.id ?? null, title: titleOf(card.item), path: card.item.relPath })),

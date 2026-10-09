@@ -1,7 +1,7 @@
 /** Dispatcher selection from current vault state. This command writes nothing. */
-import { dependenciesOf, openDependencies, titleOf } from '../dependencies.ts'
+import { dependenciesOf, openDependencies, titleOf } from '../../shared/item-dependencies.ts'
 import { holderOf, isAnyAgent } from '../../shared/holder.ts'
-import type { Vault, WorkItem } from '../vault.ts'
+import type { Vault, WorkItem } from '../../shared/vault.ts'
 import { getList } from '../../shared/frontmatter.ts'
 import { roleTags } from '../../shared/role-tags.ts'
 

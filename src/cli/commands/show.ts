@@ -2,9 +2,9 @@
 import { getList } from '../../shared/frontmatter.ts'
 import { holderOf } from '../../shared/holder.ts'
 import { bodyOf, listItems, section } from '../../shared/sections.ts'
-import { dependenciesOf, titleOf } from '../dependencies.ts'
+import { dependenciesOf, titleOf } from '../../shared/item-dependencies.ts'
 import { procedureNotes, roleTags, type TaggedNote } from '../../shared/role-tags.ts'
-import type { Vault, WorkItem } from '../vault.ts'
+import type { Vault, WorkItem } from '../../shared/vault.ts'
 
 function stringField(item: WorkItem, key: string): string | null {
   const value = item.frontmatter.get(key)

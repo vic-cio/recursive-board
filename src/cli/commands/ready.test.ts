@@ -1,6 +1,7 @@
 import { test, afterEach } from 'node:test'
 import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
+import { join } from 'node:path'
 
 import { readyCards } from './ready.ts'
 import { loadVault } from '../vault.ts'
@@ -154,5 +155,5 @@ test('readyCards scopes descendants and exclusion reasons without changing card 
   assert.deepEqual(result.excluded.map((card) => [card.id, card.reasons]), [['wi-waiting', ['dependency']]])
   assert.deepEqual(result.counts, { ready: 1, excluded: 1 })
   assert.throws(() => readyCards(vault, { parent: 'wi-missing' }), /no work item matches/)
-  for (const card of vault.items) assert.equal(readFileSync(card.path, 'utf8'), card.text)
+  for (const card of vault.items) assert.equal(readFileSync(join(fixture!.root, card.relPath), 'utf8'), card.text)
 })

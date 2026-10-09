@@ -4,11 +4,11 @@
  * The operation changes one item's frontmatter. It keeps the body and every unrelated key, and
  * refuses to discard an active claim when converting a card to an area.
  */
-import { editItem } from '../write.ts'
+import { editItem } from '../../shared/edit-item.ts'
 import { isStatus, type Status } from '../../shared/schema.ts'
 import { cardState } from '../../shared/card-state.ts'
 import { areaEdits, areaRefusal, type AreaItemState, type AreaTarget } from '../../shared/area.ts'
-import type { Vault, WorkItem } from '../vault.ts'
+import type { Vault, WorkItem } from '../../shared/vault.ts'
 
 export interface AreaOptions {
   off: boolean
@@ -29,7 +29,7 @@ export async function setArea(vault: Vault, ref: string, options: AreaOptions): 
   // load is never discarded (docs/adr/0054-edits-from-the-file-at-write-time.md).
   let status = item.status
   let current = item.text
-  const after = await editItem(item, (text) => {
+  const after = await editItem(vault, item, (text) => {
     current = text
     const now = cardState(text)
     const state: AreaItemState = {

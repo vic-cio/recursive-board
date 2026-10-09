@@ -3,10 +3,10 @@
  *
  * It writes one list on one file, the card that waits. The card it waits on is never touched.
  */
-import { editItem } from '../write.ts'
+import { editItem } from '../../shared/edit-item.ts'
 import { dependencyEditIn, dependencyPath } from '../../shared/dependencies.ts'
-import { dependenciesOf, titleOf } from '../dependencies.ts'
-import type { Vault, WorkItem } from '../vault.ts'
+import { dependenciesOf, titleOf } from '../../shared/item-dependencies.ts'
+import type { Vault, WorkItem } from '../../shared/vault.ts'
 
 export interface DependChange {
   item: WorkItem
@@ -44,7 +44,7 @@ export async function setDependency(vault: Vault, ref: string, onRef: string, ad
   const names = (linkTarget: string) =>
     on !== undefined ? vault.resolveLink(linkTarget) === on : linkTarget.toLowerCase() === target.toLowerCase()
   let changed = false
-  await editItem(item, (text) => {
+  await editItem(vault, item, (text) => {
     const edit = dependencyEditIn(text, target, add, names)
     changed = edit !== null
     return edit === null ? null : [edit]

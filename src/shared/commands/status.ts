@@ -9,13 +9,15 @@
  * `done` clears the record. Unticking is therefore `wi status <ref> <prev_status>`, which needs no
  * command of its own.
  */
-import { editItem } from '../write.ts'
-import { dependentsOf, openDependencies, titleOf } from '../dependencies.ts'
-import { waitingRefusal } from '../../shared/dependencies.ts'
-import { statusEdits } from '../../shared/transitions.ts'
-import { cardState } from '../../shared/card-state.ts'
-import { isStatus, STATUSES, type Status } from '../../shared/schema.ts'
+import { editItem } from '../edit-item.ts'
+import { dependentsOf, openDependencies, titleOf } from '../item-dependencies.ts'
+import { waitingRefusal } from '../dependencies.ts'
+import { statusEdits } from '../transitions.ts'
+import { cardState } from '../card-state.ts'
+import { isStatus, STATUSES, type Status } from '../schema.ts'
 import type { Vault, WorkItem } from '../vault.ts'
+import { UsageError, type RunFunction } from './command.ts'
+import { json, label } from './output.ts'
 
 export interface StatusChange {
   item: WorkItem
@@ -49,7 +51,7 @@ export async function setStatus(vault: Vault, ref: string, status: string): Prom
   // Decided under the lock, from the card as it is then (docs/adr/0054-edits-from-the-file-at-write-time.md).
   let from = item.status
   let changed = false
-  await editItem(item, (text) => {
+  await editItem(vault, item, (text) => {
     const state = cardState(text)
     from = state.status
     const edits = statusEdits(state.status, status, state.hasPrevStatus)
@@ -88,4 +90,40 @@ export function readyParent(vault: Vault, item: WorkItem): WorkItem | undefined 
   if (parent === undefined || !parent.frontmatter.has('parent') || parent.area || parent.status === 'done') return undefined
   const open = vault.childrenOf(parent).filter((child) => !child.archived && child !== item && child.status !== 'done')
   return open.length === 0 ? parent : undefined
+}
+
+/** `wi status <ref> <status>`: what it prints, from the change setStatus made. */
+export const runStatus: RunFunction = async (context, line) => {
+  const vault = await context.vault()
+  const [ref, status] = line.positionals.slice(1)
+  if (ref === undefined || status === undefined) {
+    throw new UsageError(`wi status needs a <ref> and a <status>. One of: ${STATUSES.join(', ')}.`)
+  }
+  const change = await setStatus(vault, ref, status)
+  if (line.values['json'] === true) {
+    context.out(json({
+      id: change.item.id,
+      path: change.item.relPath,
+      from: change.from ?? null,
+      to: change.to,
+      prev_status: change.recorded ?? null,
+      changed: change.changed,
+      parent_ready: change.parentReady?.id ?? null,
+      unblocked: change.unblocked.map((item) => item.id ?? item.stem),
+    }))
+    return 0
+  }
+  if (!change.changed) {
+    context.out(`${label(change.item)} is already ${change.to}. Nothing written.\n`)
+  } else {
+    const recorded = change.recorded ? `  (prev_status: ${change.recorded})` : ''
+    context.out(`${label(change.item)}  ${change.from ?? '—'} → ${change.to}${recorded}\n`)
+  }
+  for (const item of change.unblocked) context.out(`${label(item)}  waits on nothing open now. It can start.\n`)
+  const ready = change.parentReady
+  if (ready) {
+    context.out(`${label(ready)}  every child is done. If its own criteria are met, run: ` +
+      `wi status ${ready.id ?? ready.stem} done\n`)
+  }
+  return 0
 }

@@ -1,8 +1,8 @@
 /** `wi archive`: one file changes; descendants inherit visibility when read. */
 import { archiveEdits, activeDescendant } from '../../shared/archive.ts'
-import { editItem } from '../write.ts'
+import { editItem } from '../../shared/edit-item.ts'
 import { cardState } from '../../shared/card-state.ts'
-import { requireAccountedTree, type Vault, type WorkItem } from '../vault.ts'
+import { requireAccountedTree, type Vault, type WorkItem } from '../../shared/vault.ts'
 
 export interface ArchiveChange {
   item: WorkItem
@@ -24,7 +24,7 @@ export async function archiveItem(vault: Vault, ref: string, undo: boolean): Pro
   }
   // The flag is read again under the lock, so a second archive of one card reports no change.
   let changed = false
-  await editItem(item, (text) => {
+  await editItem(vault, item, (text) => {
     const edits = archiveEdits(cardState(text).archived, archived)
     changed = edits !== null
     return edits

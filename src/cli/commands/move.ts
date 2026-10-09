@@ -8,14 +8,11 @@
  *
  * The rules are in `shared/transitions.ts`, so the plugin's "Move to…" does the same thing.
  */
-import { readFile } from 'node:fs/promises'
-import { join } from 'node:path'
-
-import { editItem, withFileLock } from '../write.ts'
+import { editItem } from '../../shared/edit-item.ts'
 import { parseFrontmatter } from '../../shared/frontmatter.ts'
 import { parseWikilink } from '../../shared/schema.ts'
 import { moveEdits, moveRefusal } from '../../shared/transitions.ts'
-import { requireAccountedTree, type Vault, type WorkItem } from '../vault.ts'
+import { requireAccountedTree, type Vault, type WorkItem } from '../../shared/vault.ts'
 
 export interface MoveResult {
   item: WorkItem
@@ -36,7 +33,7 @@ export async function moveItem(vault: Vault, ref: string, targetRef: string): Pr
   const target = vault.resolve(targetRef)
   requireAccountedTree(vault, `move ${item.title ?? item.stem}`)
 
-  return withFileLock(join(vault.root, MOVE_LOCK), async () => {
+  return vault.port.withLock(MOVE_LOCK, async () => {
     // Keyed by stem, lowercased: the key a wikilink resolves by.
     const key = (w: WorkItem) => w.stem.toLowerCase()
     const byKey = new Map(vault.items.map((w) => [key(w), w]))
@@ -57,7 +54,7 @@ export async function moveItem(vault: Vault, ref: string, targetRef: string): Pr
 
     let from = item.parent
     let changed = false
-    await editItem(item, (text) => {
+    await editItem(vault, item, (text) => {
       from = parseWikilink(parseFrontmatter(text)?.get('parent'))
       const edits = moveEdits(from, target.stem)
       changed = edits !== null
@@ -67,7 +64,7 @@ export async function moveItem(vault: Vault, ref: string, targetRef: string): Pr
   })
 }
 
-/** The lock every `wi move` in a vault takes. A name, not a file: the lock lives in the OS temp folder. */
+/** The lock every `wi move` in a vault takes. A name, not a file: the Node port keeps its locks in the OS temp folder. */
 const MOVE_LOCK = '.wi-move'
 
 /** The parent of the target and of each ancestor, read from disk now. A loop stops where it repeats. */
@@ -76,7 +73,7 @@ async function parentsFromDisk(
 ): Promise<Map<string, string | null>> {
   const parents = new Map<string, string | null>()
   for (let current: WorkItem | undefined = start; current && !parents.has(key(current));) {
-    const text = await readFile(current.path, 'utf8').catch(() => current!.text)
+    const text = await vault.port.read(current.relPath).catch(() => current!.text)
     const next = vault.resolveLink(parseWikilink(parseFrontmatter(text)?.get('parent')))
     parents.set(key(current), next ? key(next) : null)
     current = next

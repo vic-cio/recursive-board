@@ -4,9 +4,9 @@
  * Old area tags are reserved, so this refuses changes to them.
  * The tags are edited as the file holds them under the lock, so a tag added since the load stays.
  */
-import { editItem } from '../write.ts'
+import { editItem } from '../../shared/edit-item.ts'
 import { freeTag, freeTagEditsIn } from '../../shared/tags.ts'
-import type { Vault, WorkItem } from '../vault.ts'
+import type { Vault, WorkItem } from '../../shared/vault.ts'
 
 export interface TagChange {
   item: WorkItem
@@ -19,7 +19,7 @@ export async function setTag(vault: Vault, ref: string, input: string, add: bool
   const tag = freeTag(input)
   const item = vault.resolve(ref)
   let changed = false
-  await editItem(item, (text) => {
+  await editItem(vault, item, (text) => {
     const edits = freeTagEditsIn(text, tag, add)
     changed = edits !== null
     return edits

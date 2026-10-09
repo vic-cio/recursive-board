@@ -15,11 +15,7 @@
  * Nothing is unlinked. A removed file moves to the vault's `.trash`, which is Obsidian's own
  * convention and is outside the work-item folder, so it is never indexed again.
  */
-import { mkdir, rename } from 'node:fs/promises'
-import { existsSync } from 'node:fs'
-import { join } from 'node:path'
-
-import { requireAccountedTree, type Vault, type WorkItem } from '../vault.ts'
+import { requireAccountedTree, type Vault, type WorkItem } from '../../shared/vault.ts'
 
 /** Obsidian's own local trash. Outside the five folders, so `wi validate` never sees it. */
 export const TRASH = '.trash'
@@ -60,11 +56,11 @@ function subtree(vault: Vault, root: WorkItem): WorkItem[] {
 }
 
 /** A free name in the trash. Removing twice must not overwrite the first copy. */
-function trashPath(vault: Vault, item: WorkItem): string {
+async function trashPath(vault: Vault, item: WorkItem): Promise<string> {
   const stem = item.stem
   for (let n = 0; n < 1000; n++) {
     const name = n === 0 ? `${stem}.md` : `${stem} ${n}.md`
-    if (!existsSync(join(vault.root, TRASH, name))) return `${TRASH}/${name}`
+    if (!(await vault.port.exists(`${TRASH}/${name}`))) return `${TRASH}/${name}`
   }
   return `${TRASH}/${stem} ${Date.now()}.md`
 }
@@ -97,10 +93,10 @@ export async function removeItem(
   const removed: Removed[] = []
 
   for (const target of doomed) {
-    const trashedTo = trashPath(vault, target)
+    const trashedTo = await trashPath(vault, target)
     if (!dryRun) {
-      await mkdir(join(vault.root, TRASH), { recursive: true })
-      await rename(target.path, join(vault.root, ...trashedTo.split('/')))
+      await vault.port.mkdir(TRASH)
+      await vault.port.rename(target.relPath, trashedTo)
     }
     removed.push({ item: target, trashedTo })
   }

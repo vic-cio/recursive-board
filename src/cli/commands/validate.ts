@@ -11,11 +11,11 @@
 import {
   CORE_FIELDS, OPTIONAL_FIELDS, STATUSES, isStatus, parseWikilink,
 } from '../../shared/schema.ts'
-import { readRoleTaggedNotes, type Vault, type WorkItem } from '../vault.ts'
+import { readRoleTaggedNotes, type Vault, type WorkItem } from '../../shared/vault.ts'
 import { duplicateProcedures, roleTagFor } from '../../shared/role-tags.ts'
 import { PLUGIN_DATA_FILE } from '../../shared/board-settings.ts'
 import { dependencyCycle } from '../../shared/dependencies.ts'
-import { dependenciesOf, titleOf } from '../dependencies.ts'
+import { dependenciesOf, titleOf } from '../../shared/item-dependencies.ts'
 import { displayName } from '../../shared/authorship.ts'
 
 export type Severity = 'error' | 'warning'
@@ -95,7 +95,7 @@ function checkOwners(vault: Vault, report: Reporter): void {
  * cannot tell which to follow. A role tag that no note carries is fine.
  */
 async function checkRoleProcedures(vault: Vault, report: Reporter): Promise<void> {
-  for (const [tag, paths] of duplicateProcedures(await readRoleTaggedNotes(vault.root))) {
+  for (const [tag, paths] of duplicateProcedures(await readRoleTaggedNotes(vault.port))) {
     report('role-procedure-duplicate', 'warning', paths[0]!, undefined,
       `and ${paths.slice(1).join(', ')} all carry #${tag}, so a worker with that role tag gets every one of them as its procedure. Keep the tag on one note.`)
   }

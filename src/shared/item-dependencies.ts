@@ -1,5 +1,5 @@
 /** Reads the dependencies of a work item in a loaded vault (docs/adr/0041-card-dependencies.md). */
-import { dependsOnRaw, isOpenDependency, parseDependsOn } from '../shared/dependencies.ts'
+import { dependsOnRaw, isOpenDependency, parseDependsOn } from './dependencies.ts'
 import type { Vault, WorkItem } from './vault.ts'
 
 export interface ItemDependencies {

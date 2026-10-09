@@ -4,9 +4,9 @@
  */
 import { applyReviewRequest, applyVerdict, type Verdict } from '../../shared/review.ts'
 import type { Status } from '../../shared/schema.ts'
-import { readPeople, type Vault, type WorkItem } from '../vault.ts'
-import { editItem } from '../write.ts'
-import { readyParent, unblockedBy } from './status.ts'
+import { readPeople, type Vault, type WorkItem } from '../../shared/vault.ts'
+import { editItem } from '../../shared/edit-item.ts'
+import { readyParent, unblockedBy } from '../../shared/commands/status.ts'
 
 export interface ReviewRequest {
   item: WorkItem
@@ -20,9 +20,9 @@ export async function sendForReview(
   const item = vault.resolve(ref)
   if (item.parent === null) throw new Error(`${item.relPath} is a root. A root cannot be sent for review.`)
   const name = to.trim()
-  const person = (await readPeople(vault.root)).get(name.toLowerCase())
+  const person = (await readPeople(vault.port)).get(name.toLowerCase())
   if (person === undefined) throw new Error(`there is no person note called ${name}. Make a note with type: person.`)
-  await editItem(item, [], (text) => applyReviewRequest(text, {
+  await editItem(vault, item, [], (text) => applyReviewRequest(text, {
     to: person, files, note, now, ...(writer === undefined ? {} : { writer }),
   }))
   return { item, to: person, files: files.map((file) => file.trim()).filter((file) => file !== '') }
@@ -52,7 +52,7 @@ export async function giveVerdict(vault: Vault, ref: string, verdict: Verdict, n
     throw new Error(`${item.relPath} has ${open.length} open child${open.length === 1 ? '' : 'ren'}: ${names}. ` +
       'For review lists a card when every child is done or archived.')
   }
-  await editItem(item, [], (text) => applyVerdict(text, verdict, now))
+  await editItem(vault, item, [], (text) => applyVerdict(text, verdict, now))
   if (verdict.verdict === 'send back') return { item, status: 'doing', parentReady: undefined, unblocked: [] }
   return { item, status: 'done', parentReady: readyParent(vault, item), unblocked: unblockedBy(vault, item) }
 }

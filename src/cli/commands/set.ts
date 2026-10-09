@@ -3,11 +3,12 @@
  * (docs/adr/0062-role-tags.md); `--role ""` only removes an old `role` field. Cards no longer record
  * their creator (docs/adr/0063-wi-starts-no-agents.md).
  */
-import { editItem, type Edit } from '../write.ts'
+import { editItem } from '../../shared/edit-item.ts'
+import type { Edit } from '../../shared/edits.ts'
 import { asName } from '../../shared/authorship.ts'
 import { roleTagFor } from '../../shared/role-tags.ts'
 import { parseFrontmatter, type Scalar } from '../../shared/frontmatter.ts'
-import type { Vault, WorkItem } from '../vault.ts'
+import type { Vault, WorkItem } from '../../shared/vault.ts'
 
 export interface SetOptions {
   /** A name or link. An empty string removes the owner. */
@@ -29,7 +30,7 @@ export async function setPeople(vault: Vault, ref: string, options: SetOptions):
   }
   let changed: string[] = []
   // Decided under the lock, from the card as it is then (docs/adr/0054-edits-from-the-file-at-write-time.md).
-  await editItem(item, (text) => {
+  await editItem(vault, item, (text) => {
     const fm = parseFrontmatter(text)
     const planned = peopleEdits(options, (key) => fm?.get(key))
     changed = planned.changed

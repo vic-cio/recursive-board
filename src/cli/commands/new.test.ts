@@ -37,7 +37,7 @@ test('createItem writes a file into Boards with the nine-field shape', async () 
   const created = await createItem(await reload(fixture), { title: 'Streaming', parent: 'wi-0004' })
 
   assert.equal(created.relPath, 'Boards/Streaming.md')
-  const fm = parseFrontmatter(readFileSync(created.path, 'utf8'))!
+  const fm = parseFrontmatter(readFileSync(join(fixture!.root, created.relPath), 'utf8'))!
   assert.equal(fm.get('type'), 'work-item')
   assert.match(String(fm.get('id')), /^wi-[a-z0-9]{4}$/)
   assert.equal(fm.get('title'), 'Streaming')
@@ -54,7 +54,7 @@ test('createItem with the area template writes a backlog area by default', async
   const created = await createItem(await reload(fixture), {
     title: 'Operations', parent: 'wi-0001', template: 'area',
   })
-  const text = readFileSync(created.path, 'utf8')
+  const text = readFileSync(join(fixture!.root, created.relPath), 'utf8')
   const fm = parseFrontmatter(text)!
   assert.equal(fm.get('area'), true)
   assert.equal(fm.get('status'), 'backlog')
@@ -73,7 +73,7 @@ test('createItem wraps placeholders in brief body fields', async () => {
     },
   })
 
-  const body = readFileSync(created.path, 'utf8')
+  const body = readFileSync(join(fixture!.root, created.relPath), 'utf8')
   assert.match(body, /Use `<port>` for `<topic>`\./)
   assert.match(body, /See `<path\/to\/source>`\./)
   assert.match(body, /\[docs\]\(<docs\/index\.md>\)/)
@@ -84,7 +84,7 @@ test('createItem with the area template accepts an explicit status', async () =>
   const created = await createItem(await reload(fixture), {
     title: 'Operations', parent: 'wi-0001', template: 'area', status: 'doing',
   })
-  assert.equal(parseFrontmatter(readFileSync(created.path, 'utf8'))!.get('status'), 'doing')
+  assert.equal(parseFrontmatter(readFileSync(join(fixture!.root, created.relPath), 'utf8'))!.get('status'), 'doing')
 })
 
 test('createItem does not inherit a holder for an area', async () => {
@@ -92,7 +92,7 @@ test('createItem does not inherit a holder for an area', async () => {
   const created = await createItem(await reload(fixture), {
     title: 'Operations', parent: 'wi-0004', template: 'area', status: 'doing',
   })
-  const fm = parseFrontmatter(readFileSync(created.path, 'utf8'))!
+  const fm = parseFrontmatter(readFileSync(join(fixture!.root, created.relPath), 'utf8'))!
   assert.equal(fm.get('area'), true)
   assert.equal(fm.get('status'), 'doing')
   assert.equal(fm.has('holder'), false)
@@ -117,13 +117,13 @@ test('createItem uses the configured folder and root when no parent is given', a
   }))
   const created = await createItem(await reload(fixture), { title: 'Plan' })
   assert.equal(created.relPath, 'Projects/Plan.md')
-  assert.equal(parseFrontmatter(readFileSync(created.path, 'utf8'))!.get('parent'), '[[Launch]]')
+  assert.equal(parseFrontmatter(readFileSync(join(fixture!.root, created.relPath), 'utf8'))!.get('parent'), '[[Launch]]')
 })
 
 test('createItem never writes board or prev_status on a fresh item', async () => {
   fixture = seed()
   const created = await createItem(await reload(fixture), { title: 'Streaming', parent: 'wi-0004' })
-  const fm = parseFrontmatter(readFileSync(created.path, 'utf8'))!
+  const fm = parseFrontmatter(readFileSync(join(fixture!.root, created.relPath), 'utf8'))!
   assert.equal(fm.has('board'), false, 'absence means not a board')
   assert.equal(fm.has('prev_status'), false)
 })
@@ -140,7 +140,7 @@ test('createItem does not inherit owner, and inherits the parent\'s old agent as
       const created = await createItem(await reload(fixture), {
         title: 'Streaming', parent: 'wi-0004', status,
       })
-      const fm = parseFrontmatter(readFileSync(created.path, 'utf8'))!
+      const fm = parseFrontmatter(readFileSync(join(fixture!.root, created.relPath), 'utf8'))!
       assert.equal(fm.has('owner'), false)
       assert.equal(fm.get('holder'), expectedAgent)
       assert.equal(fm.has('agent'), false)
@@ -153,7 +153,7 @@ test('createItem does not inherit owner, and inherits the parent\'s old agent as
 test('createItem does not invent owner or holder when the parent has none', async () => {
   fixture = seed()
   const created = await createItem(await reload(fixture), { title: 'Top level', parent: 'wi-0001' })
-  const fm = parseFrontmatter(readFileSync(created.path, 'utf8'))!
+  const fm = parseFrontmatter(readFileSync(join(fixture!.root, created.relPath), 'utf8'))!
   assert.equal(fm.has('owner'), false)
   assert.equal(fm.has('holder'), false)
 })
@@ -163,7 +163,7 @@ test('an explicit owner beats the inherited one', async () => {
   const created = await createItem(await reload(fixture), {
     title: 'Streaming', parent: 'wi-0004', owner: 'lee',
   })
-  assert.equal(parseFrontmatter(readFileSync(created.path, 'utf8'))!.get('owner'), 'lee')
+  assert.equal(parseFrontmatter(readFileSync(join(fixture!.root, created.relPath), 'utf8'))!.get('owner'), 'lee')
 })
 
 test('an explicit holder beats the status-based inheritance rule', async () => {
@@ -171,7 +171,7 @@ test('an explicit holder beats the status-based inheritance rule', async () => {
   const created = await createItem(await reload(fixture), {
     title: 'Streaming', parent: 'wi-0004', status: 'options', holder: 'lee',
   })
-  assert.equal(parseFrontmatter(readFileSync(created.path, 'utf8'))!.get('holder'), 'lee')
+  assert.equal(parseFrontmatter(readFileSync(join(fixture!.root, created.relPath), 'utf8'))!.get('holder'), 'lee')
 })
 
 test('createItem accepts a status, which is how the board add row works', async () => {
@@ -179,13 +179,13 @@ test('createItem accepts a status, which is how the board add row works', async 
   const created = await createItem(await reload(fixture), {
     title: 'Streaming', parent: 'wi-0004', status: 'options',
   })
-  assert.equal(parseFrontmatter(readFileSync(created.path, 'utf8'))!.get('status'), 'options')
+  assert.equal(parseFrontmatter(readFileSync(join(fixture!.root, created.relPath), 'utf8'))!.get('status'), 'options')
 })
 
 test('createItem writes the template body with Objective first', async () => {
   fixture = seed()
   const created = await createItem(await reload(fixture), { title: 'Streaming', parent: 'wi-0004' })
-  const text = readFileSync(created.path, 'utf8')
+  const text = readFileSync(join(fixture!.root, created.relPath), 'utf8')
   assert.ok(text.indexOf('## Objective') < text.indexOf('## Context'))
   assert.ok(text.indexOf('## Context') < text.indexOf('## Acceptance Criteria'))
 })
@@ -194,23 +194,24 @@ test('createItem appends vault-configured sections', async () => {
   fixture = seed()
   fixture.writeSettings('{"extraSections":["References","Risks"]}')
   const created = await createItem(await reload(fixture), { title: 'Streaming', parent: 'wi-0004' })
-  assert.match(readFileSync(created.path, 'utf8'),
+  assert.match(readFileSync(join(fixture!.root, created.relPath), 'utf8'),
     /## Notes\n\n## References\n\n## Risks\n?$/)
 })
 
 test('the body carries no H1, because Obsidian already draws the filename as the title', async () => {
   fixture = seed()
   const created = await createItem(await reload(fixture), { title: 'Streaming', parent: 'wi-0004' })
-  const text = readFileSync(created.path, 'utf8')
+  const text = readFileSync(join(fixture!.root, created.relPath), 'utf8')
   assert.doesNotMatch(text, /^# /m, 'an H1 repeating the title shows the same words twice')
   assert.match(text, /^---\n[\s\S]*?\n---\n## Objective\n/, 'Objective is the first line of the body, with no blank line above it')
 })
 
 test('createItem resolves the parent by id, filename or title', async () => {
   fixture = seed()
+  const root = fixture.root
   for (const [i, ref] of ['wi-0004', 'Build server', 'build server'].entries()) {
     const created = await createItem(await reload(fixture), { title: `Child ${i}`, parent: ref })
-    const fm = parseFrontmatter(readFileSync(created.path, 'utf8'))!
+    const fm = parseFrontmatter(readFileSync(join(root, created.relPath), 'utf8'))!
     assert.equal(fm.get('parent'), '[[Build server]]')
   }
 })
@@ -222,7 +223,7 @@ test('createItem links the parent by filename, not by title', async () => {
     parent: '"[[Main]]"', created: '2026-09-22', updated: '2026-09-22',
   }))
   const created = await createItem(await reload(fixture), { title: 'Tokens', parent: 'wi-0014' })
-  const fm = parseFrontmatter(readFileSync(created.path, 'utf8'))!
+  const fm = parseFrontmatter(readFileSync(join(fixture!.root, created.relPath), 'utf8'))!
   assert.equal(fm.get('parent'), '[[Auth--b2e1]]', 'the wikilink is authoritative for resolution')
 })
 
@@ -232,7 +233,7 @@ test('createItem adds the id suffix when the filename is taken', async () => {
     title: 'Build server', parent: 'wi-0001',
   })
   assert.match(created.relPath, /^Boards\/Build server--[a-z0-9]{4}\.md$/)
-  assert.equal(parseFrontmatter(readFileSync(created.path, 'utf8'))!.get('title'), 'Build server')
+  assert.equal(parseFrontmatter(readFileSync(join(fixture!.root, created.relPath), 'utf8'))!.get('title'), 'Build server')
 })
 
 test('createItem mints an id no existing item holds', async () => {
@@ -304,9 +305,9 @@ test('createItem sanitises a title that is not filename-safe', async () => {
   const created = await createItem(await reload(fixture), {
     title: 'Ship v1/v2: the [[hard]] one?', parent: 'wi-0001',
   })
-  assert.ok(existsSync(created.path))
+  assert.ok(existsSync(join(fixture!.root, created.relPath)))
   assert.equal(
-    parseFrontmatter(readFileSync(created.path, 'utf8'))!.get('title'),
+    parseFrontmatter(readFileSync(join(fixture!.root, created.relPath), 'utf8'))!.get('title'),
     'Ship v1/v2: the [[hard]] one?',
     'the title keeps the characters the filename had to drop',
   )
@@ -318,7 +319,7 @@ test('createItem writes the brief into the body in one command', async () => {
     title: 'Price demolition', parent: 'wi-0004',
     brief: { objective: 'Price every line.', context: ['Survey of 2026-09-01.'], criteria: ['Each line has a rate'] },
   })
-  const text = readFileSync(created.path, 'utf8')
+  const text = readFileSync(join(fixture!.root, created.relPath), 'utf8')
   assert.match(text, /## Objective\n\nPrice every line\.\n/)
   assert.match(text, /## Context\n\nSurvey of 2026-09-01\.\n/)
   assert.match(text, /## Acceptance Criteria\n\n- Each line has a rate\n/)

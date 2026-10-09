@@ -4,7 +4,8 @@ import { chmodSync, existsSync, readdirSync, readFileSync, rmSync, statSync, uti
 import { join } from 'node:path'
 import { setTimeout as sleep } from 'node:timers/promises'
 
-import { applyEdits, withStamp, writeAtomic, writeNew, editItem, withFileLock, lockPathFor, isSameLock } from './write.ts'
+import { applyEdits, withStamp, writeAtomic, writeNew, withFileLock, lockPathFor, isSameLock } from './write.ts'
+import { editItem } from '../shared/edit-item.ts'
 import { parseFrontmatter } from '../shared/frontmatter.ts'
 import { loadVault } from './vault.ts'
 import { makeVault, item, type Fixture } from './test-helpers.ts'
@@ -81,7 +82,7 @@ test('editItem writes the change to disk and stamps updated', async () => {
   fixture.write('Boards/Main.md', item({ type: 'work-item', id: 'wi-0001', title: 'Main' }))
   const path = fixture.write('Boards/Build server.md', TEXT)
   const vault = await loadVault(fixture.root)
-  await editItem(vault.byId.get('wi-0004')!, [{ op: 'set', key: 'status', value: 'doing' }])
+  await editItem(vault, vault.byId.get('wi-0004')!, [{ op: 'set', key: 'status', value: 'doing' }])
 
   const after = readFileSync(path, 'utf8')
   assert.match(after, /^status: doing$/m)
@@ -97,8 +98,8 @@ test('editItem leaves updated and the file untouched when an edit changes nothin
   const vault = await loadVault(fixture.root)
   const workItem = vault.byId.get('wi-0004')!
 
-  assert.equal(await editItem(workItem, []), TEXT)
-  assert.equal(await editItem(workItem, [{ op: 'set', key: 'status', value: 'backlog' }]), TEXT)
+  assert.equal(await editItem(vault, workItem, []), TEXT)
+  assert.equal(await editItem(vault, workItem, [{ op: 'set', key: 'status', value: 'backlog' }]), TEXT)
   assert.equal(readFileSync(path, 'utf8'), TEXT)
 })
 
@@ -109,7 +110,7 @@ test('editItem stamps updated when only the body edit changes the file', async (
   const vault = await loadVault(fixture.root)
   const workItem = vault.byId.get('wi-0004')!
 
-  const after = await editItem(workItem, [{ op: 'set', key: 'status', value: 'backlog' }], (text) => `${text}\nA note.\n`)
+  const after = await editItem(vault, workItem, [{ op: 'set', key: 'status', value: 'backlog' }], (text) => `${text}\nA note.\n`)
   assert.doesNotMatch(after, /^updated: 2026-09-21$/m)
   assert.match(after, /^updated: \d{4}-\d{2}-\d{2}$/m)
   assert.equal(readFileSync(path, 'utf8'), after)
@@ -121,7 +122,7 @@ test('editItem applies its edits to the file as it is now, not as it was loaded'
   const vault = await loadVault(fixture.root)
   const loaded = vault.resolve('wi-0004')
   writeFileSync(path, TEXT.replace('Human prose', 'A newer edit. Human prose'))
-  await editItem(loaded, [{ op: 'set', key: 'status', value: 'doing' }])
+  await editItem(vault, loaded, [{ op: 'set', key: 'status', value: 'doing' }])
   const after = readFileSync(path, 'utf8')
   assert.match(after, /^status: doing$/m)
   assert.match(after, /A newer edit\./)
@@ -133,7 +134,7 @@ test('concurrent editItem calls on one file keep every write', async () => {
   const vault = await loadVault(fixture.root)
   const loaded = vault.resolve('wi-0004')
   await Promise.all(Array.from({ length: 8 }, (_, n) =>
-    editItem(loaded, [], (text) => `${text}line ${n}\n`)))
+    editItem(vault, loaded, [], (text) => `${text}line ${n}\n`)))
   const after = readFileSync(path, 'utf8')
   for (let n = 0; n < 8; n++) assert.match(after, new RegExp(`^line ${n}$`, 'm'))
 })
@@ -145,7 +146,7 @@ test('editItem computes a plan from the file as it is under the lock', async () 
   const loaded = vault.resolve('wi-0004')
   writeFileSync(path, TEXT.replace('status: backlog', 'status: doing'))
   let seen: string | undefined
-  await editItem(loaded, (text) => {
+  await editItem(vault, loaded, (text) => {
     seen = String(parseFrontmatter(text)?.get('status'))
     return [{ op: 'set', key: 'prev_status', value: seen }]
   })
@@ -156,12 +157,13 @@ test('editItem computes a plan from the file as it is under the lock', async () 
 test('editItem writes nothing when a plan returns null, and a plan that throws writes nothing', async () => {
   fixture = makeVault()
   const path = fixture.write('Boards/Build server.md', TEXT)
-  const loaded = (await loadVault(fixture.root)).resolve('wi-0004')
-  assert.equal(await editItem(loaded, () => null), TEXT)
-  await assert.rejects(editItem(loaded, () => { throw new Error('refused') }), /refused/)
+  const vault = await loadVault(fixture.root)
+  const loaded = vault.resolve('wi-0004')
+  assert.equal(await editItem(vault, loaded, () => null), TEXT)
+  await assert.rejects(editItem(vault, loaded, () => { throw new Error('refused') }), /refused/)
   assert.equal(readFileSync(path, 'utf8'), TEXT)
   // The lock is free again after the refusal.
-  await editItem(loaded, [{ op: 'set', key: 'status', value: 'doing' }])
+  await editItem(vault, loaded, [{ op: 'set', key: 'status', value: 'doing' }])
 })
 
 test('writeNew refuses to replace an existing file and leaves no temporary file', async () => {

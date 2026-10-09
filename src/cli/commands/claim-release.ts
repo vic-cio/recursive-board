@@ -1,13 +1,13 @@
-import { openDependencies, titleOf } from '../dependencies.ts'
+import { openDependencies, titleOf } from '../../shared/item-dependencies.ts'
 import { waitingRefusal } from '../../shared/dependencies.ts'
-import { editItem } from '../write.ts'
+import { editItem } from '../../shared/edit-item.ts'
 import { claimEdits, releaseEdits } from '../../shared/transitions.ts'
 import { appendNote, noteLine } from '../../shared/notes.ts'
 import { cardState } from '../../shared/card-state.ts'
 import type { Edit } from '../../shared/edits.ts'
 import { holderOf } from '../../shared/holder.ts'
 import { today, type Status } from '../../shared/schema.ts'
-import type { Vault, WorkItem } from '../vault.ts'
+import type { Vault, WorkItem } from '../../shared/vault.ts'
 
 export interface ClaimChange {
   item: WorkItem
@@ -44,7 +44,7 @@ export async function claimItem(
   const rule = claimRule(vault, item, agent)
   let from = item.status
   let changed = false
-  await editItem(item, (text) => {
+  await editItem(vault, item, (text) => {
     from = cardState(text).status
     const edits = rule(text)
     changed = edits !== null
@@ -87,7 +87,7 @@ export async function releaseItem(
   // Signed and timed like every wi note, so the hand-over reads like the rest of Notes.
   const note = () => noteLine(`Released from ${holder}: ${reason.replace(/\.$/, '')}.` +
     (where === undefined ? '' : ` Work: ${where.replace(/\.$/, '')}.`), writer?.trim() || holder)
-  await editItem(item, (text) => {
+  await editItem(vault, item, (text) => {
     const state = cardState(text)
     if (state.holder === undefined) throw new Error(`${item.relPath} has no holder to release.`)
     holder = state.holder

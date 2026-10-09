@@ -12,12 +12,13 @@
 import { homedir } from 'node:os'
 import { resolve } from 'node:path'
 
+import { loadVault, findVaultRoot, getDefaultVault } from './vault.ts'
+import { nodePort } from './node-port.ts'
 import {
-  loadVault, findVaultRoot, getDefaultVault, maxAgentsForRun, readRoleTaggedNotes,
-  type Vault, type WorkItem,
-} from './vault.ts'
+  loadVault as loadVaultFrom, maxAgentsForRun, readRoleTaggedNotes, type Vault, type WorkItem,
+} from '../shared/vault.ts'
+import { createContext, isRegistered, runCommand, UsageError } from '../shared/runner.ts'
 import { createItem } from './commands/new.ts'
-import { setStatus } from './commands/status.ts'
 import { claimItem, releaseItem } from './commands/claim-release.ts'
 import { delegate } from './commands/delegate.ts'
 import { addNote } from './commands/note.ts'
@@ -33,7 +34,7 @@ import { setPromoted } from './commands/promote.ts'
 import { setArea } from './commands/area.ts'
 import { setDependency } from './commands/depend.ts'
 import { setPeople } from './commands/set.ts'
-import { dependenciesOf, openDependencies, titleOf } from './dependencies.ts'
+import { dependenciesOf, openDependencies, titleOf } from '../shared/item-dependencies.ts'
 import { runSetup } from './commands/setup.ts'
 import { npmLatestVersion, renderDoctor, runDoctor } from './commands/doctor.ts'
 import { realUpdateSeams, runUpdate } from './commands/update.ts'
@@ -49,8 +50,6 @@ import { isAnyAgent } from '../shared/holder.ts'
 
 
 const VERSION = '0.9.0'
-
-class UsageError extends Error {}
 
 async function main(argv: string[]): Promise<number> {
   if (argv[0] === 'trace') {
@@ -127,14 +126,23 @@ async function main(argv: string[]): Promise<number> {
     return 0
   }
 
-  const vault = await openVault(text(values, 'vault'))
+  const root = await openRoot(text(values, 'vault'))
+  if (isRegistered(command)) {
+    const context = createContext({
+      port: nodePort(root),
+      version: VERSION,
+      env: process.env,
+      out: (text) => process.stdout.write(text),
+      err: (text) => process.stderr.write(text),
+    })
+    return (await runCommand(context, { command, positionals, values })).code
+  }
+  const vault = await loadVault(root)
   const json = values.json === true
 
   switch (command) {
     case 'new':
       return runNew(vault, rest, values, json)
-    case 'status':
-      return runStatus(vault, rest, json)
     case 'area':
       return runArea(vault, rest, values, json)
     case 'note':
@@ -188,12 +196,12 @@ function text(values: Values, key: string): string | undefined {
   return typeof value === 'string' ? value : undefined
 }
 
-async function openVault(flag: string | undefined): Promise<Vault> {
+async function openRoot(flag: string | undefined): Promise<string> {
   const root = await resolveVaultRoot(flag)
   if (findVaultRoot(root) !== root) {
     throw new UsageError(`${root} is not a vault: it has no Boards/ folder or board settings.`)
   }
-  return loadVault(root)
+  return root
 }
 
 async function resolveVaultRoot(flag: string | undefined): Promise<string> {
@@ -269,40 +277,6 @@ async function runNew(vault: Vault, rest: string[], values: Values, json: boolea
   } else {
     process.stdout.write(`${created.id}  ${created.relPath}  (child of ${created.parentStem})\n`)
     if (created.promotedParent) process.stdout.write(`${created.parentStem}  promoted to a board (its first child)\n`)
-  }
-  return 0
-}
-
-async function runStatus(vault: Vault, rest: string[], json: boolean): Promise<number> {
-  const [ref, status] = rest
-  if (ref === undefined || status === undefined) {
-    throw new UsageError(`wi status needs a <ref> and a <status>. One of: ${STATUSES.join(', ')}.`)
-  }
-  const change = await setStatus(vault, ref, status)
-  if (json) {
-    print({
-      id: change.item.id,
-      path: change.item.relPath,
-      from: change.from ?? null,
-      to: change.to,
-      prev_status: change.recorded ?? null,
-      changed: change.changed,
-      parent_ready: change.parentReady?.id ?? null,
-      unblocked: change.unblocked.map((item) => item.id ?? item.stem),
-    })
-  } else if (!change.changed) {
-    process.stdout.write(`${label(change.item)} is already ${change.to}. Nothing written.\n`)
-  } else {
-    const recorded = change.recorded ? `  (prev_status: ${change.recorded})` : ''
-    process.stdout.write(`${label(change.item)}  ${change.from ?? '—'} → ${change.to}${recorded}\n`)
-  }
-  if (!json) {
-    for (const item of change.unblocked) process.stdout.write(`${label(item)}  waits on nothing open now. It can start.\n`)
-  }
-  const ready = change.parentReady
-  if (ready && !json) {
-    process.stdout.write(`${label(ready)}  every child is done. If its own criteria are met, run: ` +
-      `wi status ${ready.id ?? ready.stem} done\n`)
   }
   return 0
 }
@@ -394,7 +368,7 @@ async function runClaim(vault: Vault, rest: string[], values: Values, json: bool
   // An agent claims by its own name, which its session sets in WI_AGENT.
   const agent = values['holder'] === undefined ? envText('WI_AGENT') : singleLineOption(values, 'holder')
   if (agent === undefined) throw new UsageError('wi claim needs --holder <name>, or WI_AGENT set.')
-  const maxAgents = maxAgentsForRun(vault)
+  const maxAgents = maxAgentsForRun(vault, process.env)
   const before = maxAgents === null ? new Set<string>() : await activeAgentsOf(vault)
   const change = await claimItem(vault, ref, agent)
   if (json) print({ id: change.item.id, path: change.item.relPath, holder: change.holder,
@@ -405,7 +379,7 @@ async function runClaim(vault: Vault, rest: string[], values: Values, json: bool
   if (change.changed && maxAgents !== null) {
     // Count after the claim: it can move a step to doing and leave the parent's agent only waiting.
     // A person, a request for any agent, and an agent that only waits add no agent.
-    const after = await activeAgentsOf(await loadVault(vault.root))
+    const after = await activeAgentsOf(await loadVaultFrom(vault.port, vault.seams))
     const name = agent.trim().toLowerCase()
     if (!before.has(name) && after.has(name) && after.size > maxAgents) {
       process.stderr.write(`wi: warning: agent limit is ${maxAgents}; ${after.size} agents now work a doing card.\n`)
@@ -505,7 +479,7 @@ async function runNote(vault: Vault, rest: string[], values: Values, json: boole
 
 async function runAgents(vault: Vault, rest: string[], json: boolean): Promise<number> {
   if (rest.length > 0) throw new UsageError('wi agents takes no card reference.')
-  const report = await agentsReport(vault)
+  const report = await agentsReport(vault, process.env)
   if (json) print(report)
   else process.stdout.write(renderAgents(report))
   return 0
@@ -627,7 +601,7 @@ async function runRemove(
 async function runShow(vault: Vault, rest: string[], json: boolean): Promise<number> {
   const ref = rest.join(' ').trim()
   if (ref === '') throw new UsageError('wi show needs a <ref>.')
-  const card = showCard(vault, ref, await readRoleTaggedNotes(vault.root))
+  const card = showCard(vault, ref, await readRoleTaggedNotes(vault.port))
   if (json) print(card)
   else process.stdout.write(`${JSON.stringify(card, null, 2)}\n`)
   return 0
