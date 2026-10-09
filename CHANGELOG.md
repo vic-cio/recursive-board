@@ -54,6 +54,10 @@ the agent notes in your vault.
 - `wi` parses its command line with a parser in `src/shared` that uses no Node, and prints its
   help from one command table, so the plugin can read the same command line. The behaviour and the
   help text are unchanged ([0077](docs/adr/0077-one-command-line-in-shared.md)).
+- The README install prompt installs the plugin first, from the GitHub release until the
+  community listing is live. `wi` on npm is the option for headless use and scripts. The
+  install text asks for the Obsidian installer 1.12.7 or later and the Command line interface
+  setting when agents work the board on a desktop.
 - The area bar shows on a root board only. It holds a chip for every area in options or doing
   anywhere below the root, at any depth, in tree order. A board that is not a root shows no area
   bar, because a live area is also a card in its status column. A chip's count is still the

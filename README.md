@@ -1,6 +1,8 @@
 # Recursive Board
 
-> **Install with your agent.** Paste this prompt into your coding agent: "Check that Node.js 20.12 or later is installed, run `npm install --global recursive-board`, then run `wi setup`. Show me the recommended agent setup that `wi setup` prints at the end, and tell me that it is optional."
+> **Install with your agent.** Paste this prompt into your coding agent: "Install the Recursive Board plugin in my Obsidian vault. Ask me which vault. Download `main.js`, `manifest.json` and `styles.css` from https://github.com/vic-cio/recursive-board/releases/latest into the vault's `.obsidian/plugins/recursive-board/` folder. Tell me to enable Recursive Board in Settings → Community plugins. If agents will work the board on this computer, tell me to install the Obsidian installer 1.12.7 or later from https://obsidian.md/download and to turn on Settings → General → Advanced → Command line interface. On a headless machine with no Obsidian app, or for scripts, install the `wi` CLI instead: check that Node.js 20.12 or later is installed, run `npm install --global recursive-board`, then run `wi setup`."
+>
+> To install without an agent, see [Install the Obsidian plugin](#install-the-obsidian-plugin). For headless use and scripts, see [Install `wi`](#install-wi).
 
 Recursive Board turns a folder of Markdown files in an Obsidian vault into a hierarchical work board. Each work item is one Markdown file. Its parent link defines where it belongs.
 
@@ -113,12 +115,16 @@ To build your own dashboard, read the card files, or use these `wi` commands:
 
 Once the plugin is listed in the Community plugins directory, open **Settings → Community plugins → Browse**, find **Recursive Board**, select **Install**, then enable it.
 
-Before listing, you can install a release manually:
+Until the listing is live, install the plugin from the GitHub release:
 
-1. Download a release or build the project with `npm run build`.
-2. Create a folder under the vault's plugin directory using the `id` in `manifest.json` as its name.
-3. Copy `main.js`, `manifest.json`, and `styles.css` from that release or directly from `dist/` into it.
+1. Download `main.js`, `manifest.json`, and `styles.css` from the [latest release](https://github.com/vic-cio/recursive-board/releases/latest).
+2. Create the folder `.obsidian/plugins/recursive-board/` in the vault.
+3. Copy the three files into it.
 4. In Obsidian, open **Settings → Community plugins** and enable **Recursive Board**.
+
+To build from source instead, run `npm run build` and copy the same three files from `dist/`.
+
+For agents that work the board on a desktop through the Obsidian CLI, install the Obsidian installer 1.12.7 or later from [obsidian.md/download](https://obsidian.md/download). Then turn on **Settings → General → Advanced → Command line interface**. An older installer prints a warning line before each CLI reply, and a CLI call waits until Obsidian quits when Obsidian is closed.
 
 Reload Obsidian after replacing plugin files. If your vault syncs its `.obsidian` folder, the sync client can copy the installed plugin to your other devices. Sync behavior depends on that client's settings.
 
@@ -126,7 +132,7 @@ Reload Obsidian after replacing plugin files. If your vault syncs its `.obsidian
 
 ## Install `wi`
 
-`wi` is the CLI package `recursive-board`. It requires Node.js 20.12 or later and installs the `wi` binary:
+Install `wi` for headless use and scripts, for example on a server with no Obsidian app. `wi` is the CLI package `recursive-board`. It requires Node.js 20.12 or later and installs the `wi` binary:
 
 ```sh
 npm install --global recursive-board
