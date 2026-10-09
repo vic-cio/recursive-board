@@ -19,6 +19,7 @@ import { toAreas, toColumns, type AreaSummary, type Column, type WorkItemMeta } 
 import { renderAddRow, renderHiddenNote } from './add-row.ts'
 import { renderArchiveNote, showingArchived } from './archive-note.ts'
 import { renderCard } from './card.ts'
+import { tabArchivedCount } from './tab-archived-count.ts'
 import { renderSelfCard } from './self-card.ts'
 import { attachMenu } from './menu.ts'
 import type { RenderContext } from './context.ts'
@@ -32,18 +33,17 @@ export function renderBoard(
 ): void {
   const columns = toColumns(children, new Date(), showingArchived(ctx, parent))
   const areas = toAreas(parent, (item) => ctx.index.childrenOf(item.file), showingArchived(ctx, parent))
-  const archivedCount = children.filter((c) => c.effectiveArchived).length
   // The phone shows the same strip as the desktop, above its tabs (docs/adr/0073-area-chips-live-on-the-root-board.md).
   if (areas.length > 0) renderAreaStrip(host, ctx, parent, areas)
   if (Platform.isMobile) {
-    renderTabbed(host.createDiv({ cls: 'wi-tabbed' }), ctx, parent, columns, archivedCount)
+    renderTabbed(host.createDiv({ cls: 'wi-tabbed' }), ctx, parent, columns)
     return
   }
   const board = host.createDiv({ cls: 'wi-board' })
   for (const column of columns) {
     renderColumn(board, ctx, parent, column.status, column.visible, column.hidden)
   }
-  renderArchiveNote(host, ctx, parent, archivedCount)
+  renderArchiveNote(host, ctx, parent, children.filter((c) => c.effectiveArchived).length)
 }
 
 /** Doing when anything is in it, because that is what you open a board to see. */
@@ -56,7 +56,6 @@ function renderTabbed(
   ctx: RenderContext,
   parent: WorkItemMeta,
   columns: Column[],
-  archivedCount: number,
 ): void {
   host.empty()
   const shown = ctx.selectedTab(parent.file.path) ?? defaultTab(columns)
@@ -71,7 +70,7 @@ function renderTabbed(
     tab.createSpan({ cls: 'wi-tab-count', text: String(column.visible.length) })
     tab.addEventListener('click', () => {
       ctx.selectTab(parent.file.path, column.status)
-      renderTabbed(host, ctx, parent, columns, archivedCount)
+      renderTabbed(host, ctx, parent, columns)
       ctx.checklistComponents.releaseDisconnected()
     })
   }
@@ -79,7 +78,8 @@ function renderTabbed(
   const column = columns.find((c) => c.status === shown) ?? columns[0]!
   const board = host.createDiv({ cls: 'wi-board' })
   renderColumn(board, ctx, parent, column.status, column.visible, column.hidden)
-  renderArchiveNote(host, ctx, parent, archivedCount)
+  // The button counts the shown tab only: archived cards of another tab would not appear on screen.
+  renderArchiveNote(host, ctx, parent, tabArchivedCount(columns, column.status))
 }
 
 function renderAreaStrip(host: HTMLElement, ctx: RenderContext, root: WorkItemMeta, areas: AreaSummary[]): void {

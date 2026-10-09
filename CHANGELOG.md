@@ -58,6 +58,9 @@ the agent notes in your vault.
 - The phone shows the same strip of small chips as the desktop, in one row that scrolls sideways.
   It replaces the collapsible Areas group of full-width rows. A chip has no ⋯ button, because the
   area's own card on its parent board has one.
+- On the phone, the archived button under a board counts the archived cards of the shown tab only,
+  and a tab with none shows no button. Before, it counted the whole board, so the button seemed to
+  do nothing on a tab that held none of them. The desktop board is unchanged.
 - `wi setup` no longer offers the Git validation hook, and asks no question after the vault choice.
 - The `hook` check of `wi doctor` reads the pre-commit file and reports whether it runs
   validation. It is a note, never a fix, and it prints nothing to paste.
