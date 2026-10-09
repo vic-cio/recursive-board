@@ -75,6 +75,9 @@ the agent notes in your vault.
 - `wi setup` no longer offers the Git validation hook, and asks no question after the vault choice.
 - The `hook` check of `wi doctor` reads the pre-commit file and reports whether it runs
   validation. It is a note, never a fix, and it prints nothing to paste.
+- `AGENTS.md` is a short guide for an agent that builds on Recursive Board. It says where the
+  schema, `wi --json`, the plugin data, the skill and the example dashboard are, and it keeps the
+  contributor rules. The release rules left the file.
 
 ### Removed
 
