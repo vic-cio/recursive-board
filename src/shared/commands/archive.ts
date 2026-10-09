@@ -1,8 +1,11 @@
 /** `wi archive`: one file changes; descendants inherit visibility when read. */
-import { archiveEdits, activeDescendant } from '../../shared/archive.ts'
-import { editItem } from '../../shared/edit-item.ts'
-import { cardState } from '../../shared/card-state.ts'
-import { requireAccountedTree, type Vault, type WorkItem } from '../../shared/vault.ts'
+import { archiveEdits, activeDescendant } from '../archive.ts'
+import { editItem } from '../edit-item.ts'
+import { cardState } from '../card-state.ts'
+import { requireAccountedTree, type Vault, type WorkItem } from '../vault.ts'
+import { UsageError, type RunFunction } from './command.ts'
+import { refOf } from './options.ts'
+import { json, label } from './output.ts'
 
 export interface ArchiveChange {
   item: WorkItem
@@ -30,4 +33,18 @@ export async function archiveItem(vault: Vault, ref: string, undo: boolean): Pro
     return edits
   })
   return { item, archived, changed }
+}
+
+/** `wi archive <ref> [--undo]`. */
+export const runArchive: RunFunction = async (context, line) => {
+  const ref = refOf(line.positionals)
+  if (ref === '') throw new UsageError('wi archive needs a <ref>.')
+  const change = await archiveItem(await context.vault(), ref, line.values['undo'] === true)
+  if (line.values['json'] === true) {
+    context.out(json({ id: change.item.id, path: change.item.relPath, archived: change.archived, changed: change.changed }))
+  } else {
+    const verb = change.archived ? 'archived' : 'unarchived'
+    context.out(`${label(change.item)}  ${verb}${change.changed ? '' : ' (already so; nothing written)'}\n`)
+  }
+  return 0
 }

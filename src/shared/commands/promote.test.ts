@@ -7,15 +7,15 @@ import { promisify } from 'node:util'
 import { fileURLToPath } from 'node:url'
 
 import { setPromoted } from './promote.ts'
-import { loadVault } from '../vault.ts'
-import { parseFrontmatter } from '../../shared/frontmatter.ts'
-import { makeVault, item, type Fixture } from '../test-helpers.ts'
+import { loadVault } from '../../cli/vault.ts'
+import { parseFrontmatter } from '../frontmatter.ts'
+import { makeVault, item, type Fixture } from '../../cli/test-helpers.ts'
 
 let fixture: Fixture | undefined
 afterEach(() => { fixture?.cleanup(); fixture = undefined })
 
 const run = promisify(execFile)
-const CLI = fileURLToPath(new URL('../wi.ts', import.meta.url))
+const CLI = fileURLToPath(new URL('../../cli/wi.ts', import.meta.url))
 
 function seed(board?: boolean): Fixture {
   const f = makeVault()

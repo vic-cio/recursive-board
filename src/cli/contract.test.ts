@@ -26,8 +26,7 @@ const NOT_VAULT_COMMANDS = new Set(['setup', 'doctor', 'update', 'hook'])
 
 /** Vault commands with no contract case yet. Each card that moves a command into the registry takes it off. */
 const NOT_YET = new Set([
-  'new', 'note', 'area', 'tag', 'depend', 'set', 'claim', 'delegate', 'review', 'approve', 'send-back', 'objective',
-  'dashboard', 'release', 'move', 'archive', 'promote', 'demote', 'rm',
+  'new', 'objective', 'dashboard', 'move', 'rm',
   'retag', 'graph', 'template', 'here',
 ])
 
@@ -37,6 +36,8 @@ interface ContractCase {
   files: Record<string, string>
   /** The arguments after `wi`. */
   argv: string[]
+  /** The environment the command reads, such as WI_AGENT. None when absent. */
+  env?: Record<string, string>
   /** What the reply must show, so a case cannot pass by both ports failing alike. */
   expect: { code: number; stdout?: RegExp; stderr?: RegExp; files?: Record<string, RegExp> }
 }
@@ -84,6 +85,273 @@ const CLEAN: Record<string, string> = {
   'People/Victor.md': item({ type: 'person' }),
   'Roles/Coder.md': item({ type: 'role', tags: '[role/coder]' }, '## Procedure\n'),
 }
+
+/** SEED with a person, a held card, a card that waits for Ana's review, a free card and an area. */
+const EDIT_SEED: Record<string, string> = {
+  ...SEED,
+  'People/Ana.md': '---\ntype: person\n---\n',
+  'Boards/Draft.md': item({ type: 'work-item', id: 'wi-0006', title: 'Draft', status: 'options', parent: '"[[Launch]]"' }, '## Notes\n'),
+  'Boards/Held.md': item({ type: 'work-item', id: 'wi-0007', title: 'Held', status: 'doing', parent: '"[[Main]]"', holder: 'bot' }, '## Notes\n'),
+  'Boards/In review.md': item({ type: 'work-item', id: 'wi-0008', title: 'In review', status: 'doing', parent: '"[[Main]]"', owner: 'Ana' },
+    '## Notes\n\n- 2026-10-08 09:00, codex: **Review:** Please review `Work/a.md`.\n'),
+  'Boards/Ongoing.md': item({ type: 'work-item', id: 'wi-0009', title: 'Ongoing', parent: '"[[Main]]"', area: true }),
+}
+
+/** A signed writer, as an agent's session sets it. */
+const AGENT = { WI_AGENT: 'sp-bot', WI_MODEL: 'model-1' }
+
+/** The card edit commands (wi-0fko). */
+const EDIT_CASES: ContractCase[] = [
+  {
+    name: 'note: the line is signed from WI_AGENT and WI_MODEL in the context env',
+    files: EDIT_SEED, env: AGENT,
+    argv: ['note', 'Build server', 'Priced 12 lines.'],
+    expect: {
+      code: 0, stdout: /^wi-0003 {2}Build server {2}- 2026-10-09 10:30, sp-bot \(model-1\): Priced 12 lines\.\n$/,
+      files: { 'Boards/Build server.md': /Human prose\.\n- 2026-10-09 10:30, sp-bot \(model-1\): Priced 12 lines\.\n$/ },
+    },
+  },
+  {
+    name: 'note: --agent names the writer, --json',
+    files: EDIT_SEED, env: AGENT,
+    argv: ['note', 'wi-0006', 'Started.', '--agent', 'relay', '--json'],
+    expect: { code: 0, stdout: /"line": "- 2026-10-09 10:30, relay \(model-1\): Started\."/ },
+  },
+  {
+    name: 'note: no writer name is refused',
+    files: EDIT_SEED,
+    argv: ['note', 'Build server', 'Priced 12 lines.'],
+    expect: { code: 2, stderr: /^wi: wi note needs a writer name\. Set WI_AGENT or pass --agent\.\n$/ },
+  },
+  {
+    name: 'tag: adds a free tag',
+    files: EDIT_SEED,
+    argv: ['tag', 'Ship', 'design'],
+    expect: { code: 0, stdout: /^wi-0005 {2}Ship {2}\+design\n$/, files: { 'Boards/Ship.md': /^tags:\n {2}- design$/m } },
+  },
+  {
+    name: 'tag: --off on a tag the card lacks writes nothing',
+    files: EDIT_SEED,
+    argv: ['tag', 'Ship', 'design', '--off', '--json'],
+    expect: { code: 0, stdout: /"changed": false/ },
+  },
+  {
+    name: 'tag: an old area tag is refused',
+    files: EDIT_SEED,
+    argv: ['tag', 'Ship', 'area'],
+    expect: { code: 2, stderr: /^wi: "area" is reserved for old area tags/ },
+  },
+  {
+    name: 'area: a card becomes an area',
+    files: EDIT_SEED,
+    argv: ['area', 'Draft'],
+    expect: { code: 0, stdout: /^wi-0006 {2}Draft {2}card → area/ },
+  },
+  {
+    name: 'area: --off on an area with no status to restore is refused',
+    files: EDIT_SEED,
+    argv: ['area', 'Ongoing', '--off', '--json'],
+    expect: { code: 2, stderr: /^wi: Boards\/Ongoing\.md has no valid status to preserve\.\n$/ },
+  },
+  {
+    name: 'area: a root is refused',
+    files: EDIT_SEED,
+    argv: ['area', 'Main'],
+    expect: { code: 2, stderr: /^wi: Boards\/Main\.md is a root, and a root is not a card or area child\.\n$/ },
+  },
+  {
+    name: 'depend: a card waits on another',
+    files: EDIT_SEED,
+    argv: ['depend', 'Draft', '--on', 'Ship'],
+    expect: { code: 0, stdout: /^wi-0006 {2}Draft {2}waits on Ship\n$/, files: { 'Boards/Draft.md': /^depends_on:\n {2}- "\[\[Ship\]\]"$/m } },
+  },
+  {
+    name: 'depend: --off on a dependency the card lacks writes nothing, --json',
+    files: EDIT_SEED,
+    argv: ['depend', 'Draft', '--on', 'Ship', '--off', '--json'],
+    expect: { code: 0, stdout: /"changed": false/ },
+  },
+  {
+    name: 'depend: a loop is refused',
+    files: EDIT_SEED,
+    argv: ['depend', 'Build server', '--on', 'Ship'],
+    expect: { code: 2, stderr: /^wi: Ship already waits on Build server/ },
+  },
+  {
+    name: 'set: sets the owner',
+    files: EDIT_SEED,
+    argv: ['set', 'Ship', '--owner', 'Ana'],
+    expect: { code: 0, stdout: /^wi-0005 {2}Ship {2}set owner\n$/, files: { 'Boards/Ship.md': /^owner: Ana$/m } },
+  },
+  {
+    name: 'set: the owner already so writes nothing, --json',
+    files: EDIT_SEED,
+    argv: ['set', 'In review', '--owner', 'Ana', '--json'],
+    expect: { code: 0, stdout: /"changed": \[\]/ },
+  },
+  {
+    name: 'set: a named role is refused',
+    files: EDIT_SEED,
+    argv: ['set', 'Ship', '--role', 'coder'],
+    expect: { code: 2, stderr: /^wi: a role is a tag now\. Run: wi tag Ship role\/coder\n$/ },
+  },
+  {
+    name: 'claim: an agent claims by WI_AGENT from the context env',
+    files: EDIT_SEED, env: AGENT,
+    argv: ['claim', 'Draft'],
+    expect: { code: 0, stdout: /^wi-0006 {2}Draft {2}options → doing {2}\(holder: sp-bot\)\n$/, files: { 'Boards/Draft.md': /^holder: sp-bot$/m } },
+  },
+  {
+    name: 'claim: WI_MAX_AGENTS from the context env warns after the claim, from the vault read again',
+    files: EDIT_SEED, env: { WI_AGENT: 'sp-bot', WI_MAX_AGENTS: '1' },
+    argv: ['claim', 'Draft', '--json'],
+    expect: { code: 0, stdout: /"changed": true/, stderr: /^wi: warning: agent limit is 1; 2 agents now work a doing card\.\n$/ },
+  },
+  {
+    name: 'claim: a card that waits on an open card is refused',
+    files: EDIT_SEED,
+    argv: ['claim', 'Ship', '--holder', 'bot'],
+    expect: { code: 2, stderr: /^wi: Boards\/Ship\.md waits on/ },
+  },
+  {
+    name: 'claim: no holder and no WI_AGENT is a usage error',
+    files: EDIT_SEED,
+    argv: ['claim', 'Draft'],
+    expect: { code: 2, stderr: /^wi: wi claim needs --holder <name>, or WI_AGENT set\.\n$/ },
+  },
+  {
+    name: 'release: the hand-over note is signed from the context env',
+    files: EDIT_SEED, env: AGENT,
+    argv: ['release', 'Held', '--reason', 'Blocked on keys.', '--where', 'card/held'],
+    expect: {
+      code: 0, stdout: /^wi-0007 {2}Held {2}doing → options {2}\(released bot\)\n$/,
+      files: { 'Boards/Held.md': /- 2026-10-09 10:30, sp-bot \(model-1\): Released from bot: Blocked on keys\. Work: card\/held\.\n$/ },
+    },
+  },
+  {
+    name: 'release: a card with no holder is refused',
+    files: EDIT_SEED,
+    argv: ['release', 'Draft', '--reason', 'Nothing to do.', '--json'],
+    expect: { code: 2, stderr: /^wi: Boards\/Draft\.md has no holder to release\.\n$/ },
+  },
+  {
+    name: 'delegate: to a person, with a role tag',
+    files: EDIT_SEED,
+    argv: ['delegate', 'Draft', '--to', 'Ana', '--role', 'coder'],
+    expect: { code: 0, stdout: /^wi-0006 {2}Draft {2}options {2}\(assigned to Ana\)\n$/, files: { 'Boards/Draft.md': /^holder: Ana$[\s\S]*^tags:\n {2}- role\/coder$/m } },
+  },
+  {
+    name: 'delegate: to any agent, --json',
+    files: EDIT_SEED,
+    argv: ['delegate', 'Draft', '--to', 'agent', '--json'],
+    expect: { code: 0, stdout: /"holder": "/ },
+  },
+  {
+    name: 'delegate: a name with no person note is refused',
+    files: EDIT_SEED,
+    argv: ['delegate', 'Draft', '--to', 'Nobody'],
+    expect: { code: 2, stderr: /^wi: there is no person note called Nobody\./ },
+  },
+  {
+    name: 'review: sends a card to a person, signed from the context env',
+    files: EDIT_SEED, env: AGENT,
+    argv: ['review', 'Held', '--to', 'Ana', '--files', 'Work/a.md', '--note', 'Check the totals.'],
+    expect: {
+      code: 0, stdout: /^wi-0007 {2}Held {2}sent to Ana for review {2}\(Work\/a\.md\)\n$/,
+      files: { 'Boards/Held.md': /^owner: Ana$[\s\S]*- 2026-10-09 10:30, sp-bot \(model-1\): \*\*Review:\*\*/m },
+    },
+  },
+  {
+    name: 'review: a name with no person note is refused',
+    files: EDIT_SEED,
+    argv: ['review', 'Held', '--to', 'Nobody', '--json'],
+    expect: { code: 2, stderr: /^wi: there is no person note called Nobody/ },
+  },
+  {
+    name: 'approve: the reviewer closes the card',
+    files: EDIT_SEED, env: AGENT,
+    argv: ['approve', 'In review', '--you', 'Ana'],
+    expect: {
+      code: 0, stdout: /^wi-0008 {2}In review {2}approved by Ana {2}doing → done\n$/,
+      files: { 'Boards/In review.md': /- 2026-10-09 10:30, sp-bot \(model-1\): Approved by Ana\.\n$/ },
+    },
+  },
+  {
+    name: 'approve: --json',
+    files: EDIT_SEED,
+    argv: ['approve', 'wi-0008', '--you', 'Ana', '--json'],
+    expect: { code: 0, stdout: /"status": "done"/ },
+  },
+  {
+    name: 'approve: a verdict from the wrong reviewer is refused',
+    files: EDIT_SEED,
+    argv: ['approve', 'In review', '--you', 'Bob'],
+    expect: { code: 2, stderr: /^wi: the card waits for review by Ana, not Bob\.\n$/ },
+  },
+  {
+    name: 'send-back: the reviewer sends the card back with a comment',
+    files: EDIT_SEED,
+    argv: ['send-back', 'In review', '--you', 'Ana', '--comment', 'Recheck the totals.'],
+    expect: {
+      code: 0, stdout: /^wi-0008 {2}In review {2}sent back by Ana {2}\(owner removed; it stays in doing\)\n$/,
+      files: { 'Boards/In review.md': /- 2026-10-09 10:30: Sent back by Ana: Recheck the totals\.\n$/ },
+    },
+  },
+  {
+    name: 'send-back: a card that waits for no review is refused',
+    files: EDIT_SEED,
+    argv: ['send-back', 'Held', '--you', 'Ana', '--json'],
+    expect: { code: 2, stderr: /^wi: no one is asked to review this card/ },
+  },
+  {
+    name: 'archive: archives a done card',
+    files: EDIT_SEED,
+    argv: ['archive', 'Write docs'],
+    expect: { code: 0, stdout: /^wi-0004 {2}Write docs {2}archived\n$/, files: { 'Boards/Write docs.md': /^archived: true$/m } },
+  },
+  {
+    name: 'archive: --undo on a card that is not archived writes nothing, --json',
+    files: EDIT_SEED,
+    argv: ['archive', 'Write docs', '--undo', '--json'],
+    expect: { code: 0, stdout: /"changed": false/ },
+  },
+  {
+    name: 'archive: a board with a descendant in doing is refused',
+    files: EDIT_SEED,
+    argv: ['archive', 'Launch'],
+    expect: { code: 2, stderr: /^wi: cannot archive Launch: descendant Build server \(wi-0003\) is doing\.\n$/ },
+  },
+  {
+    name: 'promote: a card becomes a board',
+    files: EDIT_SEED,
+    argv: ['promote', 'Ship'],
+    expect: { code: 0, stdout: /^wi-0005 {2}Ship {2}promoted\n$/, files: { 'Boards/Ship.md': /^board: true$/m } },
+  },
+  {
+    name: 'promote: a board already so writes nothing, --json',
+    files: EDIT_SEED,
+    argv: ['promote', 'Launch', '--json'],
+    expect: { code: 0, stdout: /"changed": false/ },
+  },
+  {
+    name: 'promote: an area is refused',
+    files: EDIT_SEED,
+    argv: ['promote', 'Ongoing'],
+    expect: { code: 2, stderr: /^wi: Boards\/Ongoing\.md is an area and cannot be promoted\.\n$/ },
+  },
+  {
+    name: 'demote: a board becomes a card',
+    files: EDIT_SEED,
+    argv: ['demote', 'Launch'],
+    expect: { code: 0, stdout: /^wi-0002 {2}Launch {2}demoted\n$/ },
+  },
+  {
+    name: 'demote: an area is refused',
+    files: EDIT_SEED,
+    argv: ['demote', 'Ongoing', '--json'],
+    expect: { code: 2, stderr: /^wi: Boards\/Ongoing\.md is an area and cannot be demoted\.\n$/ },
+  },
+]
 
 const CASES: ContractCase[] = [
   {
@@ -228,6 +496,7 @@ const CASES: ContractCase[] = [
     argv: ['validate', '--json'],
     expect: { code: 1, stdout: /^\{\n {2}"ok": false,\n {2}"items": 5,/ },
   },
+  ...EDIT_CASES,
 ]
 
 /** A fixed clock and a fixed chance, so both runs stamp the same date and draw the same id. */
@@ -236,9 +505,9 @@ function seams(): VaultSeams {
   return { now: () => new Date(2026, 9, 9, 10, 30), random: () => ((n++ * 0.618034) % 1) }
 }
 
-async function run(port: StoragePort, argv: string[]): Promise<Reply> {
+async function run(port: StoragePort, argv: string[], env: Record<string, string> = {}): Promise<Reply> {
   const line = parseCommandLine(argv)
-  const context = createContext({ port, version: '0.0.0-contract', env: {}, seams: seams() })
+  const context = createContext({ port, version: '0.0.0-contract', env, seams: seams() })
   return runCommand(context, { command: line.positionals[0], positionals: line.positionals, values: line.values })
 }
 
@@ -266,10 +535,10 @@ for (const contract of CASES) {
   test(`contract: ${contract.name}`, async () => {
     fixture = makeVault()
     for (const [path, text] of Object.entries(contract.files)) fixture.write(path, text)
-    const onNode = await run(nodePort(fixture.root), contract.argv)
+    const onNode = await run(nodePort(fixture.root), contract.argv, contract.env)
 
     const fake = fakeObsidian(contract.files, FOLDERS)
-    const onObsidian = await run(obsidianPort(fake), contract.argv)
+    const onObsidian = await run(obsidianPort(fake), contract.argv, contract.env)
 
     assert.deepEqual(onObsidian, onNode, 'the replies match')
     assert.deepEqual(sorted(fake.files), snapshotDisk(fixture.root), 'every file matches')

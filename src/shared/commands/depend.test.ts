@@ -7,15 +7,15 @@ import { fileURLToPath } from 'node:url'
 
 import { setDependency } from './depend.ts'
 import { claimItem } from './claim-release.ts'
-import { setStatus } from '../../shared/commands/status.ts'
-import { validate } from '../../shared/commands/validate.ts'
-import { loadVault } from '../vault.ts'
-import { openDependencies } from '../../shared/item-dependencies.ts'
-import { getList } from '../../shared/frontmatter.ts'
-import { makeVault, item, type Fixture } from '../test-helpers.ts'
+import { setStatus } from './status.ts'
+import { validate } from './validate.ts'
+import { loadVault } from '../../cli/vault.ts'
+import { openDependencies } from '../item-dependencies.ts'
+import { getList } from '../frontmatter.ts'
+import { makeVault, item, type Fixture } from '../../cli/test-helpers.ts'
 
 const run = promisify(execFile)
-const CLI = fileURLToPath(new URL('../wi.ts', import.meta.url))
+const CLI = fileURLToPath(new URL('../../cli/wi.ts', import.meta.url))
 
 let fixture: Fixture | undefined
 afterEach(() => {

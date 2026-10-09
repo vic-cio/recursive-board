@@ -3,10 +3,10 @@ import assert from 'node:assert/strict'
 import { readFileSync, writeFileSync } from 'node:fs'
 
 import { setTag } from './tag.ts'
-import { loadVault } from '../vault.ts'
-import { getList, parseFrontmatter } from '../../shared/frontmatter.ts'
-import { today } from '../../shared/schema.ts'
-import { makeVault, item, type Fixture } from '../test-helpers.ts'
+import { loadVault } from '../../cli/vault.ts'
+import { getList, parseFrontmatter } from '../frontmatter.ts'
+import { today } from '../schema.ts'
+import { makeVault, item, type Fixture } from '../../cli/test-helpers.ts'
 
 let fixture: Fixture | undefined
 afterEach(() => {

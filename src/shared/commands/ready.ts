@@ -4,8 +4,9 @@ import { holderOf, isAnyAgent } from '../holder.ts'
 import type { Vault, WorkItem } from '../vault.ts'
 import { getList } from '../frontmatter.ts'
 import { roleTags } from '../role-tags.ts'
-import { UsageError, type RunFunction, type Values } from './command.ts'
+import { UsageError, type RunFunction } from './command.ts'
 import { json } from './output.ts'
+import { singleLineOption } from './options.ts'
 
 export type ExclusionReason = 'claimed' | 'dependency' | 'invalid-dependency' | 'active-child' | 'missing-parent'
 
@@ -111,14 +112,4 @@ export const runReady: RunFunction = async (context, line) => {
   for (const card of result.ready) context.out(`  ${card.id ?? '?'}  ${card.title}\n`)
   if (result.counts.excluded > 0) context.out(`${result.counts.excluded} option card${result.counts.excluded === 1 ? '' : 's'} excluded; use --json for reasons.\n`)
   return 0
-}
-
-/** A flag that must hold one line of text. The same refusal as wi claim gives. */
-function singleLineOption(values: Values, key: string): string {
-  const value = values[key]
-  if (typeof value !== 'string' || value.trim() === '') {
-    throw new UsageError(`--${key} needs non-empty text.`)
-  }
-  if (/[\r\n]/.test(value)) throw new UsageError(`--${key} must be one line.`)
-  return value.trim()
 }

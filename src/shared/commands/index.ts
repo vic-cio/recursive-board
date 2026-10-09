@@ -10,6 +10,17 @@ import { runChildren } from './children.ts'
 import { runReady } from './ready.ts'
 import { runShow } from './show.ts'
 import { runValidate } from './validate.ts'
+// The card edit commands (wi-0fko).
+import { runArchive } from './archive.ts'
+import { runArea } from './area.ts'
+import { runClaim, runRelease } from './claim-release.ts'
+import { runDelegate } from './delegate.ts'
+import { runDepend } from './depend.ts'
+import { runNote } from './note.ts'
+import { runDemote, runPromote } from './promote.ts'
+import { runApprove, runReview, runSendBack } from './review.ts'
+import { runSet } from './set.ts'
+import { runTag } from './tag.ts'
 
 export const RUNNERS: Readonly<Record<string, RunFunction>> = {
   status: runStatus,
@@ -19,4 +30,19 @@ export const RUNNERS: Readonly<Record<string, RunFunction>> = {
   ready: runReady,
   show: runShow,
   validate: runValidate,
+  // The card edit commands (wi-0fko).
+  note: runNote,
+  tag: runTag,
+  area: runArea,
+  depend: runDepend,
+  set: runSet,
+  claim: runClaim,
+  release: runRelease,
+  delegate: runDelegate,
+  review: runReview,
+  approve: runApprove,
+  'send-back': runSendBack,
+  archive: runArchive,
+  promote: runPromote,
+  demote: runDemote,
 }

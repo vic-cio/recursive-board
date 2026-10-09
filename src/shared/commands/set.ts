@@ -3,12 +3,15 @@
  * (docs/adr/0062-role-tags.md); `--role ""` only removes an old `role` field. Cards no longer record
  * their creator (docs/adr/0063-wi-starts-no-agents.md).
  */
-import { editItem } from '../../shared/edit-item.ts'
-import type { Edit } from '../../shared/edits.ts'
-import { asName } from '../../shared/authorship.ts'
-import { roleTagFor } from '../../shared/role-tags.ts'
-import { parseFrontmatter, type Scalar } from '../../shared/frontmatter.ts'
-import type { Vault, WorkItem } from '../../shared/vault.ts'
+import { editItem } from '../edit-item.ts'
+import type { Edit } from '../edits.ts'
+import { asName } from '../authorship.ts'
+import { roleTagFor } from '../role-tags.ts'
+import { parseFrontmatter, type Scalar } from '../frontmatter.ts'
+import type { Vault, WorkItem } from '../vault.ts'
+import { UsageError, type RunFunction } from './command.ts'
+import { refOf, text } from './options.ts'
+import { json, label } from './output.ts'
 
 export interface SetOptions {
   /** A name or link. An empty string removes the owner. */
@@ -66,4 +69,21 @@ function peopleEdits(
 
 
   return { edits, changed }
+}
+
+/** `wi set <ref> --owner <name>`, or `--role ""` to remove an old role field. */
+export const runSet: RunFunction = async (context, line) => {
+  const ref = refOf(line.positionals)
+  const owner = text(line.values, 'owner')
+  const role = text(line.values, 'role')
+  const options: SetOptions = { ...(owner === undefined ? {} : { owner }), ...(role === undefined ? {} : { role }) }
+  if (ref === '' || Object.keys(options).length === 0) {
+    throw new UsageError('wi set needs a <ref> and --owner, or --role "" to remove an old role field.')
+  }
+  const change = await setPeople(await context.vault(), ref, options)
+  if (line.values['json'] === true) context.out(json({ id: change.item.id, path: change.item.relPath, changed: change.changed }))
+  else context.out(change.changed.length > 0
+    ? `${label(change.item)}  set ${change.changed.join(', ')}\n`
+    : `${label(change.item)}  already so. Nothing written.\n`)
+  return 0
 }

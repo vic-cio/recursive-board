@@ -7,13 +7,16 @@
  * harness starts its own with its own tools, and that agent runs `wi claim` by its own name.
  * `--role` adds the role tag in the same write.
  */
-import { readPeople, type Vault, type WorkItem } from '../../shared/vault.ts'
-import { editItem } from '../../shared/edit-item.ts'
-import { roleTagFor } from '../../shared/role-tags.ts'
-import { freeTagEditsIn } from '../../shared/tags.ts'
-import type { Edit } from '../../shared/edits.ts'
-import { ANY_AGENT } from '../../shared/holder.ts'
-import { assignEdits, delegateTarget } from '../../shared/delegate.ts'
+import { readPeople, type Vault, type WorkItem } from '../vault.ts'
+import { editItem } from '../edit-item.ts'
+import { roleTagFor } from '../role-tags.ts'
+import { freeTagEditsIn } from '../tags.ts'
+import type { Edit } from '../edits.ts'
+import { ANY_AGENT, isAnyAgent } from '../holder.ts'
+import { assignEdits, delegateTarget } from '../delegate.ts'
+import { UsageError, type RunFunction } from './command.ts'
+import { refOf, singleLineOption } from './options.ts'
+import { json, label } from './output.ts'
 
 export interface DelegateOptions {
   /** A person (a note with type: person), or `agent` for any agent. */
@@ -40,4 +43,19 @@ export async function delegate(vault: Vault, ref: string, options: DelegateOptio
     return edits.length > 0 ? edits : null
   })
   return { item, holder }
+}
+
+/** `wi delegate <ref> --to <person|agent> [--role <name>]`. */
+export const runDelegate: RunFunction = async (context, line) => {
+  const ref = refOf(line.positionals)
+  if (ref === '') throw new UsageError('wi delegate needs a <ref> and --to <person|agent>.')
+  const to = singleLineOption(line.values, 'to')
+  const role = line.values['role'] === undefined ? undefined : singleLineOption(line.values, 'role')
+  const result = await delegate(await context.vault(), ref, { to, role })
+  if (line.values['json'] === true) context.out(json({ id: result.item.id ?? null, path: result.item.relPath, holder: result.holder }))
+  else {
+    const what = isAnyAgent(result.holder) ? 'any agent may take it' : `assigned to ${result.holder}`
+    context.out(`${label(result.item)}  ${result.item.status}  (${what})\n`)
+  }
+  return 0
 }

@@ -3,10 +3,13 @@
  *
  * It writes one list on one file, the card that waits. The card it waits on is never touched.
  */
-import { editItem } from '../../shared/edit-item.ts'
-import { dependencyEditIn, dependencyPath } from '../../shared/dependencies.ts'
-import { dependenciesOf, titleOf } from '../../shared/item-dependencies.ts'
-import type { Vault, WorkItem } from '../../shared/vault.ts'
+import { editItem } from '../edit-item.ts'
+import { dependencyEditIn, dependencyPath } from '../dependencies.ts'
+import { dependenciesOf, titleOf } from '../item-dependencies.ts'
+import type { Vault, WorkItem } from '../vault.ts'
+import { UsageError, type RunFunction } from './command.ts'
+import { refOf } from './options.ts'
+import { json, label } from './output.ts'
 
 export interface DependChange {
   item: WorkItem
@@ -50,4 +53,21 @@ export async function setDependency(vault: Vault, ref: string, onRef: string, ad
     return edit === null ? null : [edit]
   })
   return { item, on, onRef, added: add, changed }
+}
+
+/** `wi depend <ref> --on <ref> [--off]`. */
+export const runDepend: RunFunction = async (context, line) => {
+  const ref = refOf(line.positionals)
+  const on = typeof line.values['on'] === 'string' ? line.values['on'].trim() : ''
+  if (ref === '' || on === '') throw new UsageError('wi depend needs a <ref> and --on <ref>. Add --off to remove the dependency.')
+  const change = await setDependency(await context.vault(), ref, on, line.values['off'] !== true)
+  const target = change.on ? titleOf(change.on) : change.onRef
+  if (line.values['json'] === true) {
+    context.out(json({ id: change.item.id, path: change.item.relPath, on: change.on?.id ?? change.on?.stem ?? change.onRef, added: change.added, changed: change.changed }))
+  } else if (!change.changed) {
+    context.out(`${label(change.item)} ${change.added ? 'already waits' : 'does not wait'} on ${target}. Nothing written.\n`)
+  } else {
+    context.out(`${label(change.item)}  ${change.added ? 'waits on' : 'no longer waits on'} ${target}\n`)
+  }
+  return 0
 }

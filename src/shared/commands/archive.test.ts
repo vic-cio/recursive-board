@@ -4,8 +4,8 @@ import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
 
 import { archiveItem } from './archive.ts'
-import { loadVault } from '../vault.ts'
-import { makeVault, item, type Fixture } from '../test-helpers.ts'
+import { loadVault } from '../../cli/vault.ts'
+import { makeVault, item, type Fixture } from '../../cli/test-helpers.ts'
 
 let fixture: Fixture | undefined
 afterEach(() => { fixture?.cleanup(); fixture = undefined })

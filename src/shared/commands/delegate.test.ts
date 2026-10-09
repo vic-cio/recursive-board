@@ -7,8 +7,8 @@ import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 import { delegate } from './delegate.ts'
-import { loadVault } from '../vault.ts'
-import { makeVault, item, type Fixture } from '../test-helpers.ts'
+import { loadVault } from '../../cli/vault.ts'
+import { makeVault, item, type Fixture } from '../../cli/test-helpers.ts'
 
 const cleanups: (() => void)[] = []
 afterEach(() => {
@@ -87,7 +87,7 @@ test('a second holder, an area and a root are refused', async () => {
   await assert.rejects(delegate(await loadVault(f.root), 'Main', { to: 'Ana' }), /root/)
 })
 
-const CLI = fileURLToPath(new URL('../wi.ts', import.meta.url))
+const CLI = fileURLToPath(new URL('../../cli/wi.ts', import.meta.url))
 
 function wi(args: string[], vault: string): { code: number; stdout: string; stderr: string } {
   const cwd = realpathSync(mkdtempSync(join(tmpdir(), 'wi-nogit-')))
