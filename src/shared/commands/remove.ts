@@ -15,7 +15,9 @@
  * Nothing is unlinked. A removed file moves to the vault's `.trash`, which is Obsidian's own
  * convention and is outside the work-item folder, so it is never indexed again.
  */
-import { requireAccountedTree, type Vault, type WorkItem } from '../../shared/vault.ts'
+import { requireAccountedTree, type Vault, type WorkItem } from '../vault.ts'
+import { UsageError, type RunFunction } from './command.ts'
+import { json } from './output.ts'
 
 /** Obsidian's own local trash. Outside the five folders, so `wi validate` never sees it. */
 export const TRASH = '.trash'
@@ -102,4 +104,38 @@ export async function removeItem(
   }
 
   return { removed, dryRun }
+}
+
+/** `wi rm <ref>`: what it prints, from what removeItem moved to the trash or would move. */
+export const runRemove: RunFunction = async (context, line) => {
+  const vault = await context.vault()
+  const ref = line.positionals.slice(1).join(' ').trim()
+  if (ref === '') throw new UsageError('wi rm needs a <ref>.')
+
+  const result = await removeItem(vault, ref, {
+    recursive: line.values['recursive'] === true,
+    dryRun: line.values['dry-run'] === true,
+  })
+
+  if (line.values['json'] === true) {
+    context.out(json({
+      dryRun: result.dryRun,
+      removed: result.removed.map((r) => ({
+        id: r.item.id,
+        title: r.item.title,
+        from: r.item.relPath,
+        to: r.trashedTo,
+      })),
+    }))
+    return 0
+  }
+
+  const verb = result.dryRun ? 'would remove' : 'removed'
+  for (const entry of result.removed) {
+    const id = entry.item.id ?? '(no id)'
+    context.out(`${verb}  ${id}  ${entry.item.relPath} -> ${entry.trashedTo}\n`)
+  }
+  const count = result.removed.length
+  context.out(`${count} work item${count === 1 ? '' : 's'}${result.dryRun ? ', nothing written' : ''}\n`)
+  return 0
 }

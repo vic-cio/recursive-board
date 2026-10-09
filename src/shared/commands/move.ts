@@ -8,11 +8,13 @@
  *
  * The rules are in `shared/transitions.ts`, so the plugin's "Move to…" does the same thing.
  */
-import { editItem } from '../../shared/edit-item.ts'
-import { parseFrontmatter } from '../../shared/frontmatter.ts'
-import { parseWikilink } from '../../shared/schema.ts'
-import { moveEdits, moveRefusal } from '../../shared/transitions.ts'
-import { requireAccountedTree, type Vault, type WorkItem } from '../../shared/vault.ts'
+import { editItem } from '../edit-item.ts'
+import { parseFrontmatter } from '../frontmatter.ts'
+import { parseWikilink } from '../schema.ts'
+import { moveEdits, moveRefusal } from '../transitions.ts'
+import { requireAccountedTree, type Vault, type WorkItem } from '../vault.ts'
+import { UsageError, type RunFunction } from './command.ts'
+import { json, label } from './output.ts'
 
 export interface MoveResult {
   item: WorkItem
@@ -79,4 +81,29 @@ async function parentsFromDisk(
     current = next
   }
   return parents
+}
+
+/** `wi move <ref> --to <ref>`: what it prints, from the move moveItem made. */
+export const runMove: RunFunction = async (context, line) => {
+  const vault = await context.vault()
+  const ref = line.positionals.slice(1).join(' ').trim()
+  const to = typeof line.values['to'] === 'string' ? line.values['to'] : ''
+  if (ref === '' || to === '') {
+    throw new UsageError('wi move needs a <ref> and --to <ref>. Try: wi move wi-a7f3 --to Main')
+  }
+  const result = await moveItem(vault, ref, to)
+  if (line.values['json'] === true) {
+    context.out(json({
+      id: result.item.id,
+      path: result.item.relPath,
+      from: result.from,
+      to: result.to.stem,
+      changed: result.changed,
+    }))
+  } else if (!result.changed) {
+    context.out(`${label(result.item)} is already under ${result.to.stem}. Nothing written.\n`)
+  } else {
+    context.out(`${label(result.item)}  ${result.from ?? '—'} → ${result.to.stem}\n`)
+  }
+  return 0
 }

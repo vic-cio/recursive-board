@@ -3,9 +3,9 @@ import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 
 import { moveItem } from './move.ts'
-import { loadVault } from '../vault.ts'
-import { parseFrontmatter } from '../../shared/frontmatter.ts'
-import { makeVault, item, type Fixture } from '../test-helpers.ts'
+import { loadVault } from '../../cli/vault.ts'
+import { parseFrontmatter } from '../frontmatter.ts'
+import { makeVault, item, type Fixture } from '../../cli/test-helpers.ts'
 
 let fixture: Fixture | undefined
 afterEach(() => {

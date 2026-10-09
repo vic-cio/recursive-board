@@ -25,10 +25,7 @@ import { fakeObsidian } from '../plugin/fake-obsidian.ts'
 const NOT_VAULT_COMMANDS = new Set(['setup', 'doctor', 'update', 'hook'])
 
 /** Vault commands with no contract case yet. Each card that moves a command into the registry takes it off. */
-const NOT_YET = new Set([
-  'new', 'objective', 'dashboard', 'move', 'rm',
-  'retag', 'graph', 'template', 'here',
-])
+const NOT_YET = new Set<string>([])
 
 interface ContractCase {
   name: string
@@ -497,6 +494,82 @@ const CASES: ContractCase[] = [
     expect: { code: 1, stdout: /^\{\n {2}"ok": false,\n {2}"items": 5,/ },
   },
   ...EDIT_CASES,
+  {
+    name: 'new: a brief from flags',
+    files: SEED,
+    argv: ['new', 'Write tests', '--parent', 'Launch', '--objective', 'Cover the port', '--context', 'Use the fixtures',
+      '--criteria', 'Both ports agree'],
+    expect: {
+      code: 0,
+      stdout: /^wi-[0-9a-z]{4} {2}Boards\/Write tests\.md {2}\(child of Launch\)\n$/,
+      files: { 'Boards/Write tests.md': /created: 2026-10-09[\s\S]*Cover the port[\s\S]*Use the fixtures[\s\S]*Both ports agree/ },
+    },
+  },
+  {
+    name: 'new: a first child promotes its parent to a board',
+    files: SEED,
+    argv: ['new', 'Pick a host', '--parent', 'Build server'],
+    expect: {
+      code: 0,
+      stdout: /\nBuild server {2}promoted to a board \(its first child\)\n$/,
+      stderr: /^wi: warning: wi-[0-9a-z]{4} has no /,
+      files: { 'Boards/Build server.md': /^board: true$/m },
+    },
+  },
+  {
+    name: 'new: a filename clash takes the id suffix',
+    files: SEED,
+    argv: ['new', 'Ship', '--parent', 'Launch', '--json'],
+    expect: { code: 0, stdout: /"path": "Boards\/Ship--[0-9a-z]{4}\.md"/, stderr: /wi: note: another item has this filename/ },
+  },
+  {
+    name: 'new: a missing title is a usage error',
+    files: SEED,
+    argv: ['new', '--parent', 'Launch'],
+    expect: { code: 2, stderr: /^wi: wi new needs a title/ },
+  },
+  {
+    name: 'move: a card moves to another parent',
+    files: SEED,
+    argv: ['move', 'Ship', '--to', 'Launch'],
+    expect: { code: 0, stdout: /^wi-0005 {2}Ship {2}Main → Launch\n$/, files: { 'Boards/Ship.md': /^parent: "\[\[Launch\]\]"$/m } },
+  },
+  {
+    name: 'move: a move that would make a loop is refused',
+    files: SEED,
+    argv: ['move', 'Launch', '--to', 'Build server'],
+    expect: { code: 2, stderr: /^wi: cannot move Launch under Build server: / },
+  },
+  {
+    name: 'rm: --recursive moves the card and its children to the trash',
+    files: SEED,
+    argv: ['rm', 'Launch', '--recursive'],
+    expect: { code: 0, stdout: /removed {2}wi-0002 {2}Boards\/Launch\.md -> \.trash\/Launch\.md\n3 work items\n$/, files: { '.trash/Launch.md': /title: Launch/ } },
+  },
+  {
+    name: 'rm: --dry-run names what would go and writes nothing',
+    files: SEED,
+    argv: ['rm', 'Launch', '--recursive', '--dry-run', '--json'],
+    expect: { code: 0, stdout: /"dryRun": true[\s\S]*"to": "\.trash\/Launch\.md"/ },
+  },
+  {
+    name: 'rm: a taken trash name gets a number',
+    files: { ...SEED, '.trash/Ship.md': '# An older Ship\n' },
+    argv: ['rm', 'Ship'],
+    expect: { code: 0, stdout: /-> \.trash\/Ship 1\.md\n1 work item\n$/, files: { '.trash/Ship.md': /^# An older Ship\n$/ } },
+  },
+  {
+    name: 'rm: a parent without --recursive is refused',
+    files: SEED,
+    argv: ['rm', 'Launch'],
+    expect: { code: 2, stderr: /^wi: Launch has 2 children: / },
+  },
+  ...['trace', 'here', 'template', 'objective', 'dashboard', 'retag', 'graph'].map((command): ContractCase => ({
+    name: `${command}: retired, it names the new way and exits 0`,
+    files: SEED,
+    argv: [command],
+    expect: { code: 0, stdout: new RegExp(`^wi [a-z ]*\\b${command}\\b[a-z ]*(is retired|was removed|were removed)`) },
+  })),
 ]
 
 /** A fixed clock and a fixed chance, so both runs stamp the same date and draw the same id. */

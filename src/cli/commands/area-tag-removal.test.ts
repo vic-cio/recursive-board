@@ -3,7 +3,7 @@ import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
 
-import { createItem } from './new.ts'
+import { createItem } from '../../shared/commands/new.ts'
 import { validate } from '../../shared/commands/validate.ts'
 import { loadVault } from '../vault.ts'
 import { getList } from '../../shared/frontmatter.ts'

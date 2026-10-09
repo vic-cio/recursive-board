@@ -6,18 +6,20 @@
  * which is why a status can be given and why the holder follows the shared status rule.
  */
 
-import { editItem } from '../../shared/edit-item.ts'
-import { isPathExists } from '../../shared/storage.ts'
-import { cardState } from '../../shared/card-state.ts'
-import { holderOf } from '../../shared/holder.ts'
-import { inheritedChildFields, renderWorkItem, type NewWorkItem } from '../../shared/work-item.ts'
-import { briefGaps, renderBody, requireTemplate, type Brief } from '../../shared/templates.ts'
-import { firstChildPromotion } from '../../shared/transitions.ts'
-import { asName } from '../../shared/authorship.ts'
-import { freeTag, withFreeTag } from '../../shared/tags.ts'
-import { fileNameFor, fileNameStem, isStatus, newId, today, WORK_ITEM_TYPE, type Status } from '../../shared/schema.ts'
-import { parseFrontmatter } from '../../shared/frontmatter.ts'
-import type { Vault } from '../../shared/vault.ts'
+import { editItem } from '../edit-item.ts'
+import { isPathExists } from '../storage.ts'
+import { cardState } from '../card-state.ts'
+import { holderOf } from '../holder.ts'
+import { inheritedChildFields, renderWorkItem, type NewWorkItem } from '../work-item.ts'
+import { briefGaps, renderBody, requireTemplate, type Brief } from '../templates.ts'
+import { firstChildPromotion } from '../transitions.ts'
+import { asName } from '../authorship.ts'
+import { freeTag, withFreeTag } from '../tags.ts'
+import { fileNameFor, fileNameStem, isStatus, newId, today, WORK_ITEM_TYPE, type Status } from '../schema.ts'
+import { parseFrontmatter } from '../frontmatter.ts'
+import type { Vault } from '../vault.ts'
+import { UsageError, type RunFunction } from './command.ts'
+import { json } from './output.ts'
 
 export interface NewOptions {
   title: string
@@ -152,4 +154,63 @@ function newTags(inputs: readonly string[]): string[] {
   let tags: string[] = []
   for (const input of inputs) tags = withFreeTag(tags, freeTag(input), true)
   return tags
+}
+
+/** `wi new <title> --parent <ref>`: what it prints, from the item createItem made. */
+export const runNew: RunFunction = async (context, line) => {
+  const vault = await context.vault()
+  const { values } = line
+  const title = line.positionals.slice(1).join(' ').trim()
+  if (title === '') throw new UsageError('wi new needs a title. Try: wi new "Build server" --parent Main')
+
+  const explicitParent = typeof values['parent'] === 'string' ? values['parent'] : undefined
+  const parent = explicitParent ?? vault.config.defaultRoot
+  if (!parent) throw new UsageError('wi new needs --parent <ref>, or a defaultRoot in the board settings.')
+
+  const priority = typeof values['priority'] === 'string' ? Number(values['priority']) : undefined
+  if (priority !== undefined && !Number.isFinite(priority)) {
+    throw new UsageError(`--priority must be a number, not "${values['priority']}".`)
+  }
+
+  const created = await createItem(vault, {
+    title,
+    parent,
+    ...(typeof values['status'] === 'string' ? { status: values['status'] as never } : {}),
+    ...(typeof values['owner'] === 'string' ? { owner: values['owner'] } : {}),
+    ...(typeof values['holder'] === 'string' ? { holder: values['holder'] } : {}),
+    ...(typeof values['template'] === 'string' ? { template: values['template'] } : {}),
+    ...(priority !== undefined ? { priority } : {}),
+    ...(Array.isArray(values['tag']) ? { tags: values['tag'] } : {}),
+    brief: {
+      objective: typeof values['objective'] === 'string' ? values['objective'] : undefined,
+      context: Array.isArray(values['context']) ? values['context'] : undefined,
+      criteria: Array.isArray(values['criteria']) ? values['criteria'] : undefined,
+    },
+    strict: values['strict'] === true,
+  })
+
+  if (vault.unaccounted.length > 0) {
+    context.err(
+      `wi: warning: a new id or filename may clash with an unread file. ` +
+      `Unread files: ${vault.unaccounted.join(', ')}.\n`,
+    )
+  }
+
+  if (created.gaps.length > 0) {
+    context.err(`wi: warning: ${created.id} has no ${created.gaps.join(' or ')}. ` +
+      `Pass --objective and --criteria, or fill the card before work starts.\n`)
+  }
+  if (created.renamed) {
+    context.err(`wi: note: another item has this filename, so this one is ${created.relPath}. ` +
+      `If they are different work, give the card a more specific title.\n`)
+  }
+
+  if (values['json'] === true) {
+    context.out(json({ id: created.id, path: created.relPath, parent: created.parentStem,
+      promoted_parent: created.promotedParent, gaps: created.gaps }))
+  } else {
+    context.out(`${created.id}  ${created.relPath}  (child of ${created.parentStem})\n`)
+    if (created.promotedParent) context.out(`${created.parentStem}  promoted to a board (its first child)\n`)
+  }
+  return 0
 }

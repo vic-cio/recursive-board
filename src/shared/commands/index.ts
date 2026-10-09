@@ -21,6 +21,11 @@ import { runDemote, runPromote } from './promote.ts'
 import { runApprove, runReview, runSendBack } from './review.ts'
 import { runSet } from './set.ts'
 import { runTag } from './tag.ts'
+// new, move, rm and the retired commands (wi-5s2x).
+import { runNew } from './new.ts'
+import { runMove } from './move.ts'
+import { runRemove } from './remove.ts'
+import { RETIRED } from './retired.ts'
 
 export const RUNNERS: Readonly<Record<string, RunFunction>> = {
   status: runStatus,
@@ -45,4 +50,9 @@ export const RUNNERS: Readonly<Record<string, RunFunction>> = {
   archive: runArchive,
   promote: runPromote,
   demote: runDemote,
+  // new, move, rm and the retired commands (wi-5s2x).
+  new: runNew,
+  move: runMove,
+  rm: runRemove,
+  ...RETIRED,
 }
