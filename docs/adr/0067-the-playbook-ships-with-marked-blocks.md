@@ -1,5 +1,6 @@
 ---
-status: accepted
+status: superseded
+superseded_by: 0081-the-docs-explain-the-tools-and-ship-no-agent-playbook.md
 amended_by: 0075-git-versioning-is-advice.md (a git-hook block holds the pre-commit snippet)
 ---
 # The agent playbook ships in the package, with marked blocks

@@ -1,6 +1,7 @@
 ---
 status: accepted
 amends: 0025-agent-setup.md (setup offers no hook), 0069-setup-prints-the-recommended-setup.md (the hook offer is gone), 0070-wi-doctor-checks-on-request.md (the hook check reads the file)
+amended_by: 0081-the-docs-explain-the-tools-and-ship-no-agent-playbook.md (the README holds the Git advice)
 ---
 # Git versioning is advice, and `wi` installs no hook
 

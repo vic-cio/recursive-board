@@ -1,6 +1,7 @@
 ---
 status: accepted
 amends: 0069-setup-prints-the-recommended-setup.md (the plugin CLI's setup prints the summary to an agent), 0076-a-storage-port-and-a-command-runner.md (the coverage test reads the command table), 0078-one-plugin-cli-handler.md (the handler serves every command)
+amended_by: 0081-the-docs-explain-the-tools-and-ship-no-agent-playbook.md (the plugin bundles the skill only)
 ---
 # The plugin serves setup, doctor and update, and writes nothing
 

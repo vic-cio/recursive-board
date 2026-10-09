@@ -1,6 +1,6 @@
 ---
 status: accepted
-amended_by: 0075-git-versioning-is-advice.md (the hook check reads the pre-commit file)
+amended_by: 0075-git-versioning-is-advice.md (the hook check reads the pre-commit file), 0081-the-docs-explain-the-tools-and-ship-no-agent-playbook.md (doctor checks the install and the vault, and no agent setup)
 ---
 # wi doctor checks the install and the agent setup, on request
 

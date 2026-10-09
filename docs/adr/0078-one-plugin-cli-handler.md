@@ -1,6 +1,6 @@
 ---
 status: accepted
-amended_by: 0080-the-plugin-serves-setup-doctor-and-update-and-writes-nothing.md (the handler serves every command)
+amended_by: 0080-the-plugin-serves-setup-doctor-and-update-and-writes-nothing.md (the handler serves every command), 0081-the-docs-explain-the-tools-and-ship-no-agent-playbook.md (the plugin CLI needs are for agents only)
 ---
 # One plugin CLI handler, with a fixed first reply line
 

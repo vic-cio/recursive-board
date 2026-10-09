@@ -1,6 +1,6 @@
 # Recursive Board
 
-> **Install with your agent.** Paste this prompt into your coding agent: "Install the Recursive Board plugin in my Obsidian vault. Ask me which vault. Tell me to open Settings → Community plugins → Browse in Obsidian, find Recursive Board, select Install, then enable it. If I cannot use Browse, download `main.js`, `manifest.json` and `styles.css` from https://github.com/vic-cio/recursive-board/releases/latest into the vault's `.obsidian/plugins/recursive-board/` folder, and tell me to enable Recursive Board in Settings → Community plugins. If agents will work the board on this computer, tell me to install the Obsidian installer 1.12.7 or later from https://obsidian.md/download and to turn on Settings → General → Advanced → Command line interface. On a headless machine with no Obsidian app, or for scripts, install the `wi` CLI instead: check that Node.js 20.12 or later is installed, run `npm install --global recursive-board`, then run `wi setup`."
+> **Install with your agent.** Paste this prompt into your coding agent: "Install the Recursive Board plugin in my Obsidian vault. Ask me which vault. Tell me to open Settings → Community plugins → Browse in Obsidian, find Recursive Board, select Install, then enable it. If I cannot use Browse, download `main.js`, `manifest.json` and `styles.css` from https://github.com/vic-cio/recursive-board/releases/latest into the vault's `.obsidian/plugins/recursive-board/` folder, and tell me to enable Recursive Board in Settings → Community plugins. On a headless machine with no Obsidian app, or for scripts, install the `wi` CLI instead: check that Node.js 20.12 or later is installed, run `npm install --global recursive-board`, then run `wi setup`."
 >
 > To install without an agent, see [Install the Obsidian plugin](#install-the-obsidian-plugin). For headless use and scripts, see [Install `wi`](#install-wi).
 
@@ -75,8 +75,6 @@ The board hides old `area/` tags. The Tags… picker leaves them out. New cards 
 
 Enable Recursive Board in an empty vault. Use the **Create your first board** button in the notice, or run **Create your first board** from the command palette. Enter a name. The default is `Main`. The plugin creates the board and a starter card. It sets `defaultRoot` in the board settings, then opens the board.
 
-Agents and people who read the repo find the optional [agent playbook](docs/playbook.md) here. The plugin does not show it.
-
 ### Manual fallback
 
 1. Create the file `Boards/Project.md` with this content. A root item has no `parent` and no `status`:
@@ -124,8 +122,6 @@ To install it manually, use the GitHub release:
 
 To build from source instead, run `npm run build` and copy the same three files from `dist/`.
 
-For agents that work the board on a desktop through the Obsidian CLI, install the Obsidian installer 1.12.7 or later from [obsidian.md/download](https://obsidian.md/download). Then turn on **Settings → General → Advanced → Command line interface**. An older installer prints a warning line before each CLI reply, and a CLI call waits until Obsidian quits when Obsidian is closed.
-
 Reload Obsidian after replacing plugin files. If your vault syncs its `.obsidian` folder, the sync client can copy the installed plugin to your other devices. Sync behavior depends on that client's settings.
 
 `wi update` replaces these three files in the default vault from the `wi` package. It does not create the folder.
@@ -140,7 +136,7 @@ wi --help
 wi setup
 ```
 
-`wi setup` ends with the optional recommended agent setup. It prints the summary of the [agent playbook](docs/playbook.md), the path of the installed `docs/playbook.md`, and `wi doctor`, the command that checks a vault against it. Setup writes nothing into the vault for it and stores no state. `--yes` prints the same text. `--json` prints one object, with the summary in `recommendedSetup`, and asks no questions, so it needs `--vault <path>`.
+`wi setup` copies the agent skill and saves the default vault. It writes nothing into the vault and stores no state. `--yes` asks no questions. `--json` prints one object, with the vault, the config path and the outcome for each skill copy, and asks no questions, so it needs `--vault <path>`. `wi doctor` checks the install and the vault.
 
 To update, run `wi update`:
 
@@ -154,7 +150,7 @@ It does four steps, and reports each one:
 1. It installs the newest `recursive-board` with npm.
 2. It replaces both skill copies, as `wi setup` installs them.
 3. It replaces `main.js`, `manifest.json`, and `styles.css` in the default vault's plugin folder. Then it says to reload Obsidian, and to force-quit and open it again on the phone.
-4. It prints the changelog's Agent setup changes since your old version, and suggests `wi doctor`.
+4. It prints the changelog's Agent setup changes since your old version.
 
 At the current version, it installs nothing and still refreshes the skill and plugin copies. It leaves symlinked development installs alone. It does not create a missing plugin folder: install the plugin as [Install the Obsidian plugin](#install-the-obsidian-plugin) says. `--dry-run` writes nothing.
 
@@ -164,13 +160,17 @@ Pass `--vault <path>`, set `WI_VAULT`, run `wi` inside a vault, or set `defaultV
 
 `skills/recursive-board/SKILL.md` teaches an agent to read and change a vault through `wi`. `wi setup` installs copies into `~/.claude/skills/recursive-board/` and `~/.agents/skills/recursive-board/`. It leaves symlinked development installs alone and refuses to replace an unmanaged folder unless you pass `--force`. From a source checkout, `npm run install:skill` links the skill and `wi` into `~/.local/bin`.
 
-The optional [agent playbook](docs/playbook.md) describes one agent setup that works: a session agent, headless workers that split their cards, role notes, a shared Dispatching procedure, and the agent limit. It has texts to paste into a vault's `AGENTS.md` and `Roles/` folder. Nothing in Recursive Board needs it. The npm package ships it at `docs/playbook.md`. Run `wi doctor` to compare your vault with it. It prints the text to paste for each recommendation that the vault does not follow.
-
 The optional [refocus hook](docs/refocus-hook.md) sends a card's Objective chain after compaction or Claude transcript growth. Add its settings entries yourself to enable it.
 
 ### Run commands through the Obsidian CLI
 
-On a desktop, an agent may run a `wi` command line through the plugin, with no Node. Obsidian must be running. If it is not, the CLI exits with 'The CLI is unable to find Obsidian...', and an agent falls back to `wi` or asks for input. The Obsidian installer must be 1.12.7 or later. An older one prints a warning line before every reply and hangs when Obsidian is closed. The command line interface must be on in Settings, General, Advanced.
+On a desktop, an agent may run a `wi` command line through the plugin, with no Node. This is for agents only. The plugin's install steps above do not need it.
+
+The one step a person must do is to turn on **Settings → General → Advanced → Command line interface** in Obsidian. The agent needs three more things:
+
+- Obsidian must be running. If it is not, the CLI exits with 'The CLI is unable to find Obsidian...', and an agent falls back to `wi` or asks for input.
+- The Obsidian installer must be 1.12.7 or later, from [obsidian.md/download](https://obsidian.md/download). An older one prints a warning line before every reply and hangs when Obsidian is closed.
+- The call is on a desktop. The phone has no Obsidian CLI.
 
 ```sh
 obsidian vault=<name> recursive-board cmd="status wi-1 done" agent=<name> model=<model>
@@ -181,7 +181,7 @@ obsidian vault=<name> recursive-board cmd="status wi-1 done" agent=<name> model=
 - Put the whole command line, flags included, in `cmd`. Quote a title with an apostrophe as `cmd="new \"Ana's card\" --parent wi-1"`.
 - `agent=` and `model=` sign a claim or a note, as `WI_AGENT` and `WI_MODEL` do. `cmd=help` prints the `wi --help` text.
 
-The plugin serves every `wi` command. On the plugin, `setup`, `doctor` and `update` write nothing. `cmd=setup` prints what the plugin CLI needs, the playbook summary, and the skill's text with the paths where an agent saves it. `cmd=doctor` runs the vault checks and lists the install checks that need `wi doctor`. `cmd=update` prints the plugin and rules versions, and says to update from Settings, Community plugins. [ADR 0078](docs/adr/0078-one-plugin-cli-handler.md) records the handler, and [ADR 0080](docs/adr/0080-the-plugin-serves-setup-doctor-and-update-and-writes-nothing.md) the three install commands.
+The plugin serves every `wi` command. On the plugin, `setup`, `doctor` and `update` write nothing. `cmd=setup` prints what the plugin CLI needs and the skill's text with the paths where an agent saves it. `cmd=doctor` runs the vault checks and lists the install checks that need `wi doctor`. `cmd=update` prints the plugin and rules versions, and says to update from Settings, Community plugins. [ADR 0078](docs/adr/0078-one-plugin-cli-handler.md) records the handler, and [ADR 0080](docs/adr/0080-the-plugin-serves-setup-doctor-and-update-and-writes-nothing.md) the three install commands.
 
 ## Version the vault with Git (optional)
 
@@ -195,15 +195,30 @@ If your vault is a Git repository, a pre-commit hook can run `wi validate` and s
 exec "/absolute/path/to/node" "/absolute/path/to/wi.js" validate --vault "/absolute/path/to/vault"
 ```
 
-The [Git versioning](docs/playbook.md#git-versioning) section of the playbook says how to find the paths, and what to do when the hook cannot run. `wi doctor` reports whether a pre-commit hook runs validation. `wi hook` is removed: a hook that it installed earlier keeps working.
+To set it up:
+
+1. Find the path of Node: `command -v node`.
+2. Find the path of the `wi` entry point: `echo "$(npm root -g)/recursive-board/dist/wi/wi.js"`.
+3. Save the snippet as `.git/hooks/pre-commit` in the repository. Replace the three paths. When the vault is a subfolder of the repository, name the subfolder.
+4. Make the file executable: `chmod +x .git/hooks/pre-commit`.
+5. Run `wi doctor`. Its `hook` check reads the file and writes nothing.
+
+Keep these points in mind:
+
+- **Absolute paths.** A Git GUI client starts the hook without your shell `PATH`, so a bare `node` or `wi` may not be found. The snippet runs the `wi.js` file with Node, and not the `wi` command, because the `wi` command starts with `#!/usr/bin/env node`, which needs `node` on the `PATH`.
+- **A path that changes.** An upgrade of Node can change its path. Use the path that `command -v node` prints. Do not use the folder that this path links to, because a package manager can put the version in that folder name.
+- **A hook that cannot run.** Git refuses every commit while the hook fails. Skip it once with `git commit --no-verify`, then correct the paths.
+- **Remove it.** Delete `.git/hooks/pre-commit`.
+
+`wi doctor` reports whether a pre-commit hook runs validation. `wi hook` is removed: a hook that it installed earlier keeps working.
 
 ## Commands
 
 | Command | What it does |
 | --- | --- |
-| `wi setup [--yes] [--vault <path>] [--force] [--json]` | Installs the agent skill and saves a default vault. It ends with the optional recommended agent setup and writes nothing into the vault for it. `--yes` requires `--vault` and asks no questions. `--json` prints one object, asks no questions, and requires `--vault`. |
-| `wi doctor [--json]` | Checks the install and the optional agent setup, and prints each check as pass, note or fix. A fix prints the command to run or the text to paste. It writes nothing. It exits 1 only when the install is broken (docs/adr/0070-wi-doctor-checks-on-request.md). |
-| `wi update [--dry-run] [--from <version>] [--vault <path>]` | Installs the newest package with npm, then runs the new `wi` to refresh both skill copies and the vault's plugin files. It prints the changelog's Agent setup changes and suggests `wi doctor`. `--dry-run` writes nothing. `--from <version>` skips the install and names the old version. |
+| `wi setup [--yes] [--vault <path>] [--force] [--json]` | Installs the agent skill and saves a default vault. It writes nothing into the vault. `--yes` requires `--vault` and asks no questions. `--json` prints one object, asks no questions, and requires `--vault`. |
+| `wi doctor [--json]` | Checks the install and the vault, and prints each check as pass, note or fix. A fix prints the command to run. It writes nothing. It exits 1 only when the install is broken (docs/adr/0070-wi-doctor-checks-on-request.md). |
+| `wi update [--dry-run] [--from <version>] [--vault <path>]` | Installs the newest package with npm, then runs the new `wi` to refresh both skill copies and the vault's plugin files. It prints the changelog's Agent setup changes. `--dry-run` writes nothing. `--from <version>` skips the install and names the old version. |
 | `wi new <title> [--parent <ref>] [--status <status>] [--template <name>] [--owner <name>] [--holder <name>] [--priority <number>] [--objective <text>] [--context <text>]... [--criteria <text>]... [--strict]` | Creates a work item under the given parent. It does not copy the parent's owner; pass `--owner` to set one. If `--parent` is omitted, uses `defaultRoot` from the board settings. The brief flags fill the body: repeat `--context` for each paragraph and `--criteria` for each criterion. It wraps bare angle placeholders in backticks and preserves code, links, autolinks, and HTML. It warns when the card has no Objective or Acceptance Criteria, and `--strict` refuses the card instead. Unsafe filename characters in the title become hyphens; a filename clash adds the id suffix and never overwrites. See `autoPromote`. |
 | `wi status <ref> <status>` | Changes an item's status. Use `backlog`, `options`, `doing`, or `done`. Leaving `done` clears the recorded previous status. When the item was its parent's last open child, it says so; it does not close the parent. |
 | `wi note <ref> <text> [--agent <name>]` | Adds a dated line under Notes. It signs with `--agent` or `WI_AGENT`. It adds `WI_MODEL` when set, and refuses to write without a writer name. It wraps bare angle placeholders in backticks. It preserves code, links, autolinks, and HTML. A lock keeps two notes from overwriting each other. |
@@ -229,7 +244,7 @@ The [Git versioning](docs/playbook.md#git-versioning) section of the playbook sa
 | `wi show <ref> --json` | Reads one complete card as JSON. It includes the brief, Notes, Knowledge lines, assignment, ancestor objectives, dependencies, and child summary. Broken links appear as issues; the command changes no files. |
 | `wi objective [<ref>]` | Retired command. Exits 0 and names `wi show <ref> --json`. |
 | `wi validate` | Checks work-item structure and reports errors and warnings. Exits with code 1 when it finds errors. |
-| `wi hook` | Retired. It exits 0, changes nothing, and names the playbook's Git versioning section. A hook that it installed earlier keeps working. See [Version the vault with Git](#version-the-vault-with-git-optional). |
+| `wi hook` | Removed. It is an unknown command. A hook that it installed earlier keeps working. See [Version the vault with Git](#version-the-vault-with-git-optional). |
 | `wi here` | Retired. Exits 0 and changes nothing. A project's `AGENTS.md` names its board; pass it to `wi new` as `--parent`. |
 | `wi template` | Retired command. Prints a message that names `wi new --template` and exits with code 0. |
 | `wi --help` or `wi help` | Prints usage, options, and notes. |

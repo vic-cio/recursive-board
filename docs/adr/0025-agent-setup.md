@@ -1,6 +1,6 @@
 ---
 status: accepted
-amended_by: 0069-setup-prints-the-recommended-setup.md (setup ends with the recommended agent setup and gains --json), 0075-git-versioning-is-advice.md (setup offers no hook)
+amended_by: 0069-setup-prints-the-recommended-setup.md (setup ends with the recommended agent setup and gains --json), 0075-git-versioning-is-advice.md (setup offers no hook), 0081-the-docs-explain-the-tools-and-ship-no-agent-playbook.md (setup prints no recommended setup)
 ---
 # `wi setup` installs the agent skill and records a default vault
 

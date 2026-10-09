@@ -1,5 +1,6 @@
 ---
-status: accepted
+status: superseded
+superseded_by: 0081-the-docs-explain-the-tools-and-ship-no-agent-playbook.md
 amends: docs/adr/0025-agent-setup.md (setup ends with the recommended agent setup and gains --json)
 amended_by: 0075-git-versioning-is-advice.md (setup offers no hook), 0080-the-plugin-serves-setup-doctor-and-update-and-writes-nothing.md (the plugin CLI's setup prints the summary to an agent)
 ---
