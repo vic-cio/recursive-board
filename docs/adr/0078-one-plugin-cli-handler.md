@@ -29,7 +29,7 @@ argument that starts with `--`. A command queued at start-up can run before the 
   environment, so the handler gives them to the runner as `WI_AGENT` and `WI_MODEL`, and a claim
   or a note signs as it does in `wi`. A parameter with no value is an error line.
 - **`cmd=help`, `cmd="--help"` and `--help` after any command reply `ok`, then `renderHelp()`,**
-  the same text as `wi --help`. `--version` replies the plugin version.
+  the same text as `wi --help`. `--version` replies the plugin version and its rules version, as `wi --version` does.
 - **A command the registry does not serve replies an error line that names it:**
   `error: the plugin does not serve wi <command> yet. Run it with wi.` The machine commands
   (`setup`, `doctor`, `update`) come from another card.

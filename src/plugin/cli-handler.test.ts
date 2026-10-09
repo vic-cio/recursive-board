@@ -76,7 +76,7 @@ test('an unknown flag, an unclosed quote and a missing cmd reply error:', async 
 
 test('a command that the registry does not serve yet replies error: and names it', async () => {
   const { deps: d } = deps()
-  assert.equal(await handleCli({ cmd: 'children Main' }, d), 'error: the plugin does not serve wi children yet. Run it with wi.')
+  assert.equal(await handleCli({ cmd: 'setup' }, d), 'error: the plugin does not serve wi setup yet. Run it with wi.')
   assert.equal(await handleCli({ cmd: 'nope' }, d), 'error: unknown command "nope". Run cmd=help.')
 })
 
@@ -92,7 +92,7 @@ test('cmd=help, cmd=--help and --help after a command print the wi help', async 
   for (const cmd of ['help', '--help', 'status --help']) {
     assert.equal(await handleCli({ cmd }, d), `ok\n${renderHelp()}`, cmd)
   }
-  assert.equal(await handleCli({ cmd: '--version' }, d), 'ok\n1.2.3\n')
+  assert.equal(await handleCli({ cmd: '--version' }, d), 'ok\n1.2.3 (rules 1)\n')
 })
 
 test('a wi exit 1 replies error:, and the output follows', () => {

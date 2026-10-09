@@ -14,6 +14,7 @@ import type { CliData, CliFlags, EventRef } from 'obsidian'
 import { parseCommandLine, splitCommandLine } from '../shared/command-line.ts'
 import { COMMAND_FLAGS, renderHelp } from '../shared/command-table.ts'
 import { createContext, isRegistered, runCommand, type Reply } from '../shared/runner.ts'
+import { versionLine } from '../shared/rules-version.ts'
 import type { StoragePort } from '../shared/storage.ts'
 import type { VaultSeams } from '../shared/vault.ts'
 import { obsidianPort, type ObsidianStorage } from './obsidian-port.ts'
@@ -108,7 +109,7 @@ async function run(params: CliData, deps: CliDeps): Promise<string> {
   const env = cliEnv(params)
   const line = parseCommandLine(splitCommandLine(cmd))
   const { command, values } = line
-  if (values.version) return okReply(`${deps.version}\n`)
+  if (values.version) return okReply(`${versionLine(deps.version)}\n`)
   if (values.help || command === undefined || command === 'help') return okReply(renderHelp())
   if (!(command in COMMAND_FLAGS)) throw new Error(`unknown command "${command}". Run cmd=help.`)
   if (!isRegistered(command)) throw new Error(`the plugin does not serve wi ${command} yet. Run it with wi.`)
