@@ -150,6 +150,9 @@ it. --yes prints it too. --json prints one object and asks no questions; it need
 pass, note or fix, and a fix prints the text to paste. It writes nothing. It exits 1 only when
 the install is broken: Node is too old, the package is incomplete, the vault wi would use is
 missing, or the plugin data cannot be read.` },
+  { about: ['setup', 'doctor', 'update'], text: `On the plugin CLI, setup, doctor and update write nothing. setup prints what the plugin CLI
+needs and the skill to save. doctor runs the vault checks and lists the install checks it skipped.
+update prints the plugin and rules versions and where to update.` },
   { about: [], text: `Each command takes only the flags its usage line shows, plus --vault and --json where it reads a
 vault or prints a result. It refuses any other flag with exit 2 and names the flag.` },
   { about: ['new'], text: `\`wi new\` writes the brief: --objective once, --context and --criteria once per paragraph or

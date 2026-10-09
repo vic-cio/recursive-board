@@ -21,6 +21,10 @@ the agent notes in your vault.
   The skill, the playbook and the README give the rules: a reply succeeded only when its first
   line is exactly `ok`, every call passes `vault=<name>` first, and the Obsidian installer must
   be 1.12.7 or later ([0078](docs/adr/0078-one-plugin-cli-handler.md)).
+- With no Node, an agent gets the skill from the plugin: `cmd=setup` prints the skill's text and
+  the two paths where the agent saves it. `cmd=doctor` checks the vault, and `cmd=update` says
+  how to update the plugin. On the plugin, the three write nothing
+  ([0080](docs/adr/0080-the-plugin-serves-setup-doctor-and-update-and-writes-nothing.md)).
 
 ### Added
 
@@ -31,8 +35,10 @@ the agent notes in your vault.
   ([0079](docs/adr/0079-the-rules-version-marker-lives-in-the-plugin-data.md)).
 - The plugin registers the `recursive-board` Obsidian CLI command on the desktop app. It runs a
   whole `wi` command line from `cmd` on the vault Obsidian has open, and replies `ok` or
-  `error: <reason>` on its first line. It serves the vault commands that run on the shared
-  storage port, and names any other command in its error line.
+  `error: <reason>` on its first line. It serves every `wi` command. Its `setup`, `doctor` and
+  `update` write nothing: setup prints what the plugin CLI needs, the playbook summary and the
+  skill; doctor runs the vault checks and lists the install checks it skipped; update prints the
+  plugin and rules versions and where to update.
 - An area's board shows the area as a self-card in its own status column, the same as its card on
   the parent board. It adds no file and no count. Drag it to another column to set the area's
   status. Open it from its preview to zoom into the same board.

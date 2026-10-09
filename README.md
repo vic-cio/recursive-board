@@ -175,7 +175,7 @@ obsidian vault=<name> recursive-board cmd="status wi-1 done" agent=<name> model=
 - Put the whole command line, flags included, in `cmd`. Quote a title with an apostrophe as `cmd="new \"Ana's card\" --parent wi-1"`.
 - `agent=` and `model=` sign a claim or a note, as `WI_AGENT` and `WI_MODEL` do. `cmd=help` prints the `wi --help` text.
 
-The plugin serves the vault commands that run on the shared storage port. Any other command replies an error line that names it; run it with `wi`. [ADR 0078](docs/adr/0078-one-plugin-cli-handler.md) records the handler.
+The plugin serves every `wi` command. On the plugin, `setup`, `doctor` and `update` write nothing. `cmd=setup` prints what the plugin CLI needs, the playbook summary, and the skill's text with the paths where an agent saves it. `cmd=doctor` runs the vault checks and lists the install checks that need `wi doctor`. `cmd=update` prints the plugin and rules versions, and says to update from Settings, Community plugins. [ADR 0078](docs/adr/0078-one-plugin-cli-handler.md) records the handler, and [ADR 0080](docs/adr/0080-the-plugin-serves-setup-doctor-and-update-and-writes-nothing.md) the three install commands.
 
 ## Version the vault with Git (optional)
 

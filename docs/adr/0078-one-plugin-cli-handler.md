@@ -1,5 +1,6 @@
 ---
 status: accepted
+amended_by: 0080-the-plugin-serves-setup-doctor-and-update-and-writes-nothing.md (the handler serves every command)
 ---
 # One plugin CLI handler, with a fixed first reply line
 
@@ -30,9 +31,10 @@ argument that starts with `--`. A command queued at start-up can run before the 
   or a note signs as it does in `wi`. A parameter with no value is an error line.
 - **`cmd=help`, `cmd="--help"` and `--help` after any command reply `ok`, then `renderHelp()`,**
   the same text as `wi --help`. `--version` replies the plugin version and its rules version, as `wi --version` does.
-- **A command the registry does not serve replies an error line that names it:**
-  `error: the plugin does not serve wi <command> yet. Run it with wi.` The machine commands
-  (`setup`, `doctor`, `update`) come from another card.
+- **The handler serves every command in the command table.** It runs `RUNNERS` and the plugin's
+  own `setup`, `doctor` and `update`
+  ([0080](0080-the-plugin-serves-setup-doctor-and-update-and-writes-nothing.md)). A name that is
+  not in the table replies `error: unknown command "<name>". Run cmd=help.`
 - **`--vault` in `cmd` is refused.** The vault is the one `obsidian` opened, chosen by
   `vault=<name>`. A `--vault` that the handler ignored would look as if it worked, on the wrong
   vault.

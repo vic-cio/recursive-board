@@ -199,6 +199,15 @@ do not read the skill:
 - The Obsidian installer must be 1.12.7 or later.
 - A title with an apostrophe goes in escaped double quotes: `cmd="new \"Ana's card\" --parent wi-1"`.
 
+The plugin serves every `wi` command. `setup`, `doctor` and `update` write nothing on the plugin:
+
+- `cmd=setup` prints what the plugin CLI needs, this playbook's summary, and the skill's text with
+  the two paths where an agent saves it.
+- `cmd=doctor` runs the vault checks, the agent setup checks of this page included, and lists the
+  install checks that only `wi doctor` can run, where Node is installed.
+- `cmd=update` prints the plugin and rules versions, and says to update the plugin in Obsidian:
+  Settings > Community plugins > Check for updates.
+
 ## Git versioning
 
 Git versioning is optional advice. Recursive Board and `wi` work the same without it, and a solo user with no agents does not need it. It pays off when a team grows or when agents write to the vault: each commit is a point that you can go back to after a bad write.

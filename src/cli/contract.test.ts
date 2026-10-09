@@ -3,29 +3,26 @@
  *
  * Each case runs one command line through runCommand twice: on the Node port over a temp vault,
  * and on the Obsidian port over an in-memory fake of the Obsidian API. The replies and every file
- * must match byte for byte. The coverage test fails when a vault command has no case and is not
- * on NOT_YET; the cards that move the other commands into the registry empty that list.
+ * must match byte for byte. The coverage test fails when a command in the command table that
+ * is not an install command has no case. The install commands (setup, doctor, update) differ on
+ * purpose: wi works on the machine and the plugin only prints, so each side tests its own, and
+ * src/plugin/cli-handler.test.ts checks that the plugin serves every command in the table.
  */
 import { test, afterEach } from 'node:test'
 import assert from 'node:assert/strict'
 import { readdirSync, readFileSync } from 'node:fs'
 import { join, sep } from 'node:path'
 
-import { COMMAND_FLAGS, parseCommandLine } from './flags.ts'
+import { parseCommandLine } from './flags.ts'
 import { nodePort } from './node-port.ts'
 import { makeVault, item, type Fixture } from './test-helpers.ts'
+import { COMMANDS } from '../shared/command-table.ts'
 import { createContext, isRegistered, runCommand, type Reply } from '../shared/runner.ts'
 import type { StoragePort } from '../shared/storage.ts'
 import type { VaultSeams } from '../shared/vault.ts'
 import { FOLDERS } from '../shared/schema.ts'
 import { obsidianPort } from '../plugin/obsidian-port.ts'
 import { fakeObsidian } from '../plugin/fake-obsidian.ts'
-
-/** The machine-level commands, which the plugin serves in its own way. */
-const NOT_VAULT_COMMANDS = new Set(['setup', 'doctor', 'update', 'hook'])
-
-/** Vault commands with no contract case yet. Each card that moves a command into the registry takes it off. */
-const NOT_YET = new Set<string>([])
 
 interface ContractCase {
   name: string
@@ -626,14 +623,10 @@ for (const contract of CASES) {
   })
 }
 
-test('contract: every vault command has a case, or waits on NOT_YET', () => {
-  const vaultCommands = Object.keys(COMMAND_FLAGS).filter((name) => !NOT_VAULT_COMMANDS.has(name))
+test('contract: every vault and retired command in the command table has a case on both ports', () => {
+  const vaultCommands = COMMANDS.filter((command) => command.kind !== 'install').map((command) => command.name)
   const covered = new Set(CASES.map((contract) => contract.argv[0]!))
-  const missing = vaultCommands.filter((name) => !covered.has(name) && !NOT_YET.has(name))
-  assert.deepEqual(missing, [], 'add a contract case for each, or put it on NOT_YET')
-  const done = [...NOT_YET].filter((name) => covered.has(name))
-  assert.deepEqual(done, [], 'a command with a case comes off NOT_YET')
-  const stale = [...NOT_YET].filter((name) => !vaultCommands.includes(name))
-  assert.deepEqual(stale, [], 'NOT_YET names only commands wi has')
+  const missing = vaultCommands.filter((name) => !covered.has(name))
+  assert.deepEqual(missing, [], 'add a contract case for each')
   for (const name of covered) assert.ok(isRegistered(name), `${name} has a case, so it runs through runCommand`)
 })

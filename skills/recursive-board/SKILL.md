@@ -66,8 +66,12 @@ obsidian vault=<name> recursive-board cmd="status wi-1 done" agent=<your name> m
 - `agent=` and `model=` sign a claim or a note, as `WI_AGENT` and `WI_MODEL` do for `wi`.
 - Quote a title with an apostrophe in escaped double quotes:
   `cmd="new \"Ana's card\" --parent wi-1"`.
-- `cmd=help` prints the same help as `wi --help`. A command the plugin does not serve yet
-  replies an error line that names it. Run that command with `wi`.
+- `cmd=help` prints the same help as `wi --help`. The plugin serves every `wi` command.
+- `cmd=setup`, `cmd=doctor` and `cmd=update` write nothing. `cmd=setup` prints what the plugin
+  CLI needs, the playbook summary and this skill's text: save that text as
+  `~/.claude/skills/recursive-board/SKILL.md` or `~/.agents/skills/recursive-board/SKILL.md`.
+  `cmd=doctor` runs the vault checks and lists the install checks that need `wi doctor`.
+  `cmd=update` prints the plugin and rules versions and says to update the plugin in Obsidian.
 - The Obsidian installer must be 1.12.7 or later. An older one prints a warning line before
   every reply, and hangs when Obsidian is closed.
 

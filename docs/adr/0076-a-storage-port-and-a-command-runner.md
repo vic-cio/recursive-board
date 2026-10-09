@@ -1,6 +1,7 @@
 ---
 status: accepted
 amends: 0054-edits-from-the-file-at-write-time.md (the re-read under the lock is the port's update)
+amended_by: 0080-the-plugin-serves-setup-doctor-and-update-and-writes-nothing.md (the coverage test reads the command table)
 ---
 # A storage port and a command runner
 
@@ -49,8 +50,8 @@ command line into a reply on any port.
 - **A contract test holds the two ports together.** `src/cli/contract.test.ts` runs each case
   through `runCommand` on the Node port over a temp vault and on the Obsidian port over the fake,
   with a fixed clock and chance, and compares the reply and every file byte for byte. A coverage
-  test fails when a vault command (every key of `COMMAND_FLAGS` but `setup`, `doctor`, `update`
-  and `hook`) has no case and is not on `NOT_YET`.
+  test fails when a command in the command table that is not an install command has no case
+  ([0080](0080-the-plugin-serves-setup-doctor-and-update-and-writes-nothing.md)).
 
 ## How the Obsidian port differs
 

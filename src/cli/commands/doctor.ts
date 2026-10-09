@@ -8,21 +8,18 @@
  */
 import { execFile } from 'node:child_process'
 import { existsSync } from 'node:fs'
-import { lstat, readdir, readFile, stat } from 'node:fs/promises'
+import { lstat, readFile, stat } from 'node:fs/promises'
 import { platform } from 'node:os'
-import { join, resolve, sep } from 'node:path'
+import { join, resolve } from 'node:path'
 import { promisify } from 'node:util'
 
-import { agentSetupChecks, isSetupNote, rulesCheck, type CheckResult, type SetupNote, type SkillCopy } from '../../shared/doctor.ts'
-import { boardSettingsIn, parsePluginData, PLUGIN_DATA_FILE } from '../../shared/board-settings.ts'
-import { getList, parseFrontmatter } from '../../shared/frontmatter.ts'
-import { rulesMarkerIn } from '../../shared/rules-version.ts'
-import { roleTags } from '../../shared/role-tags.ts'
-import { WORK_ITEM_TYPE } from '../../shared/schema.ts'
+import { agentSetupChecks, checkBase, countLine, renderCheckSection, rulesCheck, type CheckResult, type SkillCopy } from '../../shared/doctor.ts'
+import { boardSettingsCheck, openRoleTags, readSetupNotes, validateCheck } from '../../shared/doctor-vault.ts'
+import { readRulesMarker } from '../../shared/rules-version.ts'
 import { packageRoot, readPackageFile } from '../package-files.ts'
-import { findVaultRoot, getDefaultVault, loadVault, NOT_NOTES, type Vault } from '../vault.ts'
+import { nodePort } from '../node-port.ts'
+import { findVaultRoot, getDefaultVault, loadVault, type Vault } from '../vault.ts'
 import { MANAGED_MARKER, MANAGED_TEXT, skillDestinations } from './setup.ts'
-import { validate } from '../../shared/commands/validate.ts'
 
 const run = promisify(execFile)
 const PACKAGE = 'recursive-board'
@@ -78,10 +75,11 @@ export async function runDoctor(options: DoctorOptions): Promise<DoctorReport> {
   const root = located?.isVault ? located.root : null
 
   let vault: Vault | null = null
-  if (root !== null) {
+  const port = root === null ? null : nodePort(root)
+  if (root !== null && port !== null) {
     install.push(await pluginVersionCheck(root, options.version))
-    install.push(rulesCheck(await rulesMarker(root), 'wi'))
-    const settings = await boardSettingsCheck(root)
+    install.push(rulesCheck(await readRulesMarker(port), 'wi'))
+    const settings = await boardSettingsCheck(port)
     install.push(settings)
     install.push(await hookCheck(root))
     if (!settings.broken) {
@@ -94,7 +92,7 @@ export async function runDoctor(options: DoctorOptions): Promise<DoctorReport> {
   const agentSetup = playbook === null ? [] : agentSetupChecks({
     playbook,
     agentsMd: root === null ? null : await readIfPresent(join(root, 'AGENTS.md')),
-    notes: root === null ? [] : await readNotes(root),
+    notes: port === null ? [] : await readSetupNotes(port),
     openRoleTags: vault === null ? [] : openRoleTags(vault),
     maxAgents: vault?.config.maxAgents ?? null,
     skill,
@@ -112,7 +110,7 @@ export async function runDoctor(options: DoctorOptions): Promise<DoctorReport> {
 }
 
 async function nodeCheck(running: string): Promise<CheckResult> {
-  const base = { id: 'node', title: 'Node meets the package engines.' }
+  const base = checkBase('node')
   const text = await readPackageFile('package.json')
   const engines = text === null ? undefined : (JSON.parse(text) as { engines?: { node?: string } }).engines?.node
   const minimum = /^>=\s*(\d+(?:\.\d+){0,2})$/.exec(engines?.trim() ?? '')?.[1]
@@ -122,7 +120,7 @@ async function nodeCheck(running: string): Promise<CheckResult> {
 }
 
 function packageCheck(playbook: string | null, skill: string | null): CheckResult {
-  const base = { id: 'package', title: 'The package has its playbook and skill.' }
+  const base = checkBase('package')
   const missing = [playbook === null ? 'docs/playbook.md' : null, skill === null ? 'skills/recursive-board/SKILL.md' : null]
     .filter((path): path is string => path !== null)
   if (missing.length === 0) return { ...base, level: 'pass', message: `${packageRoot()} has the playbook and the skill.` }
@@ -133,7 +131,7 @@ function packageCheck(playbook: string | null, skill: string | null): CheckResul
 }
 
 function versionCheck(version: string, latest: string | null): CheckResult {
-  const base = { id: 'wi-version', title: 'wi is the newest published version.' }
+  const base = checkBase('wi-version')
   if (latest === null) return { ...base, level: 'note', message: `wi ${version}. The npm registry did not answer, so the newest version is not known.` }
   if (compareVersions(version, latest) >= 0) return { ...base, level: 'pass', message: `wi ${version} is the newest version.` }
   return { ...base, level: 'fix', message: `wi ${version} is older than ${latest}. Update it.`, paste: UPDATE_WI }
@@ -158,7 +156,7 @@ async function locateVault(options: DoctorOptions): Promise<LocatedVault | null>
 }
 
 function vaultCheck(located: LocatedVault | null): CheckResult {
-  const base = { id: 'vault', title: 'wi finds a vault.' }
+  const base = checkBase('vault')
   if (located === null) {
     return {
       ...base, level: 'fix', paste: 'wi setup',
@@ -175,7 +173,7 @@ function vaultCheck(located: LocatedVault | null): CheckResult {
 }
 
 async function pluginVersionCheck(root: string, version: string): Promise<CheckResult> {
-  const base = { id: 'plugin-version', title: 'The vault\'s plugin version matches wi.' }
+  const base = checkBase('plugin-version')
   const text = await readIfPresent(join(root, ...PLUGIN_MANIFEST.split('/')))
   if (text === null) {
     return { ...base, level: 'fix', message: 'The plugin is not installed in this vault. Install Recursive Board in Obsidian: Settings > Community plugins.' }
@@ -192,32 +190,6 @@ async function pluginVersionCheck(root: string, version: string): Promise<CheckR
     return { ...base, level: 'fix', message: `The plugin is ${plugin} and wi is ${version}. Update the plugin in Obsidian: Settings > Community plugins > Check for updates.` }
   }
   return { ...base, level: 'fix', message: `The plugin is ${plugin} and wi is ${version}. Update wi.`, paste: UPDATE_WI }
-}
-
-/** The rules version marker in the plugin data, or null when it is missing or the file is broken. */
-async function rulesMarker(root: string): Promise<number | null> {
-  const text = await readIfPresent(join(root, ...PLUGIN_DATA_FILE.split('/')))
-  if (text === null) return null
-  try {
-    return rulesMarkerIn(parsePluginData(text))
-  } catch {
-    return null // The board-settings check reports the broken file.
-  }
-}
-
-async function boardSettingsCheck(root: string): Promise<CheckResult> {
-  const base = { id: 'board-settings', title: 'The plugin data holds the board settings.' }
-  const sync = 'wi and the plugin use the defaults. Change a setting in Settings > Recursive Board to save them. With Obsidian Sync, turn on Installed community plugins sync on each device.'
-  const text = await readIfPresent(join(root, ...PLUGIN_DATA_FILE.split('/')))
-  if (text === null) return { ...base, level: 'note', message: `${PLUGIN_DATA_FILE} does not exist, so ${sync}` }
-  try {
-    const board = boardSettingsIn(parsePluginData(text))
-    if (board === null) return { ...base, level: 'note', message: `${PLUGIN_DATA_FILE} has no board key, so ${sync}` }
-    return { ...base, level: 'pass', message: `${PLUGIN_DATA_FILE} holds the board settings.` }
-  } catch (error) {
-    const reason = error instanceof Error ? error.message : String(error)
-    return { ...base, level: 'fix', broken: true, message: `${reason} Each wi command that reads the vault fails. Close Obsidian, then repair the file.` }
-  }
 }
 
 /** The vault's Git repository and its pre-commit file, found as Git finds them. Null outside Git. */
@@ -237,7 +209,7 @@ function runsValidation(body: string): boolean {
 
 /** The hook is advice (docs/adr/0075-git-versioning-is-advice.md), so this check only reads and is never a fix. */
 async function hookCheck(root: string): Promise<CheckResult> {
-  const base = { id: 'hook', title: 'The Git hook validates each commit.' }
+  const base = checkBase('hook')
   const advice = 'It is optional: see "Git versioning" in docs/playbook.md.'
   const git = await gitPreCommit(root)
   if (git === null) return { ...base, level: 'note', message: 'The vault is not in a Git repository, so it has no hook.' }
@@ -248,15 +220,6 @@ async function hookCheck(root: string): Promise<CheckResult> {
     return { ...base, level: 'note', message: `The pre-commit hook in ${git.top} is not executable, so Git skips it. Run chmod +x ${git.path}.` }
   }
   return { ...base, level: 'pass', message: `The pre-commit hook in ${git.top} runs validation.` }
-}
-
-async function validateCheck(vault: Vault): Promise<CheckResult> {
-  const base = { id: 'validate', title: 'wi validate finds no errors.' }
-  const report = await validate(vault)
-  const counts = `${report.itemCount} work items, ${report.errorCount} errors, ${report.warningCount} warnings.`
-  if (report.errorCount > 0) return { ...base, level: 'fix', message: `${counts} Run wi validate to read them.`, paste: 'wi validate' }
-  if (report.warningCount > 0) return { ...base, level: 'note', message: `${counts} Run wi validate to read them.`, paste: 'wi validate' }
-  return { ...base, level: 'pass', message: counts }
 }
 
 /** The state of each skill copy that wi setup installs, against the packaged SKILL.md. */
@@ -272,36 +235,6 @@ async function skillCopies(home: string, packaged: string): Promise<SkillCopy[]>
     if (!stat.isDirectory() || await readIfPresent(join(path, MANAGED_MARKER)) !== MANAGED_TEXT) return { path, state: 'unmanaged' }
     return { path, state: await readIfPresent(join(path, 'SKILL.md')) === packaged ? 'current' : 'differs' }
   }))
-}
-
-/** Every note in the vault, with the text of each note the checks read. */
-async function readNotes(root: string): Promise<SetupNote[]> {
-  const entries = await readdir(root, { withFileTypes: true, recursive: true })
-  const notes = await Promise.all(entries.flatMap((entry) => {
-    if (entry.isDirectory() || !/\.md$/i.test(entry.name)) return []
-    const path = `${(entry.parentPath ?? root).slice(root.length + 1).split(sep).join('/')}/${entry.name}`.replace(/^\//, '')
-    if (path.split('/').some((part) => NOT_NOTES.has(part))) return []
-    return [readFile(join(root, ...path.split('/')), 'utf8').then((text): SetupNote => {
-      const frontmatter = parseFrontmatter(text)
-      const type = frontmatter?.get('type')
-      const description = frontmatter?.get('description')
-      const note: SetupNote = {
-        path,
-        ...(typeof type === 'string' ? { type } : {}),
-        ...(typeof description === 'string' ? { description } : {}),
-        tags: getList(text, 'tags') ?? [],
-        workItem: type === WORK_ITEM_TYPE,
-      }
-      return isSetupNote(note) ? { ...note, text } : note
-    })]
-  }))
-  return notes.sort((a, b) => a.path.localeCompare(b.path))
-}
-
-function openRoleTags(vault: Vault): string[] {
-  return vault.items
-    .filter((item) => item.status !== 'done' && !vault.isArchived(item))
-    .flatMap((item) => roleTags(getList(item.text, 'tags') ?? []))
 }
 
 /** Compares two dotted version numbers. A pre-release suffix is ignored. */
@@ -329,25 +262,8 @@ async function readIfPresent(path: string): Promise<string | null> {
 /** The report as text: one line per check, and the text to paste under each fix. */
 export function renderDoctor(report: DoctorReport): string {
   const out: string[] = [`wi doctor ${report.version}`, '']
-  const section = (heading: string, results: CheckResult[]) => {
-    out.push(heading)
-    const width = Math.max(0, ...results.map((result) => result.id.length))
-    for (const result of results) {
-      out.push(`  ${result.level.padEnd(4)}  ${result.id.padEnd(width)}  ${result.message}`)
-      if (result.paste !== undefined) {
-        const indent = ' '.repeat(8)
-        out.push(`${indent}${result.paste.includes('\n') ? 'Paste:' : 'Run:'}`)
-        for (const line of result.paste.split('\n')) out.push(line === '' ? '' : `${indent}  ${line}`)
-      }
-    }
-    out.push('')
-  }
-  section('Install', report.install)
-  if (report.agentSetup.length > 0) section('Agent setup (optional, from docs/playbook.md in the package)', report.agentSetup)
-  const all = [...report.install, ...report.agentSetup]
-  const count = (level: string) => all.filter((result) => result.level === level).length
-  const fixes = count('fix')
-  const notes = count('note')
-  out.push(`${fixes} fix${fixes === 1 ? '' : 'es'}, ${notes} note${notes === 1 ? '' : 's'}. ${report.broken ? 'The install is broken.' : 'The install works.'}`)
+  out.push(...renderCheckSection('Install', report.install))
+  if (report.agentSetup.length > 0) out.push(...renderCheckSection('Agent setup (optional, from docs/playbook.md in the package)', report.agentSetup))
+  out.push(`${countLine([...report.install, ...report.agentSetup])} ${report.broken ? 'The install is broken.' : 'The install works.'}`)
   return `${out.join('\n')}\n`
 }

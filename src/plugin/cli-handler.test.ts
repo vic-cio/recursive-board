@@ -3,9 +3,9 @@ import assert from 'node:assert/strict'
 
 import type { CliData, CliFlags, EventRef } from 'obsidian'
 
-import { renderHelp } from '../shared/command-table.ts'
+import { COMMANDS, renderHelp } from '../shared/command-table.ts'
 import type { VaultSeams } from '../shared/vault.ts'
-import { CLI_COMMAND, cliEnv, formatReply, handleCli, registerCli, type CliHost } from './cli-handler.ts'
+import { CLI_COMMAND, cliEnv, formatReply, handleCli, registerCli, SERVED, type CliHost } from './cli-handler.ts'
 import { fakeObsidian, type FakeObsidian } from './fake-obsidian.ts'
 import { obsidianPort } from './obsidian-port.ts'
 
@@ -74,10 +74,29 @@ test('an unknown flag, an unclosed quote and a missing cmd reply error:', async 
   assert.match(await handleCli({ cmd: 'status wi-0002 done', agent: 'true' }, d), /^error: agent needs a value/)
 })
 
-test('a command that the registry does not serve yet replies error: and names it', async () => {
+test('an unknown command replies error: and names it', async () => {
   const { deps: d } = deps()
-  assert.equal(await handleCli({ cmd: 'setup' }, d), 'error: the plugin does not serve wi setup yet. Run it with wi.')
   assert.equal(await handleCli({ cmd: 'nope' }, d), 'error: unknown command "nope". Run cmd=help.')
+})
+
+test('the handler serves every command in the command table', async () => {
+  const { app, deps: d } = deps()
+  for (const { name } of COMMANDS) {
+    assert.ok(Object.hasOwn(SERVED, name), `the plugin serves wi ${name}`)
+    assert.doesNotMatch(await handleCli({ cmd: name }, d), /^error: unknown command/, name)
+  }
+  assert.equal(app.files.size, Object.keys(FILES).length)
+})
+
+test('setup, doctor and update reply ok and write nothing', async () => {
+  const { app, deps: d } = deps()
+  const before = new Map(app.files)
+  for (const cmd of ['setup', 'setup --yes --force', 'doctor', 'update', 'update --dry-run', 'setup --json', 'doctor --json', 'update --json']) {
+    assert.equal(firstLine(await handleCli({ cmd }, d)), 'ok', cmd)
+  }
+  assert.deepEqual(app.files, before)
+  assert.match(await handleCli({ cmd: 'update' }, d), /^ok\nRecursive Board 1\.2\.3 \(rules 1\), the plugin in this vault\. .*\nUpdate the plugin in Obsidian: Settings > Community plugins > Check for updates\.\n/)
+  assert.match(await handleCli({ cmd: 'setup extra' }, d), /^error: wi setup takes options only/)
 })
 
 test('--vault in cmd is refused, because obsidian chose the vault', async () => {

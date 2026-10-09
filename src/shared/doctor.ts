@@ -27,6 +27,85 @@ export interface CheckResult {
   broken?: boolean
 }
 
+/**
+ * What a check needs. A vault check reads only the vault, so the plugin runs it through the
+ * storage port. An install check needs Node, the wi package or the machine, so only wi runs it.
+ */
+export type CheckScope = 'vault' | 'install'
+
+export interface DoctorCheck {
+  id: string
+  scope: CheckScope
+  /** What the check looks for. */
+  title: string
+}
+
+/**
+ * The checks of the Install section of `wi doctor`, in its order, each marked vault or install.
+ * The agent setup checks come from the playbook's `checks` block; `checkScope` marks those.
+ */
+export const DOCTOR_CHECKS: readonly DoctorCheck[] = [
+  { id: 'node', scope: 'install', title: 'Node meets the package engines.' },
+  { id: 'package', scope: 'install', title: 'The package has its playbook and skill.' },
+  { id: 'wi-version', scope: 'install', title: 'wi is the newest published version.' },
+  { id: 'vault', scope: 'install', title: 'wi finds a vault.' },
+  { id: 'plugin-version', scope: 'install', title: 'The vault\'s plugin version matches wi.' },
+  { id: 'rules', scope: 'vault', title: 'The plugin in this vault and wi write by the same rules.' },
+  { id: 'board-settings', scope: 'vault', title: 'The plugin data holds the board settings.' },
+  { id: 'hook', scope: 'install', title: 'The Git hook validates each commit.' },
+  { id: 'validate', scope: 'vault', title: 'wi validate finds no errors.' },
+]
+
+/** The agent setup checks that read the machine, not the vault. */
+const INSTALL_SETUP_CHECKS = new Set(['skill'])
+
+/** Whether a check of wi doctor or of the playbook's `checks` block reads only the vault. */
+export function checkScope(id: string): CheckScope {
+  const listed = DOCTOR_CHECKS.find((check) => check.id === id)
+  if (listed) return listed.scope
+  return INSTALL_SETUP_CHECKS.has(id) ? 'install' : 'vault'
+}
+
+/** The id and title of a check in DOCTOR_CHECKS, for the result that reports it. */
+export function checkBase(id: string): { id: string; title: string } {
+  const check = DOCTOR_CHECKS.find((entry) => entry.id === id)
+  if (!check) throw new Error(`no doctor check has the id ${id}.`)
+  return { id, title: check.title }
+}
+
+/** Every install check, the Install section's first and then the playbook's, in their order. */
+export function installChecks(playbook: string): DoctorCheck[] {
+  return [
+    ...DOCTOR_CHECKS.filter((check) => check.scope === 'install'),
+    ...playbookChecks(playbook).filter((check) => checkScope(check.id) === 'install')
+      .map(({ id, text }): DoctorCheck => ({ id, scope: 'install', title: text })),
+  ]
+}
+
+/** One section of a doctor report: a heading, one line per check, and the text to paste under each fix. */
+export function renderCheckSection(heading: string, results: readonly CheckResult[]): string[] {
+  const out = [heading]
+  const width = Math.max(0, ...results.map((result) => result.id.length))
+  for (const result of results) {
+    out.push(`  ${result.level.padEnd(4)}  ${result.id.padEnd(width)}  ${result.message}`)
+    if (result.paste !== undefined) {
+      const indent = ' '.repeat(8)
+      out.push(`${indent}${result.paste.includes('\n') ? 'Paste:' : 'Run:'}`)
+      for (const line of result.paste.split('\n')) out.push(line === '' ? '' : `${indent}  ${line}`)
+    }
+  }
+  out.push('')
+  return out
+}
+
+/** The closing count of a doctor report: "2 fixes, 1 note." */
+export function countLine(results: readonly CheckResult[]): string {
+  const count = (level: CheckLevel) => results.filter((result) => result.level === level).length
+  const fixes = count('fix')
+  const notes = count('note')
+  return `${fixes} fix${fixes === 1 ? '' : 'es'}, ${notes} note${notes === 1 ? '' : 's'}.`
+}
+
 /** A note in the vault, as the checks see it. */
 export interface SetupNote {
   /** Vault-relative, with forward slashes. */

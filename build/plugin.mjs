@@ -8,6 +8,7 @@ import { join, dirname } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 import { forbiddenImports } from './forbidden-imports.mjs'
+import { writeBundledTexts } from './bundled-texts.mjs'
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..')
 const source = join(root, 'src', 'plugin')
@@ -16,6 +17,7 @@ const out = join(root, 'dist')
 const watch = process.argv.includes('--watch')
 
 await mkdir(out, { recursive: true })
+await writeBundledTexts()
 
 const options = {
   entryPoints: [join(source, 'main.ts')],

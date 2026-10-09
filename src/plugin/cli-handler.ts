@@ -13,11 +13,15 @@ import type { CliData, CliFlags, EventRef } from 'obsidian'
 
 import { parseCommandLine, splitCommandLine } from '../shared/command-line.ts'
 import { COMMAND_FLAGS, renderHelp } from '../shared/command-table.ts'
-import { createContext, isRegistered, runCommand, type Reply } from '../shared/runner.ts'
+import { createContext, runCommand, RUNNERS, type Reply, type RunFunction } from '../shared/runner.ts'
 import { versionLine } from '../shared/rules-version.ts'
 import type { StoragePort } from '../shared/storage.ts'
 import type { VaultSeams } from '../shared/vault.ts'
 import { obsidianPort, type ObsidianStorage } from './obsidian-port.ts'
+import { PLUGIN_RUNNERS } from './install-commands.ts'
+
+/** Every command the handler serves: the shared vault commands and the plugin's install commands. */
+export const SERVED: Readonly<Record<string, RunFunction>> = { ...RUNNERS, ...PLUGIN_RUNNERS }
 
 export const CLI_COMMAND = 'recursive-board'
 
@@ -111,14 +115,13 @@ async function run(params: CliData, deps: CliDeps): Promise<string> {
   const { command, values } = line
   if (values.version) return okReply(`${versionLine(deps.version)}\n`)
   if (values.help || command === undefined || command === 'help') return okReply(renderHelp())
-  if (!(command in COMMAND_FLAGS)) throw new Error(`unknown command "${command}". Run cmd=help.`)
-  if (!isRegistered(command)) throw new Error(`the plugin does not serve wi ${command} yet. Run it with wi.`)
+  if (!(command in COMMAND_FLAGS) || !Object.hasOwn(SERVED, command)) throw new Error(`unknown command "${command}". Run cmd=help.`)
   if (values['vault'] !== undefined) {
     throw new Error('the plugin runs in the vault that obsidian opened. Pass vault=<name> to obsidian, not --vault in cmd.')
   }
 
   const context = createContext({ port: deps.port, version: deps.version, env, ...(deps.seams ? { seams: deps.seams } : {}) })
-  return formatReply(command, await runCommand(context, line))
+  return formatReply(command, await runCommand(context, line, SERVED))
 }
 
 /** The environment a command sees: agent= is WI_AGENT and model= is WI_MODEL, since the plugin has no process environment. */

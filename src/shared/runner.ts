@@ -7,7 +7,7 @@
  * `wi: <message>` on standard error, as wi has always printed it.
  */
 import { RUNNERS } from './commands/index.ts'
-import { UsageError, type CommandContext, type CommandLine, type Reply } from './commands/command.ts'
+import { UsageError, type CommandContext, type CommandLine, type Reply, type RunFunction } from './commands/command.ts'
 import { loadVault, REAL_SEAMS, type Env, type Vault, type VaultSeams } from './vault.ts'
 import type { StoragePort } from './storage.ts'
 import { COMMANDS } from './command-table.ts'
@@ -45,16 +45,20 @@ export function isRegistered(command: string | undefined): command is string {
   return command !== undefined && Object.hasOwn(RUNNERS, command)
 }
 
-/** True when the command's table entry says it writes (docs/adr/0079-the-rules-version-marker-lives-in-the-plugin-data.md). */
+/**
+ * True when the command's table entry says it writes into the vault
+ * (docs/adr/0079-the-rules-version-marker-lives-in-the-plugin-data.md). The plugin's install
+ * commands write nothing, so they read no marker.
+ */
 function writes(command: string): boolean {
-  return COMMANDS.some((entry) => entry.name === command && entry.writes)
+  return COMMANDS.some((entry) => entry.name === command && entry.kind === 'vault' && entry.writes)
 }
 
 /**
  * Runs the command the line names. The context's writers still see every write as it happens,
- * and the reply holds them all.
+ * and the reply holds them all. The plugin passes RUNNERS with its own install commands added.
  */
-export async function runCommand(context: CommandContext, line: CommandLine): Promise<Reply> {
+export async function runCommand(context: CommandContext, line: CommandLine, runners: Readonly<Record<string, RunFunction>> = RUNNERS): Promise<Reply> {
   let stdout = ''
   let stderr = ''
   const run: CommandContext = {
@@ -64,12 +68,14 @@ export async function runCommand(context: CommandContext, line: CommandLine): Pr
   }
   let code: number
   try {
-    if (!isRegistered(line.command)) throw new UsageError(`unknown command "${line.command ?? ''}". Run wi --help.`)
+    if (line.command === undefined || !Object.hasOwn(runners, line.command)) {
+      throw new UsageError(`unknown command "${line.command ?? ''}". Run wi --help.`)
+    }
     if (writes(line.command)) {
       const warning = newerRulesWarning(await readRulesMarker(run.port))
       if (warning !== null) run.err(`wi: ${warning}\n`)
     }
-    code = await RUNNERS[line.command]!(run, line)
+    code = await runners[line.command]!(run, line)
   } catch (error) {
     run.err(`wi: ${error instanceof Error ? error.message : String(error)}\n`)
     code = 2

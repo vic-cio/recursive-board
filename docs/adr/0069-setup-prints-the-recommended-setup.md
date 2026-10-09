@@ -1,7 +1,7 @@
 ---
 status: accepted
 amends: docs/adr/0025-agent-setup.md (setup ends with the recommended agent setup and gains --json)
-amended_by: 0075-git-versioning-is-advice.md (setup offers no hook)
+amended_by: 0075-git-versioning-is-advice.md (setup offers no hook), 0080-the-plugin-serves-setup-doctor-and-update-and-writes-nothing.md (the plugin CLI's setup prints the summary to an agent)
 ---
 # `wi setup` prints the recommended setup and writes no workflow file
 
