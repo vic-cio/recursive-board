@@ -27,6 +27,9 @@ the agent notes in your vault.
 
 ### Changed
 
+- `wi` parses its command line with a parser in `src/shared` that uses no Node, and prints its
+  help from one command table, so the plugin can read the same command line. The behaviour and the
+  help text are unchanged ([0077](docs/adr/0077-one-command-line-in-shared.md)).
 - The area bar shows on a root board only. It holds a chip for every area in options or doing
   anywhere below the root, at any depth, in tree order. A board that is not a root shows no area
   bar, because a live area is also a card in its status column. A chip's count is still the
