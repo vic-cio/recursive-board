@@ -10,13 +10,15 @@
  */
 import {
   CORE_FIELDS, OPTIONAL_FIELDS, STATUSES, isStatus, parseWikilink,
-} from '../../shared/schema.ts'
-import { readRoleTaggedNotes, type Vault, type WorkItem } from '../../shared/vault.ts'
-import { duplicateProcedures, roleTagFor } from '../../shared/role-tags.ts'
-import { PLUGIN_DATA_FILE } from '../../shared/board-settings.ts'
-import { dependencyCycle } from '../../shared/dependencies.ts'
-import { dependenciesOf, titleOf } from '../../shared/item-dependencies.ts'
-import { displayName } from '../../shared/authorship.ts'
+} from '../schema.ts'
+import { readRoleTaggedNotes, type Vault, type WorkItem } from '../vault.ts'
+import { duplicateProcedures, roleTagFor } from '../role-tags.ts'
+import { PLUGIN_DATA_FILE } from '../board-settings.ts'
+import { dependencyCycle } from '../dependencies.ts'
+import { dependenciesOf, titleOf } from '../item-dependencies.ts'
+import { displayName } from '../authorship.ts'
+import type { RunFunction } from './command.ts'
+import { json } from './output.ts'
 
 export type Severity = 'error' | 'warning'
 
@@ -310,4 +312,28 @@ function checkCycles(vault: Vault, report: Reporter): void {
       seen.add(current.relPath)
     }
   }
+}
+
+/** `wi validate`: every problem, then the counts. Exit 1 when the vault has an error. */
+export const runValidate: RunFunction = async (context, line) => {
+  const report = await validate(await context.vault())
+  if (line.values['json'] === true) {
+    context.out(json({
+      ok: report.ok,
+      items: report.itemCount,
+      errors: report.errorCount,
+      warnings: report.warningCount,
+      problems: report.problems,
+    }))
+    return report.ok ? 0 : 1
+  }
+  for (const problem of report.problems) context.out(`${problemLine(problem)}\n`)
+  const counts = `${report.itemCount} work items, ${report.errorCount} errors, ${report.warningCount} warnings`
+  context.out(report.ok ? `ok: ${counts}\n` : `FAILED: ${counts}\n`)
+  return report.ok ? 0 : 1
+}
+
+function problemLine(problem: Problem): string {
+  const mark = problem.severity === 'error' ? 'error' : 'warn '
+  return `${mark}  ${problem.relPath}  [${problem.rule}] ${problem.message}`
 }

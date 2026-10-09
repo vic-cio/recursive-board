@@ -2,8 +2,8 @@ import { test } from 'node:test'
 import assert from 'node:assert/strict'
 
 import { validate } from './validate.ts'
-import { loadVault } from '../vault.ts'
-import { makeVault } from '../test-helpers.ts'
+import { loadVault } from '../../cli/vault.ts'
+import { makeVault } from '../../cli/test-helpers.ts'
 
 test('validate says nothing about an old config file: wi does not read it', async () => {
   const fixture = makeVault()

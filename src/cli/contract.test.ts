@@ -27,8 +27,8 @@ const NOT_VAULT_COMMANDS = new Set(['setup', 'doctor', 'update', 'hook'])
 /** Vault commands with no contract case yet. Each card that moves a command into the registry takes it off. */
 const NOT_YET = new Set([
   'new', 'note', 'area', 'tag', 'depend', 'set', 'claim', 'delegate', 'review', 'approve', 'send-back', 'objective',
-  'agents', 'dashboard', 'release', 'move', 'archive', 'promote', 'demote', 'rm', 'children', 'ready',
-  'show', 'validate', 'retag', 'graph', 'template', 'here',
+  'dashboard', 'release', 'move', 'archive', 'promote', 'demote', 'rm',
+  'retag', 'graph', 'template', 'here',
 ])
 
 interface ContractCase {
@@ -56,6 +56,33 @@ const SEED: Record<string, string> = {
     type: 'work-item', id: 'wi-0005', title: 'Ship', status: 'backlog', parent: '"[[Main]]"', depends_on: '["[[Build server]]"]',
   }),
   'Knowledge/Note.md': '# A note\n',
+}
+
+/** A vault that validates clean, with an agent at work, a person, and a role procedure. */
+const CLEAN: Record<string, string> = {
+  'Boards/Main.md': item({ type: 'work-item', id: 'wi-0001', title: 'Main', board: true, created: '2026-09-01', updated: '2026-09-01' }),
+  'Boards/Launch.md': item({
+    type: 'work-item', id: 'wi-0002', title: 'Launch', status: 'doing', parent: '"[[Main]]"', board: true,
+    created: '2026-09-01', updated: '2026-09-01',
+  }),
+  'Boards/Build server.md': item({
+    type: 'work-item', id: 'wi-0003', title: 'Build server', status: 'doing', parent: '"[[Launch]]"', holder: 'sp-bot',
+    tags: '[role/coder]', created: '2026-09-01', updated: '2026-09-03',
+  }, '## Objective\n\nServe the API.\n\n## Acceptance Criteria\n\n- It starts\n'),
+  'Boards/Write docs.md': item({
+    type: 'work-item', id: 'wi-0004', title: 'Write docs', status: 'options', parent: '"[[Launch]]"', priority: 1,
+    created: '2026-09-01', updated: '2026-09-02',
+  }),
+  'Boards/Ship.md': item({
+    type: 'work-item', id: 'wi-0005', title: 'Ship', status: 'options', parent: '"[[Main]]"', depends_on: '["[[Build server]]"]',
+    created: '2026-09-01', updated: '2026-09-01',
+  }),
+  'Boards/Review copy.md': item({
+    type: 'work-item', id: 'wi-0006', title: 'Review copy', status: 'doing', parent: '"[[Launch]]"', holder: 'Victor',
+    created: '2026-09-01', updated: '2026-09-01',
+  }),
+  'People/Victor.md': item({ type: 'person' }),
+  'Roles/Coder.md': item({ type: 'role', tags: '[role/coder]' }, '## Procedure\n'),
 }
 
 const CASES: ContractCase[] = [
@@ -104,6 +131,102 @@ const CASES: ContractCase[] = [
     files: SEED,
     argv: ['status', 'Build server'],
     expect: { code: 2, stderr: /^wi: wi status needs a <ref> and a <status>/ },
+  },
+  {
+    name: 'children: the four status groups, with the board, area and waits-on marks',
+    files: SEED,
+    argv: ['children', 'Main'],
+    expect: { code: 0, stdout: /^wi-0001 {2}Main {2}\[board\]\n {2}backlog \(1\)\n {4}wi-0005 {2}backlog {2}Ship {2}\[waits on 1\]\n {2}options \(0\)\n {2}doing \(1\)\n {4}wi-0002 {2}doing {4}Launch {2}\(2\) {2}\[board\]\n {2}done \(0\)\n$/ },
+  },
+  {
+    name: 'children: --tree lists every level, indented',
+    files: SEED,
+    argv: ['children', 'Main', '--tree'],
+    expect: { code: 0, stdout: /\n {4}wi-0003 {2}doing {4}Build server\n/ },
+  },
+  {
+    name: 'children: --status filters the flat list',
+    files: SEED,
+    argv: ['children', 'Launch', '--status', 'done'],
+    expect: { code: 0, stdout: /^wi-0002 {2}Launch {2}\[board\]\n {2}wi-0004 {2}done {5}Write docs\n$/ },
+  },
+  {
+    name: 'children: --json names what each child waits on',
+    files: SEED,
+    argv: ['children', 'Main', '--json'],
+    expect: { code: 0, stdout: /"waits_on": \[\n\s+"wi-0003"\n\s+\]/ },
+  },
+  {
+    name: 'children: a missing ref is a usage error',
+    files: SEED,
+    argv: ['children'],
+    expect: { code: 2, stderr: /^wi: wi children needs a <ref>\. A project's AGENTS\.md names its board\.\n$/ },
+  },
+  {
+    name: 'show: the text form is the JSON, with the role procedure and the ancestry',
+    files: CLEAN,
+    argv: ['show', 'Build server'],
+    expect: { code: 0, stdout: /"procedures": \[\n\s+\{\n\s+"tag": "role\/coder",\n\s+"notes": \[\n\s+"Roles\/Coder\.md"[\s\S]*"title": "Launch"/ },
+  },
+  {
+    name: 'show: --json',
+    files: CLEAN,
+    argv: ['show', 'wi-0005', '--json'],
+    expect: { code: 0, stdout: /"satisfied": false/ },
+  },
+  {
+    name: 'show: a missing ref is a usage error',
+    files: CLEAN,
+    argv: ['show'],
+    expect: { code: 2, stderr: /^wi: wi show needs a <ref>\.\n$/ },
+  },
+  {
+    name: 'ready: the free option cards, and a count of the excluded',
+    files: CLEAN,
+    argv: ['ready'],
+    expect: { code: 0, stdout: /^1 ready card\n {2}wi-0004 {2}Write docs\n1 option card excluded; use --json for reasons\.\n$/ },
+  },
+  {
+    name: 'ready: --json gives the reasons, inside --parent',
+    files: CLEAN,
+    argv: ['ready', '--parent', 'Main', '--holder', 'sp-bot', '--json'],
+    expect: { code: 0, stdout: /"reasons": \[\n\s+"dependency"\n\s+\]/ },
+  },
+  {
+    name: 'ready: a card reference is a usage error',
+    files: CLEAN,
+    argv: ['ready', 'Main'],
+    expect: { code: 2, stderr: /^wi: wi ready takes no card reference\.\n$/ },
+  },
+  {
+    name: 'agents: an agent counts, a person does not',
+    files: CLEAN,
+    argv: ['agents'],
+    expect: { code: 0, stdout: /^1 active, limit none\n {2}sp-bot\n {4}wi-0003 {2}Build server\n$/ },
+  },
+  {
+    name: 'agents: --json',
+    files: CLEAN,
+    argv: ['agents', '--json'],
+    expect: { code: 0, stdout: /"activeAgents": 1,\n\s+"maxAgents": null/ },
+  },
+  {
+    name: 'validate: a clean vault',
+    files: CLEAN,
+    argv: ['validate'],
+    expect: { code: 0, stdout: /^ok: 6 work items, 0 errors, 0 warnings\n$/ },
+  },
+  {
+    name: 'validate: a vault with errors exits 1',
+    files: SEED,
+    argv: ['validate'],
+    expect: { code: 1, stdout: /^error {2}Boards\/Build server\.md {2}\[date-missing\][\s\S]*warn {3}Boards\/Build server\.md {2}\[unknown-key\][\s\S]*\nFAILED: 5 work items, \d+ errors, 1 warnings\n$/ },
+  },
+  {
+    name: 'validate: --json on a vault with errors exits 1',
+    files: SEED,
+    argv: ['validate', '--json'],
+    expect: { code: 1, stdout: /^\{\n {2}"ok": false,\n {2}"items": 5,/ },
   },
 ]
 

@@ -21,7 +21,7 @@ import { WORK_ITEM_TYPE } from '../../shared/schema.ts'
 import { packageRoot, readPackageFile } from '../package-files.ts'
 import { findVaultRoot, getDefaultVault, loadVault, NOT_NOTES, type Vault } from '../vault.ts'
 import { MANAGED_MARKER, MANAGED_TEXT, skillDestinations } from './setup.ts'
-import { validate } from './validate.ts'
+import { validate } from '../../shared/commands/validate.ts'
 
 const run = promisify(execFile)
 const PACKAGE = 'recursive-board'

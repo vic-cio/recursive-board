@@ -2,8 +2,8 @@ import { test, afterEach } from 'node:test'
 import assert from 'node:assert/strict'
 
 import { validate, type Problem } from './validate.ts'
-import { loadVault } from '../vault.ts'
-import { makeVault, item, type Fixture } from '../test-helpers.ts'
+import { loadVault } from '../../cli/vault.ts'
+import { makeVault, item, type Fixture } from '../../cli/test-helpers.ts'
 
 let fixture: Fixture | undefined
 afterEach(() => {

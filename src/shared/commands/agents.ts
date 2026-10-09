@@ -3,11 +3,13 @@
  * the shared rule from src/shared/agents.ts, so `wi agents` and the warning in `wi claim` agree
  * (docs/adr/0066-count-only-working-agents.md).
  */
-import { activeAgents, type AgentItem, type AgentTree } from '../../shared/agents.ts'
-import { holderOf } from '../../shared/holder.ts'
-import { awaitsReviewVerdict } from '../../shared/review.ts'
-import { titleOf } from '../../shared/item-dependencies.ts'
-import { maxAgentsForRun, readPeople, type Env, type Vault, type WorkItem } from '../../shared/vault.ts'
+import { activeAgents, type AgentItem, type AgentTree } from '../agents.ts'
+import { holderOf } from '../holder.ts'
+import { awaitsReviewVerdict } from '../review.ts'
+import { titleOf } from '../item-dependencies.ts'
+import { maxAgentsForRun, readPeople, type Env, type Vault, type WorkItem } from '../vault.ts'
+import { UsageError, type RunFunction } from './command.ts'
+import { json } from './output.ts'
 
 interface Card extends AgentItem {
   item: WorkItem
@@ -52,4 +54,13 @@ export function renderAgents(report: AgentsReport): string {
     lines.push(`  ${agent.name}`, ...agent.cards.map((card) => `    ${card.id ?? '?'}  ${card.title}`))
   }
   return lines.join('\n') + '\n'
+}
+
+/** `wi agents`: the active agents and the limit. WI_MAX_AGENTS comes from the context's environment. */
+export const runAgents: RunFunction = async (context, line) => {
+  const vault = await context.vault()
+  if (line.positionals.length > 1) throw new UsageError('wi agents takes no card reference.')
+  const report = await agentsReport(vault, context.env)
+  context.out(line.values['json'] === true ? json(report) : renderAgents(report))
+  return 0
 }

@@ -5,7 +5,7 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 
 import { loadVault } from '../src/cli/vault.ts'
-import { validate } from '../src/cli/commands/validate.ts'
+import { validate } from '../src/shared/commands/validate.ts'
 import { BENCH_ROOT, writeBenchFixture } from './bench-fixture.ts'
 
 test('benchmark fixture is a valid, branched vault with the requested number of cards', async () => {

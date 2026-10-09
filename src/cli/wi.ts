@@ -15,7 +15,7 @@ import { resolve } from 'node:path'
 import { loadVault, findVaultRoot, getDefaultVault } from './vault.ts'
 import { nodePort } from './node-port.ts'
 import {
-  loadVault as loadVaultFrom, maxAgentsForRun, readRoleTaggedNotes, type Vault, type WorkItem,
+  loadVault as loadVaultFrom, maxAgentsForRun, type Vault, type WorkItem,
 } from '../shared/vault.ts'
 import { createContext, isRegistered, runCommand, UsageError } from '../shared/runner.ts'
 import { createItem } from './commands/new.ts'
@@ -23,10 +23,6 @@ import { claimItem, releaseItem } from './commands/claim-release.ts'
 import { delegate } from './commands/delegate.ts'
 import { addNote } from './commands/note.ts'
 import { setTag } from './commands/tag.ts'
-import { listChildren, type ChildRow } from './commands/children.ts'
-import { readyCards } from './commands/ready.ts'
-import { showCard } from './commands/show.ts'
-import { validate, type Problem } from './commands/validate.ts'
 import { removeItem } from './commands/remove.ts'
 import { moveItem } from './commands/move.ts'
 import { archiveItem } from './commands/archive.ts'
@@ -34,12 +30,12 @@ import { setPromoted } from './commands/promote.ts'
 import { setArea } from './commands/area.ts'
 import { setDependency } from './commands/depend.ts'
 import { setPeople } from './commands/set.ts'
-import { dependenciesOf, openDependencies, titleOf } from '../shared/item-dependencies.ts'
+import { titleOf } from '../shared/item-dependencies.ts'
 import { runSetup } from './commands/setup.ts'
 import { npmLatestVersion, renderDoctor, runDoctor } from './commands/doctor.ts'
 import { realUpdateSeams, runUpdate } from './commands/update.ts'
 import { packageRoot } from './package-files.ts'
-import { activeAgentsOf, agentsReport, renderAgents } from './commands/agents.ts'
+import { activeAgentsOf } from '../shared/commands/agents.ts'
 import { giveVerdict, sendForReview } from './commands/review.ts'
 import { parseCommandLine, type Values } from '../shared/command-line.ts'
 import { COMMAND_FLAGS, renderHelp } from '../shared/command-table.ts'
@@ -162,10 +158,6 @@ async function main(argv: string[]): Promise<number> {
     case 'approve':
     case 'send-back':
       return runVerdict(vault, command, rest, values, json)
-    case 'agents':
-      return runAgents(vault, rest, json)
-    case 'ready':
-      return runReady(vault, rest, values, json)
     case 'release':
       return runRelease(vault, rest, values, json)
     case 'move':
@@ -178,13 +170,6 @@ async function main(argv: string[]): Promise<number> {
       return runPromote(vault, rest, false, json)
     case 'rm':
       return runRemove(vault, rest, values, json)
-    case 'children':
-      if (rest.length === 0) throw new UsageError('wi children needs a <ref>. A project\'s AGENTS.md names its board.')
-      return runChildren(vault, rest, values, json)
-    case 'show':
-      return runShow(vault, rest, json)
-    case 'validate':
-      return runValidate(vault, json)
     default:
       throw new UsageError(`unknown command "${command}". Run wi --help.`)
   }
@@ -477,28 +462,6 @@ async function runNote(vault: Vault, rest: string[], values: Values, json: boole
   return 0
 }
 
-async function runAgents(vault: Vault, rest: string[], json: boolean): Promise<number> {
-  if (rest.length > 0) throw new UsageError('wi agents takes no card reference.')
-  const report = await agentsReport(vault, process.env)
-  if (json) print(report)
-  else process.stdout.write(renderAgents(report))
-  return 0
-}
-
-function runReady(vault: Vault, rest: string[], values: Values, json: boolean): number {
-  if (rest.length > 0) throw new UsageError('wi ready takes no card reference.')
-  const agent = values['holder'] === undefined ? undefined : singleLineOption(values, 'holder')
-  const parent = typeof values['parent'] === 'string' ? values['parent'] : undefined
-  const result = readyCards(vault, { ...(agent === undefined ? {} : { agent }), ...(parent === undefined ? {} : { parent }) })
-  if (json) print(result)
-  else {
-    process.stdout.write(`${result.counts.ready} ready card${result.counts.ready === 1 ? '' : 's'}\n`)
-    for (const card of result.ready) process.stdout.write(`  ${card.id ?? '?'}  ${card.title}\n`)
-    if (result.counts.excluded > 0) process.stdout.write(`${result.counts.excluded} option card${result.counts.excluded === 1 ? '' : 's'} excluded; use --json for reasons.\n`)
-  }
-  return 0
-}
-
 async function runRelease(vault: Vault, rest: string[], values: Values, json: boolean): Promise<number> {
   const ref = rest.join(' ').trim()
   if (ref === '') throw new UsageError('wi release needs a <ref> and --reason <text>.')
@@ -598,111 +561,8 @@ async function runRemove(
   return 0
 }
 
-async function runShow(vault: Vault, rest: string[], json: boolean): Promise<number> {
-  const ref = rest.join(' ').trim()
-  if (ref === '') throw new UsageError('wi show needs a <ref>.')
-  const card = showCard(vault, ref, await readRoleTaggedNotes(vault.port))
-  if (json) print(card)
-  else process.stdout.write(`${JSON.stringify(card, null, 2)}\n`)
-  return 0
-}
-
-function runChildren(vault: Vault, rest: string[], values: Values, json: boolean): number {
-  const ref = rest.join(' ').trim()
-  if (ref === '') throw new UsageError('wi children needs a <ref>.')
-
-  const listing = listChildren(vault, ref, {
-    ...(typeof values['status'] === 'string' ? { status: values['status'] } : {}),
-    recursive: values['tree'] === true,
-    archived: values['archived'] === true,
-  })
-
-  if (json) {
-    print({
-      parent: { id: listing.parent.id, path: listing.parent.relPath, board: listing.parent.board },
-      cycle: listing.cycle,
-      areas: listing.areas.map((row) => ({
-        id: row.item.id,
-        title: row.item.title,
-        path: row.item.relPath,
-        children: row.childCount,
-        depth: row.depth,
-        archived: row.archived,
-      })),
-      children: listing.children.map((row) => ({
-        id: row.item.id,
-        title: row.item.title,
-        path: row.item.relPath,
-        status: row.item.status ?? null,
-        children: row.childCount,
-        depth: row.depth,
-        archived: row.archived,
-        waits_on: openDependencies(vault, row.item).map((item) => item.id ?? item.stem),
-        depends_on: dependenciesOf(vault, row.item).resolved.map((item) => item.id ?? item.stem),
-      })),
-    })
-    return 0
-  }
-
-  const out: string[] = [
-    `${label(listing.parent)}${listing.parent.board ? '  [board]' : ''}`,
-  ]
-  if (listing.areas.length > 0) {
-    out.push(`  Areas (${listing.areas.length})`)
-    for (const row of listing.areas) out.push(`    ${'  '.repeat(row.depth)}${row3(row, vault)}`)
-  }
-  if (listing.children.length === 0 && listing.areas.length === 0) {
-    out.push('  no children')
-  } else if (values['tree'] === true || typeof values['status'] === 'string') {
-    for (const row of listing.children) out.push(`  ${'  '.repeat(row.depth)}${row3(row, vault)}`)
-  } else {
-    for (const [status, rows] of listing.byStatus) {
-      out.push(`  ${status} (${rows.length})`)
-      for (const row of rows) out.push(`    ${row3(row, vault)}`)
-    }
-  }
-  if (listing.cycle) out.push('  ! the parent chain loops. Run wi validate.')
-  process.stdout.write(`${out.join('\n')}\n`)
-  return 0
-}
-
-async function runValidate(vault: Vault, json: boolean): Promise<number> {
-  const report = await validate(vault)
-  if (json) {
-    print({
-      ok: report.ok,
-      items: report.itemCount,
-      errors: report.errorCount,
-      warnings: report.warningCount,
-      problems: report.problems,
-    })
-    return report.ok ? 0 : 1
-  }
-
-  for (const problem of report.problems) process.stdout.write(`${line(problem)}\n`)
-  const counts = `${report.itemCount} work items, ${report.errorCount} errors, ${report.warningCount} warnings`
-  process.stdout.write(report.ok ? `ok: ${counts}\n` : `FAILED: ${counts}\n`)
-  return report.ok ? 0 : 1
-}
-
-function line(problem: Problem): string {
-  const mark = problem.severity === 'error' ? 'error' : 'warn '
-  return `${mark}  ${problem.relPath}  [${problem.rule}] ${problem.message}`
-}
-
 function label(item: WorkItem): string {
   return `${item.id ?? '(no id)'}  ${item.title ?? item.stem}`
-}
-
-function row3(row: ChildRow, vault: Vault): string {
-  const status = row.item.status ?? '—'
-  const kids = row.childCount > 0 ? `  (${row.childCount})` : ''
-  const board = row.item.board ? '  [board]' : ''
-  const area = row.item.area ? '  [area]' : ''
-  const archived = row.archived ? '  [archived]' : ''
-  const open = row.item.status === 'done' ? 0 : openDependencies(vault, row.item).length
-  const waits = open > 0 ? `  [waits on ${open}]` : ''
-  return `${row.item.id ?? '(no id)'}  ${status.padEnd(7)}  ${row.item.title ?? row.item.stem}${kids}${board}${area}${waits}${archived}`
 }
 
 function print(value: unknown): void {

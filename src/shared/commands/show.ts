@@ -1,10 +1,12 @@
 /** A complete read of one card for agents. This command never changes a vault file. */
-import { getList } from '../../shared/frontmatter.ts'
-import { holderOf } from '../../shared/holder.ts'
-import { bodyOf, listItems, section } from '../../shared/sections.ts'
-import { dependenciesOf, titleOf } from '../../shared/item-dependencies.ts'
-import { procedureNotes, roleTags, type TaggedNote } from '../../shared/role-tags.ts'
-import type { Vault, WorkItem } from '../../shared/vault.ts'
+import { getList } from '../frontmatter.ts'
+import { holderOf } from '../holder.ts'
+import { bodyOf, listItems, section } from '../sections.ts'
+import { dependenciesOf, titleOf } from '../item-dependencies.ts'
+import { procedureNotes, roleTags, type TaggedNote } from '../role-tags.ts'
+import { readRoleTaggedNotes, type Vault, type WorkItem } from '../vault.ts'
+import { UsageError, type RunFunction } from './command.ts'
+import { json } from './output.ts'
 
 function stringField(item: WorkItem, key: string): string | null {
   const value = item.frontmatter.get(key)
@@ -109,4 +111,13 @@ export function showCard(vault: Vault, ref: string, tagged: readonly TaggedNote[
     archived: item.archived,
     effectiveArchived: vault.isArchived(item),
   }
+}
+
+/** `wi show <ref>`: the card as JSON. The text form is the same JSON. */
+export const runShow: RunFunction = async (context, line) => {
+  const vault = await context.vault()
+  const ref = line.positionals.slice(1).join(' ').trim()
+  if (ref === '') throw new UsageError('wi show needs a <ref>.')
+  context.out(json(showCard(vault, ref, await readRoleTaggedNotes(vault.port))))
+  return 0
 }

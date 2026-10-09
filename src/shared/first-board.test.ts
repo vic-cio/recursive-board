@@ -5,7 +5,7 @@ import { join } from 'node:path'
 
 import { firstBoardPlan } from './first-board.ts'
 import { loadVault } from '../cli/vault.ts'
-import { validate } from '../cli/commands/validate.ts'
+import { validate } from './commands/validate.ts'
 import { makeVault, type Fixture } from '../cli/test-helpers.ts'
 
 let fixture: Fixture | undefined

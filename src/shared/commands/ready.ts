@@ -1,9 +1,11 @@
 /** Dispatcher selection from current vault state. This command writes nothing. */
-import { dependenciesOf, openDependencies, titleOf } from '../../shared/item-dependencies.ts'
-import { holderOf, isAnyAgent } from '../../shared/holder.ts'
-import type { Vault, WorkItem } from '../../shared/vault.ts'
-import { getList } from '../../shared/frontmatter.ts'
-import { roleTags } from '../../shared/role-tags.ts'
+import { dependenciesOf, openDependencies, titleOf } from '../item-dependencies.ts'
+import { holderOf, isAnyAgent } from '../holder.ts'
+import type { Vault, WorkItem } from '../vault.ts'
+import { getList } from '../frontmatter.ts'
+import { roleTags } from '../role-tags.ts'
+import { UsageError, type RunFunction, type Values } from './command.ts'
+import { json } from './output.ts'
 
 export type ExclusionReason = 'claimed' | 'dependency' | 'invalid-dependency' | 'active-child' | 'missing-parent'
 
@@ -91,4 +93,32 @@ export function readyCards(vault: Vault, options: ReadyOptions = {}) {
     excluded: excluded.map(({ item, reasons }) => ({ ...summary(item), reasons })),
     counts: { ready: ready.length, excluded: excluded.length },
   }
+}
+
+/** `wi ready`: the option cards a worker may claim now, in the order to take them. */
+export const runReady: RunFunction = async (context, line) => {
+  const vault = await context.vault()
+  const { values } = line
+  if (line.positionals.length > 1) throw new UsageError('wi ready takes no card reference.')
+  const agent = values['holder'] === undefined ? undefined : singleLineOption(values, 'holder')
+  const parent = typeof values['parent'] === 'string' ? values['parent'] : undefined
+  const result = readyCards(vault, { ...(agent === undefined ? {} : { agent }), ...(parent === undefined ? {} : { parent }) })
+  if (values['json'] === true) {
+    context.out(json(result))
+    return 0
+  }
+  context.out(`${result.counts.ready} ready card${result.counts.ready === 1 ? '' : 's'}\n`)
+  for (const card of result.ready) context.out(`  ${card.id ?? '?'}  ${card.title}\n`)
+  if (result.counts.excluded > 0) context.out(`${result.counts.excluded} option card${result.counts.excluded === 1 ? '' : 's'} excluded; use --json for reasons.\n`)
+  return 0
+}
+
+/** A flag that must hold one line of text. The same refusal as wi claim gives. */
+function singleLineOption(values: Values, key: string): string {
+  const value = values[key]
+  if (typeof value !== 'string' || value.trim() === '') {
+    throw new UsageError(`--${key} needs non-empty text.`)
+  }
+  if (/[\r\n]/.test(value)) throw new UsageError(`--${key} must be one line.`)
+  return value.trim()
 }

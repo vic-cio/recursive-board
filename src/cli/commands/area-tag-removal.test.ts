@@ -4,7 +4,7 @@ import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
 
 import { createItem } from './new.ts'
-import { validate } from './validate.ts'
+import { validate } from '../../shared/commands/validate.ts'
 import { loadVault } from '../vault.ts'
 import { getList } from '../../shared/frontmatter.ts'
 import { makeVault, item, type Fixture } from '../test-helpers.ts'

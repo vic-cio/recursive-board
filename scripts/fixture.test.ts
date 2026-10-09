@@ -5,7 +5,7 @@ import { join } from 'node:path'
 
 import { generate, writeFixture } from './fixture.ts'
 import { loadVault } from '../src/cli/vault.ts'
-import { validate } from '../src/cli/commands/validate.ts'
+import { validate } from '../src/shared/commands/validate.ts'
 import { parseFrontmatter } from '../src/shared/frontmatter.ts'
 import { toColumns } from '../src/plugin/index.ts'
 import { makeVault, type Fixture } from '../src/cli/test-helpers.ts'
