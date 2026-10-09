@@ -6,12 +6,12 @@
  * Obsidian port and reads the reply. A usage error or a thrown error becomes exit 2 and
  * `wi: <message>` on standard error, as wi has always printed it.
  */
-import { COMMANDS } from './commands/index.ts'
+import { RUNNERS } from './commands/index.ts'
 import { UsageError, type CommandContext, type CommandLine, type Reply } from './commands/command.ts'
 import { loadVault, REAL_SEAMS, type Env, type Vault, type VaultSeams } from './vault.ts'
 import type { StoragePort } from './storage.ts'
 
-export { COMMANDS }
+export { RUNNERS }
 export { UsageError, type CommandContext, type CommandLine, type Reply, type RunFunction, type Values } from './commands/command.ts'
 
 export interface ContextOptions {
@@ -40,7 +40,7 @@ export function createContext(options: ContextOptions): CommandContext {
 
 /** True when the registry holds the command, so runCommand can run it. */
 export function isRegistered(command: string | undefined): command is string {
-  return command !== undefined && Object.hasOwn(COMMANDS, command)
+  return command !== undefined && Object.hasOwn(RUNNERS, command)
 }
 
 /**
@@ -58,7 +58,7 @@ export async function runCommand(context: CommandContext, line: CommandLine): Pr
   let code: number
   try {
     if (!isRegistered(line.command)) throw new UsageError(`unknown command "${line.command ?? ''}". Run wi --help.`)
-    code = await COMMANDS[line.command]!(run, line)
+    code = await RUNNERS[line.command]!(run, line)
   } catch (error) {
     run.err(`wi: ${error instanceof Error ? error.message : String(error)}\n`)
     code = 2

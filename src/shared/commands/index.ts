@@ -5,6 +5,6 @@
 import type { RunFunction } from './command.ts'
 import { runStatus } from './status.ts'
 
-export const COMMANDS: Readonly<Record<string, RunFunction>> = {
+export const RUNNERS: Readonly<Record<string, RunFunction>> = {
   status: runStatus,
 }

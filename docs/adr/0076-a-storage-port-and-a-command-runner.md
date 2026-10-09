@@ -37,7 +37,7 @@ command line into a reply on any port.
   types from `obsidian`, so `node --test` loads it over the fake in `src/plugin/fake-obsidian.ts`.
 - **The runner is `src/shared/runner.ts`.** `createContext` makes a `CommandContext`: the port, an
   environment record, the version, the clock and the chance (`VaultSeams`), the `out` and `err`
-  writers, and a vault index that is read on the first call. `COMMANDS` in
+  writers, and a vault index that is read on the first call. `RUNNERS` in
   `src/shared/commands/index.ts` maps a command name to a run function that takes the context and
   the parsed `CommandLine`. `runCommand(context, line)` runs it and returns a `Reply` (code,
   stdout, stderr); a usage error or any thrown error becomes exit 2 and `wi: <message>` on

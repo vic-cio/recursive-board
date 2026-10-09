@@ -6,17 +6,10 @@
  * the clock and the chance. It never reads `process`, so it runs in the plugin as in wi.
  */
 import type { StoragePort } from '../storage.ts'
+import type { CommandLine } from '../command-line.ts'
 import type { Env, Vault, VaultSeams } from '../vault.ts'
 
-/** Parsed flag values, as `src/cli/flags.ts` gives them. */
-export type Values = Record<string, string | string[] | boolean | undefined>
-
-/** A parsed command line. `positionals[0]` is the command name. */
-export interface CommandLine {
-  command: string | undefined
-  positionals: string[]
-  values: Values
-}
+export type { CommandLine, Values } from '../command-line.ts'
 
 /** A command line that cannot run as typed. wi exits 2 for it, as for any other error. */
 export class UsageError extends Error {}
