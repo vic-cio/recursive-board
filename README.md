@@ -1,6 +1,6 @@
 # Recursive Board
 
-> **Install with your agent.** Paste this prompt into your coding agent: "Install the Recursive Board plugin in my Obsidian vault. Ask me which vault. Download `main.js`, `manifest.json` and `styles.css` from https://github.com/vic-cio/recursive-board/releases/latest into the vault's `.obsidian/plugins/recursive-board/` folder. Tell me to enable Recursive Board in Settings → Community plugins. If agents will work the board on this computer, tell me to install the Obsidian installer 1.12.7 or later from https://obsidian.md/download and to turn on Settings → General → Advanced → Command line interface. On a headless machine with no Obsidian app, or for scripts, install the `wi` CLI instead: check that Node.js 20.12 or later is installed, run `npm install --global recursive-board`, then run `wi setup`."
+> **Install with your agent.** Paste this prompt into your coding agent: "Install the Recursive Board plugin in my Obsidian vault. Ask me which vault. Tell me to open Settings → Community plugins → Browse in Obsidian, find Recursive Board, select Install, then enable it. If I cannot use Browse, download `main.js`, `manifest.json` and `styles.css` from https://github.com/vic-cio/recursive-board/releases/latest into the vault's `.obsidian/plugins/recursive-board/` folder, and tell me to enable Recursive Board in Settings → Community plugins. If agents will work the board on this computer, tell me to install the Obsidian installer 1.12.7 or later from https://obsidian.md/download and to turn on Settings → General → Advanced → Command line interface. On a headless machine with no Obsidian app, or for scripts, install the `wi` CLI instead: check that Node.js 20.12 or later is installed, run `npm install --global recursive-board`, then run `wi setup`."
 >
 > To install without an agent, see [Install the Obsidian plugin](#install-the-obsidian-plugin). For headless use and scripts, see [Install `wi`](#install-wi).
 
@@ -8,7 +8,7 @@ Recursive Board turns a folder of Markdown files in an Obsidian vault into a hie
 
 **Markdown is canonical. The plugin is a view, never the database.** The plugin renders and edits work items in Obsidian. The `wi` command-line tool supports scripts and agents. Both use the same schema and rules.
 
-Recursive Board works with local vaults and vaults synchronized by Obsidian Sync or another sync client. Install the plugin files in the vault's `.obsidian` folder, and install `wi` wherever you run commands. Sync clients can then synchronize the Markdown and plugin files according to their settings.
+Recursive Board works with local vaults and vaults synchronized by Obsidian Sync or another sync client. Install the plugin files in the vault's `.obsidian` folder. `wi` is optional: install it where you run headless commands or scripts. Sync clients can then synchronize the Markdown and plugin files according to their settings.
 
 ## Work items
 
@@ -113,9 +113,9 @@ To build your own dashboard, read the card files, or use these `wi` commands:
 
 ## Install the Obsidian plugin
 
-Once the plugin is listed in the Community plugins directory, open **Settings → Community plugins → Browse**, find **Recursive Board**, select **Install**, then enable it.
+Open **Settings → Community plugins → Browse**, find **Recursive Board**, select **Install**, then enable it.
 
-Until the listing is live, install the plugin from the GitHub release:
+To install it manually, use the GitHub release:
 
 1. Download `main.js`, `manifest.json`, and `styles.css` from the [latest release](https://github.com/vic-cio/recursive-board/releases/latest).
 2. Create the folder `.obsidian/plugins/recursive-board/` in the vault.

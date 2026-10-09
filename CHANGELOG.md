@@ -58,6 +58,10 @@ the agent notes in your vault.
   community listing is live. `wi` on npm is the option for headless use and scripts. The
   install text asks for the Obsidian installer 1.12.7 or later and the Command line interface
   setting when agents work the board on a desktop.
+- The README install prompt installs the plugin first, from **Settings → Community plugins →
+  Browse**, with the GitHub release as the manual option. `wi` on npm is the option for headless
+  use and scripts. The install text asks for the Obsidian installer 1.12.7 or later and the
+  Command line interface setting when agents work the board on a desktop.
 - The area bar shows on a root board only. It holds a chip for every area in options or doing
   anywhere below the root, at any depth, in tree order. A board that is not a root shows no area
   bar, because a live area is also a card in its status column. A chip's count is still the
