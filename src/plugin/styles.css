@@ -531,6 +531,13 @@
   color: var(--text-muted);
 }
 
+/* The icon's wrapper span is a flex item of the badge, so it is a block holding an inline svg. The svg then
+   sits on a text baseline inside a line box of 1.5 line heights, which lifts it above the number's centre.
+   A flex wrapper makes the svg its only box, and the badge's align-items centres that box. */
+.wi-badge-icon {
+  display: inline-flex;
+}
+
 .wi-badge .svg-icon,
 .wi-badge-icon .svg-icon {
   width: 11px;
