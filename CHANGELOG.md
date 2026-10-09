@@ -67,6 +67,8 @@ the agent notes in your vault.
 
 ### Removed
 
+- A card that is a board no longer shows a columns badge next to its child count. The Promote and
+  Demote control and menu item stay.
 - `wi hook` is removed, with `install`, `uninstall` and `status`. `wi hook` is now an unknown
   command. A hook that `wi hook install` wrote earlier keeps working. Delete
   `.git/hooks/pre-commit` to remove it.

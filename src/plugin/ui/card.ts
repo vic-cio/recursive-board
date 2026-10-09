@@ -128,17 +128,13 @@ export function renderLabels(host: HTMLElement, labels: string[]): void {
   }
 }
 
-/** Child count, board, priority, waiting marker, owner or agent initial. No other fields appear on the collapsed face. */
+/** Child count, priority, waiting marker, owner or agent initial. No other fields appear on the collapsed face. */
 function renderBadges(host: HTMLElement, ctx: RenderContext, meta: WorkItemMeta): void {
   const children = ctx.index.childCount(meta.file)
   if (children > 0) {
     const badge = host.createSpan({ cls: 'wi-badge wi-badge-children' })
     setIcon(badge.createSpan({ cls: 'wi-badge-icon' }), 'list')
     badge.createSpan({ text: String(children) })
-  }
-  if (meta.board) {
-    const badge = host.createSpan({ cls: 'wi-badge wi-badge-board', attr: { 'aria-label': 'Board' } })
-    setIcon(badge, 'columns-3')
   }
   if (meta.priority !== undefined) {
     host.createSpan({ cls: 'wi-badge wi-badge-priority', text: `P${meta.priority}` })
