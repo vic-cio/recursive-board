@@ -2,7 +2,7 @@ import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 
-import { agentSetupChecks, isSetupNote, skillCheck, type AgentSetupInput, type CheckResult, type SetupNote } from './doctor.ts'
+import { agentSetupChecks, isSetupNote, rulesCheck, skillCheck, type AgentSetupInput, type CheckResult, type SetupNote } from './doctor.ts'
 
 const PLAYBOOK = readFileSync(new URL('../../docs/playbook.md', import.meta.url), 'utf8')
 
@@ -183,4 +183,16 @@ test('isSetupNote picks the notes whose text the checks read', () => {
   assert.equal(isSetupNote(note('Roles/Other.md', { type: 'procedure' })), true)
   assert.equal(isSetupNote(note('Notes/Plain.md')), false)
   assert.equal(isSetupNote(note('Boards/Card.md', { tags: ['role/coder'], workItem: true })), false)
+})
+
+test('rulesCheck passes on an equal marker and reports a mismatch either way', () => {
+  assert.equal(rulesCheck(3, 'wi', 3).level, 'pass')
+  const newer = rulesCheck(4, 'wi', 3)
+  assert.equal(newer.level, 'fix')
+  assert.match(newer.message, /rules version 4.*wi has rules version 3.*Update wi\./)
+  const older = rulesCheck(2, 'wi', 3)
+  assert.equal(older.level, 'fix')
+  assert.match(older.message, /Update the plugin/)
+  assert.equal(rulesCheck(null, 'wi', 3).level, 'note')
+  assert.equal(rulesCheck(3, 'wi', 3).id, 'rules')
 })

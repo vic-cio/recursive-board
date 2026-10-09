@@ -11,6 +11,8 @@ import { promisify } from 'node:util'
 import { item, makeVault, type Fixture } from '../test-helpers.ts'
 import { compareVersions, npmLatestVersion, renderDoctor, runDoctor, type DoctorOptions, type DoctorReport } from './doctor.ts'
 import { MANAGED_MARKER, MANAGED_TEXT, skillDestinations } from './setup.ts'
+import { PLUGIN_DATA_FILE } from '../../shared/board-settings.ts'
+import { RULES_VERSION } from '../../shared/rules-version.ts'
 
 const run = promisify(execFile)
 const ENTRY = fileURLToPath(new URL('../wi.ts', import.meta.url))
@@ -51,7 +53,7 @@ function setup(): Setup {
 
 /** A vault that follows the recommendations, with both skill copies installed. */
 function healthy(s: Setup): void {
-  s.vault.writeSettings('{"maxAgents":2}')
+  s.vault.write(PLUGIN_DATA_FILE, JSON.stringify({ board: { maxAgents: 2 }, rulesVersion: RULES_VERSION }))
   s.vault.write(PLUGIN_MANIFEST, JSON.stringify({ id: 'recursive-board', version: VERSION }))
   s.vault.write('AGENTS.md', '# Rules\n\n## Agents and roles\n\nEvery agent is a worker.\n')
   s.vault.write('Roles/Dispatching.md', '---\ntype: procedure\n---\n\n7. Wait in the foreground. Never wait in a background task.\n')
@@ -99,7 +101,7 @@ test('a vault that follows each recommendation passes every check, and doctor wr
     assert.equal(report.broken, false)
     assert.equal(report.vault, s.vault.root)
     assert.deepEqual(report.install.map((r) => r.id),
-      ['node', 'package', 'wi-version', 'vault', 'plugin-version', 'board-settings', 'hook', 'validate'])
+      ['node', 'package', 'wi-version', 'vault', 'plugin-version', 'rules', 'board-settings', 'hook', 'validate'])
     for (const r of report.install.filter((r) => r.id !== 'hook')) assert.equal(r.level, 'pass', `${r.id}: ${r.message}`)
     assert.equal(result(report, 'hook').level, 'note')
     assert.deepEqual(report.agentSetup.map((r) => [r.id, r.level]), [
@@ -187,6 +189,29 @@ test('vault: the defaultVault from wi setup is found when no flag, WI_VAULT or f
     const report = await runDoctor(noFlag)
     assert.equal(report.vault, s.vault.root)
     assert.match(result(report, 'vault').message, /defaultVault/)
+  } finally {
+    s.cleanup()
+  }
+})
+
+test('rules: wi doctor reports a newer, an older and a missing rules version marker', async () => {
+  const s = setup()
+  try {
+    healthy(s)
+    const rules = async () => result(await runDoctor(s.options()), 'rules')
+    s.vault.write(PLUGIN_DATA_FILE, JSON.stringify({ board: { maxAgents: 2 }, rulesVersion: RULES_VERSION + 1 }))
+    const newer = await rules()
+    assert.equal(newer.level, 'fix')
+    assert.match(newer.message, /Update wi/)
+
+    s.vault.write(PLUGIN_DATA_FILE, JSON.stringify({ board: { maxAgents: 2 }, rulesVersion: 0.5 }))
+    assert.equal((await rules()).level, 'note')
+
+    s.vault.write(PLUGIN_DATA_FILE, JSON.stringify({ board: { maxAgents: 2 } }))
+    assert.equal((await rules()).level, 'note')
+
+    s.vault.write(PLUGIN_DATA_FILE, '{broken')
+    assert.equal((await rules()).level, 'note')
   } finally {
     s.cleanup()
   }

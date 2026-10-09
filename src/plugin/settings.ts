@@ -1,6 +1,7 @@
 import { AbstractInputSuggest, PluginSettingTab, Setting, TFolder, type App, type Plugin } from 'obsidian'
 import type { VaultConfig } from '../shared/vault-config.ts'
 import { cleanSections } from '../shared/board-settings.ts'
+import { versionLine } from '../shared/rules-version.ts'
 
 /** What the Board section reads and writes (docs/adr/0050-board-settings-in-plugin-data.md). */
 export interface BoardSettingsHost {
@@ -82,6 +83,7 @@ export class StatusColorSettingTab extends PluginSettingTab {
   private readonly maxAgents: () => number | null
   private readonly changeMaxAgents: (maxAgents: number | null) => Promise<void>
   private readonly board: BoardSettingsHost
+  private readonly version: string
 
   constructor(
     app: App,
@@ -93,6 +95,7 @@ export class StatusColorSettingTab extends PluginSettingTab {
     board: BoardSettingsHost,
   ) {
     super(app, plugin)
+    this.version = plugin.manifest.version
     this.colors = colors
     this.changeColor = changeColor
     this.maxAgents = maxAgents
@@ -104,6 +107,7 @@ export class StatusColorSettingTab extends PluginSettingTab {
     const { containerEl } = this
     containerEl.empty()
     containerEl.createEl('h2', { text: 'Recursive Board' })
+    containerEl.createEl('p', { cls: 'setting-item-description', text: `Version ${versionLine(this.version)}` })
     this.displayBoard(containerEl)
     containerEl.createEl('h3', { text: 'Status colours' })
 

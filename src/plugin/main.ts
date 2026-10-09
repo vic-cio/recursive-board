@@ -15,6 +15,7 @@ import {
   boardSettingsIn, boardSettingsRecord, PLUGIN_DATA_FILE, readBoardSettings, withBoardSettings,
 } from '../shared/board-settings.ts'
 import { today, type Status } from '../shared/schema.ts'
+import { withRaisedRulesMarker } from '../shared/rules-version.ts'
 
 import { Actions } from './actions.ts'
 import { WorkItemIndex } from './index.ts'
@@ -61,6 +62,9 @@ export default class RecursiveBoardPlugin extends Plugin {
     if (typeof storedData === 'object' && storedData !== null && !Array.isArray(storedData)) {
       this.storedData = Object.fromEntries(Object.entries(storedData))
     }
+    // The plugin is the one writer of the rules version marker (docs/adr/0079-the-rules-version-marker-lives-in-the-plugin-data.md).
+    const raised = withRaisedRulesMarker(storedData)
+    if (raised !== null) await this.saveData(this.storedData = raised)
     this.statusColors = parseStatusColors(this.storedData.statusColors)
     this.applyStatusColors()
     this.addSettingTab(new StatusColorSettingTab(

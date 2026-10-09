@@ -38,7 +38,7 @@ Options
   --force          Replace an unmanaged skill during setup.
   --yes            Run setup without prompts; requires --vault <path>.
   -h, --help       This text.
-  -V, --version    Print the version.
+  -V, --version    Print the version and the rules version.
 
 Notes
   wi retag and wi graph were removed in 0.8.0. The board tree shows each card's area.

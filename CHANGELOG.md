@@ -19,6 +19,11 @@ the agent notes in your vault.
 
 ### Added
 
+- A rules version. `wi --version` prints `0.9.0 (rules 1)`, with the package version first, and
+  the plugin's settings tab prints the same line. The plugin records its rules version in its
+  plugin data. A write command warns when a plugin with newer rules works on the vault, and
+  `wi doctor` reports a mismatch as the `rules` check
+  ([0079](docs/adr/0079-the-rules-version-marker-lives-in-the-plugin-data.md)).
 - An area's board shows the area as a self-card in its own status column, the same as its card on
   the parent board. It adds no file and no count. Drag it to another column to set the area's
   status. Open it from its preview to zoom into the same board.

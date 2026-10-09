@@ -133,7 +133,7 @@ const HELP_OPTIONS: [label: string, text: string][] = [
   ['--force', 'Replace an unmanaged skill during setup.'],
   ['--yes', 'Run setup without prompts; requires --vault <path>.'],
   ['-h, --help', 'This text.'],
-  ['-V, --version', 'Print the version.'],
+  ['-V, --version', 'Print the version and the rules version.'],
 ]
 
 /**

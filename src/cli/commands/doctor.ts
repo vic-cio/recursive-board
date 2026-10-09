@@ -13,9 +13,10 @@ import { platform } from 'node:os'
 import { join, resolve, sep } from 'node:path'
 import { promisify } from 'node:util'
 
-import { agentSetupChecks, isSetupNote, type CheckResult, type SetupNote, type SkillCopy } from '../../shared/doctor.ts'
+import { agentSetupChecks, isSetupNote, rulesCheck, type CheckResult, type SetupNote, type SkillCopy } from '../../shared/doctor.ts'
 import { boardSettingsIn, parsePluginData, PLUGIN_DATA_FILE } from '../../shared/board-settings.ts'
 import { getList, parseFrontmatter } from '../../shared/frontmatter.ts'
+import { rulesMarkerIn } from '../../shared/rules-version.ts'
 import { roleTags } from '../../shared/role-tags.ts'
 import { WORK_ITEM_TYPE } from '../../shared/schema.ts'
 import { packageRoot, readPackageFile } from '../package-files.ts'
@@ -79,6 +80,7 @@ export async function runDoctor(options: DoctorOptions): Promise<DoctorReport> {
   let vault: Vault | null = null
   if (root !== null) {
     install.push(await pluginVersionCheck(root, options.version))
+    install.push(rulesCheck(await rulesMarker(root), 'wi'))
     const settings = await boardSettingsCheck(root)
     install.push(settings)
     install.push(await hookCheck(root))
@@ -190,6 +192,17 @@ async function pluginVersionCheck(root: string, version: string): Promise<CheckR
     return { ...base, level: 'fix', message: `The plugin is ${plugin} and wi is ${version}. Update the plugin in Obsidian: Settings > Community plugins > Check for updates.` }
   }
   return { ...base, level: 'fix', message: `The plugin is ${plugin} and wi is ${version}. Update wi.`, paste: UPDATE_WI }
+}
+
+/** The rules version marker in the plugin data, or null when it is missing or the file is broken. */
+async function rulesMarker(root: string): Promise<number | null> {
+  const text = await readIfPresent(join(root, ...PLUGIN_DATA_FILE.split('/')))
+  if (text === null) return null
+  try {
+    return rulesMarkerIn(parsePluginData(text))
+  } catch {
+    return null // The board-settings check reports the broken file.
+  }
 }
 
 async function boardSettingsCheck(root: string): Promise<CheckResult> {

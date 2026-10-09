@@ -9,6 +9,7 @@
 import { playbookBlock, playbookChecks } from './playbook.ts'
 import { procedureNotes, roleTagKey, roleTags } from './role-tags.ts'
 import { PERSON_TYPE } from './authorship.ts'
+import { RULES_VERSION } from './rules-version.ts'
 
 /** A pass meets the recommendation. A note is for information. A fix carries what to change. */
 export type CheckLevel = 'pass' | 'note' | 'fix'
@@ -190,6 +191,23 @@ export function skillCheck(copies: readonly SkillCopy[] | null): CheckResult {
   }
   const links = copies.filter((copy) => copy.state === 'dev-link').length
   return { ...base, level: 'pass', message: links > 0 ? 'The skill is installed; a development link is kept.' : 'Both skill copies match this wi.' }
+}
+
+/**
+ * The rules check: the marker in the plugin data against the rules this writer carries
+ * (docs/adr/0079-the-rules-version-marker-lives-in-the-plugin-data.md). `writer` names the writer
+ * in the message, such as `wi`.
+ */
+export function rulesCheck(marker: number | null, writer: string, rules: number = RULES_VERSION): CheckResult {
+  const base = { id: 'rules', title: `The plugin in this vault and ${writer} write by the same rules.` }
+  if (marker === null) {
+    return { ...base, level: 'note', message: `The plugin data has no rules version, so a newer plugin is not known. ${writer} has rules version ${rules}.` }
+  }
+  if (marker === rules) return { ...base, level: 'pass', message: `The plugin and ${writer} both have rules version ${rules}.` }
+  if (marker > rules) {
+    return { ...base, level: 'fix', message: `A plugin with rules version ${marker} works on this vault, and ${writer} has rules version ${rules}. Each write warns. Update ${writer}.` }
+  }
+  return { ...base, level: 'fix', message: `The plugin has rules version ${marker}, and ${writer} has rules version ${rules}. Update the plugin in Obsidian: Settings > Community plugins > Check for updates.` }
 }
 
 /**

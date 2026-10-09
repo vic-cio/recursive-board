@@ -10,6 +10,8 @@ import { RUNNERS } from './commands/index.ts'
 import { UsageError, type CommandContext, type CommandLine, type Reply } from './commands/command.ts'
 import { loadVault, REAL_SEAMS, type Env, type Vault, type VaultSeams } from './vault.ts'
 import type { StoragePort } from './storage.ts'
+import { COMMANDS } from './command-table.ts'
+import { newerRulesWarning, readRulesMarker } from './rules-version.ts'
 
 export { RUNNERS }
 export { UsageError, type CommandContext, type CommandLine, type Reply, type RunFunction, type Values } from './commands/command.ts'
@@ -43,6 +45,11 @@ export function isRegistered(command: string | undefined): command is string {
   return command !== undefined && Object.hasOwn(RUNNERS, command)
 }
 
+/** True when the command's table entry says it writes (docs/adr/0079-the-rules-version-marker-lives-in-the-plugin-data.md). */
+function writes(command: string): boolean {
+  return COMMANDS.some((entry) => entry.name === command && entry.writes)
+}
+
 /**
  * Runs the command the line names. The context's writers still see every write as it happens,
  * and the reply holds them all.
@@ -58,6 +65,10 @@ export async function runCommand(context: CommandContext, line: CommandLine): Pr
   let code: number
   try {
     if (!isRegistered(line.command)) throw new UsageError(`unknown command "${line.command ?? ''}". Run wi --help.`)
+    if (writes(line.command)) {
+      const warning = newerRulesWarning(await readRulesMarker(run.port))
+      if (warning !== null) run.err(`wi: ${warning}\n`)
+    }
     code = await RUNNERS[line.command]!(run, line)
   } catch (error) {
     run.err(`wi: ${error instanceof Error ? error.message : String(error)}\n`)

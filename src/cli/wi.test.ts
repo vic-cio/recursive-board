@@ -7,6 +7,7 @@ import { existsSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 
 import { makeVault, item, type Fixture } from './test-helpers.ts'
+import { RULES_VERSION } from '../shared/rules-version.ts'
 
 const run = promisify(execFile)
 const CLI = fileURLToPath(new URL('./wi.ts', import.meta.url))
@@ -274,12 +275,13 @@ function seed(): Fixture {
   return f
 }
 
-test('wi --version prints the version', async () => {
+test('wi --version prints the package version first, then the rules version', async () => {
   fixture = seed()
   const { code, stdout } = await wi(['--version'])
   const pkg = JSON.parse(readFileSync(new URL('../../package.json', import.meta.url), 'utf8'))
   assert.equal(code, 0)
-  assert.equal(stdout.trim(), pkg.version)
+  assert.equal(stdout.trim().split(' ')[0], pkg.version)
+  assert.equal(stdout.trim(), `${pkg.version} (rules ${RULES_VERSION})`)
 })
 
 test('wi with no command prints help and exits 2', async () => {

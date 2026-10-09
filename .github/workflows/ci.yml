@@ -25,7 +25,7 @@ jobs:
           const pkg = JSON.parse(readFileSync('package.json', 'utf8'))
           const lock = JSON.parse(readFileSync('package-lock.json', 'utf8'))
           const versions = JSON.parse(readFileSync('versions.json', 'utf8'))
-          const cli = execFileSync(process.execPath, ['dist/wi/wi.js', '--version'], { encoding: 'utf8' }).trim()
+          const cli = execFileSync(process.execPath, ['dist/wi/wi.js', '--version'], { encoding: 'utf8' }).trim().split(/\s+/)[0]
           if (pkg.version !== manifest.version || cli !== manifest.version || lock.version !== manifest.version || lock.packages[''].version !== manifest.version) throw new Error('Release versions must agree')
           if (versions[manifest.version] !== manifest.minAppVersion) throw new Error('Missing compatibility mapping')
           NODE

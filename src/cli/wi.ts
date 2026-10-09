@@ -43,6 +43,7 @@ import { STATUSES } from '../shared/schema.ts'
 import { authorLabel } from '../shared/authorship.ts'
 import { roleTagFor } from '../shared/role-tags.ts'
 import { isAnyAgent } from '../shared/holder.ts'
+import { versionLine } from '../shared/rules-version.ts'
 
 
 const VERSION = '0.9.0'
@@ -55,7 +56,7 @@ async function main(argv: string[]): Promise<number> {
   const { values, positionals } = parseCommandLine(argv)
 
   if (values.version) {
-    process.stdout.write(`${VERSION}\n`)
+    process.stdout.write(`${versionLine(VERSION)}\n`)
     return 0
   }
   const [command, ...rest] = positionals
