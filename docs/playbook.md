@@ -187,6 +187,18 @@ To give a card to a person instead, run `wi delegate <card> --to <person>`. The 
 with `type: person`.
 ```
 
+## The plugin CLI
+
+On a desktop, an agent may run a `wi` command line through the plugin, with no Node:
+`obsidian vault=<name> recursive-board cmd="<wi command line>" agent=<name> model=<model>`.
+Headless machines keep `wi`. Tell agents four rules, in `AGENTS.md` or a role note when they
+do not read the skill:
+
+- A reply succeeded only when its first line is exactly `ok`. The exit code is always 0.
+- Every call passes `vault=<name>` as the first argument.
+- The Obsidian installer must be 1.12.7 or later.
+- A title with an apostrophe goes in escaped double quotes: `cmd="new \"Ana's card\" --parent wi-1"`.
+
 ## Git versioning
 
 Git versioning is optional advice. Recursive Board and `wi` work the same without it, and a solo user with no agents does not need it. It pays off when a team grows or when agents write to the vault: each commit is a point that you can go back to after a bad write.
@@ -282,6 +294,7 @@ Code reads this file. Keep these markers when you change it. `docs/adr/0067-the-
 
 ### Unreleased
 
+- Added the plugin CLI section: the four rules for an agent that runs a `wi` command line through `obsidian recursive-board`.
 - Added the Git versioning section: optional advice, with a `git-hook` block that holds a pre-commit hook snippet to copy. `wi hook` is removed, and `wi setup` no longer offers a hook.
 
 ### 0.9.0

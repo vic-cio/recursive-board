@@ -162,6 +162,21 @@ The optional [agent playbook](docs/playbook.md) describes one agent setup that w
 
 The optional [refocus hook](docs/refocus-hook.md) sends a card's Objective chain after compaction or Claude transcript growth. Add its settings entries yourself to enable it.
 
+### Run commands through the Obsidian CLI
+
+On a desktop, an agent may run a `wi` command line through the plugin, with no Node. Obsidian must be open, its installer must be 1.12.7 or later, and the command line interface must be on in Settings, General, Advanced.
+
+```sh
+obsidian vault=<name> recursive-board cmd="status wi-1 done" agent=<name> model=<model>
+```
+
+- Pass `vault=<name>` as the first argument of every call, so the command cannot reach the vault that has focus.
+- The reply succeeded only when its first line is exactly `ok`. Any other first line is a failure, and the exit code is always 0.
+- Put the whole command line, flags included, in `cmd`. Quote a title with an apostrophe as `cmd="new \"Ana's card\" --parent wi-1"`.
+- `agent=` and `model=` sign a claim or a note, as `WI_AGENT` and `WI_MODEL` do. `cmd=help` prints the `wi --help` text.
+
+The plugin serves the vault commands that run on the shared storage port. Any other command replies an error line that names it; run it with `wi`. [ADR 0078](docs/adr/0078-one-plugin-cli-handler.md) records the handler.
+
 ## Version the vault with Git (optional)
 
 Git is optional. Recursive Board works without it, and a solo user with no agents does not need it. It pays off when a team grows or when agents write to the vault, because each commit is a point that you can go back to.

@@ -29,6 +29,7 @@ import { openLinkTarget } from './ui/open-link.ts'
 import { OPEN_WORK_ITEM_ICON, OpenModal } from './ui/open-modal.ts'
 import { CreateBoardModal } from './ui/create-board-modal.ts'
 import { createFirstBoard } from './first-board.ts'
+import { registerCli } from './cli-handler.ts'
 import { replaceChangedSpan, stampObservedChange } from './updated.ts'
 import { parseStatusColors, StatusColorSettingTab, type StatusColorKey, type StatusColors } from './settings.ts'
 
@@ -93,6 +94,7 @@ export default class RecursiveBoardPlugin extends Plugin {
       throw error
     }
     this.actions = new Actions(this.app, this.index)
+    registerCli(this, Platform.isDesktopApp)
 
     this.rememberActiveEditor()
     this.registerEvent(this.app.workspace.on('editor-change', (editor) => this.editorChanged(editor)))

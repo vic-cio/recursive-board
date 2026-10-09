@@ -16,6 +16,11 @@ the agent notes in your vault.
   versioning" section of the playbook. If a note in your vault tells an agent to run `wi hook
   install`, remove that line. `wi hook` is removed
   ([0075](docs/adr/0075-git-versioning-is-advice.md)).
+- On a desktop, an agent may run a `wi` command line through the plugin, with no Node:
+  `obsidian vault=<name> recursive-board cmd="<wi command line>" agent=<name> model=<model>`.
+  The skill, the playbook and the README give the rules: a reply succeeded only when its first
+  line is exactly `ok`, every call passes `vault=<name>` first, and the Obsidian installer must
+  be 1.12.7 or later ([0078](docs/adr/0078-one-plugin-cli-handler.md)).
 
 ### Added
 
@@ -24,6 +29,10 @@ the agent notes in your vault.
   plugin data. A write command warns when a plugin with newer rules works on the vault, and
   `wi doctor` reports a mismatch as the `rules` check
   ([0079](docs/adr/0079-the-rules-version-marker-lives-in-the-plugin-data.md)).
+- The plugin registers the `recursive-board` Obsidian CLI command on the desktop app. It runs a
+  whole `wi` command line from `cmd` on the vault Obsidian has open, and replies `ok` or
+  `error: <reason>` on its first line. It serves the vault commands that run on the shared
+  storage port, and names any other command in its error line.
 - An area's board shows the area as a self-card in its own status column, the same as its card on
   the parent board. It adds no file and no count. Drag it to another column to set the area's
   status. Open it from its preview to zoom into the same board.

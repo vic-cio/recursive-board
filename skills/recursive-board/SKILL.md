@@ -47,6 +47,30 @@ A project's `AGENTS.md` names its board. Pass that board to `wi new` as `--paren
 
 `wi --help` is the full command reference. Read it for any flag this page does not name.
 
+## The plugin CLI, on a desktop
+
+On a desktop with Obsidian open, you may run a `wi` command line through the plugin instead of
+`wi`. It needs no Node:
+
+```sh
+obsidian vault=<name> recursive-board cmd="status wi-1 done" agent=<your name> model=<model>
+```
+
+- Pass `vault=<name>` as the first argument of every call. Without it, the CLI writes into the
+  vault of the working folder, else into the vault that has focus.
+- Put the whole `wi` command line, flags included, in `cmd`. Obsidian drops an argument that
+  starts with `--`.
+- The reply succeeded only when its first line is exactly `ok`. Any other first line is a
+  failure: `error: <reason>`, or a line from Obsidian itself. The exit code is always 0. The
+  output of `wi` follows the first line, then its warnings.
+- `agent=` and `model=` sign a claim or a note, as `WI_AGENT` and `WI_MODEL` do for `wi`.
+- Quote a title with an apostrophe in escaped double quotes:
+  `cmd="new \"Ana's card\" --parent wi-1"`.
+- `cmd=help` prints the same help as `wi --help`. A command the plugin does not serve yet
+  replies an error line that names it. Run that command with `wi`.
+- The Obsidian installer must be 1.12.7 or later. An older one prints a warning line before
+  every reply, and hangs when Obsidian is closed.
+
 ## Vault config
 
 The board settings live in the Recursive Board plugin settings tab.
