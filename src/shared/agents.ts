@@ -9,8 +9,8 @@ import type { Status } from './schema.ts'
 /** The fields of a work item that the count reads. */
 export interface AgentItem {
   status: Status | undefined
-  /** The person or agent who does the work. */
-  holder: string | undefined
+  /** The people and agents who do the work. */
+  holders: readonly string[]
   /** Own flag or an ancestor's flag. */
   effectiveArchived: boolean
 }
@@ -36,7 +36,9 @@ export interface ActiveAgent<T> {
 }
 
 /**
- * The agents that work a doing card, by name. People and requests for any agent are not agents.
+ * The agents that work a doing card, by name. Each agent on a card counts, so a card with several
+ * agents uses several places (docs/adr/0083-assign-and-several-holders.md). People and requests
+ * for any agent are not agents.
  * A card that only waits on its children does not make its holder active, so a full tree of agents
  * cannot deadlock on the limit. Nor does a card that waits on a person, such as a review: `waitsOnPerson`
  * says which, because only the caller has the card's text. Names match without case.
@@ -47,13 +49,15 @@ export function activeAgents<T extends AgentItem>(
   const personNames = new Set(people.map((name) => name.trim().toLowerCase()))
   const active = new Map<string, ActiveAgent<T>>()
   for (const card of cards) {
-    const holder = card.holder?.trim()
-    const key = holder?.toLowerCase()
-    if (card.status !== 'doing' || !holder || !key || isAnyAgent(key) || personNames.has(key) ||
-      waitsOnChildren(card, tree) || waitsOnPerson(card)) continue
-    const agent = active.get(key) ?? { name: holder, cards: [] }
-    agent.cards.push(card)
-    active.set(key, agent)
+    if (card.status !== 'doing' || card.holders.length === 0 || waitsOnChildren(card, tree) || waitsOnPerson(card)) continue
+    for (const raw of card.holders) {
+      const holder = raw.trim()
+      const key = holder.toLowerCase()
+      if (!key || isAnyAgent(key) || personNames.has(key)) continue
+      const agent = active.get(key) ?? { name: holder, cards: [] }
+      if (!agent.cards.includes(card)) agent.cards.push(card)
+      active.set(key, agent)
+    }
   }
   return [...active.values()].sort((a, b) => a.name.localeCompare(b.name))
 }

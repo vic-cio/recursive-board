@@ -61,12 +61,15 @@ test('readyCards lists the requests for any agent first, and excludes a card som
   write('Old request', 'wi-old-request', { agent: 'agent' })
   write('Held', 'wi-held', { holder: 'Ana' })
   write('Asked in backlog', 'wi-backlog', { status: 'backlog', holder: 'agent' })
+  write('Held and asked', 'wi-held-asked', { holder: '[Ana, agent]' })
 
   const result = readyCards(await loadVault(fixture.root))
   assert.deepEqual(result.ready.map((card) => [card.id, card.holder, card.request]), [
-    ['wi-request', 'agent', true], ['wi-old-request', 'agent', true], ['wi-high', null, false],
+    ['wi-request', ['agent'], true], ['wi-old-request', ['agent'], true], ['wi-high', [], false],
   ])
-  assert.deepEqual(result.excluded.map((card) => [card.id, card.holder, card.reasons]), [['wi-held', 'Ana', ['claimed']]])
+  assert.deepEqual(result.excluded.map((card) => [card.id, card.holder, card.reasons]), [
+    ['wi-held', ['Ana'], ['claimed']], ['wi-held-asked', ['Ana', 'agent'], ['claimed']],
+  ], 'a card with any holder but agent is taken')
 })
 
 test('readyCards permits a nested claim by the agent already working on its child', async () => {
@@ -81,6 +84,11 @@ test('readyCards permits a nested claim by the agent already working on its chil
   assert.deepEqual(readyCards(vault, { agent: 'codex' }).ready.map((card) => card.id), ['wi-board'])
   assert.deepEqual(readyCards(vault, { agent: 'codex', parent: 'wi-board' }).ready, [])
   assert.deepEqual(readyCards(vault, { agent: 'codex', parent: 'wi-main' }).ready.map((card) => card.id), ['wi-board'])
+  fixture.write('Boards/Child.md', item({ type: 'work-item', id: 'wi-child', title: 'Child',
+    status: 'doing', parent: '"[[Board]]"', holder: '[Victor, codex]' }))
+  const shared = await loadVault(fixture.root)
+  assert.deepEqual(readyCards(shared, { agent: 'codex' }).ready.map((card) => card.id), ['wi-board'], 'codex is one of the child\'s holders')
+  assert.deepEqual(readyCards(shared, { agent: 'luna' }).ready, [])
 })
 
 test('readyCards excludes invalid dependencies and waits for archived unfinished dependencies', async () => {

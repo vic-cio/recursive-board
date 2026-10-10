@@ -15,7 +15,7 @@ import { roleTags, type TaggedNote } from './role-tags.ts'
 import { type VaultConfig } from './vault-config.ts'
 import { parsePluginData, PLUGIN_DATA_FILE, readBoardSettings } from './board-settings.ts'
 import { archiveOwner } from './archive.ts'
-import { peopleIn } from './delegate.ts'
+import { peopleIn } from './assign.ts'
 import { dependsOnRaw, parseDependsOn } from './dependencies.ts'
 import { readIfPresent, type StoragePort } from './storage.ts'
 import {
@@ -375,7 +375,7 @@ export async function readRoleTaggedNotes(port: StoragePort): Promise<TaggedNote
 
 /**
  * The people the vault knows: each note with `type: person`, in any folder, as the plugin reads
- * them (docs/adr/0058-delegate-a-card.md). A vault with no person note knows no one, so every claim
+ * them (docs/adr/0083-assign-and-several-holders.md). A vault with no person note knows no one, so every claim
  * counts as an agent, as before.
  */
 export async function readPeople(port: StoragePort): Promise<Map<string, string>> {

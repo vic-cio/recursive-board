@@ -4,7 +4,7 @@
  * (docs/adr/0066-count-only-working-agents.md).
  */
 import { activeAgents, type AgentItem, type AgentTree } from '../agents.ts'
-import { holderOf } from '../holder.ts'
+import { holdersIn } from '../holder.ts'
 import { dependenciesOf, titleOf } from '../item-dependencies.ts'
 import { maxAgentsForRun, readPeople, type Env, type Vault, type WorkItem } from '../vault.ts'
 import { UsageError, type RunFunction } from './command.ts'
@@ -18,7 +18,7 @@ async function activeIn(vault: Vault) {
   const cards = new Map<WorkItem, Card>(vault.items.map((item) => [item, {
     item,
     status: item.status,
-    holder: holderOf((key) => item.frontmatter.get(key)),
+    holders: holdersIn(item.text),
     effectiveArchived: vault.isArchived(item),
   }]))
   const tree: AgentTree<Card> = { childrenOf: (card) => vault.childrenOf(card.item).map((child) => cards.get(child)!) }

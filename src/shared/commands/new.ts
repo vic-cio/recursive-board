@@ -9,7 +9,7 @@
 import { editItem } from '../edit-item.ts'
 import { isPathExists } from '../storage.ts'
 import { cardState } from '../card-state.ts'
-import { holderOf } from '../holder.ts'
+import { holdersIn } from '../holder.ts'
 import { inheritedChildFields, renderWorkItem, type NewWorkItem } from '../work-item.ts'
 import { briefGaps, renderBody, requireTemplate, type Brief } from '../templates.ts'
 import { firstChildPromotion } from '../transitions.ts'
@@ -27,7 +27,7 @@ export interface NewOptions {
   parent?: string
   status?: Status
   owner?: string
-  /** The person or agent who does the work. `wi new --agent` sets it. */
+  /** The person or agent who does the work. `wi new --holder` sets it. */
   holder?: string
   /** Free tags, such as a role tag `role/checker` (docs/adr/0062-role-tags.md). */
   tags?: string[]
@@ -80,8 +80,12 @@ export async function createItem(vault: Vault, options: NewOptions): Promise<Cre
 
   const stamp = today(vault.seams.now())
   const inherited = inheritedChildFields({
-    holder: template.area ? undefined : holderOf((key) => parent.frontmatter.get(key)),
-  }, status, options)
+    holders: template.area ? undefined : holdersIn(parent.text),
+  }, status, {
+    owner: options.owner,
+    // An empty --holder gives the card no holder, so it inherits none.
+    holders: options.holder === undefined ? undefined : [options.holder.trim()].filter((name) => name !== ''),
+  })
   const tags = newTags(options.tags ?? [])
   const render = (id: string): string => {
     const common = {

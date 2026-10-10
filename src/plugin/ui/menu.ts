@@ -16,7 +16,8 @@ import type { RenderContext } from './context.ts'
 import { MoveModal } from './move-modal.ts'
 import { DependModal } from './depend-modal.ts'
 import { TagModal } from './tag-modal.ts'
-import { DelegateModal } from './delegate-modal.ts'
+import { AssignModal } from './assign-modal.ts'
+import { holderLabel } from '../../shared/holder.ts'
 import { statusLabel } from './status-label.ts'
 import { menuStatuses } from './menu-status.ts'
 
@@ -84,11 +85,20 @@ function buildMenu(ctx: RenderContext, meta: WorkItemMeta): Menu {
         .onClick(() => void ctx.actions.setPersonWait(meta, file.basename, false)))
     }
   }
+  // Holders (docs/adr/0083-assign-and-several-holders.md). Each holder's full name shows here.
   if (meta.parentLink !== null && !meta.area) {
     menu.addItem((item) => item
-      .setTitle('Delegate to…')
+      .setTitle('Assign to…')
       .setIcon('user-round-plus')
-      .onClick(() => new DelegateModal(ctx.app, ctx.actions, meta, ctx.personNames()).open()))
+      .onClick(() => new AssignModal(ctx.app, ctx.actions, meta, ctx.personNames()).open()))
+  }
+  if (meta.parentLink !== null) {
+    for (const holder of meta.holders) {
+      menu.addItem((item) => item
+        .setTitle(`Unassign ${holderLabel(holder)}`)
+        .setIcon('user-round-minus')
+        .onClick(() => void ctx.actions.unassign(meta, holder)))
+    }
   }
   // Free tags (docs/adr/0057-free-tags.md). The picker never offers old area tags.
   menu.addItem((item) => item

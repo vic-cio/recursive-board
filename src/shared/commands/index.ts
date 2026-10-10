@@ -14,7 +14,7 @@ import { runValidate } from './validate.ts'
 import { runArchive } from './archive.ts'
 import { runArea } from './area.ts'
 import { runClaim, runRelease } from './claim-release.ts'
-import { runDelegate } from './delegate.ts'
+import { runAssign } from './assign.ts'
 import { runDepend } from './depend.ts'
 import { runNote } from './note.ts'
 import { runDemote, runPromote } from './promote.ts'
@@ -42,7 +42,7 @@ export const RUNNERS: Readonly<Record<string, RunFunction>> = {
   set: runSet,
   claim: runClaim,
   release: runRelease,
-  delegate: runDelegate,
+  assign: runAssign,
   archive: runArchive,
   promote: runPromote,
   demote: runDemote,

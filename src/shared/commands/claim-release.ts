@@ -4,8 +4,8 @@ import { editItem } from '../edit-item.ts'
 import { claimEdits, releaseEdits } from '../transitions.ts'
 import { appendNote, noteLine } from '../notes.ts'
 import { cardState } from '../card-state.ts'
-import type { Edit } from '../edits.ts'
-import { holderOf } from '../holder.ts'
+import { applyEdits, type Edit } from '../edits.ts'
+import { holds, holdersIn, holdersLabel, sameName } from '../holder.ts'
 import { today, type Status } from '../schema.ts'
 import { loadVault, maxAgentsForRun, type Vault, type WorkItem } from '../vault.ts'
 import { authorLabel } from '../authorship.ts'
@@ -16,7 +16,10 @@ import { json, label } from './output.ts'
 
 export interface ClaimChange {
   item: WorkItem
+  /** The claimant. */
   holder: string
+  /** The card's holders after the claim. */
+  holders: string[]
   from: Status | undefined
   to: 'doing'
   changed: boolean
@@ -24,9 +27,13 @@ export interface ClaimChange {
 
 export interface ReleaseChange {
   item: WorkItem
+  /** The holder that gave the card up. */
   holder: string
+  /** The holders that remain. */
+  holders: string[]
   from: Status | undefined
-  to: 'options'
+  /** The status after the release: options when no named holder remains, else as it was. */
+  to: Status | undefined
   reason: string
   where: string | undefined
   changed: true
@@ -49,60 +56,89 @@ export async function claimItem(
   const rule = claimRule(vault, item, agent)
   let from = item.status
   let changed = false
+  let holders: string[] = []
   await editItem(vault, item, (text) => {
     from = cardState(text).status
     const edits = rule(text)
     changed = edits !== null
+    holders = holdersIn(edits === null ? text : applyEdits(text, edits))
     return edits
   }, editBody)
-  return { item, holder: agent, from, to: 'doing', changed }
+  return { item, holder: agent, holders, from, to: 'doing', changed }
 }
 
 /**
  * Every check `wi claim` makes, as a rule on the card's text: an area, a root, an open wait,
- * another holder, a done card, a board with a child in doing that someone else works. `wi delegate`
- * runs it before it names a worker, so a worker never starts on a card it cannot claim.
+ * another holder, a done card, a board with a child in doing that someone else works.
  */
 export function claimRule(vault: Vault, item: WorkItem, agent: string): (text: string) => Edit[] | null {
   if (item.area) throw new Error(`${item.relPath} is an area, and an area cannot be claimed.`)
   if (item.parent === null) throw new Error(`${item.relPath} is a root, and a root cannot be claimed.`)
   const otherDoingChild = vault.childrenOf(item).some((child) =>
-    child.status === 'doing' && holderOf((key) => child.frontmatter.get(key)) !== agent)
+    child.status === 'doing' && !holds(holdersIn(child.text), agent))
   return (text) => {
     const state = cardState(text)
-    const holding = state.holder === agent && state.status === 'doing'
+    const holding = holds(state.holders, agent) && state.status === 'doing'
     // A holder keeps its claim on a doing card that waits, for example on a person's review.
     const waiting = holding ? { cards: [], people: [] } : openWaits(vault, item, text)
     if (waiting.cards.length + waiting.people.length > 0) {
       throw new Error(waitingRefusal(item.relPath, waiting.cards.map(titleOf), waiting.people))
     }
-    return claimEdits(state.status, state.holder, agent, state.hasPrevStatus, state.board && otherDoingChild)
+    return claimEdits(state.status, state.holders, agent, state.hasPrevStatus, state.board && otherDoingChild)
   }
 }
 
-export async function releaseItem(
-  vault: Vault,
-  ref: string,
-  reason: string,
-  where?: string,
+export interface ReleaseOptions {
+  where?: string | undefined
   /** Who signs the note. Defaults to the holder that gives the card up. */
-  writer?: string,
-): Promise<ReleaseChange> {
+  writer?: string | undefined
+  /** The holder to remove, from --holder. */
+  holder?: string | undefined
+  /** The caller's own name, from WI_AGENT. It is the default holder to remove when it holds the card. */
+  caller?: string | undefined
+}
+
+/**
+ * Which holder a release removes: the one named, else the caller when it holds the card, else the
+ * only holder. A card with several holders and no name to choose by is refused.
+ */
+export function releasedHolder(path: string, holders: readonly string[], options: Pick<ReleaseOptions, 'holder' | 'caller'>): string {
+  if (holders.length === 0) throw new Error(`${path} has no holder to release.`)
+  const named = options.holder?.trim()
+  if (named) {
+    const found = holders.find((name) => sameName(name, named))
+    if (found === undefined) throw new Error(`${named} does not hold ${path}. Its holders: ${holdersLabel(holders)}.`)
+    return found
+  }
+  const caller = options.caller?.trim()
+  const self = caller ? holders.find((name) => sameName(name, caller)) : undefined
+  if (self !== undefined) return self
+  if (holders.length === 1) return holders[0]!
+  throw new Error(`${path} has several holders: ${holdersLabel(holders)}. Name the one to release with --holder <name>.`)
+}
+
+export async function releaseItem(vault: Vault, ref: string, reason: string, options: ReleaseOptions = {}): Promise<ReleaseChange> {
+  const { where, writer } = options
   const item = vault.resolve(ref)
   if (item.parent === null) throw new Error(`${item.relPath} is a root, and a root cannot be released.`)
   let holder = ''
+  let holders: string[] = []
   let from = item.status
+  let to: Status | undefined
   // Signed and timed like every wi note, so the hand-over reads like the rest of Notes.
   const note = () => noteLine(`Released from ${holder}: ${reason.replace(/\.$/, '')}.` +
     (where === undefined ? '' : ` Work: ${where.replace(/\.$/, '')}.`), writer?.trim() || holder, vault.seams.now())
   await editItem(vault, item, (text) => {
     const state = cardState(text)
-    if (state.holder === undefined) throw new Error(`${item.relPath} has no holder to release.`)
-    holder = state.holder
+    holder = releasedHolder(item.relPath, state.holders, options)
     from = state.status
-    return releaseEdits(state.status, state.hasPrevStatus)
+    const edits = releaseEdits(state.status, state.holders, holder, state.hasPrevStatus)
+    const after = cardState(applyEdits(text, edits))
+    holders = after.holders
+    to = after.status
+    return edits
   }, (text) => appendNote(text, note()))
-  return { item, holder, from, to: 'options', reason, where, changed: true }
+  return { item, holder, holders, from, to, reason, where, changed: true }
 }
 
 /** `wi claim <ref>`: by --holder, or by the agent's own name in WI_AGENT. */
@@ -116,8 +152,8 @@ export const runClaim: RunFunction = async (context, line) => {
   const maxAgents = maxAgentsForRun(vault, context.env)
   const before = maxAgents === null ? new Set<string>() : await activeAgentsOf(vault)
   const change = await claimItem(vault, ref, agent)
-  if (line.values['json'] === true) context.out(json({ id: change.item.id, path: change.item.relPath, holder: change.holder,
-    from: change.from ?? null, to: change.to, changed: change.changed }))
+  if (line.values['json'] === true) context.out(json({ id: change.item.id, path: change.item.relPath, name: change.holder,
+    holder: change.holders, from: change.from ?? null, to: change.to, changed: change.changed }))
   else context.out(change.changed
     ? `${label(change.item)}  ${change.from ?? '—'} → doing  (holder: ${agent})\n`
     : `${label(change.item)} is already claimed by ${agent} in doing. Nothing written.\n`)
@@ -133,17 +169,21 @@ export const runClaim: RunFunction = async (context, line) => {
   return 0
 }
 
-/** `wi release <ref> --reason <text> [--where <branch-or-path>]`. */
+/** `wi release <ref> --reason <text> [--where <branch-or-path>] [--holder <name>]`. */
 export const runRelease: RunFunction = async (context, line) => {
   const ref = refOf(line.positionals)
   if (ref === '') throw new UsageError('wi release needs a <ref> and --reason <text>.')
   const reason = singleLineOption(line.values, 'reason')
   const where = line.values['where'] === undefined ? undefined : singleLineOption(line.values, 'where')
-  const writer = authorLabel(envText(context, 'WI_AGENT'), envText(context, 'WI_MODEL'))
-  const change = await releaseItem(await context.vault(), ref, reason, where, writer)
-  if (line.values['json'] === true) context.out(json({ id: change.item.id, path: change.item.relPath, holder: change.holder,
-    from: change.from ?? null, to: change.to, reason: change.reason, where: change.where ?? null,
-    changed: change.changed }))
-  else context.out(`${label(change.item)}  ${change.from ?? '—'} → options  (released ${change.holder})\n`)
+  const holder = line.values['holder'] === undefined ? undefined : singleLineOption(line.values, 'holder')
+  const caller = envText(context, 'WI_AGENT')
+  const writer = authorLabel(caller, envText(context, 'WI_MODEL'))
+  const change = await releaseItem(await context.vault(), ref, reason, { where, writer, holder, caller })
+  if (line.values['json'] === true) context.out(json({ id: change.item.id, path: change.item.relPath, name: change.holder,
+    holder: change.holders, from: change.from ?? null, to: change.to ?? null, reason: change.reason,
+    where: change.where ?? null, changed: change.changed }))
+  else if (change.holders.length > 0 && change.to === change.from) {
+    context.out(`${label(change.item)}  ${change.from ?? '—'}  (released ${change.holder}; holders: ${holdersLabel(change.holders)})\n`)
+  } else context.out(`${label(change.item)}  ${change.from ?? '—'} → ${change.to ?? '—'}  (released ${change.holder})\n`)
   return 0
 }

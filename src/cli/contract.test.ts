@@ -223,27 +223,47 @@ const EDIT_CASES: ContractCase[] = [
     },
   },
   {
+    name: 'release: --holder names the one of several holders to remove',
+    files: { ...EDIT_SEED, 'Boards/Held.md': item({ type: 'work-item', id: 'wi-0007', title: 'Held', status: 'doing', parent: '"[[Main]]"', holder: '[bot, Ana]' }, '## Notes\n') },
+    argv: ['release', 'Held', '--reason', 'Done with my part.', '--holder', 'bot'],
+    expect: { code: 0, stdout: /^wi-0007 {2}Held {2}doing {2}\(released bot; holders: Ana\)\n$/, files: { 'Boards/Held.md': /^holder: Ana$/m } },
+  },
+  {
     name: 'release: a card with no holder is refused',
     files: EDIT_SEED,
     argv: ['release', 'Draft', '--reason', 'Nothing to do.', '--json'],
     expect: { code: 2, stderr: /^wi: Boards\/Draft\.md has no holder to release\.\n$/ },
   },
   {
-    name: 'delegate: to a person, with a role tag',
+    name: 'assign: to a person, with a role tag',
     files: EDIT_SEED,
-    argv: ['delegate', 'Draft', '--to', 'Ana', '--role', 'coder'],
+    argv: ['assign', 'Draft', '--to', 'Ana', '--role', 'coder'],
     expect: { code: 0, stdout: /^wi-0006 {2}Draft {2}options {2}\(assigned to Ana\)\n$/, files: { 'Boards/Draft.md': /^holder: Ana$[\s\S]*^tags:\n {2}- role\/coder$/m } },
   },
   {
-    name: 'delegate: to any agent, --json',
+    name: 'assign: to any agent, --json',
     files: EDIT_SEED,
-    argv: ['delegate', 'Draft', '--to', 'agent', '--json'],
-    expect: { code: 0, stdout: /"holder": "/ },
+    argv: ['assign', 'Draft', '--to', 'agent', '--json'],
+    expect: { code: 0, stdout: /"holder": \[\n {4}"agent"\n {2}\]/ },
   },
   {
-    name: 'delegate: a name with no person note is refused',
+    name: 'assign: a second holder joins the first',
     files: EDIT_SEED,
-    argv: ['delegate', 'Draft', '--to', 'Nobody'],
+    argv: ['assign', 'Held', '--to', 'Ana'],
+    expect: { code: 0, stdout: /^wi-0007 {2}Held {2}doing {2}\(assigned to Ana; holders: bot, Ana\)\n$/,
+      files: { 'Boards/Held.md': /^holder:\n {2}- bot\n {2}- Ana$/m } },
+  },
+  {
+    name: 'assign: --off removes one holder and keeps the status',
+    files: EDIT_SEED,
+    argv: ['assign', 'Held', '--to', 'bot', '--off'],
+    expect: { code: 0, stdout: /^wi-0007 {2}Held {2}doing {2}\(unassigned bot; holders: none\)\n$/,
+      files: { 'Boards/Held.md': /^(?![\s\S]*^holder:)[\s\S]*^status: doing$/m } },
+  },
+  {
+    name: 'assign: a name with no person note is refused',
+    files: EDIT_SEED,
+    argv: ['assign', 'Draft', '--to', 'Nobody'],
     expect: { code: 2, stderr: /^wi: there is no person note called Nobody\./ },
   },
   {
@@ -534,7 +554,7 @@ const CASES: ContractCase[] = [
     argv: ['rm', 'Launch'],
     expect: { code: 2, stderr: /^wi: Launch has 2 children: / },
   },
-  ...['trace', 'here', 'template', 'objective', 'dashboard', 'retag', 'graph', 'review', 'approve', 'send-back'].map((command): ContractCase => ({
+  ...['trace', 'here', 'template', 'objective', 'dashboard', 'retag', 'graph', 'review', 'approve', 'send-back', 'delegate'].map((command): ContractCase => ({
     name: `${command}: retired, it names the new way and exits 0`,
     files: SEED,
     argv: [command],

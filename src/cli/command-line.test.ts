@@ -247,7 +247,7 @@ test('the refusal names the flag and the commands that take it', () => {
   assert.throws(() => parseCommandLine(['show', 'x', '--parent=Main']),
     { message: 'wi show does not take --parent. --parent applies only to wi new and wi dashboard and wi ready. Run wi --help.' })
   assert.throws(() => parseCommandLine(['show', 'x', '--off']),
-    { message: 'wi show does not take --off. --off applies only to wi area and wi tag and wi depend. Run wi --help.' })
+    { message: 'wi show does not take --off. Run wi --help.' })
   assert.throws(() => parseCommandLine(['show', 'x', '--json=1']),
     { message: "Option '--json' does not take an argument" })
 })

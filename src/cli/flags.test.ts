@@ -124,6 +124,7 @@ const INVOCATIONS: Record<string, string[]> = {
   set: ['set', 'Build server', '--owner', 'sam'],
   claim: ['claim', 'Build server', '--holder', 'codex'],
   // A person, so a missed refusal could never start an agent.
+  assign: ['assign', 'Build server', '--to', 'sam'],
   delegate: ['delegate', 'Build server', '--to', 'sam'],
   objective: ['objective'],
   agents: ['agents'],

@@ -313,13 +313,14 @@ test('wi --help documents area conversion', async () => {
   assert.match(stdout, /wi agents/)
 })
 
-test('wi --help documents the holder and delegation to any agent', async () => {
+test('wi --help documents the holders and assigning any agent', async () => {
   fixture = seed()
   const { code, stdout } = await wi(['--help'])
   assert.equal(code, 0)
-  assert.match(stdout, /wi delegate <ref> --to <person\|agent> \[--role <name>\]\n/)
-  assert.match(stdout, /holder field names the person or agent/)
-  assert.match(stdout, /--to agent\` writes holder: agent, which asks any agent\. wi starts no\n {2}agent/)
+  assert.match(stdout, /wi assign <ref> --to <person\|agent> \[--role <name>\] \[--off\]\n/)
+  assert.doesNotMatch(stdout, /^ {2}wi delegate /m)
+  assert.match(stdout, /holder field names the people and agents who do its work: one name, or a list/)
+  assert.match(stdout, /--to agent\` adds holder agent, which\n {2}asks any agent/)
   assert.doesNotMatch(stdout, /--permission|claude\|codex|--creator/m)
 })
 
@@ -533,13 +534,13 @@ test('wi claim and release expose JSON results and accept --vault', async () => 
   const claimed = await wi(['claim', 'wi-0004', '--holder', 'codex', '--json', '--vault', fixture.root])
   assert.equal(claimed.code, 0, claimed.stderr)
   assert.deepEqual(JSON.parse(claimed.stdout), {
-    id: 'wi-0004', path: 'Boards/Build server.md', holder: 'codex',
+    id: 'wi-0004', path: 'Boards/Build server.md', name: 'codex', holder: ['codex'],
     from: 'doing', to: 'doing', changed: true,
   })
   const released = await wi(['release', 'wi-0004', '--reason', 'stopped', '--where', 'card/task', '--json'])
   assert.equal(released.code, 0, released.stderr)
   assert.deepEqual(JSON.parse(released.stdout), {
-    id: 'wi-0004', path: 'Boards/Build server.md', holder: 'codex',
+    id: 'wi-0004', path: 'Boards/Build server.md', name: 'codex', holder: [],
     from: 'doing', to: 'options', reason: 'stopped', where: 'card/task', changed: true,
   })
 })
@@ -562,7 +563,7 @@ test('wi claim refusal exits 2 and names the existing agent', async () => {
   }))
   const { code, stderr } = await wi(['claim', 'wi-0004', '--holder', 'codex'])
   assert.equal(code, 2)
-  assert.match(stderr, /already claimed by claude/i)
+  assert.match(stderr, /already held by claude\./i)
 })
 
 test('wi --help lists claim and release', async () => {

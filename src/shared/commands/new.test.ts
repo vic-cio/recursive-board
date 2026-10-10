@@ -150,6 +150,14 @@ test('createItem does not inherit owner, and inherits the parent\'s old agent as
   }
 })
 
+test('createItem gives a doing child every holder of a parent with several', async () => {
+  fixture = seed()
+  fixture.write('Boards/Pair.md', '---\ntype: work-item\nid: wi-pair\ntitle: Pair\nstatus: doing\nparent: "[[Main]]"\n' +
+    'holder:\n  - Victor\n  - codex\n  - agent\n---\n')
+  const created = await createItem(await reload(fixture), { title: 'Step', parent: 'wi-pair', status: 'doing' })
+  assert.match(readFileSync(join(fixture.root, created.relPath), 'utf8'), /^holder:\n {2}- Victor\n {2}- codex\n/m)
+})
+
 test('createItem does not invent owner or holder when the parent has none', async () => {
   fixture = seed()
   const created = await createItem(await reload(fixture), { title: 'Top level', parent: 'wi-0001' })

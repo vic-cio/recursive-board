@@ -8,7 +8,7 @@ interface Fake extends AgentItem { title: string; parent: Fake | null }
 function vault() {
   const items: Fake[] = []
   const add = (title: string, parent: Fake | null, fields: Partial<Fake> = {}): Fake => {
-    const item: Fake = { title, parent, status: parent ? 'backlog' : undefined, holder: undefined, effectiveArchived: false, ...fields }
+    const item: Fake = { title, parent, status: parent ? 'backlog' : undefined, holders: [], effectiveArchived: false, ...fields }
     items.push(item)
     return item
   }
@@ -19,9 +19,9 @@ function vault() {
 test('a card waits on its children when it has open children and every one is in doing', () => {
   const { add, tree } = vault()
   const root = add('Home', null)
-  const parent = add('Parent', root, { status: 'doing', holder: 'lead' })
+  const parent = add('Parent', root, { status: 'doing', holders: ['lead'] })
   assert.equal(waitsOnChildren(parent, tree), false, 'a card with no children does its own work')
-  const first = add('First', parent, { status: 'doing', holder: 'worker-1' })
+  const first = add('First', parent, { status: 'doing', holders: ['worker-1'] })
   add('Gone', parent, { status: 'options', effectiveArchived: true })
   add('Closed', parent, { status: 'done' })
   assert.equal(waitsOnChildren(parent, tree), true, 'done and archived children are not open')
@@ -39,24 +39,24 @@ test('a card waits on its children when it has open children and every one is in
 test('the active count skips a doing card whose open children are all in doing', () => {
   const { items, add, tree } = vault()
   const root = add('Home', null)
-  const parent = add('Parent', root, { status: 'doing', holder: 'lead' })
-  add('First', parent, { status: 'doing', holder: 'worker-1' })
-  const second = add('Second', parent, { status: 'doing', holder: 'worker-2' })
+  const parent = add('Parent', root, { status: 'doing', holders: ['lead'] })
+  add('First', parent, { status: 'doing', holders: ['worker-1'] })
+  const second = add('Second', parent, { status: 'doing', holders: ['worker-2'] })
   assert.deepEqual([...activeAgentNames(items, [], tree)].sort(), ['worker-1', 'worker-2'], 'lead only waits on its children')
 
   second.status = 'options'
   assert.equal(activeAgentNames(items, [], tree).size, 2, 'lead has a child left to work, so it counts')
 
   second.status = 'doing'
-  add('Other', root, { status: 'doing', holder: 'lead' })
+  add('Other', root, { status: 'doing', holders: ['lead'] })
   assert.equal(activeAgentNames(items, [], tree).size, 3, 'lead counts through a card it works')
 })
 
 test('the active count skips a doing card that waits on a person', () => {
   const { items, add, tree } = vault()
   const root = add('Home', null)
-  const sent = add('Waiting', root, { status: 'doing', holder: 'worker-1' })
-  add('Working', root, { status: 'doing', holder: 'worker-2' })
+  const sent = add('Waiting', root, { status: 'doing', holders: ['worker-1'] })
+  add('Working', root, { status: 'doing', holders: ['worker-2'] })
   assert.equal(activeAgentNames(items, [], tree).size, 2, 'with no person rule, both count')
   const awaits = (card: Fake) => card === sent
   assert.deepEqual([...activeAgentNames(items, [], tree, awaits)], ['worker-2'], 'worker-1 only waits on the person')
@@ -65,19 +65,27 @@ test('the active count skips a doing card that waits on a person', () => {
 test('people, requests for any agent and cards out of doing add no agent', () => {
   const { items, add, tree } = vault()
   const root = add('Home', null)
-  add('Alice task', root, { status: 'doing', holder: 'Alice' })
-  add('Asked', root, { status: 'doing', holder: 'agent' })
-  add('Planned', root, { status: 'options', holder: 'pi' })
-  add('Closed', root, { status: 'done', holder: 'pi' })
-  const writer = add('Writer task', root, { status: 'doing', holder: 'Writer' })
+  add('Alice task', root, { status: 'doing', holders: ['Alice'] })
+  add('Asked', root, { status: 'doing', holders: ['agent'] })
+  add('Planned', root, { status: 'options', holders: ['pi'] })
+  add('Closed', root, { status: 'done', holders: ['pi'] })
+  const writer = add('Writer task', root, { status: 'doing', holders: ['Writer'] })
   assert.deepEqual(activeAgents(items, ['alice'], tree), [{ name: 'Writer', cards: [writer] }])
 })
 
 test('an agent that holds a card and its current subtask counts once, with both cards', () => {
   const { items, add, tree } = vault()
   const root = add('Home', null)
-  const parent = add('Parent', root, { status: 'doing', holder: 'claude' })
-  const step = add('Step', parent, { status: 'doing', holder: 'Claude' })
+  const parent = add('Parent', root, { status: 'doing', holders: ['claude'] })
+  const step = add('Step', parent, { status: 'doing', holders: ['Claude'] })
   add('Later', parent, { status: 'options' })
   assert.deepEqual(activeAgents(items, [], tree), [{ name: 'claude', cards: [parent, step] }])
+})
+
+test('each agent on a doing card counts, so one card can use several places; a person on it adds none', () => {
+  const { items, add, tree } = vault()
+  const root = add('Home', null)
+  const shared = add('Shared', root, { status: 'doing', holders: ['Victor', 'w1', 'w2', 'agent'] })
+  assert.deepEqual(activeAgents(items, ['victor'], tree), [{ name: 'w1', cards: [shared] }, { name: 'w2', cards: [shared] }])
+  assert.equal(activeAgentNames(items, ['victor'], tree, (card) => card === shared).size, 0, 'a card that waits on a person counts no one')
 })

@@ -18,8 +18,8 @@ interface NewWorkItemFields {
   /** The parent's filename stem. The wikilink is authoritative for resolution (docs/adr/0002-work-item-identity-and-parent-links.md). */
   parentStem: string
   owner?: string | undefined
-  /** The person or agent who does the work (docs/adr/0061-holder-names-who-does-the-work.md). */
-  holder?: string | undefined
+  /** The people and agents who do the work (docs/adr/0083-assign-and-several-holders.md). */
+  holders?: readonly string[] | undefined
   /** Links to a person or role note (docs/adr/0042-creator-and-role.md). */
   creator?: string | undefined
   creatorModel?: string | undefined
@@ -40,19 +40,20 @@ export type NewWorkItem = NewWorkItemFields & (
 )
 
 /**
- * New children do not inherit owner. The holder follows active work: it is inherited for doing
+ * New children do not inherit owner. The holders follow active work: they are inherited for doing
  * children, while an explicit owner or holder remains an intentional override. A request for any
  * agent (`holder: agent`) asks for its own card only, so it is not inherited.
  */
 export function inheritedChildFields(
-  parent: Pick<NewWorkItemFields, 'owner' | 'holder'>,
+  parent: Pick<NewWorkItemFields, 'owner' | 'holders'>,
   status: Status | undefined,
-  overrides: Pick<NewWorkItemFields, 'owner' | 'holder'> = {},
-): Pick<NewWorkItemFields, 'owner' | 'holder'> {
-  const inherited = status === 'doing' && !isAnyAgent(parent.holder) ? parent.holder : undefined
+  overrides: Pick<NewWorkItemFields, 'owner' | 'holders'> = {},
+): Pick<NewWorkItemFields, 'owner' | 'holders'> {
+  const named = (parent.holders ?? []).filter((name) => !isAnyAgent(name))
+  const inherited = status === 'doing' && named.length > 0 ? named : undefined
   return {
     owner: overrides.owner,
-    holder: overrides.holder ?? inherited,
+    holders: overrides.holders ?? inherited,
   }
 }
 
@@ -73,7 +74,8 @@ export function renderWorkItem(item: NewWorkItem, extraSections: readonly string
   if (Boolean(template.area) !== (item.area === true)) {
     throw new Error(`template "${template.name}" does not match the work item kind`)
   }
-  const fields: [string, Scalar][] = [
+  // A list value is written as a block list, the way Obsidian writes `tags`.
+  const fields: [string, Scalar | readonly string[]][] = [
     ['type', WORK_ITEM_TYPE],
     ['id', item.id],
     ['title', item.title],
@@ -82,17 +84,19 @@ export function renderWorkItem(item: NewWorkItem, extraSections: readonly string
   if (item.area) fields.push(['area', true])
   fields.push(['parent', formatWikilink(item.parentStem)])
   if (item.owner !== undefined && item.owner !== '') fields.push(['owner', item.owner])
-  if (item.holder !== undefined && item.holder !== '') fields.push(['holder', item.holder])
+  // One holder is a plain value, so a card with one holder reads as it always did.
+  const holders = (item.holders ?? []).filter((name) => name !== '')
+  if (holders.length > 0) fields.push(['holder', holders.length === 1 ? holders[0]! : holders])
   if (item.role !== undefined && item.role !== '') fields.push(['role', item.role])
   if (item.creator !== undefined && item.creator !== '') fields.push(['creator', item.creator])
   if (item.creatorModel !== undefined && item.creatorModel !== '') fields.push(['creator_model', item.creatorModel])
   if (item.priority !== undefined) fields.push(['priority', item.priority])
   fields.push(['created', item.created], ['updated', item.updated])
+  if (item.tags !== undefined && item.tags.length > 0) fields.push(['tags', item.tags])
 
-  const lines = fields.map(([key, value]) => `${key}: ${formatScalar(value)}`)
-  if (item.tags !== undefined && item.tags.length > 0) {
-    lines.push('tags:', ...item.tags.map((tag) => `  - ${formatScalar(tag)}`))
-  }
+  const lines = fields.flatMap(([key, value]) => typeof value === 'object'
+    ? [`${key}:`, ...value.map((entry) => `  - ${formatScalar(entry)}`)]
+    : [`${key}: ${formatScalar(value)}`])
   return `---\n${lines.join('\n')}\n---\n${renderBody(template, extraSections, item.brief)}`
 }
 

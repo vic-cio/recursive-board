@@ -75,7 +75,7 @@ export function readRoleTaggedNotes(root: string): Promise<TaggedNote[]> {
   return shared.readRoleTaggedNotes(nodePort(root))
 }
 
-/** The people the vault at `root` knows (docs/adr/0058-delegate-a-card.md). */
+/** The people the vault at `root` knows (docs/adr/0083-assign-and-several-holders.md). */
 export function readPeople(root: string): Promise<Map<string, string>> {
   return shared.readPeople(nodePort(root))
 }

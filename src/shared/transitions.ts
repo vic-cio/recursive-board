@@ -11,7 +11,7 @@
 import type { Edit } from './edits.ts'
 import { cardState } from './card-state.ts'
 import { clearPersonWaitsEdit, dependsOnRaw } from './dependencies.ts'
-import { clearHolderEdits, isAnyAgent, setHolderEdits } from './holder.ts'
+import { holds, isAnyAgent, sameName, setHoldersEdits } from './holder.ts'
 import { formatWikilink, type Status } from './schema.ts'
 
 /**
@@ -59,37 +59,49 @@ export function untickEditsIn(text: string): Edit[] | null {
 }
 
 /**
- * A claim is one status transition and one holder edit on the same card.
+ * A claim is one status transition and one holder edit on the same card
+ * (docs/adr/0083-assign-and-several-holders.md). A claim starts a card that has no holder, that asks
+ * for any agent, or that lists the claimant already. Any other card needs the claimant assigned
+ * first, so two workers that find one card in `wi ready` cannot both take it. The claimant's name
+ * replaces the reserved holder `agent`, and the other holders stay.
  * `hasOtherDoingChild` is a child in doing that someone other than this agent works: a person, or
  * another agent. A child this agent holds does not block, so an agent can hold a card and the
- * subtask it works now, in either order. The reserved holder `agent` asks for any agent, so any
- * claim replaces it.
+ * subtask it works now, in either order.
  */
 export function claimEdits(
   from: Status | undefined,
-  currentHolder: string | undefined,
+  holders: readonly string[],
   agent: string,
   hasPrevStatus: boolean,
   hasOtherDoingChild: boolean,
 ): Edit[] | null {
   if (isAnyAgent(agent)) throw new Error('agent is the reserved holder that means any agent. Claim with your own name.')
   if (from === 'done') throw new Error('a done card cannot be claimed.')
-  const holder = isAnyAgent(currentHolder) ? undefined : currentHolder
-  if (holder && holder !== agent) {
-    throw new Error(`already claimed by ${holder}. Release that claim first.`)
+  const listed = holds(holders, agent)
+  const request = holders.findIndex((name) => isAnyAgent(name))
+  if (!listed && request === -1 && holders.length > 0) {
+    throw new Error(`already held by ${holders.join(', ')}. To add an agent, a holder runs wi assign <ref> --to agent first.`)
   }
-  if (holder === agent && from === 'doing') return null
+  if (listed && from === 'doing') return null
   if (hasOtherDoingChild) {
     throw new Error('this board has a child in doing that another agent or a person works. Release or finish that child first.')
   }
   const status = statusEdits(from, 'doing', hasPrevStatus)
-  if (holder === agent) return status
-  return [...(status ?? []), ...setHolderEdits(agent)]
+  if (listed) return status
+  const next = holders.length === 0 ? [agent] : holders.map((name, i) => i === request ? agent : name)
+  return [...(status ?? []), ...setHoldersEdits(next)]
 }
 
-/** Release retains normal status history rules while removing the holder. */
-export function releaseEdits(from: Status | undefined, hasPrevStatus: boolean): Edit[] {
-  return [...(statusEdits(from, 'options', hasPrevStatus) ?? []), ...clearHolderEdits()]
+/**
+ * A release removes one holder. The status stays while a named holder remains. When none
+ * remains, the card moves to options, with the normal status history rules, so another worker
+ * can take it.
+ */
+export function releaseEdits(from: Status | undefined, holders: readonly string[], name: string, hasPrevStatus: boolean): Edit[] {
+  if (!holds(holders, name)) throw new Error(`${name} does not hold this card. Its holders: ${holders.join(', ') || 'none'}.`)
+  const rest = holders.filter((holder) => !sameName(holder, name))
+  const status = rest.some((holder) => !isAnyAgent(holder)) ? null : statusEdits(from, 'options', hasPrevStatus)
+  return [...(status ?? []), ...setHoldersEdits(rest)]
 }
 
 /**

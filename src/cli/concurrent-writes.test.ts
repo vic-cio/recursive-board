@@ -54,7 +54,7 @@ test('two concurrent claims of one card: one agent wins and the other is refused
   const lost = results.filter((r): r is PromiseRejectedResult => r.status === 'rejected')
   assert.equal(won.length, 1, 'exactly one claim succeeds')
   assert.equal(lost.length, 1, 'the other claim reports failure')
-  assert.match(String(lost[0]!.reason), /already claimed by (alpha|beta)/)
+  assert.match(String(lost[0]!.reason), /already held by (alpha|beta)/)
   const winner = (won[0] as PromiseFulfilledResult<{ holder: string }>).value.holder
   assert.equal(fmOf(fixture, 'Task').get('holder'), winner)
 })
@@ -144,7 +144,7 @@ test('an area conversion refuses a card claimed after the load', async () => {
   fixture = seed()
   const vault = await loadVault(fixture.root)
   await claimItem(await loadVault(fixture.root), 'Task', 'alpha')
-  await assert.rejects(setArea(vault, 'Task', { off: false }), /holder "alpha"/)
+  await assert.rejects(setArea(vault, 'Task', { off: false }), /holder alpha\./)
   assert.equal(fmOf(fixture, 'Task').has('area'), false)
 })
 

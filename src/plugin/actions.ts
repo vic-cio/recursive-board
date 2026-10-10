@@ -28,7 +28,8 @@ import { PERSON_TYPE } from '../shared/authorship.ts'
 import { freeTagEditsIn } from '../shared/tags.ts'
 import { parseFrontmatter } from '../shared/frontmatter.ts'
 import { parseWikilink } from '../shared/schema.ts'
-import { assignEdits } from '../shared/delegate.ts'
+import { assignEdits, unassignEdits } from '../shared/assign.ts'
+import { holderLabel, isAnyAgent } from '../shared/holder.ts'
 import type { WorkItemIndex, WorkItemMeta } from './index.ts'
 import { UndoStack } from './undo.ts'
 import { emptyObjectiveLine } from './objective-cursor.ts'
@@ -143,15 +144,19 @@ export class Actions {
     }
   }
 
-  /** Assigns a person or any agent through the same shared step as `wi delegate`. */
-  async delegate(meta: WorkItemMeta, holder: string): Promise<void> {
-    const label = `delegate ${meta.title} to ${holder === 'agent' ? 'an agent' : holder}`
-    const written = await this.run(label, () => this.edit(
-      meta.file,
-      (text) => assignEdits(text, holder),
-      label,
-    ))
-    if (written) this.undoableNotice(`Delegated ${meta.title} to ${holder === 'agent' ? 'an agent' : holder}`)
+  /** Adds a person or any agent to the holders through the same shared step as `wi assign`. */
+  async assign(meta: WorkItemMeta, holder: string): Promise<void> {
+    const who = isAnyAgent(holder) ? 'an agent' : holder
+    const label = `assign ${meta.title} to ${who}`
+    const written = await this.run(label, () => this.edit(meta.file, (text) => assignEdits(text, holder), label))
+    if (written) this.undoableNotice(`Assigned ${meta.title} to ${who}`)
+  }
+
+  /** Removes one holder through the same shared step as `wi assign --off`. The status stays. */
+  async unassign(meta: WorkItemMeta, holder: string): Promise<void> {
+    const label = `unassign ${holderLabel(holder)} from ${meta.title}`
+    const written = await this.run(label, () => this.edit(meta.file, (text) => unassignEdits(text, holder), label))
+    if (written) this.undoableNotice(`Unassigned ${holderLabel(holder)} from ${meta.title}`)
   }
 
   /** A card this one may wait on: not itself, not a root, and not one that already waits on it. */
@@ -236,7 +241,7 @@ export class Actions {
           isRoot: meta.parentLink === null,
           isArea: now.area,
           status: now.status,
-          holder: now.holder,
+          holders: now.holders,
         }, target)
       }, `${label} ${meta.title}`)
       return true

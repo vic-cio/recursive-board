@@ -1,7 +1,7 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 
-import { firstChildPromotion, moveEdits, moveRefusal, statusEditsIn } from './transitions.ts'
+import { claimEdits, firstChildPromotion, moveEdits, moveRefusal, releaseEdits, statusEditsIn } from './transitions.ts'
 
 // A small tree, keyed the way either writer keys it: Main > Project > Server > Auth, Main > Site.
 const PARENTS: Record<string, string | null> = {
@@ -82,4 +82,57 @@ test('statusEditsIn to done also clears the person links in depends_on', () => {
 test('statusEditsIn leaves depends_on alone for any other move, or without a person rule', () => {
   assert.equal(statusEditsIn(WAITING, 'backlog', isPerson)?.some((edit) => edit.key === 'depends_on'), false)
   assert.equal(statusEditsIn(WAITING, 'done')?.some((edit) => edit.key === 'depends_on'), false)
+})
+
+const DOING = { op: 'set', key: 'status', value: 'doing' } as const
+const holderIs = (value: string) => [{ op: 'set', key: 'holder', value }, { op: 'remove', key: 'agent' }]
+const holdersAre = (...values: string[]) => [{ op: 'list', key: 'holder', values }, { op: 'remove', key: 'agent' }]
+
+test('a claim on an unheld card writes the claimant as the one holder and moves it to doing', () => {
+  assert.deepEqual(claimEdits('options', [], 'w1', false, false), [DOING, ...holderIs('w1')])
+})
+
+test('a holder starts its own card: only the status moves, and a repeat in doing writes nothing', () => {
+  assert.deepEqual(claimEdits('options', ['w1'], 'w1', false, false), [DOING])
+  assert.deepEqual(claimEdits('options', ['Victor', 'W1'], 'w1', false, false), [DOING], 'a name matches without case')
+  assert.equal(claimEdits('doing', ['w1'], 'w1', false, false), null)
+  assert.equal(claimEdits('doing', ['Victor', 'w1'], 'w1', false, false), null)
+})
+
+test('a claim replaces the request for any agent with the claimant, and keeps the other holders', () => {
+  assert.deepEqual(claimEdits('options', ['agent'], 'w1', false, false), [DOING, ...holderIs('w1')])
+  assert.deepEqual(claimEdits('doing', ['agent'], 'w1', false, false), holderIs('w1'))
+  assert.deepEqual(claimEdits('doing', ['Victor', 'agent'], 'w1', false, false), holdersAre('Victor', 'w1'))
+})
+
+test('a claim refuses a card that others hold and that asks for no agent: assign first', () => {
+  assert.throws(() => claimEdits('options', ['w2'], 'w1', false, false), /already held by w2\..*wi assign/)
+  assert.throws(() => claimEdits('doing', ['Victor', 'w2'], 'w1', false, false), /already held by Victor, w2/)
+})
+
+test('a claim refuses the reserved name, a done card, and a board whose doing child another works', () => {
+  assert.throws(() => claimEdits('options', [], 'agent', false, false), /reserved/)
+  assert.throws(() => claimEdits('options', [], 'Agent', false, false), /reserved/)
+  assert.throws(() => claimEdits('done', [], 'w1', true, false), /done card/)
+  assert.throws(() => claimEdits('options', [], 'w1', false, true), /child in doing/)
+})
+
+test('releasing the last holder clears holder and agent, and moves the card to options', () => {
+  assert.deepEqual(releaseEdits('doing', ['codex'], 'codex', false), [
+    { op: 'set', key: 'status', value: 'options' }, { op: 'remove', key: 'holder' }, { op: 'remove', key: 'agent' },
+  ])
+})
+
+test('releasing one of several holders removes only that name, and the card stays where it is', () => {
+  assert.deepEqual(releaseEdits('doing', ['Victor', 'w1'], 'W1', false), holderIs('Victor'))
+  assert.deepEqual(releaseEdits('doing', ['Victor', 'w1', 'w2'], 'w1', false), holdersAre('Victor', 'w2'))
+})
+
+test('releasing the last named holder leaves a request for any agent, in options', () => {
+  assert.deepEqual(releaseEdits('doing', ['w1', 'agent'], 'w1', false),
+    [{ op: 'set', key: 'status', value: 'options' }, ...holderIs('agent')])
+})
+
+test('a release refuses a name that does not hold the card', () => {
+  assert.throws(() => releaseEdits('doing', ['Victor'], 'w1', false), /w1 does not hold/)
 })

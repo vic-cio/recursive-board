@@ -69,6 +69,11 @@ test('setArea refuses a card with a holder, read from an old card\'s agent', asy
   )
 })
 
+test('setArea refuses a card with a list of holders', async () => {
+  fixture = seed({ holder: '[Victor, codex]' })
+  await assert.rejects(setArea(await loadVault(fixture.root), 'wi-0005', { off: false }), /holders Victor, codex/)
+})
+
 test('setArea converts an area back to a card without changing its status', async () => {
   fixture = seed({ area: true, prev_status: 'doing' })
   const result = await setArea(await loadVault(fixture.root), 'wi-0005', { off: true })

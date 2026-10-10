@@ -95,16 +95,17 @@ const ENTRIES: Entry[] = [
     usage: ['wi set <ref> [--owner <name>] [--role ""]'] },
   { name: 'claim', kind: 'vault', writes: true, flags: ['holder', 'vault', 'json'],
     usage: ['wi claim <ref> [--holder <name>]'] },
-  { name: 'delegate', kind: 'vault', writes: true, flags: ['to', 'role', 'vault', 'json'],
-    usage: ['wi delegate <ref> --to <person|agent> [--role <name>]'] },
+  { name: 'assign', kind: 'vault', writes: true, flags: ['to', 'role', 'off', 'vault', 'json'],
+    usage: ['wi assign <ref> --to <person|agent> [--role <name>] [--off]'] },
+  { name: 'delegate', kind: 'retired', writes: false, flags: ['to', 'role', 'vault', 'json'], usage: [] },
   { name: 'review', kind: 'retired', writes: false, flags: ['to', 'files', 'note', 'vault', 'json'], usage: [] },
   { name: 'approve', kind: 'retired', writes: false, flags: ['you', 'vault', 'json'], usage: [] },
   { name: 'send-back', kind: 'retired', writes: false, flags: ['you', 'comment', 'vault', 'json'], usage: [] },
   { name: 'objective', kind: 'retired', writes: false, flags: [], usage: [] },
   { name: 'agents', kind: 'vault', writes: false, flags: ['vault', 'json'], usage: ['wi agents [--json]'] },
   { name: 'dashboard', kind: 'retired', writes: false, flags: ['you', 'parent', 'panel', 'vault', 'json'], usage: [] },
-  { name: 'release', kind: 'vault', writes: true, flags: ['reason', 'where', 'vault', 'json'],
-    usage: ['wi release <ref> --reason <text> [--where <branch-or-path>]'] },
+  { name: 'release', kind: 'vault', writes: true, flags: ['reason', 'where', 'holder', 'vault', 'json'],
+    usage: ['wi release <ref> --reason <text> [--where <branch-or-path>] [--holder <name>]'] },
   { name: 'move', kind: 'vault', writes: true, flags: ['to', 'vault', 'json'], usage: ['wi move <ref> --to <ref>'] },
   { name: 'archive', kind: 'vault', writes: true, flags: ['undo', 'vault', 'json'], usage: ['wi archive <ref> [--undo]'] },
   { name: 'promote', kind: 'vault', writes: true, flags: ['vault', 'json'], usage: ['wi promote <ref>'] },
@@ -190,21 +191,30 @@ and \`wi status <ref> doing\` refuse a card with an open wait. \`wi children\` m
 A person clears a wait with \`wi depend <ref> --on <person> --off\`: the card stays in doing with its
 holder. \`wi status <ref> done\` clears the card's waits on people: that is the approval.` },
   { about: ['status'], text: '`wi status <ref> done` names each card it unblocks. An archived card that is not done still blocks.' },
-  { about: ['ready', 'claim'], text: `A card's holder field names the person or agent who does its work. An old card's agent field
-is read as its holder. The holder value agent asks for any agent: \`wi ready\` lists those cards
-first, and a claim replaces agent with the claimant's name.` },
-  { about: ['claim'], text: `\`wi claim\` writes the holder and moves the card to doing. The holder is --holder, else WI_AGENT.
-It lets an agent hold a card and its
-subtasks at once. It refuses a board with a child in doing that a different agent or a person works.` },
-  { about: ['delegate'], text: `\`wi delegate\` sets the holder and nothing else: the status stays. \`--to <person>\` names a person
-(a note with type: person). \`--to agent\` writes holder: agent, which asks any agent. wi starts no
-agent: start one with your harness's own tools, and it runs \`wi claim\` by its own name.
---role <name> adds the tag role/<name> to the card in the same write.` },
+  { about: ['ready', 'claim', 'assign'], text: `A card's holder field names the people and agents who do its work: one name, or a list.
+An old card's agent field is read as its holder. The holder value agent asks for any agent:
+\`wi ready\` lists a card that only agent holds, first, and a claim replaces agent with the
+claimant's name. \`wi ready\` treats a card with any other holder as taken.` },
+  { about: ['claim'], text: `\`wi claim\` adds the claimant to the holders and moves the card to doing. The claimant is
+--holder, else WI_AGENT. It starts a card with no holder, a card that holds agent, or a card that
+lists the claimant. A card that others hold needs \`wi assign <ref> --to agent\` first. An agent may
+hold a card and its subtasks at once. A claim refuses a board with a child in doing that a
+different agent or a person works.` },
+  { about: ['release'], text: `\`wi release\` removes one holder and adds a note. It removes --holder, else WI_AGENT when that
+holds the card, else the only holder. The status stays while another named holder remains;
+otherwise the card moves to options.` },
+  { about: ['assign'], text: `\`wi assign\` adds one holder and nothing else: the status stays, and no note is written.
+\`--to <person>\` names a person (a note with type: person). \`--to agent\` adds holder agent, which
+asks any agent. wi starts no agent: start one with your harness's own tools, and it runs
+\`wi claim\` by its own name. --off removes the name and leaves the status. --role <name> adds the
+tag role/<name> to the card in the same write.` },
+  { about: ['delegate'], text: '`wi delegate` is retired and changes nothing. Use `wi assign <ref> --to <person|agent>`.' },
   { about: ['show'], text: '`wi show` lists each role tag on the card with the notes that carry it: the procedure to follow.' },
   { about: ['objective'], text: '`wi objective` is retired. Use `wi show <ref> --json` to read a card and its ancestor objectives.' },
   { about: ['agents'], text: `\`wi agents\` prints the agents that count against maxAgents, each with the doing cards it works,
-the count and the limit. An agent counts while it works a doing card. A card whose open children
-are all in doing, or that waits on a person, does not count. The limit is none (null in
+the count and the limit. Each agent on a doing card counts, so one card can use several places.
+A person does not count. A card whose open children are all in doing, or that waits on a person,
+does not count. The limit is none (null in
 JSON) when no limit is set. It writes nothing.` },
   { about: ['dashboard'], text: `\`wi dashboard\` is retired and reads nothing. Use \`wi agents\` for the agent count and limit. A
 dashboard is a separate plugin that reads the card files; the README names an example.` },
