@@ -90,19 +90,16 @@ const ENTRIES: Entry[] = [
   { name: 'area', kind: 'vault', writes: true, flags: ['off', 'vault', 'json'], usage: ['wi area <ref> [--off]'] },
   { name: 'tag', kind: 'vault', writes: true, flags: ['off', 'vault', 'json'], usage: ['wi tag <ref> <tag> [--off]'] },
   { name: 'depend', kind: 'vault', writes: true, flags: ['on', 'off', 'vault', 'json'],
-    usage: ['wi depend <ref> --on <ref> [--off]'] },
+    usage: ['wi depend <ref> --on <ref|person> [--off]'] },
   { name: 'set', kind: 'vault', writes: true, flags: ['owner', 'role', 'vault', 'json'],
     usage: ['wi set <ref> [--owner <name>] [--role ""]'] },
   { name: 'claim', kind: 'vault', writes: true, flags: ['holder', 'vault', 'json'],
     usage: ['wi claim <ref> [--holder <name>]'] },
   { name: 'delegate', kind: 'vault', writes: true, flags: ['to', 'role', 'vault', 'json'],
     usage: ['wi delegate <ref> --to <person|agent> [--role <name>]'] },
-  { name: 'review', kind: 'vault', writes: true, flags: ['to', 'files', 'note', 'vault', 'json'],
-    usage: ['wi review <ref> --to <name> [--files <path>]... [--note <text>]'] },
-  { name: 'approve', kind: 'vault', writes: true, flags: ['you', 'vault', 'json'],
-    usage: ['wi approve <ref> --you <name>'] },
-  { name: 'send-back', kind: 'vault', writes: true, flags: ['you', 'comment', 'vault', 'json'],
-    usage: ['wi send-back <ref> --you <name> [--comment <text>]'] },
+  { name: 'review', kind: 'retired', writes: false, flags: ['to', 'files', 'note', 'vault', 'json'], usage: [] },
+  { name: 'approve', kind: 'retired', writes: false, flags: ['you', 'vault', 'json'], usage: [] },
+  { name: 'send-back', kind: 'retired', writes: false, flags: ['you', 'comment', 'vault', 'json'], usage: [] },
   { name: 'objective', kind: 'retired', writes: false, flags: [], usage: [] },
   { name: 'agents', kind: 'vault', writes: false, flags: ['vault', 'json'], usage: ['wi agents [--json]'] },
   { name: 'dashboard', kind: 'retired', writes: false, flags: ['you', 'parent', 'panel', 'vault', 'json'], usage: [] },
@@ -187,9 +184,11 @@ client download the file, or delete the stray file, then retry. There is no --fo
   { about: ['archive'], text: '`wi archive` changes one flag. Descendants disappear with their parent at read time.' },
   { about: ['area'], text: `\`wi area <ref>\` marks a card as an area and keeps its status. It refuses a card with a holder.
 Use \`wi area <ref> --off\` to convert back without changing its status.` },
-  { about: ['depend', 'claim', 'status', 'children'], text: `\`wi depend <ref> --on <ref>\` makes a card wait on another card; --off removes that. \`wi claim\`
-and \`wi status <ref> doing\` refuse a card with an open dependency. \`wi children\` marks it
-[waits on N].` },
+  { about: ['depend', 'claim', 'status', 'children'], text: `\`wi depend <ref> --on <ref>\` makes a card wait on another card; --off removes that. \`--on <person>\`
+makes it wait on a person (a note with type: person): that is how to ask for a review. \`wi claim\`
+and \`wi status <ref> doing\` refuse a card with an open wait. \`wi children\` marks it [waits on N].
+A person clears a wait with \`wi depend <ref> --on <person> --off\`: the card stays in doing with its
+holder. \`wi status <ref> done\` clears the card's waits on people: that is the approval.` },
   { about: ['status'], text: '`wi status <ref> done` names each card it unblocks. An archived card that is not done still blocks.' },
   { about: ['ready', 'claim'], text: `A card's holder field names the person or agent who does its work. An old card's agent field
 is read as its holder. The holder value agent asks for any agent: \`wi ready\` lists those cards
@@ -205,19 +204,13 @@ agent: start one with your harness's own tools, and it runs \`wi claim\` by its 
   { about: ['objective'], text: '`wi objective` is retired. Use `wi show <ref> --json` to read a card and its ancestor objectives.' },
   { about: ['agents'], text: `\`wi agents\` prints the agents that count against maxAgents, each with the doing cards it works,
 the count and the limit. An agent counts while it works a doing card. A card whose open children
-are all in doing, or that waits for a review verdict, does not count. The limit is none (null in
+are all in doing, or that waits on a person, does not count. The limit is none (null in
 JSON) when no limit is set. It writes nothing.` },
   { about: ['dashboard'], text: `\`wi dashboard\` is retired and reads nothing. Use \`wi agents\` for the agent count and limit. A
 dashboard is a separate plugin that reads the card files; the README names an example.` },
-  { about: ['review'], text: `\`wi review <ref> --to <name> [--files <path>]...\` sends a card to a person note for review. Each --files
-adds one vault-relative path. --note says what to check; line breaks become spaces. The command sets
-owner and appends a Review note in one write.` },
-  { about: ['approve', 'send-back'], text: `\`wi approve <ref> --you <name>\` and \`wi send-back <ref> --you <name> [--comment <text>]\` give the
-verdict. --you names the reviewer: it must match the
-card's owner. Approve notes "Approved by <name>." and moves the card to done. Send back notes the
-comment and removes owner; the card stays in doing with its holder. Each is one write. Both refuse
-a card that is not in doing, has no review request after its last verdict, or has an open child.
-wi signs the note with WI_AGENT when it is set, so a verdict an agent records names that agent.` },
+  { about: ['review', 'approve', 'send-back'], text: `\`wi review\`, \`wi approve\` and \`wi send-back\` are retired and change nothing. A review is a wait on a person:
+\`wi depend <ref> --on <person>\` asks, \`wi depend <ref> --on <person> --off\` sends the card back, and
+\`wi status <ref> done\` approves it.` },
   { about: [], text: `The board settings live in the Recursive Board plugin settings, stored in
 .obsidian/plugins/recursive-board/data.json. wi reads them and never writes them.` },
   { about: ['new'], text: '`wi new` warns when a hidden file sits in the work-item folder, because a new id or filename may clash with it.' },

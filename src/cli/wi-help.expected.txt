@@ -11,13 +11,10 @@ Usage
   wi note <ref> <text> [--agent <name>]
   wi area <ref> [--off]
   wi tag <ref> <tag> [--off]
-  wi depend <ref> --on <ref> [--off]
+  wi depend <ref> --on <ref|person> [--off]
   wi set <ref> [--owner <name>] [--role ""]
   wi claim <ref> [--holder <name>]
   wi delegate <ref> --to <person|agent> [--role <name>]
-  wi review <ref> --to <name> [--files <path>]... [--note <text>]
-  wi approve <ref> --you <name>
-  wi send-back <ref> --you <name> [--comment <text>]
   wi agents [--json]
   wi release <ref> --reason <text> [--where <branch-or-path>]
   wi move <ref> --to <ref>
@@ -86,9 +83,11 @@ Notes
   `wi archive` changes one flag. Descendants disappear with their parent at read time.
   `wi area <ref>` marks a card as an area and keeps its status. It refuses a card with a holder.
   Use `wi area <ref> --off` to convert back without changing its status.
-  `wi depend <ref> --on <ref>` makes a card wait on another card; --off removes that. `wi claim`
-  and `wi status <ref> doing` refuse a card with an open dependency. `wi children` marks it
-  [waits on N].
+  `wi depend <ref> --on <ref>` makes a card wait on another card; --off removes that. `--on <person>`
+  makes it wait on a person (a note with type: person): that is how to ask for a review. `wi claim`
+  and `wi status <ref> doing` refuse a card with an open wait. `wi children` marks it [waits on N].
+  A person clears a wait with `wi depend <ref> --on <person> --off`: the card stays in doing with its
+  holder. `wi status <ref> done` clears the card's waits on people: that is the approval.
   `wi status <ref> done` names each card it unblocks. An archived card that is not done still blocks.
   A card's holder field names the person or agent who does its work. An old card's agent field
   is read as its holder. The holder value agent asks for any agent: `wi ready` lists those cards
@@ -104,19 +103,13 @@ Notes
   `wi objective` is retired. Use `wi show <ref> --json` to read a card and its ancestor objectives.
   `wi agents` prints the agents that count against maxAgents, each with the doing cards it works,
   the count and the limit. An agent counts while it works a doing card. A card whose open children
-  are all in doing, or that waits for a review verdict, does not count. The limit is none (null in
+  are all in doing, or that waits on a person, does not count. The limit is none (null in
   JSON) when no limit is set. It writes nothing.
   `wi dashboard` is retired and reads nothing. Use `wi agents` for the agent count and limit. A
   dashboard is a separate plugin that reads the card files; the README names an example.
-  `wi review <ref> --to <name> [--files <path>]...` sends a card to a person note for review. Each --files
-  adds one vault-relative path. --note says what to check; line breaks become spaces. The command sets
-  owner and appends a Review note in one write.
-  `wi approve <ref> --you <name>` and `wi send-back <ref> --you <name> [--comment <text>]` give the
-  verdict. --you names the reviewer: it must match the
-  card's owner. Approve notes "Approved by <name>." and moves the card to done. Send back notes the
-  comment and removes owner; the card stays in doing with its holder. Each is one write. Both refuse
-  a card that is not in doing, has no review request after its last verdict, or has an open child.
-  wi signs the note with WI_AGENT when it is set, so a verdict an agent records names that agent.
+  `wi review`, `wi approve` and `wi send-back` are retired and change nothing. A review is a wait on a person:
+  `wi depend <ref> --on <person>` asks, `wi depend <ref> --on <person> --off` sends the card back, and
+  `wi status <ref> done` approves it.
   The board settings live in the Recursive Board plugin settings, stored in
   .obsidian/plugins/recursive-board/data.json. wi reads them and never writes them.
   `wi new` warns when a hidden file sits in the work-item folder, because a new id or filename may clash with it.

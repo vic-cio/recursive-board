@@ -18,7 +18,6 @@ import { runDelegate } from './delegate.ts'
 import { runDepend } from './depend.ts'
 import { runNote } from './note.ts'
 import { runDemote, runPromote } from './promote.ts'
-import { runApprove, runReview, runSendBack } from './review.ts'
 import { runSet } from './set.ts'
 import { runTag } from './tag.ts'
 // new, move, rm and the retired commands (wi-5s2x).
@@ -44,9 +43,6 @@ export const RUNNERS: Readonly<Record<string, RunFunction>> = {
   claim: runClaim,
   release: runRelease,
   delegate: runDelegate,
-  review: runReview,
-  approve: runApprove,
-  'send-back': runSendBack,
   archive: runArchive,
   promote: runPromote,
   demote: runDemote,

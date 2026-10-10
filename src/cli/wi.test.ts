@@ -85,6 +85,19 @@ test('wi dashboard is retired: it exits 0, reads no vault and names wi agents', 
   assert.match(result.stdout, /wi dashboard is retired\. Use wi agents/)
 })
 
+for (const [command, flags, replacement] of [
+  ['review', ['--to', 'Ana', '--files', 'a.md', '--note', 'Check it.'], /wi depend <ref> --on <person>/],
+  ['approve', ['--you', 'Ana'], /wi status <ref> done/],
+  ['send-back', ['--you', 'Ana', '--comment', 'Redo it.'], /wi depend <ref> --on <person> --off/],
+] as const) {
+  test(`wi ${command} is retired: it exits 0, reads no vault and names its replacement`, async () => {
+    const result = await wi([command, 'Build server', ...flags], '/no/such/vault')
+    assert.equal(result.code, 0, result.stderr)
+    assert.match(result.stdout, new RegExp(`^wi ${command} is retired\\.`))
+    assert.match(result.stdout, replacement)
+  })
+}
+
 test('wi agents takes no card reference', async () => {
   fixture = seed()
   const result = await wi(['agents', 'wi-0004'])

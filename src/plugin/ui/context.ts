@@ -12,7 +12,7 @@ export interface RenderContext {
   component: Component
   index: WorkItemIndex
   actions: Actions
-  /** Person notes that can review a card. */
+  /** Person notes a card can wait on or be assigned to. */
   personNames(): string[]
   checklistComponents: ChecklistComponents
   /** True on a phone or tablet. A board uses status tabs there (docs/adr/0022-phone-board-navigation.md). */

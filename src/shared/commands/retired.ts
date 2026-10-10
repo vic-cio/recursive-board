@@ -21,6 +21,12 @@ export const RETIRED: Readonly<Record<string, RunFunction>> = {
   objective: retired('wi objective is retired. Use wi show <ref> --json to read a card and its ancestor objectives.'),
   dashboard: retired('wi dashboard is retired. Use wi agents for the agent count and limit. ' +
     'A dashboard is a separate plugin; the README names an example.'),
+  // docs/adr/0082-review-is-a-wait-on-a-person.md
+  review: retired('wi review is retired. To ask a person to review a card, run wi depend <ref> --on <person>. ' +
+    'The person sends the card back with wi depend <ref> --on <person> --off, or approves it with wi status <ref> done.'),
+  approve: retired('wi approve is retired. To approve a card, run wi status <ref> done. That also clears its waits on people.'),
+  'send-back': retired('wi send-back is retired. To send a card back, clear the wait on the person: ' +
+    'wi depend <ref> --on <person> --off. The card stays in doing with its holder.'),
   retag: retired(REMOVED_IN_0_8),
   graph: retired(REMOVED_IN_0_8),
 }

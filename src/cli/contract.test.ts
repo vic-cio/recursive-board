@@ -80,14 +80,14 @@ const CLEAN: Record<string, string> = {
   'Roles/Coder.md': item({ type: 'role', tags: '[role/coder]' }, '## Procedure\n'),
 }
 
-/** SEED with a person, a held card, a card that waits for Ana's review, a free card and an area. */
+/** SEED with a person, a held card, a card that waits on Ana, a free card and an area. */
 const EDIT_SEED: Record<string, string> = {
   ...SEED,
   'People/Ana.md': '---\ntype: person\n---\n',
   'Boards/Draft.md': item({ type: 'work-item', id: 'wi-0006', title: 'Draft', status: 'options', parent: '"[[Launch]]"' }, '## Notes\n'),
   'Boards/Held.md': item({ type: 'work-item', id: 'wi-0007', title: 'Held', status: 'doing', parent: '"[[Main]]"', holder: 'bot' }, '## Notes\n'),
-  'Boards/In review.md': item({ type: 'work-item', id: 'wi-0008', title: 'In review', status: 'doing', parent: '"[[Main]]"', owner: 'Ana' },
-    '## Notes\n\n- 2026-10-08 09:00, codex: **Review:** Please review `Work/a.md`.\n'),
+  'Boards/In review.md': item({ type: 'work-item', id: 'wi-0008', title: 'In review', status: 'doing', parent: '"[[Main]]"', owner: 'Ana',
+    depends_on: '["[[Ana]]"]' }, '## Notes\n'),
   'Boards/Ongoing.md': item({ type: 'work-item', id: 'wi-0009', title: 'Ongoing', parent: '"[[Main]]"', area: true }),
 }
 
@@ -247,55 +247,28 @@ const EDIT_CASES: ContractCase[] = [
     expect: { code: 2, stderr: /^wi: there is no person note called Nobody\./ },
   },
   {
-    name: 'review: sends a card to a person, signed from the context env',
-    files: EDIT_SEED, env: AGENT,
-    argv: ['review', 'Held', '--to', 'Ana', '--files', 'Work/a.md', '--note', 'Check the totals.'],
-    expect: {
-      code: 0, stdout: /^wi-0007 {2}Held {2}sent to Ana for review {2}\(Work\/a\.md\)\n$/,
-      files: { 'Boards/Held.md': /^owner: Ana$[\s\S]*- 2026-10-09 10:30, sp-bot \(model-1\): \*\*Review:\*\*/m },
-    },
-  },
-  {
-    name: 'review: a name with no person note is refused',
+    name: 'depend: a person is a wait like a card',
     files: EDIT_SEED,
-    argv: ['review', 'Held', '--to', 'Nobody', '--json'],
-    expect: { code: 2, stderr: /^wi: there is no person note called Nobody/ },
+    argv: ['depend', 'Held', '--on', 'Ana'],
+    expect: { code: 0, stdout: /^wi-0007 {2}Held {2}waits on Ana\n$/, files: { 'Boards/Held.md': /^depends_on:\n {2}- "\[\[Ana\]\]"$/m } },
   },
   {
-    name: 'approve: the reviewer closes the card',
-    files: EDIT_SEED, env: AGENT,
-    argv: ['approve', 'In review', '--you', 'Ana'],
-    expect: {
-      code: 0, stdout: /^wi-0008 {2}In review {2}approved by Ana {2}doing → done\n$/,
-      files: { 'Boards/In review.md': /- 2026-10-09 10:30, sp-bot \(model-1\): Approved by Ana\.\n$/ },
-    },
-  },
-  {
-    name: 'approve: --json',
+    name: 'depend: a name that is no card and no person is refused',
     files: EDIT_SEED,
-    argv: ['approve', 'wi-0008', '--you', 'Ana', '--json'],
-    expect: { code: 0, stdout: /"status": "done"/ },
+    argv: ['depend', 'Held', '--on', 'Nobody'],
+    expect: { code: 2, stderr: /^wi: no work item or person note matches "Nobody"/ },
   },
   {
-    name: 'approve: a verdict from the wrong reviewer is refused',
+    name: 'claim: a card that waits on a person is refused',
     files: EDIT_SEED,
-    argv: ['approve', 'In review', '--you', 'Bob'],
-    expect: { code: 2, stderr: /^wi: the card waits for review by Ana, not Bob\.\n$/ },
+    argv: ['claim', 'In review', '--holder', 'sp-bot'],
+    expect: { code: 2, stderr: /^wi: .*waits on Ana\./ },
   },
   {
-    name: 'send-back: the reviewer sends the card back with a comment',
+    name: 'status: done clears the person wait',
     files: EDIT_SEED,
-    argv: ['send-back', 'In review', '--you', 'Ana', '--comment', 'Recheck the totals.'],
-    expect: {
-      code: 0, stdout: /^wi-0008 {2}In review {2}sent back by Ana {2}\(owner removed; it stays in doing\)\n$/,
-      files: { 'Boards/In review.md': /- 2026-10-09 10:30: Sent back by Ana: Recheck the totals\.\n$/ },
-    },
-  },
-  {
-    name: 'send-back: a card that waits for no review is refused',
-    files: EDIT_SEED,
-    argv: ['send-back', 'Held', '--you', 'Ana', '--json'],
-    expect: { code: 2, stderr: /^wi: no one is asked to review this card/ },
+    argv: ['status', 'In review', 'done'],
+    expect: { code: 0, files: { 'Boards/In review.md': /^(?![\s\S]*depends_on)[\s\S]*^status: done$/m } },
   },
   {
     name: 'archive: archives a done card',
@@ -561,7 +534,7 @@ const CASES: ContractCase[] = [
     argv: ['rm', 'Launch'],
     expect: { code: 2, stderr: /^wi: Launch has 2 children: / },
   },
-  ...['trace', 'here', 'template', 'objective', 'dashboard', 'retag', 'graph'].map((command): ContractCase => ({
+  ...['trace', 'here', 'template', 'objective', 'dashboard', 'retag', 'graph', 'review', 'approve', 'send-back'].map((command): ContractCase => ({
     name: `${command}: retired, it names the new way and exits 0`,
     files: SEED,
     argv: [command],
