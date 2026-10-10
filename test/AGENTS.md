@@ -19,9 +19,10 @@ created: 2026-09-21
 updated: 2026-09-22
 ```
 
-Roots have no `parent` or `status`. Optional fields include `owner`, `assignee`, `priority`, `due`,
+Roots have no `parent` or `status`. Optional fields include `assignee`, `priority`, `due`,
 `depends_on`, `tags`, `board`, and `prev_status`. An old card may carry `holder` or `agent`
 instead of `assignee`: read the first key present as the assignees, and never write the old keys.
+An old card may also carry `owner`: keep it, and never write it.
 Preserve unknown frontmatter keys.
 Change only the key you mean to change.
 

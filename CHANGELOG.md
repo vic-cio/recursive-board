@@ -10,6 +10,11 @@ the agent notes in your vault.
 
 ## [Unreleased]
 
+### Fixed
+
+- `test/AGENTS.md` no longer lists `owner` among the optional fields. It says that an old card may
+  carry `owner`, and that an agent keeps it and never writes it.
+
 ## [1.0.0] - 2026-10-10
 
 ### Agent setup
