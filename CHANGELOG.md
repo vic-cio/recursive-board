@@ -12,6 +12,23 @@ the agent notes in your vault.
 
 ### Agent setup
 
+- The frontmatter key is renamed `holder` to `assignee`; it holds one name, or a list for several,
+  and `wi` writes a plain value for one name. A reader takes `assignee`, else an old card's
+  `holder`, else the old `agent`, and a card with more than one of these keys uses the first in
+  that order. No card is rewritten to migrate it. JSON results use `assignees`, an array of names,
+  wherever they used `holder`, and no `holder` key remains in a JSON result. `--assignee <name>` is
+  the flag on `wi new`, `wi claim` and `wi ready`, and `--holder` is still accepted and means the
+  same. The commands keep their names: `claim`, `release` and `assign`
+  ([0084](docs/adr/0084-one-assignee-list.md)).
+- The `owner` key is dropped from the model, as `creator` was
+  ([0064](docs/adr/0064-validate-checks-no-creator.md)): no command writes it, no screen shows it,
+  and no JSON result carries it. An old card keeps its `owner` key, which every write preserves and
+  nothing reads. `wi assign` still adds an assignee
+  ([0084](docs/adr/0084-one-assignee-list.md)).
+- A card's assignees are the people and agents who do its work. The plugin makes no rule about who
+  assigns whom: no check, no permission, and no required level or title. A team may use the levels
+  of the tree as it likes, for example the assignee one level down as the owner, and the plugin
+  does not check that convention ([0084](docs/adr/0084-one-assignee-list.md)).
 - The agent playbook is removed, and no document recommends an agent setup. Role notes, a
   Dispatching note and an `AGENTS.md` section that you copied from it stay yours: keep, change or
   delete them. `wi doctor` no longer checks them, and `wi setup` no longer prints a summary of the
@@ -37,26 +54,27 @@ the agent notes in your vault.
 - A review is now a wait on a person. A card waits on a person when `depends_on` links to a note
   with `type: person`. Ask with **Waits on…** in the card menu or `wi depend <ref> --on <person>`.
   The person sends the card back by removing the wait (`--off`, or **Stop waiting on…**), and the
-  card stays in doing with its holder. Moving a card to done removes its waits on people, and
+  card stays in doing with its assignee. Moving a card to done removes its waits on people, and
   that is the approval. `wi claim` and `wi status <ref> doing` refuse a card with an open wait on
-  a person, and `wi agents` does not count the holder of such a card. `wi review`, `wi approve`
+  a person, and `wi agents` does not count the assignee of such a card. `wi review`, `wi approve`
   and `wi send-back` are retired: each prints the command to use and exits 0. **Send for
   review…** leaves the card menu. No command or menu item writes a `**Review:**`,
   `Approved by` or `Sent back by` note. A script that read those notes, and a dashboard that
   wrote them, must use the wait instead
   ([0082](docs/adr/0082-review-is-a-wait-on-a-person.md)).
-- `wi delegate` is renamed `wi assign`, and a card can have several holders. `holder` is one name
-  or a list; `wi` writes a plain value for one name, and old cards and the old `agent` key still
-  read. `wi assign <ref> --to <person|agent>` adds a holder, and `--off` removes one. `wi delegate`
-  is retired: it prints `wi assign` and exits 0. `wi claim` starts a card with no holder, a card
-  that holds `agent`, or a card that lists the claimant; a second agent needs
-  `wi assign <ref> --to agent` first, and its claim replaces `agent` with its name. `wi release`
-  removes one holder: `--holder`, else `WI_AGENT` when it holds the card, else the only holder; the
-  card stays where it is while another named holder remains. `wi agents` counts each agent on a
-  doing card, so one card can use several places of `maxAgents`. `wi ready` treats a card with any
-  holder but `agent` as taken. **Assign to…** replaces **Delegate to…** in the card menu, and
-  **Unassign <name>** removes a holder. Replace `wi delegate` in your role and Dispatching notes
-  ([0083](docs/adr/0083-assign-and-several-holders.md)).
+- `wi delegate` is renamed `wi assign`, and a card can have several assignees. `assignee` is one
+  name or a list; `wi` writes a plain value for one name, and old cards and the old `holder` and
+  `agent` keys still read. `wi assign <ref> --to <person|agent>` adds an assignee, and `--off`
+  removes one. `wi delegate` is retired: it prints `wi assign` and exits 0. `wi claim` starts a card
+  with no assignee, a card assigned to `agent`, or a card that lists the claimant; a second agent
+  needs `wi assign <ref> --to agent` first, and its claim replaces `agent` with its name.
+  `wi release` removes one assignee: `--assignee` or `--holder`, else `WI_AGENT` when it holds the
+  card, else the only assignee; the card stays where it is while another named assignee remains.
+  `wi agents` counts each agent on a doing card, so one card can use several places of `maxAgents`.
+  `wi ready` treats a card with any assignee but `agent` as taken. **Assign to…** replaces
+  **Delegate to…** in the card menu, and **Unassign <name>** removes an assignee. Replace
+  `wi delegate` in your role and Dispatching notes
+  ([0083](docs/adr/0083-assign-and-several-holders.md), [0084](docs/adr/0084-one-assignee-list.md)).
 
 ### Added
 
@@ -79,13 +97,15 @@ the agent notes in your vault.
 
 ### Changed
 
-- **Breaking:** `holder` in JSON is a list. `wi show --json` and `wi ready --json` give `holder`
-  as a list of names, empty for none, in place of a string or `null`. `wi claim`, `wi release` and
-  `wi assign` with `--json` give `name`, the holder they added or removed, and `holder`, the list
-  after the write. A script or dashboard that reads `holder` as a string must read a list
-  ([0083](docs/adr/0083-assign-and-several-holders.md)).
-- The card face shows the first holder's initial and `+N` for the others. Hover over it, or open
-  the card menu, for every name. The card's detail strip lists every holder.
+- **Breaking:** JSON uses `assignees` in place of `holder`. `wi show --json` and `wi ready --json`
+  give `assignees` as a list of names, empty for none, in place of a string or `null`. `wi claim`,
+  `wi release` and `wi assign` with `--json` give `name`, the assignee they added or removed, and
+  `assignees`, the list after the write. A script or dashboard that reads `holder` as a string must
+  read `assignees` ([0083](docs/adr/0083-assign-and-several-holders.md),
+  [0084](docs/adr/0084-one-assignee-list.md)).
+- The card face shows the first assignee's initial and `+N` for the others. Hover over it for
+  `Assigned to <names>`, or open the card menu, for every name. The card's detail strip lists every
+  assignee.
 - `wi depend <ref> --on` takes a person note as well as a card. **Waits on…** lists people and
   cards. `wi show --json` lists the people a card waits on in `personDependencies`, and
   `wi children --json` lists them in `waits_on_people`. `wi validate` accepts a link to a person
@@ -109,8 +129,8 @@ the agent notes in your vault.
   and a tab with none shows no button. Before, it counted the whole board, so the button seemed to
   do nothing on a tab that held none of them. The desktop board is unchanged.
 - The list icon of a card's child count sits on the same centre line as its number.
-- Every chip on a card face has the same height (17px): child count, priority, waiting, owner or
-  agent initial, label and area mark. The waiting chip was 11px tall beside a 16.5px child count.
+- Every chip on a card face has the same height (17px): child count, priority, waiting, assignee
+  initial, label and area mark. The waiting chip was 11px tall beside a 16.5px child count.
   The checklist row's status, count and waiting chips match the label and area mark beside them.
 - `wi setup` no longer offers the Git validation hook, and asks no question after the vault choice.
 - The `hook` check of `wi doctor` reads the pre-commit file and reports whether it runs
