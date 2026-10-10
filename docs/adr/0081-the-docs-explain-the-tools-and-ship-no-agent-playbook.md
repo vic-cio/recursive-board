@@ -47,7 +47,8 @@ Decided by Victor on 2026-10-09: scrap the playbook, and keep only explainers fo
   **Settings → General → Advanced → Command line interface**.
 - **The decision records stay.** 0067 and 0069 keep their text and are marked superseded. They
   explain why the playbook existed.
-- **`docs/refocus-hook.md` stays** until a grill decides about it.
+- **`docs/refocus-hook.md` leaves the repo with the playbook.** It is agent setup advice for one
+  harness, not product documentation. The hook and its settings do not change.
 
 ## Rejected
 

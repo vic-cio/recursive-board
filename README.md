@@ -160,7 +160,7 @@ Pass `--vault <path>`, set `WI_VAULT`, run `wi` inside a vault, or set `defaultV
 
 `skills/recursive-board/SKILL.md` teaches an agent to read and change a vault through `wi`. `wi setup` installs copies into `~/.claude/skills/recursive-board/` and `~/.agents/skills/recursive-board/`. It leaves symlinked development installs alone and refuses to replace an unmanaged folder unless you pass `--force`. From a source checkout, `npm run install:skill` links the skill and `wi` into `~/.local/bin`.
 
-The optional [refocus hook](docs/refocus-hook.md) sends a card's Objective chain after compaction or Claude transcript growth. Add its settings entries yourself to enable it.
+The optional refocus hook sends a card's Objective chain after compaction or Claude transcript growth. Add its settings entries yourself to enable it.
 
 ### Run commands through the Obsidian CLI
 

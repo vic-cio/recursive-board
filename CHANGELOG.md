@@ -16,6 +16,8 @@ the agent notes in your vault.
   Dispatching note and an `AGENTS.md` section that you copied from it stay yours: keep, change or
   delete them. `wi doctor` no longer checks them, and `wi setup` no longer prints a summary of the
   playbook ([0081](docs/adr/0081-the-docs-explain-the-tools-and-ship-no-agent-playbook.md)).
+- The refocus hook doc is removed from the repo. The hook and its settings do not change
+  ([0081](docs/adr/0081-the-docs-explain-the-tools-and-ship-no-agent-playbook.md)).
 - Git versioning is optional advice, with an optional pre-commit hook snippet, in the README's
   "Version the vault with Git" section. If a note in your vault tells an agent to run `wi hook
   install`, remove that line. `wi hook` is removed
