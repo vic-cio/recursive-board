@@ -59,7 +59,7 @@ function peopleEdits(
 /** `wi set <ref> --role ""` removes an old role field. `--owner` is retired and writes nothing. */
 export const runSet: RunFunction = async (context, line) => {
   if (typeof line.values['owner'] === 'string') {
-    context.out('wi set --owner is retired and writes nothing. Use wi assign <ref> --to <person|agent> to name who does the work.\n')
+    context.out('wi set --owner is retired. It writes nothing. Use wi assign <ref> --to <person|agent> to name who does the work.\n')
     return 0
   }
   const ref = refOf(line.positionals)
