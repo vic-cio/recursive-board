@@ -649,7 +649,6 @@
 .wi-check-row .wi-more,
 .wi-check-row .wi-remove {
   flex: none;
-  align-self: center;
   box-sizing: border-box;
   display: inline-flex;
   align-items: center;
@@ -665,6 +664,22 @@
   box-shadow: none;
   cursor: pointer;
   transition: opacity 80ms ease-out;
+}
+
+/* A card head is `align-items: flex-start`, so its two buttons must sit against the top. The
+ * margin nudges them down by half the difference between the title's first line box and the
+ * button, so they read as centred on the first line when the title wraps to two or more lines.
+ * The area mark uses the same formula, so the three marks share one baseline. */
+.wi-card-head .wi-more,
+.wi-card-head .wi-remove {
+  align-self: flex-start;
+  margin-top: calc((var(--font-text-size) * var(--line-height-tight, 1.3) - var(--wi-row-button, 20px)) / 2);
+}
+
+/* A checklist row is one line, so its two buttons stay centred on that line. */
+.wi-check-row .wi-more,
+.wi-check-row .wi-remove {
+  align-self: center;
 }
 
 .wi-check-row {

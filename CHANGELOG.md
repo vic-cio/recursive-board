@@ -156,6 +156,10 @@ the agent notes in your vault.
   width, height and radius on one line, on a card head and on a checklist row. Neither button
   draws Obsidian's default background or shadow; the remove button keeps its red hover tint and
   stays invisible on the desktop until hover.
+- On a phone, a card head keeps its menu button and remove button on the first line when the title
+  wraps to two or more lines. The two buttons sit against the top of the head, with half a line box
+  of offset, so they read as centred on the first line. A one-line title and the checklist row are
+  unchanged.
 
 ### Removed
 
