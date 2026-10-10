@@ -11,6 +11,10 @@ general tools. A dashboard is a separate Obsidian plugin that each vault builds 
 example is [recursive-board-dashboard](https://github.com/vic-cio/recursive-board-dashboard). It
 has no releases and no community listing. People copy it and change it.
 
+Amendment 2026-10-10: the README and `wi --help` no longer name the example (Victor,
+2026-10-10), because a dashboard that trails the release should not be advertised. The decision
+above still holds: the dashboard is separate.
+
 ## What left Recursive Board
 
 - The plugin's dashboard view, its ribbon icon and its **Open dashboard** command.

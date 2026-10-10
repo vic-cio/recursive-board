@@ -332,7 +332,7 @@ test('renderDoctor prints one line per check and a Run line for a command', asyn
   const s = setup()
   try {
     healthy(s)
-    const text = renderDoctor(await runDoctor(s.options({ latestVersion: async () => '1.0.0' })))
+    const text = renderDoctor(await runDoctor(s.options({ latestVersion: async () => '99.0.0' })))
     assert.match(text, /^Install$/m)
     assert.doesNotMatch(text, /Agent setup|docs\/playbook/i)
     assert.match(text, /^ {2}fix {3}wi-version/m)

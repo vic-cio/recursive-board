@@ -24,7 +24,7 @@ import { parseCommandLine, type Values } from '../shared/command-line.ts'
 import { COMMAND_FLAGS, renderHelp } from '../shared/command-table.ts'
 import { versionLine } from '../shared/rules-version.ts'
 
-const VERSION = '0.9.0'
+const VERSION = '1.0.0'
 
 async function main(argv: string[]): Promise<number> {
   // wi trace is not in the command table, so its old flags are not refused.

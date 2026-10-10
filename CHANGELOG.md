@@ -10,7 +10,12 @@ the agent notes in your vault.
 
 ## [Unreleased]
 
+## [1.0.0] - 2026-10-10
+
 ### Agent setup
+
+Upgrading from 0.9.0: `wi review`, `wi approve` and `wi send-back` are retired, because a review
+is a wait on a person. The frontmatter key `holder` is now `assignee`.
 
 - The frontmatter key is renamed `holder` to `assignee`; it holds one name, or a list for several,
   and `wi` writes a plain value for one name. The reserved value `agent` still asks for any agent.
@@ -84,7 +89,7 @@ the agent notes in your vault.
 
 ### Added
 
-- A rules version. `wi --version` prints `0.9.0 (rules 1)`, with the package version first, and
+- A rules version. `wi --version` prints `1.0.0 (rules 1)`, with the package version first, and
   the plugin's settings tab prints the same line. The plugin records its rules version in its
   plugin data. A write command warns when a plugin with newer rules works on the vault, and
   `wi doctor` reports a mismatch as the `rules` check
@@ -342,7 +347,8 @@ This release changes commands and flags. Read "Removed" before you update a scri
   `role` field.
 - `wi` and the plugin no longer read `.wi.json` or `Recursive Board config.md`.
 
-[Unreleased]: https://github.com/vic-cio/recursive-board/compare/0.9.0...HEAD
+[Unreleased]: https://github.com/vic-cio/recursive-board/compare/1.0.0...HEAD
+[1.0.0]: https://github.com/vic-cio/recursive-board/compare/0.9.0...1.0.0
 [0.9.0]: https://github.com/vic-cio/recursive-board/compare/0.8.3...0.9.0
 [0.8.3]: https://github.com/vic-cio/recursive-board/compare/0.8.2...0.8.3
 [0.8.2]: https://github.com/vic-cio/recursive-board/compare/0.8.1...0.8.2

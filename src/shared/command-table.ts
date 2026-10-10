@@ -219,7 +219,7 @@ A person does not count. A card whose open children are all in doing, or that wa
 does not count. The limit is none (null in
 JSON) when no limit is set. It writes nothing.` },
   { about: ['dashboard'], text: `\`wi dashboard\` is retired and reads nothing. Use \`wi agents\` for the agent count and limit. A
-dashboard is a separate plugin that reads the card files; the README names an example.` },
+dashboard is a separate plugin that reads the card files.` },
   { about: ['review', 'approve', 'send-back'], text: `\`wi review\`, \`wi approve\` and \`wi send-back\` are retired and change nothing. A review is a wait on a person:
 \`wi depend <ref> --on <person>\` asks, \`wi depend <ref> --on <person> --off\` sends the card back, and
 \`wi status <ref> done\` approves it.` },

@@ -106,7 +106,7 @@ While a card waits on a person, `wi claim` and `wi status <ref> doing` refuse it
 
 ## Dashboard
 
-Recursive Board ships no dashboard. The example dashboard is [Recursive Board Dashboard](https://github.com/vic-cio/recursive-board-dashboard), a separate Obsidian plugin. It shows the cards that wait on you, progress per area, the agents, the people and the cards that need attention. It is an example to copy: it has no releases and no community listing. It reads the card files through Obsidian, so it works on a phone.
+Recursive Board ships no dashboard.
 
 To build your own dashboard, read the card files, or use these `wi` commands:
 
@@ -253,7 +253,7 @@ Keep these points in mind:
 | `wi here` | Retired. Exits 0 and changes nothing. A project's `AGENTS.md` names its board; pass it to `wi new` as `--parent`. |
 | `wi template` | Retired command. Prints a message that names `wi new --template` and exits with code 0. |
 | `wi --help` or `wi help` | Prints usage, options, and notes. |
-| `wi --version` | Prints the installed CLI version, then the rules version: `0.9.0 (rules 1)`. |
+| `wi --version` | Prints the installed CLI version, then the rules version: `1.0.0 (rules 1)`. |
 
 Each command takes only the flags its row shows, plus `--vault` and `--json` where it reads a vault or prints a result. It refuses any other flag with exit code 2 and names the flag, so a flag cannot look as if it worked. `wi archive` refuses `--dry-run`: an archive changes one flag, and `--undo` reverses it.
 
