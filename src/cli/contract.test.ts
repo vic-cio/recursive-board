@@ -196,6 +196,13 @@ const EDIT_CASES: ContractCase[] = [
     expect: { code: 0, stdout: /^wi-0006 {2}Draft {2}options → doing {2}\(holder: sp-bot\)\n$/, files: { 'Boards/Draft.md': /^holder: sp-bot$/m } },
   },
   {
+    name: 'claim: a claim beside a person names every holder',
+    files: { ...EDIT_SEED, 'Boards/Draft.md': item({ type: 'work-item', id: 'wi-0006', title: 'Draft', status: 'options', parent: '"[[Launch]]"', holder: '[Ana, agent]' }) },
+    env: AGENT,
+    argv: ['claim', 'Draft'],
+    expect: { code: 0, stdout: /^wi-0006 {2}Draft {2}options → doing {2}\(holders: Ana, sp-bot\)\n$/ },
+  },
+  {
     name: 'claim: WI_MAX_AGENTS from the context env warns after the claim, from the vault read again',
     files: EDIT_SEED, env: { WI_AGENT: 'sp-bot', WI_MAX_AGENTS: '1' },
     argv: ['claim', 'Draft', '--json'],

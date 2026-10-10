@@ -43,8 +43,7 @@ export interface ReleaseChange {
  * The claim is decided under the lock, from the card as it is then
  * (docs/adr/0054-edits-from-the-file-at-write-time.md): of two agents that claim one card at once,
  * the second finds the first one's name and is refused. Other cards, such as the dependencies and
- * the children, come from the loaded vault. `editBody` adds to the same write, as `wi delegate`
- * adds its note.
+ * the children, come from the loaded vault. `editBody` adds a body change to the same write.
  */
 export async function claimItem(
   vault: Vault,
@@ -155,7 +154,7 @@ export const runClaim: RunFunction = async (context, line) => {
   if (line.values['json'] === true) context.out(json({ id: change.item.id, path: change.item.relPath, name: change.holder,
     holder: change.holders, from: change.from ?? null, to: change.to, changed: change.changed }))
   else context.out(change.changed
-    ? `${label(change.item)}  ${change.from ?? '—'} → doing  (holder: ${agent})\n`
+    ? `${label(change.item)}  ${change.from ?? '—'} → doing  (${change.holders.length > 1 ? `holders: ${holdersLabel(change.holders)}` : `holder: ${agent}`})\n`
     : `${label(change.item)} is already claimed by ${agent} in doing. Nothing written.\n`)
   if (change.changed && maxAgents !== null) {
     // Count after the claim: it can move a step to doing and leave the parent's agent only waiting.
