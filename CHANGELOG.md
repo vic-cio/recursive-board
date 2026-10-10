@@ -146,6 +146,14 @@ the agent notes in your vault.
   schema, `wi --json`, the plugin data, the skill and the example dashboard are, and it keeps the
   contributor rules. The release rules left the file.
 
+### Fixed
+
+- On a phone, the two top pills are thinner: only their block padding shrinks, so the width and
+  the text stay. The card's menu button and remove button now share one box, so they draw the same
+  width, height and radius on one line, on a card head and on a checklist row. Neither button
+  draws Obsidian's default background or shadow; the remove button keeps its red hover tint and
+  stays invisible on the desktop until hover.
+
 ### Removed
 
 - The agent playbook is removed, with `docs/playbook.md`, and nothing recommends an agent setup

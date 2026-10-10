@@ -308,10 +308,12 @@
   color: var(--text-normal);
 }
 
-/* Obsidian's mobile buttons are tall pills; keep these thin. */
+/* Obsidian's mobile buttons are tall pills; keep these thin. Only the block padding shrinks, so
+   the pill is under 32px high and its width stays as `padding-inline` keeps it. */
 .is-mobile .wi-control {
   height: auto;
-  padding: var(--size-4-1) var(--size-4-3);
+  padding-block: 2px;
+  padding-inline: var(--size-4-3);
   font-size: var(--font-ui-small);
 }
 
@@ -638,47 +640,71 @@
   min-width: 0;
 }
 
-.wi-remove {
+/* The menu button and the remove button are one box: the same width, height and radius, on one
+ * line. The double-class selectors beat Obsidian's core `button:not(.clickable-icon)`, which
+ * otherwise paints a filled pill with a shadow and imposes its own large mobile radius. A width
+ * of 20px sits on a card head; the checklist row widens both to 24px through the variable. */
+.wi-card-head .wi-more,
+.wi-card-head .wi-remove,
+.wi-check-row .wi-more,
+.wi-check-row .wi-remove {
   flex: none;
+  align-self: center;
+  box-sizing: border-box;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 20px;
-  height: 20px;
+  width: var(--wi-row-button, 20px);
+  height: var(--wi-row-button, 20px);
+  min-height: 0;
   padding: 0;
+  border: none;
   border-radius: 4px;
   background: none;
+  background-color: transparent;
   box-shadow: none;
-  color: var(--text-faint);
   cursor: pointer;
-  opacity: 0;
   transition: opacity 80ms ease-out;
 }
 
+.wi-check-row {
+  --wi-row-button: 24px;
+}
+
+.wi-card-head .wi-more,
+.wi-check-row .wi-more {
+  color: var(--text-muted);
+}
+
+.wi-card-head .wi-remove,
+.wi-check-row .wi-remove {
+  color: var(--text-faint);
+  opacity: 0;
+}
+
+.wi-more .svg-icon,
 .wi-remove .svg-icon {
   width: 13px;
   height: 13px;
 }
 
-.wi-card:hover .wi-remove,
+.wi-card:hover .wi-card-head .wi-remove,
 .wi-check-row:hover .wi-remove,
-.wi-remove:focus-visible {
+.wi-card-head .wi-remove:focus-visible,
+.wi-check-row .wi-remove:focus-visible {
   opacity: 1;
 }
 
-.wi-remove:hover {
+.wi-card-head .wi-remove:hover,
+.wi-check-row .wi-remove:hover {
   background: rgba(var(--color-red-rgb, 233, 49, 71), var(--wi-tint-pill));
   color: var(--color-red);
 }
 
 /* No hover on a phone, so the control is simply there. */
-.is-mobile .wi-remove {
+.is-mobile .wi-card-head .wi-remove,
+.is-mobile .wi-check-row .wi-remove {
   opacity: 1;
-}
-
-.wi-check-row .wi-remove {
-  width: 24px;
-  height: 24px;
 }
 
 /* ---------- labels ----------
@@ -959,16 +985,7 @@
   display: none;
 }
 
-/* The phone's menu button. Always drawn: there is no hover and no right click. */
-.wi-more {
-  flex: none;
-  height: auto;
-  padding: 2px 4px;
-  border: none;
-  box-shadow: none;
-  background: none;
-  color: var(--text-muted);
-}
+/* The phone's menu button shares the row-button box above, so it has no rule of its own here. */
 
 /* The move picker: a target's place in the tree, under its title. */
 .wi-move-path {
