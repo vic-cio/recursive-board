@@ -31,9 +31,11 @@ it called `parseArgs` from `node:util`, and `src/shared/` imports nothing from N
 - **The help notes are one ordered list, and each note names the commands it is about.** The help
   groups the notes by topic, and one note can be about several commands, so a list of notes per
   entry could not print the same text. Each entry's `notes` are the notes about it, in help order.
-- **Differential tests hold the copies together.** `src/cli/command-line.test.ts` compares the
-  splitter with `/bin/sh`, and the parser with `node:util` `parseArgs`, strict and loose, on every
-  command's flag set: chosen argument lists for each flag, and a seeded random set.
+- **Tests hold the copies together.** `src/cli/command-line.test.ts` compares the parser with
+  `node:util` `parseArgs`, strict and loose, on every command's flag set: chosen argument lists for
+  each flag, and a seeded random set. It compares the splitter with fixed words, because a test
+  must not ask the host shell: `/bin/sh` drops a trailing backslash on macOS and keeps it on the
+  Linux runner.
 
 ## Rejected
 

@@ -1,10 +1,10 @@
 /**
- * Differential tests for the Node-free command line in src/shared: the splitter against /bin/sh,
- * and the parser against `node:util` parseArgs, which wi used before (docs/adr/0077).
+ * The Node-free command line in src/shared: the splitter against fixed words, and the parser
+ * against `node:util` parseArgs, which wi used before (docs/adr/0077).
  */
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { execFile, execFileSync } from 'node:child_process'
+import { execFile } from 'node:child_process'
 import { readFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import { parseArgs, promisify } from 'node:util'
@@ -14,60 +14,55 @@ import {
 } from '../shared/command-line.ts'
 import { COMMAND_FLAGS, OPTIONS, renderHelp, type Flag } from '../shared/command-table.ts'
 
-/** How /bin/sh splits the line, with globbing off. A line with `$` or a backtick quotes it in single quotes. */
-function shellWords(line: string): string[] {
-  const script = `set -f\nset -- ${line}\nfor a in "$@"; do printf '%s\\0' "$a"; done`
-  const out = execFileSync('/bin/sh', ['-c', script], { encoding: 'utf8' })
-  return out === '' ? [] : out.slice(0, -1).split('\0')
-}
-
-const LINES = [
-  'new Build server --parent wi-1',
-  `new 'Build server' --parent "Main board"`,
-  `new "Victor's card" --status options`,
-  `new 'Victor'\\''s card'`,
-  `new 'It said "hi"' --json`,
-  `new "say 'hi' and \\"bye\\""`,
-  'new "a \\"quoted\\" word" --parent=wi-1',
-  'new back\\ slash\\ title',
-  `new '' --parent wi-1`,
-  `new ""`,
-  `new "" '' x`,
-  `new pre'mid'"post" x`,
-  'new   spaced\t\ttabs  ',
-  '\tnew\ttabs\t',
-  'new "tab\tinside"',
-  'new "two\nlines"',
-  `new 'two\nlines'`,
-  'new one \\\ntwo',
-  'new one\\\ntwo',
-  'new "one \\\ntwo"',
-  `new 'one \\\ntwo'`,
-  `new 'a\\b' "c\\d" e\\\\f`,
-  'new "\\a\\b\\\\c"',
-  `new '\\'`,
-  'new "\\\\"',
-  'new \\"x\\" \\\'y\\\'',
-  'new \\a\\b',
-  `new '$HOME' '\`date\`' "\\$HOME" "\\\`date\\\`"`,
-  `new '*' '?' '[a]' * ? [a]`,
-  `new a~b x~ "~" '~' \\~`,
-  `new --context 'first' --context "second" --tag role/coder`,
-  'new -- --parent is a title',
-  `new --objective='Ship it' --parent="Main board"`,
-  `note wi-1 'It''s fine'`,
-  `note wi-1 "A note: a, b; c (d) {e} <f>"`,
-  `new 'é ü 日本 🚀' "naïve"`,
-  'new #a comment',
-  `new a#b '#c' "#d" \\#e x # f 'g`,
-  'new x\t#y',
-  '',
-  '   ',
-  '\t\n',
+// A test cannot ask the host shell: macOS /bin/sh drops a trailing backslash, and Linux dash keeps it.
+/** The words each line splits into. */
+const LINES: [line: string, words: string[]][] = [
+  ["new Build server --parent wi-1", ["new", "Build", "server", "--parent", "wi-1"]],
+  ["new 'Build server' --parent \"Main board\"", ["new", "Build server", "--parent", "Main board"]],
+  ["new \"Victor's card\" --status options", ["new", "Victor's card", "--status", "options"]],
+  ["new 'Victor'\\''s card'", ["new", "Victor's card"]],
+  ["new 'It said \"hi\"' --json", ["new", "It said \"hi\"", "--json"]],
+  ["new \"say 'hi' and \\\"bye\\\"\"", ["new", "say 'hi' and \"bye\""]],
+  ["new \"a \\\"quoted\\\" word\" --parent=wi-1", ["new", "a \"quoted\" word", "--parent=wi-1"]],
+  ["new back\\ slash\\ title", ["new", "back slash title"]],
+  ["new '' --parent wi-1", ["new", "", "--parent", "wi-1"]],
+  ["new \"\"", ["new", ""]],
+  ["new \"\" '' x", ["new", "", "", "x"]],
+  ["new pre'mid'\"post\" x", ["new", "premidpost", "x"]],
+  ["new   spaced\t\ttabs  ", ["new", "spaced", "tabs"]],
+  ["\tnew\ttabs\t", ["new", "tabs"]],
+  ["new \"tab\tinside\"", ["new", "tab\tinside"]],
+  ["new \"two\nlines\"", ["new", "two\nlines"]],
+  ["new 'two\nlines'", ["new", "two\nlines"]],
+  ["new one \\\ntwo", ["new", "one", "two"]],
+  ["new one\\\ntwo", ["new", "onetwo"]],
+  ["new \"one \\\ntwo\"", ["new", "one two"]],
+  ["new 'one \\\ntwo'", ["new", "one \\\ntwo"]],
+  ["new 'a\\b' \"c\\d\" e\\\\f", ["new", "a\\b", "c\\d", "e\\f"]],
+  ["new \"\\a\\b\\\\c\"", ["new", "\\a\\b\\c"]],
+  ["new '\\'", ["new", "\\"]],
+  ["new \"\\\\\"", ["new", "\\"]],
+  ["new \\\"x\\\" \\'y\\'", ["new", "\"x\"", "'y'"]],
+  ["new \\a\\b", ["new", "ab"]],
+  ["new '$HOME' '`date`' \"\\$HOME\" \"\\`date\\`\"", ["new", "$HOME", "`date`", "$HOME", "`date`"]],
+  ["new '*' '?' '[a]' * ? [a]", ["new", "*", "?", "[a]", "*", "?", "[a]"]],
+  ["new a~b x~ \"~\" '~' \\~", ["new", "a~b", "x~", "~", "~", "~"]],
+  ["new --context 'first' --context \"second\" --tag role/coder", ["new", "--context", "first", "--context", "second", "--tag", "role/coder"]],
+  ["new -- --parent is a title", ["new", "--", "--parent", "is", "a", "title"]],
+  ["new --objective='Ship it' --parent=\"Main board\"", ["new", "--objective=Ship it", "--parent=Main board"]],
+  ["note wi-1 'It''s fine'", ["note", "wi-1", "Its fine"]],
+  ["note wi-1 \"A note: a, b; c (d) {e} <f>\"", ["note", "wi-1", "A note: a, b; c (d) {e} <f>"]],
+  ["new 'é ü 日本 🚀' \"naïve\"", ["new", "é ü 日本 🚀", "naïve"]],
+  ["new #a comment", ["new"]],
+  ["new a#b '#c' \"#d\" \\#e x # f 'g", ["new", "a#b", "#c", "#d", "#e", "x"]],
+  ["new x\t#y", ["new", "x"]],
+  ["", []],
+  ["   ", []],
+  ["\t\n", []],
 ]
 
-test('splitCommandLine splits each line as /bin/sh does', () => {
-  for (const line of LINES) assert.deepEqual(splitCommandLine(line), shellWords(line), JSON.stringify(line))
+test('splitCommandLine splits each line into the words a POSIX shell gives', () => {
+  for (const [line, words] of LINES) assert.deepEqual(splitCommandLine(line), words, JSON.stringify(line))
 })
 
 test('splitCommandLine refuses an unclosed quote', () => {
@@ -83,9 +78,7 @@ test('splitCommandLine reads an unquoted newline as a space, where a shell would
   assert.deepEqual(splitCommandLine('new a # comment\nb'), ['new', 'a', 'b'])
 })
 
-test('splitCommandLine drops a trailing backslash, as /bin/sh does', () => {
-  const out = execFileSync('/bin/sh', ['-c', `printf '%s\\0' new x\\`], { encoding: 'utf8' })
-  assert.deepEqual(out.slice(0, -1).split('\0'), ['new', 'x'])
+test('splitCommandLine drops a trailing backslash', () => {
   assert.deepEqual(splitCommandLine('new x\\'), ['new', 'x'])
 })
 

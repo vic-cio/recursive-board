@@ -10,6 +10,11 @@ the agent notes in your vault.
 
 ## [Unreleased]
 
+### Fixed
+
+- `src/cli/command-line.test.ts` compares the splitter with fixed words, so `npm test` no longer
+  depends on the host's `/bin/sh` and passes on Linux.
+
 ## [1.0.0] - 2026-10-10
 
 ### Agent setup
