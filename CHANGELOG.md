@@ -10,11 +10,6 @@ the agent notes in your vault.
 
 ## [Unreleased]
 
-### Fixed
-
-- `src/cli/command-line.test.ts` compares the splitter with fixed words, so `npm test` no longer
-  depends on the host's `/bin/sh` and passes on Linux.
-
 ## [1.0.0] - 2026-10-10
 
 ### Agent setup
@@ -183,6 +178,8 @@ is a wait on a person. The frontmatter key `holder` is now `assignee`.
   wraps to two or more lines. The two buttons sit against the top of the head, with half a line box
   of offset, so they read as centred on the first line. A one-line title and the checklist row are
   unchanged.
+- `src/cli/command-line.test.ts` compares the splitter with fixed words, so `npm test` no longer
+  depends on the host's `/bin/sh` and passes on Linux.
 
 ### Removed
 
