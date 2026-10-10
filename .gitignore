@@ -15,6 +15,9 @@ test/.obsidian/plugins/
 node_modules/
 dist/
 
+# Pi task state written by a worker in its own worktree
+.pi/
+
 # Throwaway vaults for manual runs
 /tmp/
 

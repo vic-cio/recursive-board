@@ -1,9 +1,0 @@
-
-> recursive-board@0.9.0 test
-> npm run typecheck && node --test 'src/**/*.test.ts' 'scripts/**/*.test.ts' 'scripts/**/*.test.mjs'
-
-
-> recursive-board@0.9.0 typecheck
-> tsc -p tsconfig.json && tsc -p tsconfig.plugin.json
-
-src/plugin/columns.test.ts(15,3): error TS2739: Type '{ file: TFile; stem: string; id: string; title: string; status: "backlog" | "options" | "doing" | "done" | undefined; parentLink: string | null; parent: TFile | null; board: boolean; ... 12 more ...; labels: string[]; }' is missing the following properties from type 'WorkItemMeta': owner, ownerFile

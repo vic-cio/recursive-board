@@ -103,6 +103,9 @@ the agent notes in your vault.
 
 ### Changed
 
+- The repository ignores `.pi/`. A worker writes its own task state to `<cwd>/.pi/tasks`, so a
+  driver's `git add -A` can no longer sweep those files into a commit. The four `.pi/` task files
+  that commit `3ae6445` added are deleted.
 - **Breaking:** JSON uses `assignees` in place of `holder`. `wi show --json` and `wi ready --json`
   give `assignees` as a list of names, empty for none, in place of a string or `null`. `wi claim`,
   `wi release` and `wi assign` with `--json` give `name`, the assignee they added or removed, and
