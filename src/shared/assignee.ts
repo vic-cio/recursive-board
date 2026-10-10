@@ -6,6 +6,8 @@
  * rename carry the same fact in `holder`, and older ones in `agent`, so every reader takes
  * `assignee`, else `holder`, else `agent`, and every writer that sets or clears the assignees
  * writes `assignee` and removes `holder` and `agent` in the same write. No bulk edit is needed.
+ * An old card's `owner` is never read as an assignee: `wi ready` treats any assignee as taken,
+ * and old owner keys name people who are not on the card. Every write preserves the key.
  * A writer writes a plain value for one name, so a card with one assignee reads as it did.
  * This module imports nothing from Node.
  */

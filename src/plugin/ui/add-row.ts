@@ -37,7 +37,7 @@ export function renderAddRow(
     event.preventDefault()
     const title = input.value
     input.value = ''
-    // Agent inheritance follows the shared status rule; owner does not pass to a new child.
+    // Assignees follow the shared status rule; a new child starts unassigned unless it is doing.
     void ctx.actions.createChild(parent, title, status)
   })
 }

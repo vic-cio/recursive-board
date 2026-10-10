@@ -47,7 +47,6 @@ export interface Spec {
   /** Days before today. */
   created: number
   updated: number
-  owner?: string
   /** Who does the work. `agent` asks for any agent. */
   assignees?: string[]
   priority?: number
@@ -71,7 +70,7 @@ export const SPECS: Spec[] = [
     body: 'The root board. A root is a work item with no `parent`, and it takes no `status`.\n' },
 
   { id: 'wi-0002', title: 'Ship the mobile app', parent: 'Main', status: 'doing', created: 30,
-    updated: 1, owner: 'sam', priority: 1, tags: ['app', 'infra'],
+    updated: 1, priority: 1, tags: ['app', 'infra'],
     body: `${OBJECTIVE('Create a mobile app interface so work items can trigger agent runs and show live output.')}
 ## Acceptance Criteria
 
@@ -92,7 +91,7 @@ export const SPECS: Spec[] = [
   { id: 'wi-0008', title: 'Build mobile UI', parent: 'Ship the mobile app', status: 'options',
     created: 30, updated: 2, tags: ['mobile'] },
   { id: 'wi-0004', title: 'Build server', parent: 'Ship the mobile app', status: 'backlog',
-    created: 30, updated: 1, owner: 'sam', board: true,
+    created: 30, updated: 1, board: true,
     body: OBJECTIVE('A server the mobile app can reach over a secure network.') },
   { id: 'wi-0005', title: 'Authentication', parent: 'Build server', status: 'backlog',
     created: 30, updated: 5 },
@@ -106,7 +105,7 @@ export const SPECS: Spec[] = [
     body: OBJECTIVE('Stream command and agent output to the app.') },
 
   { id: 'wi-0013', title: 'Marketing site', parent: 'Main', status: 'backlog', created: 10,
-    updated: 2, owner: 'sam', priority: 2, tags: ['web', 'design'], board: true,
+    updated: 2, priority: 2, tags: ['web', 'design'], board: true,
     body: OBJECTIVE('A second, unrelated branch of work, so the board is not one tall tree.') },
   // The same title as wi-0005 under another parent. `fileNameFor` gives it the id suffix.
   { id: 'wi-b2e1', title: 'Authentication', parent: 'Marketing site', status: 'backlog',
@@ -117,7 +116,7 @@ export const SPECS: Spec[] = [
 
 
   { id: 'wi-0012', title: 'Improve knowledge system', parent: 'Main', status: 'backlog',
-    created: 30, updated: 6, owner: 'sam', priority: 3, tags: ['knowledge'],
+    created: 30, updated: 6, priority: 3, tags: ['knowledge'],
     unknown: ['trello_card: sample-card'],
     body: `${OBJECTIVE('Improve how reference information is organized and maintained.')}
 ## Notes
@@ -173,7 +172,6 @@ function renderRoot(spec: Spec, now: Date, stemOf: (title: string) => string): s
   const lines = [
     'type: work-item', `id: ${spec.id}`, `title: ${spec.title}`,
     `created: ${daysAgo(spec.created, now)}`, `updated: ${daysAgo(spec.updated, now)}`,
-    ...(spec.owner ? [`owner: ${spec.owner}`] : []),
     ...extraLines(spec, stemOf),
   ]
   return `---\n${lines.join('\n')}\n---\n\n${spec.body ?? ''}`
@@ -184,7 +182,6 @@ function render(spec: Spec, parentStem: string, now: Date, stemOf: (title: strin
     id: spec.id,
     title: spec.title,
     parentStem,
-    owner: spec.owner,
     assignees: spec.assignees,
     priority: spec.priority,
     created: daysAgo(spec.created, now),
@@ -262,21 +259,21 @@ const REVIEW_PEOPLE = ['Victor', 'Sam'] as const
 const NOW = { created: 0, updated: 0 }
 
 export const REVIEW_SPECS: Spec[] = [
-  { id: REVIEW_ROOT_ID, title: 'Test board', ...NOW, board: true, owner: 'Victor',
+  { id: REVIEW_ROOT_ID, title: 'Test board', ...NOW, board: true,
     body: OBJECTIVE('A throwaway board for checking Recursive Board UI changes by eye. Each card\'s title says what to look at.') },
 
   // Backlog: one chip kind at a time, plus long text.
   { id: 'wi-rv01', title: 'Chips: none', parent: 'Test board', status: 'backlog', ...NOW },
   { id: 'wi-rv02', title: 'Chips: priority only', parent: 'Test board', status: 'backlog', ...NOW, priority: 2 },
-  { id: 'wi-rv03', title: 'Chips: owner only. Hover says Owner Victor', parent: 'Test board',
-    status: 'backlog', ...NOW, owner: 'Victor' },
+  { id: 'wi-rv03', title: 'Chips: assignee only. Hover says Assigned to Victor', parent: 'Test board',
+    status: 'backlog', ...NOW, assignees: ['Victor'] },
   // A first child promotes its parent to a board, as `wi new` does.
   { id: 'wi-rv04', title: 'Chips: child count only', parent: 'Test board', status: 'backlog', ...NOW,
     board: true },
   { id: 'wi-rv05', title: 'Child A', parent: 'Chips: child count only', status: 'backlog', ...NOW },
   { id: 'wi-rv06', title: 'Child B', parent: 'Chips: child count only', status: 'doing', ...NOW },
   { id: 'wi-rv07', title: 'A long title that wraps onto a second line, so the chips under it can be checked against two lines of text',
-    parent: 'Test board', status: 'backlog', ...NOW, owner: 'Victor', priority: 3, tags: ['bug', 'ui'] },
+    parent: 'Test board', status: 'backlog', ...NOW, priority: 3, tags: ['bug', 'ui'] },
   { id: 'wi-rv08', title: 'Labels: several at once', parent: 'Test board', status: 'backlog', ...NOW,
     tags: ['bug', 'ui', 'design', 'docs', 'needs-review'] },
 
@@ -290,11 +287,11 @@ export const REVIEW_SPECS: Spec[] = [
 
   // Doing: every chip at once, then the assignees.
   { id: 'wi-rv12', title: 'Chips: every kind at once', parent: 'Test board', status: 'doing', ...NOW,
-    owner: 'Victor', priority: 1, tags: ['bug', 'ui'], assignees: ['claude', 'Victor'],
+    priority: 1, tags: ['bug', 'ui'], assignees: ['claude', 'Victor'],
     dependsOn: 'Chips: none', board: true,
     brief: {
       objective: 'Check that every chip on this card face has the same height and that the row reads as one line.',
-      context: ['A child count, priority, a wait, an owner or assignee initial, and two labels all show here.'],
+      context: ['A child count, priority, a wait, an assignee initial, and two labels all show here.'],
       criteria: [
         'The child count and the hourglass chip are the same height.',
         'The assignee chip shows an initial and +1.',
@@ -314,7 +311,7 @@ export const REVIEW_SPECS: Spec[] = [
 
   // Done.
   { id: 'wi-rv20', title: 'A finished card', parent: 'Test board', status: 'done', ...NOW },
-  { id: 'wi-rv21', title: 'Another finished card', parent: 'Test board', status: 'done', ...NOW, owner: 'Victor' },
+  { id: 'wi-rv21', title: 'Another finished card', parent: 'Test board', status: 'done', ...NOW },
 
   // An area with children.
   { id: 'wi-rv22', title: 'Area: Website', parent: 'Test board', status: 'doing', ...NOW, area: true },

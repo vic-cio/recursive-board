@@ -13,7 +13,6 @@ import { assigneesIn } from '../assignee.ts'
 import { inheritedChildFields, renderWorkItem, type NewWorkItem } from '../work-item.ts'
 import { briefGaps, renderBody, requireTemplate, type Brief } from '../templates.ts'
 import { firstChildPromotion } from '../transitions.ts'
-import { asName } from '../authorship.ts'
 import { freeTag, withFreeTag } from '../tags.ts'
 import { fileNameFor, fileNameStem, isStatus, newId, today, WORK_ITEM_TYPE, type Status } from '../schema.ts'
 import { parseFrontmatter } from '../frontmatter.ts'
@@ -26,7 +25,6 @@ export interface NewOptions {
   /** An id, a filename or a title. Required: only the root has no parent. */
   parent?: string
   status?: Status
-  owner?: string
   /** The person or agent who does the work. `wi new --assignee` sets it. */
   assignee?: string
   /** Free tags, such as a role tag `role/checker` (docs/adr/0062-role-tags.md). */
@@ -82,7 +80,6 @@ export async function createItem(vault: Vault, options: NewOptions): Promise<Cre
   const inherited = inheritedChildFields({
     assignees: template.area ? undefined : assigneesIn(parent.text),
   }, status, {
-    owner: options.owner,
     // An empty --assignee gives the card no assignee, so it inherits none.
     assignees: options.assignee === undefined ? undefined : [options.assignee.trim()].filter((name) => name !== ''),
   })
@@ -102,7 +99,6 @@ export async function createItem(vault: Vault, options: NewOptions): Promise<Cre
       : { ...common, ...inherited, status }
     if (options.priority !== undefined) fields.priority = options.priority
     if (tags.length > 0) fields.tags = tags
-    if (options.owner?.trim()) fields.owner = asName(options.owner)
     return renderWorkItem(fields, vault.config.extraSections)
   }
 
@@ -180,7 +176,6 @@ export const runNew: RunFunction = async (context, line) => {
     title,
     parent,
     ...(typeof values['status'] === 'string' ? { status: values['status'] as never } : {}),
-    ...(typeof values['owner'] === 'string' ? { owner: values['owner'] } : {}),
     ...(typeof values['assignee'] === 'string' ? { assignee: values['assignee'] }
       : typeof values['holder'] === 'string' ? { assignee: values['holder'] } : {}),
     ...(typeof values['template'] === 'string' ? { template: values['template'] } : {}),
@@ -204,6 +199,9 @@ export const runNew: RunFunction = async (context, line) => {
   if (created.gaps.length > 0) {
     context.err(`wi: warning: ${created.id} has no ${created.gaps.join(' or ')}. ` +
       `Pass --objective and --criteria, or fill the card before work starts.\n`)
+  }
+  if (typeof values['owner'] === 'string') {
+    context.err(`wi: note: --owner is retired and writes nothing. Use --assignee to name who does the work.\n`)
   }
   if (created.renamed) {
     context.err(`wi: note: another item has this filename, so this one is ${created.relPath}. ` +

@@ -81,7 +81,7 @@ const ENTRIES: Entry[] = [
     flags: ['parent', 'status', 'template', 'owner', 'assignee', 'holder', 'priority', 'objective', 'context', 'criteria',
       'tag', 'strict', 'vault', 'json'],
     usage: [
-      'wi new <title> [--parent <ref>] [--status <s>] [--template <t>] [--owner <o>] [--assignee <a>]',
+      'wi new <title> [--parent <ref>] [--status <s>] [--template <t>] [--assignee <a>]',
       '               [--priority <n>] [--objective <text>] [--context <text>]... [--criteria <text>]...',
       '               [--tag <tag>]... [--strict]',
     ] },
@@ -93,7 +93,7 @@ const ENTRIES: Entry[] = [
   { name: 'depend', kind: 'vault', writes: true, flags: ['on', 'off', 'vault', 'json'],
     usage: ['wi depend <ref> --on <ref|person> [--off]'] },
   { name: 'set', kind: 'vault', writes: true, flags: ['owner', 'role', 'vault', 'json'],
-    usage: ['wi set <ref> [--owner <name>] [--role ""]'] },
+    usage: ['wi set <ref> [--role ""]'] },
   { name: 'claim', kind: 'vault', writes: true, flags: ['assignee', 'holder', 'vault', 'json'],
     usage: ['wi claim <ref> [--assignee <name>]'] },
   { name: 'assign', kind: 'vault', writes: true, flags: ['to', 'role', 'off', 'vault', 'json'],
@@ -163,11 +163,12 @@ the new file gets the id's suffix; wi never writes over a file.` },
 "autoPromote": false in the board settings to turn this off. A root or an area is never changed.` },
   { about: ['new'], text: `\`wi new --tag <tag>\` adds a free tag; repeat it for more. A role is a tag such as role/checker:
 a note that is not a work item and carries the same tag is that role's procedure. Roles do not
-inherit. --assignee names who does the work. The legacy --holder means the same. --strict checks only the brief.` },
+inherit. --assignee names who does the work. The legacy --holder means the same. --owner is retired:
+the card is still made, but it carries no owner. --strict checks only the brief.` },
   { about: ['tag'], text: `\`wi tag <ref> <tag>\` adds a free tag to a card, and --off removes it. Case and a leading # do not
 matter. It refuses old area/ tags, which remain on cards until the owner chooses a cleanup.` },
-  { about: ['set'], text: `\`wi set\` changes a card's owner (an empty value removes it). --role "" removes an old role field;
-a role is a tag.` },
+  { about: ['set'], text: `\`wi set --role ""\` removes an old role field; a role is a tag.
+\`wi set --owner\` is retired and writes nothing. Use \`wi assign\` to name who does the work.` },
   { about: ['note'], text: `\`wi note\` appends "- <date> <time>, <writer>: <text>" under Notes. It signs WI_AGENT or --agent,
 and adds WI_MODEL when set. It refuses a note with no writer name. The write re-reads the card under a lock, so two notes at once both survive.` },
   { about: ['status'], text: '`wi status <ref> done` says when that was the parent\'s last open child. It does not close the parent.' },

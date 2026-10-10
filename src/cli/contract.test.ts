@@ -172,16 +172,16 @@ const EDIT_CASES: ContractCase[] = [
     expect: { code: 2, stderr: /^wi: Ship already waits on Build server/ },
   },
   {
-    name: 'set: sets the owner',
+    name: 'set: --owner is retired, writes nothing and names wi assign',
     files: EDIT_SEED,
     argv: ['set', 'Ship', '--owner', 'Ana'],
-    expect: { code: 0, stdout: /^wi-0005 {2}Ship {2}set owner\n$/, files: { 'Boards/Ship.md': /^owner: Ana$/m } },
+    expect: { code: 0, stdout: /wi set --owner is retired\. .*wi assign/, files: {} },
   },
   {
-    name: 'set: the owner already so writes nothing, --json',
+    name: 'set: --owner on a legacy card leaves its owner key alone, --json',
     files: EDIT_SEED,
     argv: ['set', 'In review', '--owner', 'Ana', '--json'],
-    expect: { code: 0, stdout: /"changed": \[\]/ },
+    expect: { code: 0, stdout: /wi set --owner is retired/, files: { 'Boards/In review.md': /^owner: Ana$/m } },
   },
   {
     name: 'set: a named role is refused',

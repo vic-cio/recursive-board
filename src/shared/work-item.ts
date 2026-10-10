@@ -17,7 +17,6 @@ interface NewWorkItemFields {
   title: string
   /** The parent's filename stem. The wikilink is authoritative for resolution (docs/adr/0002-work-item-identity-and-parent-links.md). */
   parentStem: string
-  owner?: string | undefined
   /** The people and agents who do the work (docs/adr/0083-assign-and-several-holders.md). */
   assignees?: readonly string[] | undefined
   /** Links to a person or role note (docs/adr/0042-creator-and-role.md). */
@@ -40,19 +39,19 @@ export type NewWorkItem = NewWorkItemFields & (
 )
 
 /**
- * New children do not inherit owner. The assignees follow active work: they are inherited for doing
- * children, while an explicit owner or assignee remains an intentional override. A request for any
- * agent (`assignee: agent`) asks for its own card only, so it is not inherited.
+ * New children take no legacy owner: nothing reads or writes `owner`. The assignees follow
+ * active work: they are inherited for doing children, while an explicit assignee remains an
+ * intentional override. A request for any agent (`assignee: agent`) asks for its own card only,
+ * so it is not inherited.
  */
 export function inheritedChildFields(
-  parent: Pick<NewWorkItemFields, 'owner' | 'assignees'>,
+  parent: Pick<NewWorkItemFields, 'assignees'>,
   status: Status | undefined,
-  overrides: Pick<NewWorkItemFields, 'owner' | 'assignees'> = {},
-): Pick<NewWorkItemFields, 'owner' | 'assignees'> {
+  overrides: Pick<NewWorkItemFields, 'assignees'> = {},
+): Pick<NewWorkItemFields, 'assignees'> {
   const named = (parent.assignees ?? []).filter((name) => !isAnyAgent(name))
   const inherited = status === 'doing' && named.length > 0 ? named : undefined
   return {
-    owner: overrides.owner,
     assignees: overrides.assignees ?? inherited,
   }
 }
@@ -83,7 +82,6 @@ export function renderWorkItem(item: NewWorkItem, extraSections: readonly string
   fields.push(['status', item.status])
   if (item.area) fields.push(['area', true])
   fields.push(['parent', formatWikilink(item.parentStem)])
-  if (item.owner !== undefined && item.owner !== '') fields.push(['owner', item.owner])
   // One assignee is a plain value, so a card with one assignee reads as it always did.
   const assignees = (item.assignees ?? []).filter((name) => name !== '')
   if (assignees.length > 0) fields.push(['assignee', assignees.length === 1 ? assignees[0]! : assignees])

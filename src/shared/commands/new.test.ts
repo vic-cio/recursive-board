@@ -170,12 +170,14 @@ test('createItem does not invent owner or assignee when the parent has none', as
   assert.equal(fm.has('holder'), false)
 })
 
-test('an explicit owner beats the inherited one', async () => {
+test('createItem writes no owner key: a legacy parent owner stays on the parent only', async () => {
   fixture = seed()
   const created = await createItem(await reload(fixture), {
-    title: 'Streaming', parent: 'wi-0004', owner: 'lee',
+    title: 'Streaming', parent: 'wi-0004', status: 'doing',
   })
-  assert.equal(parseFrontmatter(readFileSync(join(fixture!.root, created.relPath), 'utf8'))!.get('owner'), 'lee')
+  const fm = parseFrontmatter(readFileSync(join(fixture!.root, created.relPath), 'utf8'))!
+  assert.equal(fm.has('owner'), false)
+  assert.equal(fm.get('assignee'), 'codex')
 })
 
 test('an explicit assignee beats the status-based inheritance rule', async () => {

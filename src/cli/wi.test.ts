@@ -156,7 +156,7 @@ test('wi show --json returns a complete card without changing its file', async (
   assert.equal(result.code, 0, result.stderr)
   const card = JSON.parse(result.stdout)
   assert.equal(card.id, 'wi-0004')
-  assert.equal(card.owner, 'sam')
+  assert.equal('owner' in card, false, 'no JSON result carries owner')
   assert.deepEqual(card.knowledge, [])
   assert.deepEqual(card.ancestry.map((entry: { id: string }) => entry.id), ['wi-0001'])
   assert.deepEqual(card.children, { total: 0, open: 0, done: 0, items: [] })
@@ -819,13 +819,12 @@ test('wi new writes a brief from flags, and --strict refuses a card without one'
   assert.match(strict.stderr, /no Objective or Acceptance Criteria/)
 })
 
-test('wi new writes tags, owner and assignee, records no creator, and refuses --creator', async () => {
+test('wi new writes tags and assignee, records no creator, and refuses --creator', async () => {
   fixture = seed()
   const flags = await wi(['new', 'Check rates', '--parent', 'Main', '--objective', 'Check.', '--criteria', 'Done',
-    '--tag', 'role/checker', '--tag', '#Web', '--tag', 'web', '--owner', 'Ana', '--assignee', 'agent', '--json'])
+    '--tag', 'role/checker', '--tag', '#Web', '--tag', 'web', '--assignee', 'agent', '--json'])
   assert.equal(flags.code, 0, flags.stderr)
   const text = readFileSync(join(fixture.root, JSON.parse(flags.stdout).path), 'utf8')
-  assert.match(text, /^owner: Ana$/m)
   assert.match(text, /^tags:\n {2}- role\/checker\n {2}- Web$/m)
   assert.doesNotMatch(text, /^role:/m)
   assert.match(text, /^assignee: agent$/m)
@@ -846,6 +845,15 @@ test('wi new writes tags, owner and assignee, records no creator, and refuses --
   assert.doesNotMatch(strict.stderr, /no creator/)
 })
 
+test('wi new --owner is retired: it still makes the card, writes no owner, and names --assignee', async () => {
+  fixture = seed()
+  const made = await wi(['new', 'Legacy owner', '--parent', 'Main', '--owner', 'Ana', '--json'])
+  assert.equal(made.code, 0, made.stderr)
+  assert.match(made.stderr, /--owner is retired.*--assignee/)
+  const text = readFileSync(join(fixture.root, JSON.parse(made.stdout).path), 'utf8')
+  assert.doesNotMatch(text, /^owner:/m)
+})
+
 test('wi new and wi ready keep the legacy --holder flag, and it means --assignee', async () => {
   fixture = seed()
   const made = await wi(['new', 'Legacy claim', '--parent', 'Main', '--objective', 'Check.', '--criteria', 'Done',
@@ -861,6 +869,16 @@ test('wi new and wi ready keep the legacy --holder flag, and it means --assignee
   assert.deepEqual(JSON.parse(ready.stdout), JSON.parse(modern.stdout))
 })
 
+test('wi set --owner is retired: it writes nothing, exits 0 and names wi assign', async () => {
+  fixture = seed()
+  const path = join(fixture.root, 'Boards/Build server.md')
+  const before = readFileSync(path, 'utf8')
+  const result = await wi(['set', 'Build server', '--owner', 'Ana'])
+  assert.equal(result.code, 0, result.stderr)
+  assert.match(result.stdout, /wi set --owner is retired.*wi assign/)
+  assert.equal(readFileSync(path, 'utf8'), before)
+})
+
 test('wi new refuses --role and a bad tag before writing', async () => {
   fixture = seed()
   const role = await wi(['new', 'Explicit', '--parent', 'Main', '--role', 'Takeoff agent'])
@@ -873,24 +891,21 @@ test('wi new refuses --role and a bad tag before writing', async () => {
   assert.equal(existsSync(join(fixture.root, 'Boards', 'Old area.md')), false)
 })
 
-test('wi validate checks how owner and role are written, and not the type of the owner note', async () => {
+test('wi validate checks how role is written, and an old owner key validates clean', async () => {
   fixture = seed()
   fixture.write('People/Ana.md', '---\ntype: person\n---\n')
-  fixture.write('Roles/Session agent.md', '---\ntype: role\n---\nThe procedure.\n')
   fixture.write('Notes/Loose.md', 'no frontmatter\n')
   const base = { type: 'work-item', status: 'options', parent: '"[[Main]]"', created: '2026-09-21', updated: '2026-09-21' }
   fixture.write('Boards/Good.md', item({ ...base, id: 'wi-9001', title: 'Good', owner: 'Ana' }))
   fixture.write('Boards/Agent.md', item({ ...base, id: 'wi-9004', title: 'Agent', owner: 'Session agent' }))
-  fixture.write('Boards/Bad.md', item({ ...base, id: 'wi-9002', title: 'Bad', owner: 'Loose', role: 'Loose' }))
-  fixture.write('Boards/Linked.md', item({ ...base, id: 'wi-9003', title: 'Linked', owner: '"[[Ana]]"' }))
+  fixture.write('Boards/Bad.md', item({ ...base, id: 'wi-9002', title: 'Bad', role: 'Loose' }))
   const result = await wi(['validate', '--json'])
   const all = (JSON.parse(result.stdout) as { problems: { relPath: string; rule: string; message: string }[] }).problems
   const problems = all
-    .filter((problem) => ['Boards/Good.md', 'Boards/Agent.md', 'Boards/Bad.md', 'Boards/Linked.md'].includes(problem.relPath))
+    .filter((problem) => ['Boards/Good.md', 'Boards/Agent.md', 'Boards/Bad.md'].includes(problem.relPath))
     .map((problem) => `${problem.relPath} ${problem.rule}`)
   assert.deepEqual(problems, [
     'Boards/Bad.md role-field',
-    'Boards/Linked.md owner-link',
   ])
   for (const problem of all) assert.doesNotMatch(problem.message, /type: role|role note/)
   const bad = all.find((problem) => problem.rule === 'role-field')!

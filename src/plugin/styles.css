@@ -33,7 +33,7 @@
   --wi-edge: 0.75;
 
   /* One border-box height for every chip that shares a row on a card: child count, priority, waiting,
-     owner or agent initial, label, area mark, and the checklist row's status, count and waiting chips. */
+     assignee initial, label, area mark, and the checklist row's status, count and waiting chips. */
   --wi-chip-height: 17px;
 }
 

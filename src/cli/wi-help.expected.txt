@@ -4,7 +4,7 @@ Usage
   wi setup [--yes] [--vault <path>] [--force] [--json]
   wi doctor [--json]
   wi update [--dry-run] [--from <version>] [--vault <path>] [--json]
-  wi new <title> [--parent <ref>] [--status <s>] [--template <t>] [--owner <o>] [--assignee <a>]
+  wi new <title> [--parent <ref>] [--status <s>] [--template <t>] [--assignee <a>]
                  [--priority <n>] [--objective <text>] [--context <text>]... [--criteria <text>]...
                  [--tag <tag>]... [--strict]
   wi status <ref> <status>
@@ -12,7 +12,7 @@ Usage
   wi area <ref> [--off]
   wi tag <ref> <tag> [--off]
   wi depend <ref> --on <ref|person> [--off]
-  wi set <ref> [--owner <name>] [--role ""]
+  wi set <ref> [--role ""]
   wi claim <ref> [--assignee <name>]
   wi assign <ref> --to <person|agent> [--role <name>] [--off]
   wi agents [--json]
@@ -60,11 +60,12 @@ Notes
   "autoPromote": false in the board settings to turn this off. A root or an area is never changed.
   `wi new --tag <tag>` adds a free tag; repeat it for more. A role is a tag such as role/checker:
   a note that is not a work item and carries the same tag is that role's procedure. Roles do not
-  inherit. --assignee names who does the work. The legacy --holder means the same. --strict checks only the brief.
+  inherit. --assignee names who does the work. The legacy --holder means the same. --owner is retired:
+  the card is still made, but it carries no owner. --strict checks only the brief.
   `wi tag <ref> <tag>` adds a free tag to a card, and --off removes it. Case and a leading # do not
   matter. It refuses old area/ tags, which remain on cards until the owner chooses a cleanup.
-  `wi set` changes a card's owner (an empty value removes it). --role "" removes an old role field;
-  a role is a tag.
+  `wi set --role ""` removes an old role field; a role is a tag.
+  `wi set --owner` is retired and writes nothing. Use `wi assign` to name who does the work.
   `wi note` appends "- <date> <time>, <writer>: <text>" under Notes. It signs WI_AGENT or --agent,
   and adds WI_MODEL when set. It refuses a note with no writer name. The write re-reads the card under a lock, so two notes at once both survive.
   `wi status <ref> done` says when that was the parent's last open child. It does not close the parent.

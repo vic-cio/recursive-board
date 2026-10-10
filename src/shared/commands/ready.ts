@@ -50,12 +50,10 @@ function isRequest(item: WorkItem): boolean {
 
 function summary(item: WorkItem) {
   const due = item.frontmatter.get('due')
-  const owner = item.frontmatter.get('owner')
   return {
     id: item.id ?? null, title: titleOf(item), path: item.relPath,
     priority: Number.isFinite(priority(item)) ? priority(item) : null,
     due: typeof due === 'string' ? due : null,
-    owner: typeof owner === 'string' ? owner : null,
     assignees: assignees(item),
     request: isRequest(item),
     roles: roleTags(getList(item.text, 'tags') ?? []),

@@ -1,0 +1,28 @@
+{
+  "id": "b85d347e5",
+  "name": "run full test suite",
+  "command": "npm test 2>&1 | tail -40",
+  "status": "killed",
+  "outputPath": ".pi/tasks/01a12581-1006-73f6-92c2-bddbbb122fd4-80654/b85d347e5.output",
+  "cwd": "/Users/victorciobanu/Documents/Programming/Obsidian Development/recursive-board-worktrees/assignee-owner",
+  "startTime": 1791631279435,
+  "endTime": 1791631309982,
+  "exitCode": null,
+  "signal": "SIGTERM",
+  "pid": 82976,
+  "bytesWritten": 0,
+  "isAgent": false,
+  "surviveReload": false,
+  "error": "Killed during Pi session shutdown (quit)",
+  "notified": false,
+  "notifyOnCompletion": true,
+  "triggerOnCompletion": true,
+  "shellPolicy": {
+    "policy": "inherit",
+    "executable": "/bin/zsh",
+    "argvPrefix": [
+      "-c"
+    ],
+    "dialect": "posix"
+  }
+}

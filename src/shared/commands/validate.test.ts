@@ -273,6 +273,18 @@ test('an unknown key is a warning, never an error, because it must be preserved'
   assert.equal(report.ok, true)
 })
 
+test('an old owner key validates clean: it is kept, read as nothing, and never reported', async () => {
+  fixture = healthy()
+  fixture.write('Boards/Legacy.md', item({
+    type: 'work-item', id: 'wi-0032', title: 'Legacy', status: 'options',
+    parent: '"[[Main]]"', owner: '"[[sam]]"',
+    created: '2026-09-21', updated: '2026-09-21',
+  }))
+  const report = await run(fixture)
+  assert.ok(report.problems.every((p) => p.relPath !== 'Boards/Legacy.md'),
+    'no owner-link check and no unknown-key warning for the legacy key')
+  assert.equal(report.ok, true)
+})
 test('the removed blocked field is an unknown key warning', async () => {
   fixture = healthy()
   fixture.write('Boards/Full.md', item({

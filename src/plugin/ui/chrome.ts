@@ -154,10 +154,6 @@ export function renderMetaStrip(host: HTMLElement, meta: WorkItemMeta, ctx?: Ren
     })
   }
   if (meta.priority !== undefined) strip.createSpan({ cls: 'wi-pill', text: `P${meta.priority}` })
-  if (meta.owner !== undefined) {
-    const pill = strip.createSpan({ cls: 'wi-pill', attr: { 'aria-label': 'Owner' } })
-    namePill(pill, meta.owner, meta.ownerFile, openFile)
-  }
   if (meta.assignees.length > 0) {
     strip.createSpan({
       cls: 'wi-pill is-agent', text: assigneesLabel(meta.assignees), attr: { 'aria-label': `Assigned to ${assigneesLabel(meta.assignees)}` },

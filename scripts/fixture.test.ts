@@ -120,10 +120,10 @@ test('the review set validates with no error and no warning', async () => {
   assert.equal(report.itemCount, 25)
 })
 
-test('the review set has a root board owned by Victor, and the two people', async () => {
+test('the review set has a root board and the two people', async () => {
   const vault = await reviewed()
   const board = vault.resolve('wi-test')
-  assert.deepEqual([board.stem, board.parent, board.board, board.frontmatter.get('owner')], ['Test board', null, true, 'Victor'])
+  assert.deepEqual([board.stem, board.parent, board.board], ['Test board', null, true])
   for (const name of ['Victor', 'Sam']) {
     assert.equal(parseFrontmatter(readFileSync(join(fixture!.root, 'People', `${name}.md`), 'utf8'))!.get('type'), 'person')
   }
@@ -146,7 +146,7 @@ test('the review set has every kind of card the board UI needs checked', async (
   assert.ok(cards.some((i) => (getList(i.text, 'tags') ?? []).length >= 5), 'a card with several labels')
   assert.ok(cards.some((i) => (i.title ?? '').length > 100), 'a long title')
   assert.ok(cards.some((i) => i.frontmatter.get('priority') !== undefined), 'a priority')
-  assert.ok(cards.some((i) => i.frontmatter.get('owner') !== undefined), 'an owner')
+  assert.ok(cards.every((i) => i.frontmatter.get('owner') === undefined), 'no owner on any card')
   assert.ok(cards.some((i) => vault.childrenOf(i).length > 0 && !i.area), 'a card with children')
 })
 

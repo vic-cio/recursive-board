@@ -35,7 +35,7 @@ test('showCard returns the card, its brief, ancestry, dependencies, and children
   assert.equal('blocked' in shown, false)
 
   const build = showCard(await loadVault(fixture.root), 'wi-build')
-  assert.equal(build.owner, 'Victor')
+  assert.equal('owner' in build, false, 'no JSON result carries owner, even on an old card that has the key')
   assert.deepEqual(build.assignees, ['codex'], 'an old card\'s agent is its assignee, in a list')
   assert.equal('agent' in build, false)
   assert.equal('holder' in build, false)

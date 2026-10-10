@@ -40,10 +40,6 @@ export interface WorkItemMeta {
   effectiveArchived: boolean
   priority: number | undefined
   updated: string | undefined
-  /** The owner's name: a link's target, or plain text. */
-  owner: string | undefined
-  /** The note the owner links to, when it is a link that resolves. */
-  ownerFile: TFile | null
   /** The people and agents who do the work: `assignee`, else an old card's `holder` or `agent`, as a list. */
   assignees: string[]
   /** The person or role that made the item, by name (docs/adr/0042-creator-and-role.md). */
@@ -151,8 +147,6 @@ export class WorkItemIndex {
       effectiveArchived: false,
       priority: typeof priority === 'number' ? priority : undefined,
       updated: str(frontmatter['updated']),
-      owner: displayName(frontmatter['owner']),
-      ownerFile: this.linkedFile(frontmatter['owner'], file),
       assignees: assigneesOf((key) => frontmatter[key]),
       creator: displayName(frontmatter['creator']),
       creatorFile: this.linkedFile(frontmatter['creator'], file),

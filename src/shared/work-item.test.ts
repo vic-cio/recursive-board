@@ -3,31 +3,31 @@ import assert from 'node:assert/strict'
 
 import { inheritedChildFields, renderWorkItem } from './work-item.ts'
 
-test('a child does not inherit owner, but doing children inherit the assignees', () => {
+test('a doing child inherits the named assignees, and no legacy owner', () => {
   assert.deepEqual(
-    inheritedChildFields({ owner: 'sam', assignees: ['codex'] }, 'doing'),
-    { owner: undefined, assignees: ['codex'] },
+    inheritedChildFields({ assignees: ['codex'] }, 'doing'),
+    { assignees: ['codex'] },
   )
   assert.deepEqual(
-    inheritedChildFields({ owner: 'sam', assignees: ['Victor', 'codex'] }, 'doing'),
-    { owner: undefined, assignees: ['Victor', 'codex'] },
+    inheritedChildFields({ assignees: ['Victor', 'codex'] }, 'doing'),
+    { assignees: ['Victor', 'codex'] },
   )
   assert.deepEqual(
-    inheritedChildFields({ owner: 'sam', assignees: ['codex'] }, 'backlog'),
-    { owner: undefined, assignees: undefined },
+    inheritedChildFields({ assignees: ['codex'] }, 'backlog'),
+    { assignees: undefined },
   )
 })
 
 test('a request for any agent stays on its own card', () => {
-  assert.deepEqual(inheritedChildFields({ assignees: ['agent'] }, 'doing'), { owner: undefined, assignees: undefined })
-  assert.deepEqual(inheritedChildFields({ assignees: ['Victor', 'agent'] }, 'doing'), { owner: undefined, assignees: ['Victor'] })
-  assert.deepEqual(inheritedChildFields({}, 'options', { assignees: ['agent'] }), { owner: undefined, assignees: ['agent'] })
+  assert.deepEqual(inheritedChildFields({ assignees: ['agent'] }, 'doing'), { assignees: undefined })
+  assert.deepEqual(inheritedChildFields({ assignees: ['Victor', 'agent'] }, 'doing'), { assignees: ['Victor'] })
+  assert.deepEqual(inheritedChildFields({}, 'options', { assignees: ['agent'] }), { assignees: ['agent'] })
 })
 
-test('an explicit owner remains on the child', () => {
+test('an explicit assignee remains on the child', () => {
   assert.deepEqual(
-    inheritedChildFields({ owner: 'sam' }, 'backlog', { owner: 'lee' }),
-    { owner: 'lee', assignees: undefined },
+    inheritedChildFields({}, 'backlog', { assignees: ['lee'] }),
+    { assignees: ['lee'] },
   )
 })
 

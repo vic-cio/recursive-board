@@ -69,7 +69,6 @@ export function showCard(vault: Vault, ref: string, tagged: readonly TaggedNote[
   return {
     ...identity(item),
     status: item.status ?? null,
-    owner: stringField(item, 'owner'),
     assignees: assigneesIn(item.text),
     roles,
     procedures: roles.map((tag) => ({ tag, notes: procedureNotes(tag, tagged) })),

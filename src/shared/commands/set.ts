@@ -1,11 +1,11 @@
 /**
- * `wi set` — change a card's owner. One file, one write. A role is a tag now
- * (docs/adr/0062-role-tags.md); `--role ""` only removes an old `role` field. Cards no longer record
- * their creator (docs/adr/0063-wi-starts-no-agents.md).
+ * `wi set` — remove an old `role` field. A role is a tag now
+ * (docs/adr/0062-role-tags.md); `--role ""` only removes the field. Cards no longer record
+ * their creator (docs/adr/0063-wi-starts-no-agents.md), and `--owner` is retired: it writes
+ * nothing and names `wi assign`.
  */
 import { editItem } from '../edit-item.ts'
 import type { Edit } from '../edits.ts'
-import { asName } from '../authorship.ts'
 import { roleTagFor } from '../role-tags.ts'
 import { parseFrontmatter, type Scalar } from '../frontmatter.ts'
 import type { Vault, WorkItem } from '../vault.ts'
@@ -14,8 +14,6 @@ import { refOf, text } from './options.ts'
 import { json, label } from './output.ts'
 
 export interface SetOptions {
-  /** A name or link. An empty string removes the owner. */
-  owner?: string
   /** Only an empty string, which removes an old `role` field. A role is a tag: `wi tag`. */
   role?: string
 }
@@ -27,7 +25,7 @@ export interface SetChange {
 
 export async function setPeople(vault: Vault, ref: string, options: SetOptions): Promise<SetChange> {
   const item = vault.resolve(ref)
-  if (item.parent === null) throw new Error(`${item.relPath} is a root. A root has no owner.`)
+  if (item.parent === null) throw new Error(`${item.relPath} is a root. A root has no role field.`)
   if (options.role !== undefined && options.role.trim() !== '') {
     throw new Error(`a role is a tag now. Run: wi tag ${ref} ${roleTagFor(options.role)}`)
   }
@@ -48,37 +46,27 @@ function peopleEdits(
   const edits: Edit[] = []
   const changed: string[] = []
 
-  const assign = (key: 'owner' | 'role', value: string | undefined) => {
-    // An empty --role arrives here only to remove an old field; a named role was refused above.
-    if (value === undefined) return
-    if (value.trim() === '') {
-      if (current(key) !== undefined) {
-        edits.push({ op: 'remove', key })
-        changed.push(key)
-      }
-      return
-    }
-    const next = asName(value)
-    if (current(key) !== next) {
-      edits.push({ op: 'set', key, value: next })
-      changed.push(key)
-    }
+  // An empty --role arrives here only to remove an old field; a named role was refused above.
+  const value = options.role
+  if (value !== undefined && value.trim() === '' && current('role') !== undefined) {
+    edits.push({ op: 'remove', key: 'role' })
+    changed.push('role')
   }
-  assign('owner', options.owner)
-  assign('role', options.role)
-
 
   return { edits, changed }
 }
 
-/** `wi set <ref> --owner <name>`, or `--role ""` to remove an old role field. */
+/** `wi set <ref> --role ""` removes an old role field. `--owner` is retired and writes nothing. */
 export const runSet: RunFunction = async (context, line) => {
+  if (typeof line.values['owner'] === 'string') {
+    context.out('wi set --owner is retired and writes nothing. Use wi assign <ref> --to <person|agent> to name who does the work.\n')
+    return 0
+  }
   const ref = refOf(line.positionals)
-  const owner = text(line.values, 'owner')
   const role = text(line.values, 'role')
-  const options: SetOptions = { ...(owner === undefined ? {} : { owner }), ...(role === undefined ? {} : { role }) }
+  const options: SetOptions = { ...(role === undefined ? {} : { role }) }
   if (ref === '' || Object.keys(options).length === 0) {
-    throw new UsageError('wi set needs a <ref> and --owner, or --role "" to remove an old role field.')
+    throw new UsageError('wi set needs a <ref> and --role "" to remove an old role field.')
   }
   const change = await setPeople(await context.vault(), ref, options)
   if (line.values['json'] === true) context.out(json({ id: change.item.id, path: change.item.relPath, changed: change.changed }))

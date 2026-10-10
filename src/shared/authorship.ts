@@ -1,9 +1,9 @@
 /**
- * Names for card ownership and note signatures (docs/adr/0042-creator-and-role.md).
+ * Names for card assignees and note signatures (docs/adr/0042-creator-and-role.md).
  *
- * `owner` holds a plain name, not a link: a link from every card to its owner turns the graph into
+ * A name is plain text, not a link: a link from every card to a person turns the graph into
  * one star around each person. A person note has `type: person`, in any folder.
- * A role is a tag (docs/adr/0062-role-tags.md). Old `creator` fields stay on cards, and nothing
+ * A role is a tag (docs/adr/0062-role-tags.md). Old `creator` and `owner` fields stay on cards, and nothing
  * writes or checks them (docs/adr/0064-validate-checks-no-creator.md).
  * This module imports nothing from Node.
  */

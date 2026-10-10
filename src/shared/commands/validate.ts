@@ -62,7 +62,6 @@ export async function validate(vault: Vault): Promise<Report> {
   checkRoots(vault, report)
   checkCycles(vault, report)
   checkDependencies(vault, report)
-  checkOwners(vault, report)
   await checkRoleProcedures(vault, report)
   problems.sort((a, b) => a.relPath.localeCompare(b.relPath) || a.rule.localeCompare(b.rule))
 
@@ -73,22 +72,6 @@ export async function validate(vault: Vault): Promise<Report> {
     warningCount: problems.length - errorCount,
     ok: errorCount === 0,
     itemCount: vault.items.length,
-  }
-}
-
-/**
- * docs/adr/0042-creator-and-role.md: owner holds a plain name. A link draws a graph edge from every
- * card to its owner, so it is a warning. The owner note's type is not checked: a vault need not
- * keep person notes, and old creator fields are not checked at all
- * (docs/adr/0064-validate-checks-no-creator.md).
- */
-function checkOwners(vault: Vault, report: Reporter): void {
-  for (const item of vault.items) {
-    const raw = item.frontmatter.get('owner')
-    const name = displayName(raw)
-    if (name === undefined || parseWikilink(raw) === null) continue
-    report('owner-link', 'warning', item.relPath, item.id,
-      `has owner ${JSON.stringify(raw)}. Write the plain name, owner: ${name}, so the graph has no edge to it. wi set rewrites it.`)
   }
 }
 

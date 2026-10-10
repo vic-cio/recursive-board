@@ -74,6 +74,16 @@ test('readyCards lists the requests for any agent first, and excludes a card som
   ], 'a card with any assignee but agent is taken, through the new key or the old one')
 })
 
+test('readyCards lists an old card that carries only an owner key: owner is read as nothing', async () => {
+  fixture = makeVault()
+  fixture.write('Boards/Main.md', item({ type: 'work-item', id: 'wi-main', title: 'Main' }))
+  fixture.write('Boards/Legacy.md', item({ type: 'work-item', id: 'wi-legacy', title: 'Legacy',
+    status: 'options', parent: '"[[Main]]"', owner: 'Victor' }))
+  const result = readyCards(await loadVault(fixture.root))
+  assert.deepEqual(result.ready.map((card) => card.id), ['wi-legacy'])
+  assert.equal('owner' in result.ready[0]!, false, 'no JSON result carries owner')
+})
+
 test('readyCards permits a nested claim by the agent already working on its child', async () => {
   fixture = makeVault()
   fixture.write('Boards/Main.md', item({ type: 'work-item', id: 'wi-main', title: 'Main' }))

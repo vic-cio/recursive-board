@@ -9,7 +9,7 @@ id: wi-0004
 title: Build server
 status: backlog
 parent: "[[Ship the mobile app]]"
-owner: sam
+assignee: sam
 priority: 2
 created: 2026-09-21
 updated: 2026-09-21
@@ -28,7 +28,7 @@ test('parseFrontmatter reads every scalar key', () => {
   assert.equal(fm.get('type'), 'work-item')
   assert.equal(fm.get('id'), 'wi-0004')
   assert.equal(fm.get('status'), 'backlog')
-  assert.equal(fm.get('owner'), 'sam')
+  assert.equal(fm.get('assignee'), 'sam')
 })
 
 test('parseFrontmatter strips the quotes from a wikilink value', () => {
@@ -49,7 +49,7 @@ test('parseFrontmatter keeps a date as a string in ISO form', () => {
 test('parseFrontmatter reports the keys in file order', () => {
   const fm = parseFrontmatter(ITEM)!
   assert.deepEqual(fm.keys(), [
-    'type', 'id', 'title', 'status', 'parent', 'owner', 'priority', 'created', 'updated',
+    'type', 'id', 'title', 'status', 'parent', 'assignee', 'priority', 'created', 'updated',
   ])
 })
 
@@ -90,7 +90,7 @@ test('setKey rewrites one line and leaves every other byte alone', () => {
 })
 
 test('setKey preserves an unknown key it was not asked to touch', () => {
-  const text = ITEM.replace('owner: sam', 'owner: sam\nsomething_nobody_knows: 42')
+  const text = ITEM.replace('assignee: sam', 'assignee: sam\nsomething_nobody_knows: 42')
   const out = setKey(text, 'status', 'done')
   assert.match(out, /^something_nobody_knows: 42$/m)
 })
@@ -224,10 +224,10 @@ test('setList replaces the entry in place and copies every other byte', () => {
 // that such a parser reads differently.
 
 test('setKey escapes a line break so the value stays on one line', () => {
-  const out = setKey(ITEM, 'owner', 'Ana\nSmith')
-  assert.equal(out, ITEM.replace('owner: sam', 'owner: "Ana\\nSmith"'))
-  assert.equal(parseFrontmatter(out)!.get('owner'), 'Ana\nSmith')
-  assert.equal(setKey(out, 'owner', 'Bob'), ITEM.replace('owner: sam', 'owner: Bob'))
+  const out = setKey(ITEM, 'assignee', 'Ana\nSmith')
+  assert.equal(out, ITEM.replace('assignee: sam', 'assignee: "Ana\\nSmith"'))
+  assert.equal(parseFrontmatter(out)!.get('assignee'), 'Ana\nSmith')
+  assert.equal(setKey(out, 'assignee', 'Bob'), ITEM.replace('assignee: sam', 'assignee: Bob'))
 })
 
 test('formatScalar escapes every control character and parseScalar reads it back', () => {
@@ -246,10 +246,10 @@ test('formatScalar quotes a colon or a hash that follows a tab', () => {
 })
 
 test('parseScalar drops a trailing comment', () => {
-  const fm = parseFrontmatter('---\nlegacy: true # supplier\npriority: 2 # high\nowner: sam # lead\nnote: "x # y" # c\nplain: a#b\nsingle: \'it\'\'s\' # c\n---\n')!
+  const fm = parseFrontmatter('---\nlegacy: true # supplier\npriority: 2 # high\nassignee: sam # lead\nnote: "x # y" # c\nplain: a#b\nsingle: \'it\'\'s\' # c\n---\n')!
   assert.equal(fm.get('legacy'), true)
   assert.equal(fm.get('priority'), 2)
-  assert.equal(fm.get('owner'), 'sam')
+  assert.equal(fm.get('assignee'), 'sam')
   assert.equal(fm.get('note'), 'x # y')
   assert.equal(fm.get('plain'), 'a#b')
   assert.equal(fm.get('single'), "it's")
