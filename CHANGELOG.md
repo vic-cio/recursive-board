@@ -13,12 +13,14 @@ the agent notes in your vault.
 ### Agent setup
 
 - The frontmatter key is renamed `holder` to `assignee`; it holds one name, or a list for several,
-  and `wi` writes a plain value for one name. A reader takes `assignee`, else an old card's
-  `holder`, else the old `agent`, and a card with more than one of these keys uses the first in
-  that order. No card is rewritten to migrate it. JSON results use `assignees`, an array of names,
-  wherever they used `holder`, and no `holder` key remains in a JSON result. `--assignee <name>` is
-  the flag on `wi new`, `wi claim` and `wi ready`, and `--holder` is still accepted and means the
-  same. The commands keep their names: `claim`, `release` and `assign`
+  and `wi` writes a plain value for one name. The reserved value `agent` still asks for any agent.
+  A reader takes `assignee`, else an old card's `holder`, else the old `agent`, and a card with more
+  than one of these keys uses the first in that order. No card is rewritten to migrate it. A write
+  that changes the assignees writes `assignee` and removes `holder` and `agent` in the same write; a
+  write that does not change the assignees leaves every key as it is. JSON results use `assignees`,
+  an array of names, wherever they used `holder`, and no `holder` key remains in a JSON result.
+  `--assignee <name>` is the flag on `wi new`, `wi claim` and `wi ready`, and `--holder` is still
+  accepted and means the same. The commands keep their names: `claim`, `release` and `assign`
   ([0084](docs/adr/0084-one-assignee-list.md)).
 - The `owner` key is dropped from the model, as `creator` was
   ([0064](docs/adr/0064-validate-checks-no-creator.md)): no command writes it, no screen shows it,
@@ -29,6 +31,10 @@ the agent notes in your vault.
   assigns whom: no check, no permission, and no required level or title. A team may use the levels
   of the tree as it likes, for example the assignee one level down as the owner, and the plugin
   does not check that convention ([0084](docs/adr/0084-one-assignee-list.md)).
+- The shared rule and its names follow: `holder.ts` becomes `assignee.ts`, `holders` becomes
+  `assignees`, and `holderBadge` becomes `assigneeBadge`. CSS class names stay. The rules version
+  stays 1, because the 0.9.0 tag has no rules marker and 1.0.0 ships it first
+  ([0084](docs/adr/0084-one-assignee-list.md)).
 - The agent playbook is removed, and no document recommends an agent setup. Role notes, a
   Dispatching note and an `AGENTS.md` section that you copied from it stay yours: keep, change or
   delete them. `wi doctor` no longer checks them, and `wi setup` no longer prints a summary of the
@@ -105,7 +111,8 @@ the agent notes in your vault.
   [0084](docs/adr/0084-one-assignee-list.md)).
 - The card face shows the first assignee's initial and `+N` for the others. Hover over it for
   `Assigned to <names>`, or open the card menu, for every name. The card's detail strip lists every
-  assignee.
+  assignee. Where the plugin or `wi` printed `holder`, `held by` or `holds`, it prints `assignee` or
+  `assigned to`.
 - `wi depend <ref> --on` takes a person note as well as a card. **Waits on…** lists people and
   cards. `wi show --json` lists the people a card waits on in `personDependencies`, and
   `wi children --json` lists them in `waits_on_people`. `wi validate` accepts a link to a person
