@@ -13,7 +13,7 @@
 | `src/shared/transitions.ts` `statusEdits`, `boardEdits`, `moveEdits`; `src/shared/archive.ts` `archiveEdits`; `src/shared/edits.ts` `applyStampedEdits`, `withStamp`, `applyEdits`; `src/shared/frontmatter.ts` `setKey`, `removeKey` | Called by the CLI and plugin actions above | Builds and applies line-wise field edits. `applyStampedEdits` adds the date only after a requested edit changes the text; an explicit `updated` edit is preserved. `setKey` leaves an equal existing value and its formatting alone. |
 | `src/plugin/actions.ts` `undo`; `src/plugin/undo.ts` `UndoStack.restore` | Undo last board action | Restores the prior file bytes, including the prior `updated` date, if the file has not changed since that action. Undoing a creation trashes the new file. |
 | `src/cli/commands/remove.ts` `removeItem`; `src/plugin/actions.ts` `remove` | `wi rm` or plugin delete | Moves or deletes the file without editing its frontmatter. The prior date survives in a trashed copy when one is kept. |
-| `scripts/fixture.ts` `renderRoot`, `render`, `generate`, `writeFixture` | `npm run fixture` or a fixture test | Generates test-vault files with dates relative to the supplied day, then replaces fixture-owned files. This is not a production vault writer. |
+| `scripts/fixture.ts` `renderRoot`, `render`, `generate`, `writeFixture`, `generateReview`, `writeReview` | `npm run fixture`, `npm run fixture -- --review --vault <path>` or a fixture test | Generates test-vault files with dates relative to the supplied day, then replaces fixture-owned files. The review mode also writes two people notes and needs a `.obsidian` folder. This is not a production vault writer. |
 
 ## Rule and findings
 

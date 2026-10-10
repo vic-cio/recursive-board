@@ -52,6 +52,11 @@ on this code.
 - **`test/` is a deliberately invalid vault.** It carries a parent that does not resolve, a
   duplicate title and an unknown key. `wi validate --vault test` reports one error and one warning.
   `npm run fixture` generates `test/Boards/` from `scripts/fixture.ts`. Change the fixture there.
+- **`npm run fixture -- --review --vault <path>` writes a clean review set.** It is for checking
+  the board UI by eye in a vault of your own. The set validates with 0 errors and 0 warnings. It
+  needs a `.obsidian` folder in `<path>` and replaces only the cards and the two people notes that
+  it wrote. Run it in a vault that you keep only for review, and never in a vault that holds real
+  work. Change the set in `scripts/fixture.ts`, and keep it clean: a test fails on any problem.
 - **`src/shared/` and `src/plugin/` import nothing from Node.** One `node:` import makes the plugin
   fail to load on iOS, silently. The build and `src/plugin/ios-safety.test.ts` check this. Put
   filesystem work in `src/cli/`.
