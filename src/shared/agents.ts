@@ -38,11 +38,11 @@ export interface ActiveAgent<T> {
 /**
  * The agents that work a doing card, by name. People and requests for any agent are not agents.
  * A card that only waits on its children does not make its holder active, so a full tree of agents
- * cannot deadlock on the limit. Nor does a card that waits for a review verdict: `awaitsReview`
+ * cannot deadlock on the limit. Nor does a card that waits on a person, such as a review: `waitsOnPerson`
  * says which, because only the caller has the card's text. Names match without case.
  */
 export function activeAgents<T extends AgentItem>(
-  cards: T[], people: string[], tree: AgentTree<T>, awaitsReview: (card: T) => boolean = () => false,
+  cards: T[], people: string[], tree: AgentTree<T>, waitsOnPerson: (card: T) => boolean = () => false,
 ): ActiveAgent<T>[] {
   const personNames = new Set(people.map((name) => name.trim().toLowerCase()))
   const active = new Map<string, ActiveAgent<T>>()
@@ -50,7 +50,7 @@ export function activeAgents<T extends AgentItem>(
     const holder = card.holder?.trim()
     const key = holder?.toLowerCase()
     if (card.status !== 'doing' || !holder || !key || isAnyAgent(key) || personNames.has(key) ||
-      waitsOnChildren(card, tree) || awaitsReview(card)) continue
+      waitsOnChildren(card, tree) || waitsOnPerson(card)) continue
     const agent = active.get(key) ?? { name: holder, cards: [] }
     agent.cards.push(card)
     active.set(key, agent)
@@ -60,7 +60,7 @@ export function activeAgents<T extends AgentItem>(
 
 /** The active agents' names in lower case. */
 export function activeAgentNames<T extends AgentItem>(
-  cards: T[], people: string[], tree: AgentTree<T>, awaitsReview: (card: T) => boolean = () => false,
+  cards: T[], people: string[], tree: AgentTree<T>, waitsOnPerson: (card: T) => boolean = () => false,
 ): Set<string> {
-  return new Set(activeAgents(cards, people, tree, awaitsReview).map((agent) => agent.name.toLowerCase()))
+  return new Set(activeAgents(cards, people, tree, waitsOnPerson).map((agent) => agent.name.toLowerCase()))
 }

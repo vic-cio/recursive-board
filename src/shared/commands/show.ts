@@ -95,6 +95,7 @@ export function showCard(vault: Vault, ref: string, tagged: readonly TaggedNote[
       ...identity(dependency), status: dependency.status ?? null,
       archived: vault.isArchived(dependency), satisfied: dependency.status === 'done',
     })),
+    personDependencies: dependencies.people,
     unresolvedDependencies: dependencies.unresolved,
     malformedDependencies: dependencies.malformed,
     children: {

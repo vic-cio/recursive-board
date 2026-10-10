@@ -1,7 +1,7 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 
-import { firstChildPromotion, moveEdits, moveRefusal } from './transitions.ts'
+import { firstChildPromotion, moveEdits, moveRefusal, statusEditsIn } from './transitions.ts'
 
 // A small tree, keyed the way either writer keys it: Main > Project > Server > Auth, Main > Site.
 const PARENTS: Record<string, string | null> = {
@@ -66,4 +66,20 @@ test('firstChildPromotion promotes a plain card on its first child only', () => 
   assert.equal(firstChildPromotion({ ...card, hasBoardKey: true }, true), null)
   assert.equal(firstChildPromotion({ ...card, isRoot: true }, true), null)
   assert.equal(firstChildPromotion({ ...card, area: true }, true), null)
+})
+
+const WAITING = '---\ntype: work-item\nstatus: doing\ndepends_on:\n  - "[[Spec]]"\n  - "[[Ana]]"\n---\n'
+const isPerson = (target: string) => target === 'Ana'
+
+test('statusEditsIn to done also clears the person links in depends_on', () => {
+  assert.deepEqual(statusEditsIn(WAITING, 'done', isPerson), [
+    { op: 'set', key: 'status', value: 'done' },
+    { op: 'set', key: 'prev_status', value: 'doing' },
+    { op: 'list', key: 'depends_on', values: ['[[Spec]]'] },
+  ])
+})
+
+test('statusEditsIn leaves depends_on alone for any other move, or without a person rule', () => {
+  assert.equal(statusEditsIn(WAITING, 'backlog', isPerson)?.some((edit) => edit.key === 'depends_on'), false)
+  assert.equal(statusEditsIn(WAITING, 'done')?.some((edit) => edit.key === 'depends_on'), false)
 })

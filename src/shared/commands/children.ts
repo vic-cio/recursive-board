@@ -6,7 +6,7 @@
  * order is `priority` then `updated`, computed by the vault index.
  */
 import { STATUSES, isStatus, type Status } from '../schema.ts'
-import { dependenciesOf, openDependencies } from '../item-dependencies.ts'
+import { dependenciesOf, openWaits } from '../item-dependencies.ts'
 import type { Vault, WorkItem } from '../vault.ts'
 import { UsageError, type RunFunction } from './command.ts'
 import { json, label } from './output.ts'
@@ -115,7 +115,8 @@ export const runChildren: RunFunction = async (context, line) => {
         children: row.childCount,
         depth: row.depth,
         archived: row.archived,
-        waits_on: openDependencies(vault, row.item).map((item) => item.id ?? item.stem),
+        waits_on: openWaits(vault, row.item).cards.map((item) => item.id ?? item.stem),
+        waits_on_people: dependenciesOf(vault, row.item).people,
         depends_on: dependenciesOf(vault, row.item).resolved.map((item) => item.id ?? item.stem),
       })),
     }))
@@ -151,7 +152,8 @@ function rowLine(row: ChildRow, vault: Vault): string {
   const board = row.item.board ? '  [board]' : ''
   const area = row.item.area ? '  [area]' : ''
   const archived = row.archived ? '  [archived]' : ''
-  const open = row.item.status === 'done' ? 0 : openDependencies(vault, row.item).length
-  const waits = open > 0 ? `  [waits on ${open}]` : ''
-  return `${row.item.id ?? '(no id)'}  ${status.padEnd(7)}  ${row.item.title ?? row.item.stem}${kids}${board}${area}${waits}${archived}`
+  const waits = row.item.status === 'done' ? { cards: [], people: [] } : openWaits(vault, row.item)
+  const open = waits.cards.length + waits.people.length
+  const waiting = open > 0 ? `  [waits on ${open}]` : ''
+  return `${row.item.id ?? '(no id)'}  ${status.padEnd(7)}  ${row.item.title ?? row.item.stem}${kids}${board}${area}${waiting}${archived}`
 }

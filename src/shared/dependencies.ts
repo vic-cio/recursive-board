@@ -2,7 +2,9 @@
  * Card dependencies (docs/adr/0041-card-dependencies.md).
  *
  * `depends_on` is a list of wikilinks to the cards this card waits on. A dependency is open until
- * its card is done. An archived card that is not done stays open: archiving drops the work, and
+ * its card is done. A link may also name a person note (`type: person`): that is a wait on a person,
+ * the way to ask for a review. It is open until the person removes it, and moving the card to
+ * done removes it too (docs/adr/0082-review-is-a-wait-on-a-person.md). An archived card that is not done stays open: archiving drops the work, and
  * the card that needed it must not start without a decision. Nothing is written when a dependency
  * closes; the wait is derived at read time.
  *
@@ -82,6 +84,20 @@ export function dependencyEditIn(
   return dependencyEdit(dependsOnRaw(text), target, on, names)
 }
 
+/**
+ * The edit that clears every wait on a person: the entries whose link `isPerson` names go, and
+ * every other entry keeps its text and order. Returns null when no entry is a person wait.
+ */
+export function clearPersonWaitsEdit(
+  current: readonly string[], isPerson: (linkTarget: string) => boolean,
+): Edit | null {
+  const keep = current.filter((value) => {
+    const linkTarget = parseWikilink(value)
+    return linkTarget === null || !isPerson(linkTarget)
+  })
+  return keep.length === current.length ? null : { op: 'list', key: DEPENDS_ON, values: keep }
+}
+
 /** A chain of dependencies from `from` back to `from`, or null when there is none. Nodes compare by identity. */
 export function dependencyCycle<T>(from: T, dependsOn: (node: T) => readonly T[]): T[] | null {
   return dependencyPath(from, from, dependsOn)
@@ -115,8 +131,16 @@ export function dependencyPathByKey<T>(
   return walk(from, [from])
 }
 
-/** The refusal `wi claim` and `wi status doing` give a card that waits on open cards. */
-export function waitingRefusal(card: string, open: readonly string[]): string {
-  return `${card} waits on ${open.join(', ')}. Finish ${open.length === 1 ? 'that card' : 'those cards'} first, ` +
-    `or remove the dependency with wi depend <card> --on <dependency> --off.`
+/** The refusal `wi claim` and `wi status doing` give a card that waits on open cards or on people. */
+export function waitingRefusal(card: string, open: readonly string[], people: readonly string[] = []): string {
+  const parts = [`${card} waits on ${[...open, ...people].join(', ')}.`]
+  if (open.length > 0) {
+    parts.push(`Finish ${open.length === 1 ? 'that card' : 'those cards'} first, ` +
+      'or remove the dependency with wi depend <card> --on <dependency> --off.')
+  }
+  if (people.length > 0) {
+    parts.push(`${people.length === 1 ? 'The person clears' : 'The people clear'} a wait by removing it. ` +
+      'Remove it yourself with wi depend <card> --on <person> --off.')
+  }
+  return parts.join(' ')
 }

@@ -1,4 +1,4 @@
-import { openDependencies, titleOf } from '../item-dependencies.ts'
+import { openWaits, titleOf } from '../item-dependencies.ts'
 import { waitingRefusal } from '../dependencies.ts'
 import { editItem } from '../edit-item.ts'
 import { claimEdits, releaseEdits } from '../transitions.ts'
@@ -59,7 +59,7 @@ export async function claimItem(
 }
 
 /**
- * Every check `wi claim` makes, as a rule on the card's text: an area, a root, an open dependency,
+ * Every check `wi claim` makes, as a rule on the card's text: an area, a root, an open wait,
  * another holder, a done card, a board with a child in doing that someone else works. `wi delegate`
  * runs it before it names a worker, so a worker never starts on a card it cannot claim.
  */
@@ -71,8 +71,11 @@ export function claimRule(vault: Vault, item: WorkItem, agent: string): (text: s
   return (text) => {
     const state = cardState(text)
     const holding = state.holder === agent && state.status === 'doing'
-    const waiting = holding ? [] : openDependencies(vault, item, text)
-    if (waiting.length > 0) throw new Error(waitingRefusal(item.relPath, waiting.map(titleOf)))
+    // A holder keeps its claim on a doing card that waits, for example on a person's review.
+    const waiting = holding ? { cards: [], people: [] } : openWaits(vault, item, text)
+    if (waiting.cards.length + waiting.people.length > 0) {
+      throw new Error(waitingRefusal(item.relPath, waiting.cards.map(titleOf), waiting.people))
+    }
     return claimEdits(state.status, state.holder, agent, state.hasPrevStatus, state.board && otherDoingChild)
   }
 }

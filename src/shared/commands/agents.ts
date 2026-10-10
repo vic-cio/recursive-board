@@ -5,8 +5,7 @@
  */
 import { activeAgents, type AgentItem, type AgentTree } from '../agents.ts'
 import { holderOf } from '../holder.ts'
-import { awaitsReviewVerdict } from '../review.ts'
-import { titleOf } from '../item-dependencies.ts'
+import { dependenciesOf, titleOf } from '../item-dependencies.ts'
 import { maxAgentsForRun, readPeople, type Env, type Vault, type WorkItem } from '../vault.ts'
 import { UsageError, type RunFunction } from './command.ts'
 import { json } from './output.ts'
@@ -24,8 +23,8 @@ async function activeIn(vault: Vault) {
   }]))
   const tree: AgentTree<Card> = { childrenOf: (card) => vault.childrenOf(card.item).map((child) => cards.get(child)!) }
   const people = [...(await readPeople(vault.port)).values()]
-  // A card that waits for a review verdict does not make its holder an active agent.
-  return activeAgents([...cards.values()], people, tree, (card) => awaitsReviewVerdict(card.item.text))
+  // A card that waits on a person, such as a review, does not make its holder an active agent.
+  return activeAgents([...cards.values()], people, tree, (card) => dependenciesOf(vault, card.item).people.length > 0)
 }
 
 /** The active agents' names in lower case. `wi claim` warns from this set. */

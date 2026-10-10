@@ -16,7 +16,6 @@ import type { RenderContext } from './context.ts'
 import { MoveModal } from './move-modal.ts'
 import { DependModal } from './depend-modal.ts'
 import { TagModal } from './tag-modal.ts'
-import { SendForReviewModal } from './send-for-review-modal.ts'
 import { DelegateModal } from './delegate-modal.ts'
 import { statusLabel } from './status-label.ts'
 import { menuStatuses } from './menu-status.ts'
@@ -69,7 +68,7 @@ function buildMenu(ctx: RenderContext, meta: WorkItemMeta): Menu {
     menu.addItem((item) => item
       .setTitle('Waits on…')
       .setIcon('hourglass')
-      .onClick(() => new DependModal(ctx.app, ctx.index, ctx.actions, meta).open()))
+      .onClick(() => new DependModal(ctx.app, ctx.index, ctx.actions, meta, ctx.personNames()).open()))
     for (const file of meta.dependsOn) {
       const dependency = ctx.index.get(file)
       if (!dependency) continue
@@ -78,19 +77,18 @@ function buildMenu(ctx: RenderContext, meta: WorkItemMeta): Menu {
         .setIcon('x')
         .onClick(() => void ctx.actions.setDependency(meta, dependency, false)))
     }
-  }
-  if (meta.parentLink !== null) {
-    if (!meta.area) {
+    for (const file of ctx.index.personWaits(meta)) {
       menu.addItem((item) => item
-        .setTitle('Delegate to…')
-        .setIcon('user-round-plus')
-        .onClick(() => new DelegateModal(ctx.app, ctx.actions, meta, ctx.personNames()).open()))
+        .setTitle(`Stop waiting on ${file.basename}`)
+        .setIcon('x')
+        .onClick(() => void ctx.actions.setPersonWait(meta, file.basename, false)))
     }
+  }
+  if (meta.parentLink !== null && !meta.area) {
     menu.addItem((item) => item
-      .setTitle('Send for review…')
-      .setIcon('send')
-      .onClick(() => new SendForReviewModal(ctx.app, meta.title, ctx.personNames(),
-        (choice) => void ctx.actions.sendForReview(meta, choice)).open()))
+      .setTitle('Delegate to…')
+      .setIcon('user-round-plus')
+      .onClick(() => new DelegateModal(ctx.app, ctx.actions, meta, ctx.personNames()).open()))
   }
   // Free tags (docs/adr/0057-free-tags.md). The picker never offers old area tags.
   menu.addItem((item) => item

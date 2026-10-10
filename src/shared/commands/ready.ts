@@ -1,5 +1,5 @@
 /** Dispatcher selection from current vault state. This command writes nothing. */
-import { dependenciesOf, openDependencies, titleOf } from '../item-dependencies.ts'
+import { dependenciesOf, openWaits, titleOf } from '../item-dependencies.ts'
 import { holderOf, isAnyAgent } from '../holder.ts'
 import type { Vault, WorkItem } from '../vault.ts'
 import { getList } from '../frontmatter.ts'
@@ -76,7 +76,8 @@ export function readyCards(vault: Vault, options: ReadyOptions = {}) {
     const reasons: ExclusionReason[] = []
     if (item.parent === null || vault.resolveLink(item.parent) === undefined) reasons.push('missing-parent')
     if (holder(item) !== undefined && !isRequest(item)) reasons.push('claimed')
-    if (openDependencies(vault, item).length > 0) reasons.push('dependency')
+    const waits = openWaits(vault, item)
+    if (waits.cards.length + waits.people.length > 0) reasons.push('dependency')
     const dependencies = dependenciesOf(vault, item)
     if (dependencies.unresolved.length > 0 || dependencies.malformed.length > 0) reasons.push('invalid-dependency')
     if (item.board && vault.childrenOf(item).some((child) =>

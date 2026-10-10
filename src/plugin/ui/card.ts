@@ -35,7 +35,7 @@ export function renderCard(
   // columns to say it.
   if (meta.status !== undefined) card.addClass(`is-${meta.status}`)
   card.toggleClass('is-expanded', expanded)
-  card.toggleClass('is-waiting', ctx.index.openDependencies(meta).length > 0)
+  card.toggleClass('is-waiting', ctx.index.openDependencies(meta).length + ctx.index.personWaits(meta).length > 0)
   card.toggleClass('is-archived', meta.effectiveArchived)
   card.dataset['path'] = meta.file.path
 
@@ -140,9 +140,10 @@ function renderBadges(host: HTMLElement, ctx: RenderContext, meta: WorkItemMeta)
     host.createSpan({ cls: 'wi-badge wi-badge-priority', text: `P${meta.priority}` })
   }
   // A card that waits on other cards (docs/adr/0041-card-dependencies.md).
-  const waits = ctx.index.openDependencies(meta)
+  const waits = [...ctx.index.openDependencies(meta).map((dependency) => dependency.title),
+    ...ctx.index.personWaits(meta).map((file) => file.basename)]
   if (waits.length > 0) {
-    const names = waits.map((dependency) => dependency.title).join(', ')
+    const names = waits.join(', ')
     const badge = host.createSpan({ cls: 'wi-badge wi-badge-waiting', attr: { 'aria-label': `Waits on ${names}` } })
     setIcon(badge, 'hourglass')
   }

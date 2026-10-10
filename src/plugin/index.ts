@@ -15,7 +15,7 @@ import { readLabels } from '../shared/labels.ts'
 import { isLegacyAreaTag } from '../shared/legacy-area-tag.ts'
 import { DEFAULT_VAULT_CONFIG, type VaultConfig } from '../shared/vault-config.ts'
 import { archiveOwner } from '../shared/archive.ts'
-import { displayName } from '../shared/authorship.ts'
+import { displayName, PERSON_TYPE } from '../shared/authorship.ts'
 import { holderOf } from '../shared/holder.ts'
 import { dependsOnValues, isOpenDependency, parseDependsOn } from '../shared/dependencies.ts'
 import {
@@ -220,6 +220,16 @@ export class WorkItemIndex {
     return meta.dependsOn
       .map((file) => this.get(file))
       .filter((dependency): dependency is WorkItemMeta => dependency !== null && isOpenDependency(dependency))
+  }
+
+  /**
+   * The people this item waits on: its `depends_on` links to a person note, the way a review is
+   * asked for. A person wait is open until it is removed. A done card waits on nothing.
+   */
+  personWaits(meta: WorkItemMeta): TFile[] {
+    if (meta.status === 'done') return []
+    return meta.dependsOn.filter((file) => this.get(file) === null &&
+      this.app.metadataCache.getFileCache(file)?.frontmatter?.['type'] === PERSON_TYPE)
   }
 
   /** The items whose dependencies include this one. */

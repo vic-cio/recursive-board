@@ -141,13 +141,16 @@ export function renderMetaStrip(host: HTMLElement, meta: WorkItemMeta, ctx?: Ren
   } else if (meta.parentLink === null) {
     strip.createSpan({ cls: 'wi-pill is-root', text: 'Root' })
   }
-  const waits = ctx?.index.openDependencies(meta) ?? []
+  const waits = [
+    ...(ctx?.index.openDependencies(meta) ?? []).map((dependency) => ({ title: dependency.title, file: dependency.file })),
+    ...(ctx?.index.personWaits(meta) ?? []).map((file) => ({ title: file.basename, file })),
+  ]
   if (waits.length > 0) {
     const pill = strip.createSpan({ cls: 'wi-pill is-waiting' })
     pill.createSpan({ text: 'Waits on ' })
-    waits.forEach((dependency, i) => {
+    waits.forEach((wait, i) => {
       if (i > 0) pill.createSpan({ text: ', ' })
-      linkTo(pill, dependency.title, () => openFile(dependency.file))
+      linkTo(pill, wait.title, () => openFile(wait.file))
     })
   }
   if (meta.priority !== undefined) strip.createSpan({ cls: 'wi-pill', text: `P${meta.priority}` })

@@ -179,9 +179,10 @@ function decorateRow(row: HTMLElement, ctx: RenderContext, meta: WorkItemMeta): 
   if (meta.labels.length > 0) renderLabels(extras.createSpan({ cls: 'wi-labels' }), meta.labels)
   const children = ctx.index.childCount(meta.file)
   if (children > 0) extras.createSpan({ cls: 'wi-check-count', text: `${children}` })
-  const waits = ctx.index.openDependencies(meta)
+  const waits = [...ctx.index.openDependencies(meta).map((dependency) => dependency.title),
+    ...ctx.index.personWaits(meta).map((file) => file.basename)]
   if (waits.length > 0) {
-    extras.createSpan({ cls: 'wi-check-waiting', text: 'Waiting', attr: { 'aria-label': `Waits on ${waits.map((dependency) => dependency.title).join(', ')}` } })
+    extras.createSpan({ cls: 'wi-check-waiting', text: 'Waiting', attr: { 'aria-label': `Waits on ${waits.join(', ')}` } })
   }
   renderMenuButton(extras, ctx, meta)
   renderRemove(extras, ctx, meta)

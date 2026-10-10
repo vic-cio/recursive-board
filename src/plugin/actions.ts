@@ -12,7 +12,7 @@
  * the metadata cache (docs/adr/0054-edits-from-the-file-at-write-time.md). The cache can be older
  * than the file. It still decides whether a click needs a write at all.
  */
-import { FileSystemAdapter, MarkdownView, normalizePath, Notice, Platform, TFile, type App } from 'obsidian'
+import { MarkdownView, normalizePath, Notice, TFile, type App } from 'obsidian'
 
 import { applyStampedEdits, type EditPlan } from '../shared/edits.ts'
 import { cardState } from '../shared/card-state.ts'
@@ -24,11 +24,10 @@ import {
 import { fileNameFor, newId, today, type Status } from '../shared/schema.ts'
 import { inheritedChildFields, renderWorkItem } from '../shared/work-item.ts'
 import { dependencyEdit, dependencyEditIn, dependencyPathByKey } from '../shared/dependencies.ts'
+import { PERSON_TYPE } from '../shared/authorship.ts'
 import { freeTagEditsIn } from '../shared/tags.ts'
 import { parseFrontmatter } from '../shared/frontmatter.ts'
 import { parseWikilink } from '../shared/schema.ts'
-import { applyReviewRequest } from '../shared/review.ts'
-import type { ReviewRequestChoice } from './ui/send-for-review-modal.ts'
 import { assignEdits } from '../shared/delegate.ts'
 import type { WorkItemIndex, WorkItemMeta } from './index.ts'
 import { UndoStack } from './undo.ts'
@@ -116,7 +115,8 @@ export class Actions {
   /** Moves a card between columns. One file, one write, never the parent. */
   async setStatus(meta: WorkItemMeta, to: Status): Promise<void> {
     if (statusEdits(meta.status, to, meta.prevStatus !== undefined) === null) return
-    await this.writeStatus(meta, (text) => statusEditsIn(text, to), to)
+    // Moving to done clears the card's person waits: that is how a person approves a review.
+    await this.writeStatus(meta, (text) => statusEditsIn(text, to, this.isPersonLink(meta.file)), to)
   }
 
   /** The status write. `plan` reads the status and `prev_status` from the file's text. */
@@ -126,55 +126,21 @@ export class Actions {
       written = await this.edit(meta.file, plan, `mark ${meta.title} ${to}`)
       return true
     })
-    // wi refuses a card with an open dependency. A person may move it, so the board gives a notice (docs/adr/0041-card-dependencies.md).
+    // wi refuses a card with an open wait. A person may move it, so the board gives a notice (docs/adr/0041-card-dependencies.md).
     if (done && written !== null && cardState(written).status === 'doing') {
-      const waits = this.index.openDependencies(meta)
-      if (waits.length > 0) new Notice(`${meta.title} still waits on ${waits.map((dependency) => dependency.title).join(', ')}.`)
+      const waits = [...this.index.openDependencies(meta).map((dependency) => dependency.title),
+        ...this.index.personWaits(meta).map((file) => file.basename)]
+      if (waits.length > 0) new Notice(`${meta.title} still waits on ${waits.join(', ')}.`)
     }
   }
 
-  /** Sends the card for review through the same shared edit as `wi review`. */
-  async sendForReview(meta: WorkItemMeta, { to, note, paths, attachments }: ReviewRequestChoice): Promise<boolean> {
-    const done = await this.run(`send ${meta.title} for review`, async () => {
-      // An undo puts the card back and leaves the attached files in the vault.
-      const files = [...paths, ...await this.attachFiles(meta, attachments)]
-      let before = ''
-      const after = await this.app.vault.process(meta.file, (data) => {
-        before = data
-        return applyReviewRequest(data, { to, files, note })
-      })
-      this.undoStack.record({ kind: 'edit', path: meta.file.path, before, after, label: `send ${meta.title} for review` })
-      return true
-    })
-    if (done) this.undoableNotice(`Sent ${meta.title} for review`)
-    return done === true
-  }
-
-  /**
-   * Puts files picked from the system into the vault, where a review row can open them, and
-   * returns their vault paths. A file already in the vault keeps its path, where the desktop app
-   * says where the file is. Every other file is copied into Obsidian's attachment folder for the card.
-   */
-  async attachFiles(meta: WorkItemMeta, files: readonly File[]): Promise<string[]> {
-    const adapter = this.app.vault.adapter
-    // The phone has no FileSystemAdapter, so the check runs on the desktop only.
-    const root = Platform.isDesktopApp && adapter instanceof FileSystemAdapter ? adapter.getBasePath().replace(/\\/g, '/').replace(/\/$/, '') : null
-    const paths: string[] = []
-    for (const file of files) {
-      const picked = (file as File & { path?: unknown }).path
-      const absolute = typeof picked === 'string' ? picked.replace(/\\/g, '/') : null
-      if (root !== null && absolute?.startsWith(`${root}/`)) {
-        const inVault = normalizePath(absolute.slice(root.length + 1))
-        if (this.app.vault.getAbstractFileByPath(inVault) instanceof TFile) {
-          paths.push(inVault)
-          continue
-        }
-      }
-      const path = await this.app.fileManager.getAvailablePathForAttachment(file.name, meta.file.path)
-      await this.app.vault.createBinary(path, await file.arrayBuffer())
-      paths.push(path)
+  /** Whether a `depends_on` link in a card's file names a person note, as `wi` reads it. */
+  private isPersonLink(from: TFile): (linkTarget: string) => boolean {
+    return (linkTarget) => {
+      const file = this.app.metadataCache.getFirstLinkpathDest(linkTarget, from.path)
+      return file !== null && !this.index.isWorkItem(file) &&
+        this.app.metadataCache.getFileCache(file)?.frontmatter?.['type'] === PERSON_TYPE
     }
-    return paths
   }
 
   /** Assigns a person or any agent through the same shared step as `wi delegate`. */
@@ -213,6 +179,19 @@ export class Actions {
     // The list is the one in the file now, so an entry added since the cache was read survives.
     const written = await this.run(what, () => this.edit(meta.file, (text) => {
       const edit = dependencyEditIn(text, target.stem, on, names)
+      return edit === null ? null : [edit]
+    }, label))
+    if (written) this.undoableNotice(label)
+  }
+
+  /** Adds or removes a wait on a person, the same edit as `wi depend --on <person>`. */
+  async setPersonWait(meta: WorkItemMeta, person: string, on: boolean): Promise<void> {
+    const names = (link: string) => (link.split('/').pop() ?? link).toLowerCase() === person.toLowerCase()
+    if (dependencyEdit(meta.dependsOnRaw, person, on, names) === null) return
+    const label = on ? `${meta.title} waits on ${person}` : `${meta.title} no longer waits on ${person}`
+    const what = on ? `make ${meta.title} wait on ${person}` : `stop ${meta.title} waiting on ${person}`
+    const written = await this.run(what, () => this.edit(meta.file, (text) => {
+      const edit = dependencyEditIn(text, person, on, names)
       return edit === null ? null : [edit]
     }, label))
     if (written) this.undoableNotice(label)

@@ -10,9 +10,9 @@
  * command of its own.
  */
 import { editItem } from '../edit-item.ts'
-import { dependentsOf, openDependencies, titleOf } from '../item-dependencies.ts'
+import { dependentsOf, openWaits, titleOf } from '../item-dependencies.ts'
 import { waitingRefusal } from '../dependencies.ts'
-import { statusEdits } from '../transitions.ts'
+import { statusEditsIn } from '../transitions.ts'
 import { cardState } from '../card-state.ts'
 import { isStatus, STATUSES, type Status } from '../schema.ts'
 import type { Vault, WorkItem } from '../vault.ts'
@@ -54,7 +54,8 @@ export async function setStatus(vault: Vault, ref: string, status: string): Prom
   await editItem(vault, item, (text) => {
     const state = cardState(text)
     from = state.status
-    const edits = statusEdits(state.status, status, state.hasPrevStatus)
+    // Moving to done clears the card's person waits: that is how a person approves a review.
+    const edits = statusEditsIn(text, status, (target) => vault.personNamed(target) !== undefined)
     if (edits === null) return null
     if (status === 'doing') refuseStart(vault, item, text)
     changed = true
@@ -73,15 +74,19 @@ export async function setStatus(vault: Vault, ref: string, status: string): Prom
 
 /** The same checks as `wi claim`, so an agent cannot start a card by moving it (docs/adr/0041-card-dependencies.md). */
 function refuseStart(vault: Vault, item: WorkItem, text: string): void {
-  const waiting = openDependencies(vault, item, text)
-  if (waiting.length > 0) throw new Error(waitingRefusal(item.relPath, waiting.map(titleOf)))
+  const waiting = openWaits(vault, item, text)
+  if (waiting.cards.length + waiting.people.length > 0) {
+    throw new Error(waitingRefusal(item.relPath, waiting.cards.map(titleOf), waiting.people))
+  }
 }
 
-/** Cards that waited on this one and wait on nothing open now it is done. `wi approve` reports them too. */
+/** Cards that waited on this one and wait on nothing open now it is done. A person wait stays open. */
 export function unblockedBy(vault: Vault, item: WorkItem): WorkItem[] {
-  return dependentsOf(vault, item).filter((dependent) =>
-    dependent.status !== 'done' && !vault.isArchived(dependent) &&
-    openDependencies(vault, dependent).every((open) => open === item))
+  return dependentsOf(vault, item).filter((dependent) => {
+    const waits = openWaits(vault, dependent)
+    return dependent.status !== 'done' && !vault.isArchived(dependent) &&
+      waits.people.length === 0 && waits.cards.every((open) => open === item)
+  })
 }
 
 /** The open parent whose last open child this card was. */

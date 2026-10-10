@@ -10,6 +10,7 @@
  */
 import type { Edit } from './edits.ts'
 import { cardState } from './card-state.ts'
+import { clearPersonWaitsEdit, dependsOnRaw } from './dependencies.ts'
 import { clearHolderEdits, isAnyAgent, setHolderEdits } from './holder.ts'
 import { formatWikilink, type Status } from './schema.ts'
 
@@ -35,10 +36,19 @@ export function statusEdits(
   return edits
 }
 
-/** `statusEdits` for the card as its text is now. */
-export function statusEditsIn(text: string, to: Status): Edit[] | null {
+/**
+ * `statusEdits` for the card as its text is now. A move to done also clears the card's person
+ * waits, which is how a person approves a review (docs/adr/0082-review-is-a-wait-on-a-person.md).
+ * `isPerson` says whether a `depends_on` link target names a person note.
+ */
+export function statusEditsIn(
+  text: string, to: Status, isPerson?: (linkTarget: string) => boolean,
+): Edit[] | null {
   const state = cardState(text)
-  return statusEdits(state.status, to, state.hasPrevStatus)
+  const edits = statusEdits(state.status, to, state.hasPrevStatus)
+  if (edits === null || to !== 'done' || isPerson === undefined) return edits
+  const clear = clearPersonWaitsEdit(dependsOnRaw(text), isPerson)
+  return clear === null ? edits : [...edits, clear]
 }
 
 /** Unticking the card as its text is now. A card that is no longer done is left alone. */

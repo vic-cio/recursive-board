@@ -52,14 +52,14 @@ test('the active count skips a doing card whose open children are all in doing',
   assert.equal(activeAgentNames(items, [], tree).size, 3, 'lead counts through a card it works')
 })
 
-test('the active count skips a doing card that waits for a review verdict', () => {
+test('the active count skips a doing card that waits on a person', () => {
   const { items, add, tree } = vault()
   const root = add('Home', null)
-  const sent = add('Sent', root, { status: 'doing', holder: 'worker-1' })
+  const sent = add('Waiting', root, { status: 'doing', holder: 'worker-1' })
   add('Working', root, { status: 'doing', holder: 'worker-2' })
-  assert.equal(activeAgentNames(items, [], tree).size, 2, 'with no review rule, both count')
+  assert.equal(activeAgentNames(items, [], tree).size, 2, 'with no person rule, both count')
   const awaits = (card: Fake) => card === sent
-  assert.deepEqual([...activeAgentNames(items, [], tree, awaits)], ['worker-2'], 'worker-1 only waits for the verdict')
+  assert.deepEqual([...activeAgentNames(items, [], tree, awaits)], ['worker-2'], 'worker-1 only waits on the person')
 })
 
 test('people, requests for any agent and cards out of doing add no agent', () => {

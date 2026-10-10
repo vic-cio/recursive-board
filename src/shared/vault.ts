@@ -16,6 +16,7 @@ import { type VaultConfig } from './vault-config.ts'
 import { parsePluginData, PLUGIN_DATA_FILE, readBoardSettings } from './board-settings.ts'
 import { archiveOwner } from './archive.ts'
 import { peopleIn } from './delegate.ts'
+import { dependsOnRaw, parseDependsOn } from './dependencies.ts'
 import { readIfPresent, type StoragePort } from './storage.ts'
 import {
   BOARDS, FOLDERS, WORK_ITEM_TYPE, isArea, isStatus, parseWikilink, type Status,
@@ -67,8 +68,16 @@ export interface Vault {
   nonItems: string[]
   takenIds: Set<string>
   takenStems: Set<string>
+  /**
+   * The people a `depends_on` link can name: each note with `type: person`, keyed by the lower-case
+   * name. It is read only when a card links to something that is not a work item, so a vault with
+   * no person wait costs no scan.
+   */
+  people: ReadonlyMap<string, string>
   /** Finds the item a wikilink target names, as Obsidian would. */
   resolveLink(target: string | null): WorkItem | undefined
+  /** The name of the person note a link target names, or undefined. A work item of that name wins. */
+  personNamed(target: string | null): string | undefined
   /** Finds an item by id, filename stem, or title. Throws when the ref is missing or ambiguous. */
   resolve(ref: string): WorkItem
   childrenOf(item: WorkItem): WorkItem[]
@@ -290,6 +299,13 @@ export async function loadVault(port: StoragePort, seams: VaultSeams = REAL_SEAM
     return matches.length === 1 ? matches[0] : undefined
   }
 
+  // A `depends_on` link that is no work item may name a person. The scan runs only then.
+  const linksBeyondItems = items.some((item) =>
+    parseDependsOn(dependsOnRaw(item.text)).targets.some((target) => resolveLink(target) === undefined))
+  const people = linksBeyondItems ? await readPeople(port) : new Map<string, string>()
+  const personNamed = (target: string | null) =>
+    target === null || resolveLink(target) !== undefined ? undefined : people.get(stemKey(target))
+
   const children = new Map<string, WorkItem[]>()
   for (const item of items) {
     if (item.parent === null) continue
@@ -328,7 +344,9 @@ export async function loadVault(port: StoragePort, seams: VaultSeams = REAL_SEAM
     nonItems,
     takenIds: new Set(byId.keys()),
     takenStems: new Set(byStem.keys()),
+    people,
     resolveLink,
+    personNamed,
     resolve,
     childrenOf: (item) => children.get(item.relPath) ?? [],
     isArchived: (item) => archiveOwner(item, (current) => resolveLink(current.parent) ?? null, (current) => current.archived) !== null,
