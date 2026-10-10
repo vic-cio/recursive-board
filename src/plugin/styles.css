@@ -31,6 +31,10 @@
   --wi-tint-pill: 0.16;
   --wi-tint-card: 0.05;
   --wi-edge: 0.75;
+
+  /* One border-box height for every chip that shares a row on a card: child count, priority, waiting,
+     owner or agent initial, label, area mark, and the checklist row's status, count and waiting chips. */
+  --wi-chip-height: 17px;
 }
 
 /* ---------- board takeover ----------
@@ -523,6 +527,8 @@
   display: inline-flex;
   align-items: center;
   gap: 3px;
+  box-sizing: border-box;
+  height: var(--wi-chip-height);
   font-size: 11px;
   line-height: 1.5;
   padding: 0 5px;
@@ -572,8 +578,12 @@
 
 .wi-area-mark {
   flex: none;
-  /* Centre the 17px mark (15px of text and two 1px borders) on the title's first line. */
-  margin-top: calc((var(--font-text-size) * var(--line-height-tight, 1.3) - 17px) / 2);
+  /* Centre the mark on the title's first line. */
+  margin-top: calc((var(--font-text-size) * var(--line-height-tight, 1.3) - var(--wi-chip-height)) / 2);
+  display: inline-flex;
+  align-items: center;
+  box-sizing: border-box;
+  height: var(--wi-chip-height);
   border: 1px solid var(--interactive-accent);
   border-radius: 8px;
   padding: 0 5px;
@@ -688,6 +698,10 @@
 }
 
 .wi-label {
+  display: inline-flex;
+  align-items: center;
+  box-sizing: border-box;
+  height: var(--wi-chip-height);
   font-size: 11px;
   line-height: 1.55;
   padding: 0 6px;
@@ -771,6 +785,10 @@
 .wi-check-count,
 .wi-check-waiting {
   flex: none;
+  display: inline-flex;
+  align-items: center;
+  box-sizing: border-box;
+  height: var(--wi-chip-height);
   font-size: var(--font-ui-smaller);
   color: var(--text-faint);
   padding: 0 6px;

@@ -109,6 +109,9 @@ the agent notes in your vault.
   and a tab with none shows no button. Before, it counted the whole board, so the button seemed to
   do nothing on a tab that held none of them. The desktop board is unchanged.
 - The list icon of a card's child count sits on the same centre line as its number.
+- Every chip on a card face has the same height (17px): child count, priority, waiting, owner or
+  agent initial, label and area mark. The waiting chip was 11px tall beside a 16.5px child count.
+  The checklist row's status, count and waiting chips match the label and area mark beside them.
 - `wi setup` no longer offers the Git validation hook, and asks no question after the vault choice.
 - The `hook` check of `wi doctor` reads the pre-commit file and reports whether it runs
   validation. It is a note, never a fix, and it prints nothing to paste.
