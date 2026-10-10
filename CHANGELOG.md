@@ -103,6 +103,9 @@ the agent notes in your vault.
 
 ### Changed
 
+- On a tagged card, the menu and remove buttons sit at the right end of the tag row, at the top
+  right of the card face, instead of one row lower on the title. An untagged card is unchanged, and
+  a tag row that wraps to two lines keeps both buttons on the first line.
 - The repository ignores `.pi/`. A worker writes its own task state to `<cwd>/.pi/tasks`, so a
   driver's `git add -A` can no longer sweep those files into a commit. The four `.pi/` task files
   that commit `3ae6445` added are deleted.

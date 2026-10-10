@@ -40,13 +40,18 @@ export function renderCard(
   card.dataset['path'] = meta.file.path
 
   const face = card.createDiv({ cls: 'wi-card-face' })
-  if (meta.labels.length > 0) renderLabels(face.createDiv({ cls: 'wi-labels' }), meta.labels)
+  // A tagged card puts the labels and the two controls on one top row, so the controls sit at the
+  // top right of the card face instead of one row lower, on the title. An untagged card keeps the
+  // controls in the head, on the title's first line.
+  const tagged = meta.labels.length > 0
+  const top = tagged ? face.createDiv({ cls: 'wi-card-top' }) : face
+  if (tagged) renderLabels(top.createDiv({ cls: 'wi-labels' }), meta.labels)
 
   const head = face.createDiv({ cls: 'wi-card-head' })
   if (meta.area) head.createSpan({ cls: 'wi-area-mark', text: 'Area', attr: { 'aria-label': 'Area' } })
   const title = head.createDiv({ cls: 'wi-card-title', text: meta.title })
-  renderMenuButton(head, ctx, meta)
-  renderRemove(head, ctx, meta)
+  renderMenuButton(tagged ? top : head, ctx, meta)
+  renderRemove(tagged ? top : head, ctx, meta)
 
   renderBadges(face.createDiv({ cls: 'wi-badges' }), ctx, meta)
 
