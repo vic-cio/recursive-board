@@ -154,6 +154,10 @@ the agent notes in your vault.
 
 ### Fixed
 
+- A subtask row's menu button and remove button are the same 20px box as the card head and the tag
+  row. A 24px override on the checklist row made the inline-flex extras box taller than the text
+  line, so the row grew by 0.81px and the buttons overflowed the line above and below. A 20px
+  button fits inside the line box, so the row stays one text line tall.
 - On a phone, the two top pills are thinner: only their block padding shrinks, so the width and
   the text stay. The card's menu button and remove button now share one box, so they draw the same
   width, height and radius on one line, on a card head and on a checklist row. Neither button

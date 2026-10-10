@@ -657,8 +657,8 @@
 
 /* The menu button and the remove button are one box: the same width, height and radius, on one
  * line. The double-class selectors beat Obsidian's core `button:not(.clickable-icon)`, which
- * otherwise paints a filled pill with a shadow and imposes its own large mobile radius. A width
- * of 20px sits on a card head; the checklist row widens both to 24px through the variable. */
+ * otherwise paints a filled pill with a shadow and imposes its own large mobile radius. Both are
+ * 20px, the same box on a card head, a tag row and a checklist row. */
 .wi-card-head .wi-more,
 .wi-card-head .wi-remove,
 .wi-card-top .wi-more,
@@ -700,14 +700,11 @@
   margin-top: calc((var(--wi-chip-height) - var(--wi-row-button, 20px)) / 2);
 }
 
-/* A checklist row is one line, so its two buttons stay centred on that line. */
+/* A checklist row is one line, so its two buttons stay centred on that line. A 20px button fits
+ * inside the line box, so the inline-flex extras box does not make the row taller. */
 .wi-check-row .wi-more,
 .wi-check-row .wi-remove {
   align-self: center;
-}
-
-.wi-check-row {
-  --wi-row-button: 24px;
 }
 
 .wi-card-head .wi-more,
