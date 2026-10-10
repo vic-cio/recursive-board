@@ -1,7 +1,7 @@
 ---
 status: accepted
 amends: docs/adr/0034-agent-limit.md (the count), docs/adr/0038-nested-claims.md (the count), docs/adr/0040-dashboard-view.md (the Agents panel)
-amended_by: 0072-the-dashboard-is-a-separate-example-plugin.md (the rule lives in src/shared/agents.ts), 0083-assign-and-several-holders.md (each agent on a card counts)
+amended_by: 0072-the-dashboard-is-a-separate-example-plugin.md (the rule lives in src/shared/agents.ts), 0083-assign-and-several-holders.md (each agent on a card counts), 0084-one-assignee-list.md (the key is `assignee`)
 ---
 # Count only working agents
 

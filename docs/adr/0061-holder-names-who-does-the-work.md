@@ -1,7 +1,7 @@
 ---
 status: accepted
 amends: docs/adr/0014-agent-claims.md (the field name), docs/adr/0038-nested-claims.md (the field name), docs/adr/0052-ready-cards-for-dispatch.md (requests first), docs/adr/0058-delegate-a-card.md (the field name and what delegating writes)
-amended_by: 0072-the-dashboard-is-a-separate-example-plugin.md (wi agents is a command again), 0083-assign-and-several-holders.md (holder is one name or a list; delegate is now assign)
+amended_by: 0072-the-dashboard-is-a-separate-example-plugin.md (wi agents is a command again), 0083-assign-and-several-holders.md (holder is one name or a list; delegate is now assign), 0084-one-assignee-list.md (the key is now `assignee`, and `assignee` is no longer rejected)
 ---
 # The holder field names who does a card's work
 

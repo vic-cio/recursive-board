@@ -10,7 +10,7 @@ Audited against Obsidian's [Plugin guidelines](https://raw.githubusercontent.com
 | --- | --- | --- |
 | Avoid global `app` and `window.app` | Pass | Plugin code uses the instance's `app` reference and passes it into helpers. |
 | Avoid unnecessary console logging | Pass | No runtime `console.log` or debug logging in `src/plugin/`. |
-| Organize multiple source files and rename sample placeholders | Pass | Plugin code is split by action, index, mounting, and UI; no sample classes remain. |
+| Organize multiple source files and rename sample names | Pass | Plugin code is split by action, index, mounting, and UI; no sample classes remain. |
 | Keep Node.js and Electron APIs out of mobile builds | Pass | Runtime modules import neither; `tsconfig.plugin.json`, the forbidden-import build check, and `ios-safety.test.ts` guard the bundle. |
 | Avoid regex lookbehind on older iOS | Pass | No runtime regex lookbehind. |
 | Use settings headings only for multiple sections; omit “settings” from headings; use `Setting.setHeading` | Pass | The plugin has no settings tab or settings headings. |
@@ -47,7 +47,7 @@ Audited against Obsidian's [Plugin guidelines](https://raw.githubusercontent.com
 | Short, clear description | Pass | 81 characters, starts with “Renders,” has no “Obsidian” or emoji, and ends with a period. |
 | Desktop-only flag matches imports | Pass | `isDesktopOnly: false` matches the browser-only runtime bundle and iOS safety checks. |
 | Command IDs omit plugin ID; command names omit plugin name | Pass | IDs are local verbs and names omit the full plugin name. |
-| Remove sample code | Pass | No sample plugin commands, settings, or placeholder classes remain. |
+| Remove sample code | Pass | No sample plugin commands or settings remain. |
 | Manifest required fields and semantic version | Pass | ID, name, version, minAppVersion, description, author, and isDesktopOnly are present; version is `x.y.z`. |
 | Optional `authorUrl` and `fundingUrl` | Pass | Both are optional and omitted; no destination was invented. |
 | Plugin ID allowed by manifest rules | Fixed | The ID is `recursive-board`. |
@@ -64,7 +64,7 @@ Audited against Obsidian's [Plugin guidelines](https://raw.githubusercontent.com
 | Fork policy | Pass | The repository is not presented as a fork. |
 | Bot: ID syntax, reserved terms, name, and license | Pass | The ID has no reserved term. The name and the license pass. |
 | Bot: root manifest and matching GitHub release assets/tag | Fixed | `manifest.json` is at the repository root. The tag workflow attaches `main.js`, `manifest.json` and `styles.css` to a release whose tag equals the version, and `versions.json` maps it to `minAppVersion`. |
-| Bot: repository owner, issues setting, entry metadata, and release availability | Not fixed | These are GitHub submission checks. This worktree has no remote and no submission or release; they cannot be verified locally. |
+| Bot: the GitHub account that hosts the repository, issues setting, entry metadata, and release availability | Not fixed | These are GitHub submission checks. This worktree has no remote and no submission or release; they cannot be verified locally. |
 
 ## Verification
 

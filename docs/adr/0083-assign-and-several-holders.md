@@ -2,6 +2,7 @@
 status: accepted
 supersedes: 0058-delegate-a-card.md
 amends: 0061-holder-names-who-does-the-work.md (holder is one name or a list), 0052-ready-cards-for-dispatch.md (any holder but agent is taken), 0066-count-only-working-agents.md (each agent on a card counts)
+amended_by: 0084-one-assignee-list.md (the key is `assignee`, and `owner` is dropped)
 ---
 # Assign a card, and let a card have several holders
 

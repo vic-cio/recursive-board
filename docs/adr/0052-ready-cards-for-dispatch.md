@@ -1,6 +1,6 @@
 ---
 status: accepted
-amended_by: 0061-holder-names-who-does-the-work.md (requests for any agent first), 0083-assign-and-several-holders.md (any holder but agent is taken)
+amended_by: 0061-holder-names-who-does-the-work.md (requests for any agent first), 0083-assign-and-several-holders.md (any holder but agent is taken), 0084-one-assignee-list.md (the key is `assignee`)
 ---
 # Query cards ready for dispatch
 

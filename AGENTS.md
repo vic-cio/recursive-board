@@ -29,7 +29,7 @@ Read [`README.md`](README.md) first. It says what each part does.
 - **Dashboard.** The core ships none. Build yours from the card files or from `wi --json`. The
   README section "Dashboard" links an example plugin to copy.
 
-If the vault root has an `AGENTS.md`, read it. The vault owner's rules come first.
+If the vault root has an `AGENTS.md`, read it. The vault's rules come first.
 
 ## Contribute
 
