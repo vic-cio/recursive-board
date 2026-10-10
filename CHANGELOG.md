@@ -154,6 +154,12 @@ the agent notes in your vault.
 
 ### Fixed
 
+- A child row's menu button and remove button sit at the right end of the row, under the card's
+  own buttons, so a column of child rows lines up. Before, the row was a block of inline children,
+  so the extras followed the title text and stopped where the title ended. The row is a flex row
+  now: the title link takes the free space and wraps when it is long, and the extras keep their
+  width at the right end. A wrapped title keeps both buttons on the first line. The checkbox, its
+  tick, the title link and the archived dimming do not change, and the row is no taller.
 - A subtask row's menu button and remove button are the same 20px box as the card head and the tag
   row. A 24px override on the checklist row made the inline-flex extras box taller than the text
   line, so the row grew by 0.81px and the buttons overflowed the line above and below. A 20px

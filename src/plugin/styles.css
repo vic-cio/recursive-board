@@ -700,6 +700,32 @@
   margin-top: calc((var(--wi-chip-height) - var(--wi-row-button, 20px)) / 2);
 }
 
+/* A checklist row was a block whose children were inline. The extras followed the title text, so
+ * the menu button and the remove button stopped where the title ended, under the title on a
+ * phone. The row is a flex row now, like the card head. The title link takes the free space, so
+ * the extras sit at the right end of the row and line up in a column.
+ *
+ * Obsidian makes the change safe. A task list item is `list-style: none`, so no marker moves in.
+ * The checkbox keeps its own negative inline start margin, and `align-items: flex-start` keeps it
+ * on the first line when the title wraps. */
+.wi-check-row {
+  display: flex;
+  align-items: flex-start;
+}
+
+.wi-check-row > a.internal-link {
+  flex: 1;
+  min-width: 0;
+}
+
+/* The extras keep their content width. The title link shrinks first, so a long title wraps
+ * instead of squashing the chips. */
+.wi-check-row .wi-row-extras {
+  flex: none;
+  align-self: flex-start;
+  margin-top: calc((var(--font-text-size) * var(--line-height-normal, 1.5) - var(--wi-row-button, 20px)) / 2);
+}
+
 /* A checklist row is one line, so its two buttons stay centred on that line. A 20px button fits
  * inside the line box, so the inline-flex extras box does not make the row taller. */
 .wi-check-row .wi-more,
