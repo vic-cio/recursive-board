@@ -105,15 +105,13 @@ wi new "<title>" --parent <ref> --objective <text> --context <text> --criteria <
 wi status <ref> <backlog|options|doing|done>
 wi note <ref> "<result>" [--agent <name>]   # signs with --agent or WI_AGENT
 wi depend <ref> --on <ref>            # the card waits on another card; --off removes it
+wi depend <ref> --on <person>         # the card waits on a person: a review request; --off sends it back
 wi new <title> [--tag <tag>]... [--holder <name>]   # add tags; name who does the work
 wi set <ref> --owner <name>                     # change who owns it; --role "" removes an old role field
 wi area <ref>                         # mark a card as an area
 wi area <ref> --off                   # remove the area mark
 wi tag <ref> <tag>                    # add a free tag; --off removes it
 wi claim <ref> [--holder <name>]     # you become the holder (WI_AGENT) and the card moves to doing
-wi review <ref> --to <person> [--files <path>]... [--note <text>]  # send the card to a person for review
-wi approve <ref> --you <person>      # the reviewer's verdict: note it and move the card to done
-wi send-back <ref> --you <person> [--comment <text>]  # note it, remove owner; the card stays in doing
 wi delegate <ref> --to <person>      # make a person (a type: person note) the holder; status stays
 wi delegate <ref> --to agent         # leave the card for any agent (holder: agent); starts nothing
 wi show <ref> --json                 # the brief: card, ancestor Objectives, Knowledge, role procedures
@@ -149,14 +147,14 @@ In Obsidian, use **Promote** at the top of any child card to give it its own boa
   claim replaces `agent` with your name.
 - `wi claim` refuses a card held by a
   different holder, a done card, or a board with a child in doing that someone else works. `wi claim`
-  and `wi status <ref> doing` refuse a card with an open dependency. `wi children` marks it
+  and `wi status <ref> doing` refuse a card with an open wait, on a card or on a person. `wi children` marks it
   `[waits on N]`, and `wi status <ref> done` names each card it unblocks. When work must wait for
   another card, record it with `wi depend <card> --on <other>`, not in prose. One
   agent can hold a card and its current subtask. A repeat by the same agent in doing writes nothing.
 - `wi status <ref> done` says when that was the parent's last open child. Check the parent's own
   criteria, then close it.
 - Before it starts an agent, a worker reads `wi agents --json`. It counts agents, not cards, and
-  lists each agent's doing cards. A card that waits for a review verdict, or whose open children
+  lists each agent's doing cards. A card that waits on a person, or whose open children
   are all in doing, only waits, so it does not make its agent count. The worker holds off when
   `activeAgents` reaches `maxAgents`; `null` means no limit is set. `WI_MAX_AGENTS` overrides the vault setting for one run. This
   limit is advisory: `wi claim` does not enforce it.
@@ -241,21 +239,26 @@ is.
    your report, then run `wi release <card> --reason <reason> --where <branch-or-path>`. Let the
    owner decide whether to create child cards.
 5. When finished, run `wi note <card> "<result, and its branch or location>"`. Leave the card in
-   `doing` and stop for review. Merge, push and publish wait for the owner's verdict.
+   `doing`, ask the owner to review it (see below), and stop. Merge, push and publish wait for the
+   owner's verdict.
 
-To send a card for review, use **Send for review…** in its card menu, or run `wi review <ref> --to
-<person> [--files <path>]... [--note <text>]`. Choose a person note, and say what to check in the
-note. Attach files or add links in the menu, or repeat `--files` in the CLI. Both writers set
-`owner` and append a `**Review:**` note in one write. The card waits for review when its newest
-review note follows its last verdict note, it has no open child, and it is not done. Any other
-column counts.
+To ask a person to review a card, make the card wait on them: choose **Waits on…** in its card
+menu and pick the person, or run `wi depend <ref> --on <person>`. The person is a note with
+`type: person`. The command adds a link to that note in `depends_on`, next to any card links. It
+writes no note and does not change `owner`. Say what to check in the card's Notes with `wi note`,
+or tell the person in another channel.
 
-The reviewer gives the verdict with `wi approve <ref> --you <person>` or `wi send-back <ref> --you
-<person> [--comment <text>]`, or with **Approve** or **Send back** in a dashboard plugin that
-copies these rules. Each makes one write. `--you` must match the card's `owner`. `wi` refuses a card that
-is not in doing, has no review request after its last verdict, or has an open child. Run a verdict
-command only with the verdict the reviewer gave you. Never give a verdict on your own work. `wi`
-signs the note with `WI_AGENT`, so the card shows who wrote it.
+The person gives the verdict by what they do next:
+
+- To send the card back, they remove the wait: `wi depend <ref> --on <person> --off`, or **Stop
+  waiting on…** in the menu. The card stays in `doing` with its holder.
+- To approve, they move the card to done: `wi status <ref> done`, or a tick. Moving a card to done
+  removes its waits on people, so the move is the approval.
+
+While a card waits on a person, `wi claim` and `wi status <ref> doing` refuse it, and `wi agents`
+does not count its holder. Never clear a wait on a person, and never move a card to done, as the
+reviewer. `wi review`, `wi approve` and `wi send-back` are retired. Each prints the command above
+and exits 0.
 
 ## Outcomes
 

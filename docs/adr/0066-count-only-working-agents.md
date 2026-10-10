@@ -58,6 +58,13 @@ kept their holders in the count, and concierge read 9 of 8 with 5 agents working
 has the card's text, so `activeAgentNames` takes an `awaitsReview` predicate: the CLI reads the
 text it has loaded, and the plugin reads each claimed doing card with `cachedRead`.
 
+## Amendment 2026-10-10: a wait on a person
+
+[0082](0082-review-is-a-wait-on-a-person.md) replaces the `**Review:**` note rule. A doing card
+that waits on a person, with a link to a person note in `depends_on`, does not make its holder
+active. `activeAgents` still takes a predicate (`waitsOnPerson`), and the caller reads the card's
+`depends_on` instead of its Notes.
+
 ## Known gap
 
 A parent that works on its own while every child runs is not counted. The rule reads the board,

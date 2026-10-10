@@ -17,6 +17,9 @@ Read [`README.md`](README.md) first. It says what each part does.
 - **Read.** Run `wi show <ref> --json`, `wi children <ref> --tree --json`, `wi ready --json` and
   `wi agents --json`. The README section "Commands" lists every command.
 - **Write.** Change frontmatter with `wi`, never by hand. Edit the card body directly.
+- **Review.** A review is a wait on a person, in `depends_on`. Run `wi depend <ref> --on <person>`
+  to ask. The person runs `--off` to send the card back, or moves it to done to approve it. The
+  README section "Ask a person to review a card" has the rules.
 - **Settings.** The plugin keeps the board settings under the `board` key of
   `.obsidian/plugins/recursive-board/data.json`. `wi` reads that file and never writes it. The
   README section "Vault configuration" shows the keys.

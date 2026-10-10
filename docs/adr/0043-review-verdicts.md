@@ -1,5 +1,6 @@
 ---
-status: accepted
+status: superseded
+superseded_by: 0082-review-is-a-wait-on-a-person.md
 amended_by: 0065-review-verdicts-in-wi.md (wi approve and wi send-back; the shared verdict checks the reviewer and the request), 0072-the-dashboard-is-a-separate-example-plugin.md (the buttons live in the example dashboard plugin)
 ---
 # Approve or send back a review from the dashboard

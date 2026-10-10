@@ -34,6 +34,18 @@ the agent notes in your vault.
   how to update the plugin. On the plugin, the three write nothing
   ([0080](docs/adr/0080-the-plugin-serves-setup-doctor-and-update-and-writes-nothing.md)).
 
+- A review is now a wait on a person. A card waits on a person when `depends_on` links to a note
+  with `type: person`. Ask with **Waits on…** in the card menu or `wi depend <ref> --on <person>`.
+  The person sends the card back by removing the wait (`--off`, or **Stop waiting on…**), and the
+  card stays in doing with its holder. Moving a card to done removes its waits on people, and
+  that is the approval. `wi claim` and `wi status <ref> doing` refuse a card with an open wait on
+  a person, and `wi agents` does not count the holder of such a card. `wi review`, `wi approve`
+  and `wi send-back` are retired: each prints the command to use and exits 0. **Send for
+  review…** leaves the card menu. No command or menu item writes a `**Review:**`,
+  `Approved by` or `Sent back by` note. A script that read those notes, and a dashboard that
+  wrote them, must use the wait instead
+  ([0082](docs/adr/0082-review-is-a-wait-on-a-person.md)).
+
 ### Added
 
 - A rules version. `wi --version` prints `0.9.0 (rules 1)`, with the package version first, and
@@ -55,6 +67,10 @@ the agent notes in your vault.
 
 ### Changed
 
+- `wi depend <ref> --on` takes a person note as well as a card. **Waits on…** lists people and
+  cards. `wi show --json` lists the people a card waits on in `personDependencies`, and
+  `wi children --json` lists them in `waits_on_people`. `wi validate` accepts a link to a person
+  note in `depends_on`.
 - `wi` parses its command line with a parser in `src/shared` that uses no Node, and prints its
   help from one command table, so the plugin can read the same command line. The behaviour and the
   help text are unchanged ([0077](docs/adr/0077-one-command-line-in-shared.md)).

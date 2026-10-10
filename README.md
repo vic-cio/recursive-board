@@ -57,7 +57,7 @@ The plugin stores the board settings under the `board` key of its data file, `.o
 
 `workItemFolder` is a vault-relative folder path. It defaults to `Boards`. In the settings tab, **Rename** renames the folder with all its cards in one step. Links name files, not folders, so they keep working. If a folder with the new name exists, the board reads that folder and moves nothing. `defaultRoot` is a root filename stem. It defaults to `null`, so `wi new` needs an explicit `--parent`. `extraSections` lists non-empty, single-line headings. Each heading follows the built-in sections, empty like them. These settings apply to `wi new` and plugin item creation. Invalid values stop config loading.
 
-`maxAgents` is a non-negative whole number or `null` for no limit. `WI_MAX_AGENTS` overrides it for one CLI run. `wi agents` reports the limit and the active agents. One agent counts once when it holds a card and its subtask. An agent whose doing card only waits on its children, because every open child is in doing, does not count. Nor does an agent whose doing card waits for a review verdict. The limit is advisory. `wi claim` can exceed it.
+`maxAgents` is a non-negative whole number or `null` for no limit. `WI_MAX_AGENTS` overrides it for one CLI run. `wi agents` reports the limit and the active agents. One agent counts once when it holds a card and its subtask. An agent whose doing card only waits on its children, because every open child is in doing, does not count. Nor does an agent whose doing card waits on a person, which is a review. The limit is advisory. `wi claim` can exceed it.
 
 Obsidian Sync carries the plugin data file only when **Installed community plugins** sync is on for the device. Turn it on for each device. A device without the `board` key uses the defaults and shows a notice once. [Read the Obsidian Sync settings](https://obsidian.md/help/sync/settings).
 
@@ -94,20 +94,26 @@ Enable Recursive Board in an empty vault. Use the **Create your first board** bu
 3. Add a card with `wi new "Write the first card"`.
 4. Open `Project` in Obsidian. The plugin shows its children as a board.
 
-## Send a card for review
+## Ask a person to review a card
 
-Use **Send for review…** in a card's menu to choose a person, say what to check, attach files from your computer, and add web links or vault paths. An attached file outside the vault is copied into Obsidian's attachment folder. The command sets the card's `owner` and adds a `**Review:**` note. Agents use `wi review`, which makes the same edit. The reviewer gives the verdict with `wi approve` or `wi send-back`, or with a dashboard.
+A review is a wait on a person. It uses the same `depends_on` field and the same commands as a wait on another card.
+
+- **Ask.** Choose **Waits on…** in the card's menu and pick a person, or run `wi depend <ref> --on <person>`. The person is a note with `type: person`. The command adds a link to that note in `depends_on`, next to any card links, and writes no note.
+- **Send back.** The person removes the wait: **Stop waiting on…** in the menu, or `wi depend <ref> --on <person> --off`. The card stays in doing with its holder.
+- **Approve.** The person moves the card to done: tick it, or run `wi status <ref> done`. Moving a card to done removes its waits on people. A person who moves a card to done approves it, whether or not they meant to.
+
+While a card waits on a person, `wi claim` and `wi status <ref> doing` refuse it, and `wi agents` does not count the agent that holds it. Say what to check on the card, in its Notes, or send it by mail or message: `wi` writes no review request. `wi review`, `wi approve` and `wi send-back` are retired. Each prints the command above and exits 0.
 
 ## Dashboard
 
-Recursive Board ships no dashboard. The example dashboard is [Recursive Board Dashboard](https://github.com/vic-cio/recursive-board-dashboard), a separate Obsidian plugin. It shows what waits for your review, progress per area, the agents, the people and the cards that need attention, and it gives **Approve** and **Send back**. It is an example to copy: it has no releases and no community listing. It reads the card files through Obsidian, so it works on a phone.
+Recursive Board ships no dashboard. The example dashboard is [Recursive Board Dashboard](https://github.com/vic-cio/recursive-board-dashboard), a separate Obsidian plugin. It shows the cards that wait on you, progress per area, the agents, the people and the cards that need attention. It is an example to copy: it has no releases and no community listing. It reads the card files through Obsidian, so it works on a phone.
 
 To build your own dashboard, read the card files, or use these `wi` commands:
 
 - `wi agents --json`: the agents that count against `maxAgents`, their doing cards, and the limit.
 - `wi children <ref> --tree --json` and `wi show <ref> --json`: the cards, their briefs and their notes.
 - `wi ready --json`: the cards a dispatcher can start.
-- `wi review`, `wi approve` and `wi send-back`: the review loop.
+- `wi show <ref> --json`: `personDependencies` lists the people a card waits on, which is a review request.
 
 ## Install the Obsidian plugin
 
@@ -224,16 +230,14 @@ Keep these points in mind:
 | `wi note <ref> <text> [--agent <name>]` | Adds a dated line under Notes. It signs with `--agent` or `WI_AGENT`. It adds `WI_MODEL` when set, and refuses to write without a writer name. It wraps bare angle placeholders in backticks. It preserves code, links, autolinks, and HTML. A lock keeps two notes from overwriting each other. |
 | `wi new … [--tag <tag>]...` | Adds each free tag, such as a role tag `role/checker`. `--holder` names who does the work. Cards do not record their creator. `--strict` checks only the brief. |
 | `wi set <ref> [--owner <name>] [--role ""]` | Changes a card's owner (an empty value removes it). `--role ""` removes an old `role` field. |
-| `wi depend <ref> --on <ref> [--off]` | Makes a card wait on another card, or with `--off` stops it. `wi claim` and `wi status <ref> doing` refuse a card that waits on a card that is not done. The board allows it and shows a notice. `wi status <ref> done` names each card that can start now. |
+| `wi depend <ref> --on <ref\|person> [--off]` | Makes a card wait on another card or on a person, or with `--off` stops it. A person is a note with `type: person`, and a wait on one is a review request. `wi claim` and `wi status <ref> doing` refuse a card that waits on a card that is not done, or on any person. The board allows it and shows a notice. `wi status <ref> done` removes the card's waits on people, which approves the review, and names each card that can start now. See [Ask a person to review a card](#ask-a-person-to-review-a-card). |
 | `wi area <ref> [--off]` | Marks a card as an area or removes the area mark. The current status stays in place. Conversion refuses a card with a holder. |
 | `wi tag <ref> <tag> [--off]` | Adds a free tag to a card, or with `--off` removes it. Case and a leading `#` do not matter. It refuses old `area/` tags. On the board, **Tags…** in the card menu does the same: it lists the card's free tags, checked, then the other free tags on work items, and adds a tag you type. |
 | `wi claim <ref> [--holder <name>]` | Sets the card's `holder` to `--holder`, or else `WI_AGENT`, and moves the card to doing in one write. The holder of a delegated card claims it to start it. A claim replaces `holder: agent`. Refuses a different holder, the name `agent`, a done card, an open dependency, or a board with a child in doing that another agent or a person works. An agent can hold a card and its current subtask at once. Repeating an active claim by the same agent writes nothing. |
 | `wi delegate <ref> --to <person\|agent> [--role <name>]` | Sets the card's `holder` and nothing else: the status stays. For a person, it writes their name. For `agent`, it writes `holder: agent`, which asks any agent. It starts no agent. `--role` adds the role tag in the same write. See [Delegate a card](#delegate-a-card). |
-| `wi review <ref> --to <name> [--files <path>]... [--note <text>]` | Sends a card to a person note for review. It sets `owner` and appends a `**Review:**` note in one write. Repeat `--files` for each vault-relative path. `--note` says what to check. The card menu uses the same edit. |
-| `wi approve <ref> --you <name>` | Records the reviewer's approval. It notes `Approved by <name>.` and moves the card to done in one write. `--you` must match the card's `owner`. It refuses a card that is not in doing, has no review request after its last verdict, or has an open child. It names the cards that can start now, as `wi status <ref> done` does. |
-| `wi send-back <ref> --you <name> [--comment <text>]` | Records the reviewer's send back. It notes `Sent back by <name>: <comment>` and removes `owner` in one write. The card stays in doing with its holder. The comment is optional and one line. It refuses the same cards as `wi approve`. Both sign the note with `WI_AGENT` when it is set. |
+| `wi review`, `wi approve`, `wi send-back` | Retired. Each exits 0, reads nothing, and names the command to use: `wi depend <ref> --on <person>` to ask, `wi depend <ref> --on <person> --off` to send back, and `wi status <ref> done` to approve. See [Ask a person to review a card](#ask-a-person-to-review-a-card). |
 | `wi ready [--parent <ref>] [--holder <name>] --json` | Lists unclaimed cards in options that a dispatcher can start. `--parent` limits the result to descendants of one board; without it, the query covers the vault. It lists the cards with `holder: agent` first, then sorts by priority, then update date. JSON also names excluded option cards and reasons. `--holder` permits a board whose active child belongs to that agent. |
-| `wi agents [--json]` | Prints the agents that count against `maxAgents`, each with the doing cards it works, the count and the limit. JSON gives `activeAgents`, `maxAgents` (`null` for no limit) and `agents`. A person, a request for any agent, a card whose open children are all in doing, and a card that waits for a review verdict add no agent. It writes nothing. |
+| `wi agents [--json]` | Prints the agents that count against `maxAgents`, each with the doing cards it works, the count and the limit. JSON gives `activeAgents`, `maxAgents` (`null` for no limit) and `agents`. A person, a request for any agent, a card whose open children are all in doing, and a card that waits on a person add no agent. It writes nothing. |
 | `wi dashboard` | Retired. It exits 0, reads nothing, and names `wi agents`. See [Dashboard](#dashboard). |
 | `wi release <ref> --reason <text> [--where <branch-or-path>]` | Clears the holder, moves the card to options, and adds a note with the reason and optional work location, in one write. The note is signed like `wi note`: by `WI_AGENT`, else the holder. Refuses an unclaimed card. |
 | `wi move <ref> --to <ref>` | Changes the item's parent. Its status stays the same, and its children move with it. |
@@ -241,7 +245,7 @@ Keep these points in mind:
 | `wi promote <ref>` / `wi demote <ref>` | Makes an item a board or a card again. Promotion sets `board: true`; demotion removes the `board` key. |
 | `wi rm <ref> [--recursive] [--dry-run]` | Moves an item to the vault's `.trash` folder. Use `--dry-run` to preview. Items with children require `--recursive`. |
 | `wi children <ref> [--status <status>] [--tree] [--archived]` | Lists an item's children. `--status` filters by status, `--tree` shows descendants, and `--archived` includes archived items. |
-| `wi show <ref> --json` | Reads one complete card as JSON. It includes the brief, Notes, Knowledge lines, assignment, ancestor objectives, dependencies, and child summary. Broken links appear as issues; the command changes no files. |
+| `wi show <ref> --json` | Reads one complete card as JSON. It includes the brief, Notes, Knowledge lines, assignment, ancestor objectives, dependencies, the people it waits on (`personDependencies`), and child summary. Broken links appear as issues; the command changes no files. |
 | `wi objective [<ref>]` | Retired command. Exits 0 and names `wi show <ref> --json`. |
 | `wi validate` | Checks work-item structure and reports errors and warnings. Exits with code 1 when it finds errors. |
 | `wi hook` | Removed. It is an unknown command. A hook that it installed earlier keeps working. See [Version the vault with Git](#version-the-vault-with-git-optional). |
@@ -277,7 +281,7 @@ Delegating sets the card's `holder` and nothing else. The status stays: the dele
 
 `wi delegate <ref> --to agent` writes `holder: agent`: any agent may take the card. It starts nothing and writes no note. `wi ready` lists these cards first, and the first agent's `wi claim` replaces `agent` with its own name. A person note called `agent` is refused, because the name is reserved.
 
-wi starts no agent. Your harness starts agents with its own tools: a subagent, a background task, or another session. Give the agent the card id. It reads its brief with `wi show <ref> --json`: the card, the Objective of each ancestor, the Knowledge links, and each role tag with the notes that carry it. Then it claims the card by its own name, writes signed notes, and asks for review with `wi review` (docs/adr/0063-wi-starts-no-agents.md).
+wi starts no agent. Your harness starts agents with its own tools: a subagent, a background task, or another session. Give the agent the card id. It reads its brief with `wi show <ref> --json`: the card, the Objective of each ancestor, the Knowledge links, and each role tag with the notes that carry it. Then it claims the card by its own name, writes signed notes, and asks for review with `wi depend <ref> --on <person>` (docs/adr/0063-wi-starts-no-agents.md).
 
 `wi note` signs with `WI_AGENT` or `--agent`, and adds `WI_MODEL` when set. It refuses to write without a writer name. `--role <name>` on `wi delegate` adds the tag `role/<name>` with the holder.
 

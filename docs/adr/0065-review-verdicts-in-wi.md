@@ -1,5 +1,6 @@
 ---
-status: accepted
+status: superseded
+superseded_by: 0082-review-is-a-wait-on-a-person.md
 amends: docs/adr/0043-review-verdicts.md (the shared verdict checks the reviewer and the request)
 ---
 # Give a review verdict with wi
