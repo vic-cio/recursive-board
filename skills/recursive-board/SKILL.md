@@ -30,7 +30,7 @@ first to see what it would change.
 
 ## Before the first write
 
-If the vault root has an `AGENTS.md`, read it. The vault owner's rules there (what you may
+If the vault root has an `AGENTS.md`, read it. The vault's rules there (what you may
 delete, how to name cards) take priority over this page.
 
 ## Reaching the vault
@@ -106,15 +106,15 @@ wi status <ref> <backlog|options|doing|done>
 wi note <ref> "<result>" [--agent <name>]   # signs with --agent or WI_AGENT
 wi depend <ref> --on <ref>            # the card waits on another card; --off removes it
 wi depend <ref> --on <person>         # the card waits on a person: a review request; --off sends it back
-wi new <title> [--tag <tag>]... [--holder <name>]   # add tags; name who does the work
-wi set <ref> --owner <name>                     # change who owns it; --role "" removes an old role field
+wi new <title> [--tag <tag>]... [--holder <name>]   # add tags; name the assignee
+wi set <ref> --role ""                      # remove an old role field
 wi area <ref>                         # mark a card as an area
 wi area <ref> --off                   # remove the area mark
 wi tag <ref> <tag>                    # add a free tag; --off removes it
-wi claim <ref> [--holder <name>]     # you join the holders (WI_AGENT) and the card moves to doing
-wi assign <ref> --to <person>        # add a person (a type: person note) as a holder; status stays
-wi assign <ref> --to agent           # ask any agent to take the card (holder agent); starts nothing
-wi assign <ref> --to <name> --off    # remove one holder; status stays
+wi claim <ref> [--holder <name>]     # you join the assignees (WI_AGENT) and the card moves to doing
+wi assign <ref> --to <person>        # add a person (a type: person note) as an assignee; status stays
+wi assign <ref> --to agent           # ask any agent to take the card (assignee agent); starts nothing
+wi assign <ref> --to <name> --off    # remove one assignee; status stays
 wi show <ref> --json                 # the brief: card, ancestor Objectives, Knowledge, role procedures
 wi release <ref> --reason <text> [--where <branch-or-path>] [--holder <name>]
 wi move <ref> --to <new parent ref>
@@ -135,19 +135,20 @@ In Obsidian, use **Promote** at the top of any child card to give it its own boa
   hyphens and adds the id to a clashing filename, and says so.
 - Give every new card its brief in the `wi new` command: one `--objective`, a `--context` per
   source or fact, a `--criteria` per checkable result. `wi` warns when the brief is missing.
-- A new card does not inherit its parent's owner. Pass `--owner` to set an owner on a `wi new` card.
-- The board's add row also creates a child without an owner. Accountability follows the parent tree.
+- A new card does not inherit its parent's assignees. Pass `--assignee` (or `--holder`) to set one on a `wi new` card.
+- The board's add row also creates a child without an assignee. Accountability follows the parent tree.
 - Record progress with `wi note`. It locks the card, so a parent worker and its child worker can
   write at the same moment. Set `WI_AGENT` or pass `--agent` before writing. Leave the frontmatter to `wi`.
 - The first child a card gets turns the card into a board, unless the vault sets
   `autoPromote: false`.
 - To untick a done item, set it back to its `prev_status`.
-- `wi area <ref>` marks the item as an area and keeps its status. It removes `prev_status` and refuses a card with a holder. Convert it back with `wi area <ref> --off`; its status stays the same.
-- A card's `holder` names the people and agents who do its work: one name, or a list. An old
-  card's `agent` is read as its holder. The holder `agent` asks for any agent: `wi ready` lists a
-  card whose only holder is `agent` first, and your claim replaces `agent` with your name. A card
-  with any other holder is taken.
-- `wi claim` starts a card with no holder, a card that holds `agent`, or a card that lists you. It
+- `wi area <ref>` marks the item as an area and keeps its status. It removes `prev_status` and refuses a card with an assignee. Convert it back with `wi area <ref> --off`; its status stays the same.
+- A card's `assignee` names the people and agents who do its work: one name, or a list. A reader
+  takes `assignee`, else an old card's `holder`, else the old `agent`. A card with more than one of
+  these keys uses the first in that order. The assignee `agent` asks for any agent: `wi ready` lists a
+  card whose only assignee is `agent` first, and your claim replaces `agent` with your name. A card
+  with any other assignee is taken.
+- `wi claim` starts a card with no assignee, a card assigned to `agent`, or a card that lists you. It
   refuses a card that others hold: one of them runs `wi assign <card> --to agent` first. It also
   refuses a done card, or a board with a child in doing that someone else works. `wi claim`
   and `wi status <ref> doing` refuse a card with an open wait, on a card or on a person. `wi children` marks it
@@ -170,12 +171,15 @@ In Obsidian, use **Promote** at the top of any child card to give it its own boa
   name. In a Git repo, give the worker its own branch or worktree.
   To assign a card to a person, use `wi assign <card> --to <name>` with a note of
   `type: person`; a person does not count in `wi agents`. To ask any agent, use `--to agent`.
-  Assigning adds one holder and nothing else; the status stays, and it writes no note.
+  Assigning adds one assignee and nothing else; the status stays, and it writes no note.
+- The plugin makes no rule about who may assign whom: no check, no permission, and no required
+  level or title. A team may use the levels of the tree as it likes, for example the assignee one
+  level down as the owner. The plugin does not check that convention.
 - A worker that starts workers records each event on the child card (start, finish, retry, stop)
   with `wi note <child> "<event>"`.
 - When a worker stops early, the worker that started it runs `wi release` with a reason and, when available, the
-  branch or worktree path. Release removes one holder: `--holder`, else you when you hold the card,
-  else the only holder. It returns the card to options when no named holder remains, and records
+  branch or worktree path. Release removes one assignee: `--holder`, else you when you hold the card,
+  else the only assignee. It returns the card to options when no named assignee remains, and records
   the continuation location in Notes.
 - Old `area/...` tags stay on existing cards. The board hides them, and Tags… leaves them out.
 - Add or remove a free tag with `wi tag <ref> <tag> [--off]`. It refuses old `area/` tags.
@@ -192,19 +196,19 @@ the board shows what is still open.
 ## Working as a worker
 
 A worker is an agent that works one card. A person, a script or another worker started it, with a
-harness's own tools. Any worker may start workers on its own children. The owner follows the work
-on the board, so the board is the live record of what each worker does now. Use
+harness's own tools. Any worker may start workers on its own children. The person in charge follows
+the work on the board, so the board is the live record of what each worker does now. Use
 your own agent name everywhere `<me>` appears.
 
-Set `WI_AGENT` to your name and `WI_MODEL` to your model, or pass `--holder` to `wi claim` and
-`--agent` to `wi note`. `wi note` signs each line with your name and model. It refuses to write
+Set `WI_AGENT` to your name and `WI_MODEL` to your model, or pass `--assignee` (or `--holder`) to
+`wi claim` and `--agent` to `wi note`. `wi note` signs each line with your name and model. It refuses to write
 with no writer name.
 A role is a tag such as `role/checker` on your card. A note that is not a card and carries the
 same tag is its procedure: `wi show <card> --json` lists it under `procedures`. Read and follow it.
 Roles do not pass down from a parent, and a card with no role tag has no procedure beyond this
 section. `wi assign --role <name>` and `wi tag <ref> role/<name>` add one.
 
-1. Claim the card: `wi claim <card>`. Your claim adds you to the holders and moves it to doing. Read
+1. Claim the card: `wi claim <card>`. Your claim adds you to the assignees and moves it to doing. Read
    its brief with `wi show <card> --json`, and its open children.
 2. Split it before you start when it holds more than one deliverable. Make each step a child with
    a full brief: `wi new "<title>" --parent <card> --objective ... --criteria ...`. Set
@@ -230,7 +234,7 @@ work, so a card sits in doing for as long as its work takes.
 
 For `/recursive-board <card> <instruction>`, use the instruction to clarify the request and the
 card's Objective, Context and Acceptance Criteria as the brief. These steps are for a session with
-its owner present. In a Git repo, steps 3 to 5 use a branch; elsewhere, record where the result
+a person present. In a Git repo, steps 3 to 5 use a branch; elsewhere, record where the result
 is.
 
 1. Find the board in the project's `AGENTS.md`. If it names none, ask once which board to use,
@@ -242,26 +246,26 @@ is.
    "Working as a worker", steps 3 and 4.
 4. If the work is too large or cannot finish, stop with a split proposal or continuation note in
    your report, then run `wi release <card> --reason <reason> --where <branch-or-path>`. Let the
-   owner decide whether to create child cards.
+   person decide whether to create child cards.
 5. When finished, run `wi note <card> "<result, and its branch or location>"`. Leave the card in
-   `doing`, ask the owner to review it (see below), and stop. Merge, push and publish wait for the
-   owner's verdict.
+   `doing`, ask the person to review it (see below), and stop. Merge, push and publish wait for the
+   person's verdict.
 
 To ask a person to review a card, make the card wait on them: choose **Waits on…** in its card
 menu and pick the person, or run `wi depend <ref> --on <person>`. The person is a note with
 `type: person`. The command adds a link to that note in `depends_on`, next to any card links. It
-writes no note and does not change `owner`. Say what to check in the card's Notes with `wi note`,
+writes no note and changes no assignee. Say what to check in the card's Notes with `wi note`,
 or tell the person in another channel.
 
 The person gives the verdict by what they do next:
 
 - To send the card back, they remove the wait: `wi depend <ref> --on <person> --off`, or **Stop
-  waiting on…** in the menu. The card stays in `doing` with its holder.
+  waiting on…** in the menu. The card stays in `doing` with its assignee.
 - To approve, they move the card to done: `wi status <ref> done`, or a tick. Moving a card to done
   removes its waits on people, so the move is the approval.
 
 While a card waits on a person, `wi claim` and `wi status <ref> doing` refuse it, and `wi agents`
-does not count its holder. Never clear a wait on a person, and never move a card to done, as the
+does not count its assignee. Never clear a wait on a person, and never move a card to done, as the
 reviewer. `wi review`, `wi approve` and `wi send-back` are retired. Each prints the command above
 and exits 0.
 
