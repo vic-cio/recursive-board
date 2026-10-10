@@ -111,11 +111,12 @@ wi set <ref> --owner <name>                     # change who owns it; --role "" 
 wi area <ref>                         # mark a card as an area
 wi area <ref> --off                   # remove the area mark
 wi tag <ref> <tag>                    # add a free tag; --off removes it
-wi claim <ref> [--holder <name>]     # you become the holder (WI_AGENT) and the card moves to doing
-wi delegate <ref> --to <person>      # make a person (a type: person note) the holder; status stays
-wi delegate <ref> --to agent         # leave the card for any agent (holder: agent); starts nothing
+wi claim <ref> [--holder <name>]     # you join the holders (WI_AGENT) and the card moves to doing
+wi assign <ref> --to <person>        # add a person (a type: person note) as a holder; status stays
+wi assign <ref> --to agent           # ask any agent to take the card (holder agent); starts nothing
+wi assign <ref> --to <name> --off    # remove one holder; status stays
 wi show <ref> --json                 # the brief: card, ancestor Objectives, Knowledge, role procedures
-wi release <ref> --reason <text> [--where <branch-or-path>]
+wi release <ref> --reason <text> [--where <branch-or-path>] [--holder <name>]
 wi move <ref> --to <new parent ref>
 wi archive <ref>                    # --undo reverses it
 wi promote <ref>                    # render this item's children as a board
@@ -142,11 +143,13 @@ In Obsidian, use **Promote** at the top of any child card to give it its own boa
   `autoPromote: false`.
 - To untick a done item, set it back to its `prev_status`.
 - `wi area <ref>` marks the item as an area and keeps its status. It removes `prev_status` and refuses a card with a holder. Convert it back with `wi area <ref> --off`; its status stays the same.
-- A card's `holder` names the person or agent who does its work. An old card's `agent` is read as
-  its holder. `holder: agent` asks for any agent: `wi ready` lists those cards first, and your
-  claim replaces `agent` with your name.
-- `wi claim` refuses a card held by a
-  different holder, a done card, or a board with a child in doing that someone else works. `wi claim`
+- A card's `holder` names the people and agents who do its work: one name, or a list. An old
+  card's `agent` is read as its holder. The holder `agent` asks for any agent: `wi ready` lists a
+  card whose only holder is `agent` first, and your claim replaces `agent` with your name. A card
+  with any other holder is taken.
+- `wi claim` starts a card with no holder, a card that holds `agent`, or a card that lists you. It
+  refuses a card that others hold: one of them runs `wi assign <card> --to agent` first. It also
+  refuses a done card, or a board with a child in doing that someone else works. `wi claim`
   and `wi status <ref> doing` refuse a card with an open wait, on a card or on a person. `wi children` marks it
   `[waits on N]`, and `wi status <ref> done` names each card it unblocks. When work must wait for
   another card, record it with `wi depend <card> --on <other>`, not in prose. One
@@ -154,7 +157,8 @@ In Obsidian, use **Promote** at the top of any child card to give it its own boa
 - `wi status <ref> done` says when that was the parent's last open child. Check the parent's own
   criteria, then close it.
 - Before it starts an agent, a worker reads `wi agents --json`. It counts agents, not cards, and
-  lists each agent's doing cards. A card that waits on a person, or whose open children
+  lists each agent's doing cards. Each agent on a card counts, so a card with two agents uses two
+  places; a person adds none. A card that waits on a person, or whose open children
   are all in doing, only waits, so it does not make its agent count. The worker holds off when
   `activeAgents` reaches `maxAgents`; `null` means no limit is set. `WI_MAX_AGENTS` overrides the vault setting for one run. This
   limit is advisory: `wi claim` does not enforce it.
@@ -164,14 +168,15 @@ In Obsidian, use **Promote** at the top of any child card to give it its own boa
   (a subagent, a background task, another session) and give it the card id. Write the brief on
   the card first: the worker reads it with `wi show <card> --json`, and claims the card by its own
   name. In a Git repo, give the worker its own branch or worktree.
-  To assign a card to a person, use `wi delegate <card> --to <name>` with a note of
-  `type: person`; a person does not count in `wi agents`. To leave a card for any
-  agent, use `--to agent`. Delegating sets the holder and nothing else; the status stays.
+  To assign a card to a person, use `wi assign <card> --to <name>` with a note of
+  `type: person`; a person does not count in `wi agents`. To ask any agent, use `--to agent`.
+  Assigning adds one holder and nothing else; the status stays, and it writes no note.
 - A worker that starts workers records each event on the child card (start, finish, retry, stop)
   with `wi note <child> "<event>"`.
 - When a worker stops early, the worker that started it runs `wi release` with a reason and, when available, the
-  branch or worktree path. Release clears the holder, returns the card to options, and records the
-  continuation location in Notes.
+  branch or worktree path. Release removes one holder: `--holder`, else you when you hold the card,
+  else the only holder. It returns the card to options when no named holder remains, and records
+  the continuation location in Notes.
 - Old `area/...` tags stay on existing cards. The board hides them, and Tags… leaves them out.
 - Add or remove a free tag with `wi tag <ref> <tag> [--off]`. It refuses old `area/` tags.
 - Run `wi validate` after a batch of writes. Exit 0 is clean. Exit 1 lists what broke.
@@ -197,9 +202,9 @@ with no writer name.
 A role is a tag such as `role/checker` on your card. A note that is not a card and carries the
 same tag is its procedure: `wi show <card> --json` lists it under `procedures`. Read and follow it.
 Roles do not pass down from a parent, and a card with no role tag has no procedure beyond this
-section. `wi delegate --role <name>` and `wi tag <ref> role/<name>` add one.
+section. `wi assign --role <name>` and `wi tag <ref> role/<name>` add one.
 
-1. Claim the card: `wi claim <card>`. Your claim names you as holder and moves it to doing. Read
+1. Claim the card: `wi claim <card>`. Your claim adds you to the holders and moves it to doing. Read
    its brief with `wi show <card> --json`, and its open children.
 2. Split it before you start when it holds more than one deliverable. Make each step a child with
    a full brief: `wi new "<title>" --parent <card> --objective ... --criteria ...`. Set

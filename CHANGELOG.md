@@ -45,6 +45,18 @@ the agent notes in your vault.
   `Approved by` or `Sent back by` note. A script that read those notes, and a dashboard that
   wrote them, must use the wait instead
   ([0082](docs/adr/0082-review-is-a-wait-on-a-person.md)).
+- `wi delegate` is renamed `wi assign`, and a card can have several holders. `holder` is one name
+  or a list; `wi` writes a plain value for one name, and old cards and the old `agent` key still
+  read. `wi assign <ref> --to <person|agent>` adds a holder, and `--off` removes one. `wi delegate`
+  is retired: it prints `wi assign` and exits 0. `wi claim` starts a card with no holder, a card
+  that holds `agent`, or a card that lists the claimant; a second agent needs
+  `wi assign <ref> --to agent` first, and its claim replaces `agent` with its name. `wi release`
+  removes one holder: `--holder`, else `WI_AGENT` when it holds the card, else the only holder; the
+  card stays where it is while another named holder remains. `wi agents` counts each agent on a
+  doing card, so one card can use several places of `maxAgents`. `wi ready` treats a card with any
+  holder but `agent` as taken. **Assign to…** replaces **Delegate to…** in the card menu, and
+  **Unassign <name>** removes a holder. Replace `wi delegate` in your role and Dispatching notes
+  ([0083](docs/adr/0083-assign-and-several-holders.md)).
 
 ### Added
 
@@ -67,6 +79,13 @@ the agent notes in your vault.
 
 ### Changed
 
+- **Breaking:** `holder` in JSON is a list. `wi show --json` and `wi ready --json` give `holder`
+  as a list of names, empty for none, in place of a string or `null`. `wi claim`, `wi release` and
+  `wi assign` with `--json` give `name`, the holder they added or removed, and `holder`, the list
+  after the write. A script or dashboard that reads `holder` as a string must read a list
+  ([0083](docs/adr/0083-assign-and-several-holders.md)).
+- The card face shows the first holder's initial and `+N` for the others. Hover over it, or open
+  the card menu, for every name. The card's detail strip lists every holder.
 - `wi depend <ref> --on` takes a person note as well as a card. **Waits on…** lists people and
   cards. `wi show --json` lists the people a card waits on in `personDependencies`, and
   `wi children --json` lists them in `waits_on_people`. `wi validate` accepts a link to a person

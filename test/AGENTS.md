@@ -28,16 +28,17 @@ Change only the key you mean to change.
 The valid statuses are `backlog`, `options`, `doing`, and `done`. A root has no status.
 `prev_status` stores the status to restore when an item is unticked from done.
 
-A dispatcher assigns a card with `wi claim <ref> --holder <name>`. The command records the holder
-and doing status in one file write. If that worker stops, its dispatcher runs `wi release` with
-`--reason <text>` and optionally `--where <branch-or-path>`. Release clears the holder, returns
-the card to options, and adds a dated line to Notes so the next worker can continue.
+A dispatcher assigns a card with `wi claim <ref> --holder <name>`. The command adds the holder
+and sets the doing status in one file write. If that worker stops, its dispatcher runs `wi release`
+with `--reason <text>` and optionally `--where <branch-or-path>`. Release removes one holder,
+returns the card to options when no named holder remains, and adds a dated line to Notes so the
+next worker can continue.
 
-`wi delegate <ref> --to <person|agent>` sets the card's `holder` and nothing else. The status
-stays. `--to agent` writes `holder: agent`, which asks any agent to take the card. A card given to
-a person with `wi delegate <ref> --to <name>` needs a note with `type: person`. `wi` starts no
-agent. Start a worker with your harness's own tools, such as a subagent or a background task. The
-worker then runs `wi claim <ref>`.
+A card's `holder` is one name or a list. `wi assign <ref> --to <person|agent>` adds one holder and
+nothing else. The status stays. `--to agent` adds `agent`, which asks any agent to take the card.
+A person added with `wi assign <ref> --to <name>` needs a note with `type: person`. `--off` removes
+a holder. `wi` starts no agent. Start a worker with your harness's own tools, such as a subagent or
+a background task. The worker then runs `wi claim <ref>`.
 
 ## Identity
 

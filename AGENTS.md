@@ -5,7 +5,7 @@ writes them. Every work item is one Markdown file.
 
 **Markdown is canonical. The plugin is a view, never the database.**
 
-Every feature is optional. Roles, reviews and delegation are tools, not steps. The plugin stays
+Every feature is optional. Roles, reviews and assignment are tools, not steps. The plugin stays
 small: an extra feature goes to a companion plugin or stays a `wi` command.
 
 ## Use it from your own agent or dashboard

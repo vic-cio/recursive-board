@@ -1,5 +1,6 @@
 ---
-status: accepted
+status: superseded
+superseded_by: 0083-assign-and-several-holders.md
 amends: docs/adr/0034-agent-limit.md (who counts), docs/adr/0042-creator-and-role.md (the full list of person notes for delegation)
 amended_by: 0061-holder-names-who-does-the-work.md (the field is `holder`; delegating names the holder only), 0063-wi-starts-no-agents.md (wi no longer starts a harness), 0072-the-dashboard-is-a-separate-example-plugin.md (the dashboard is a separate example plugin)
 ---

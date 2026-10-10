@@ -1,7 +1,7 @@
 ---
 status: accepted
 amends: docs/adr/0034-agent-limit.md (the count), docs/adr/0038-nested-claims.md (the count), docs/adr/0040-dashboard-view.md (the Agents panel)
-amended_by: 0072-the-dashboard-is-a-separate-example-plugin.md (the rule lives in src/shared/agents.ts)
+amended_by: 0072-the-dashboard-is-a-separate-example-plugin.md (the rule lives in src/shared/agents.ts), 0083-assign-and-several-holders.md (each agent on a card counts)
 ---
 # Count only working agents
 
@@ -76,3 +76,6 @@ The rule lives in `src/shared/agents.ts` (`waitsOnChildren`, `activeAgents`), an
 reports it ([0072](0072-the-dashboard-is-a-separate-example-plugin.md)). `wi claim` warns from the
 same rule. The dashboard rows that marked a waiting claim moved to the example dashboard plugin,
 which keeps its own copy of the rule.
+
+[0083](0083-assign-and-several-holders.md) lets a card have several holders. Each agent on a
+doing card counts, so one card can use several places of the limit. A person and `agent` add none.
