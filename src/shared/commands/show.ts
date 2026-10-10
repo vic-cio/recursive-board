@@ -1,6 +1,6 @@
 /** A complete read of one card for agents. This command never changes a vault file. */
 import { getList } from '../frontmatter.ts'
-import { holdersIn } from '../holder.ts'
+import { assigneesIn } from '../assignee.ts'
 import { bodyOf, listItems, section } from '../sections.ts'
 import { dependenciesOf, titleOf } from '../item-dependencies.ts'
 import { procedureNotes, roleTags, type TaggedNote } from '../role-tags.ts'
@@ -70,7 +70,7 @@ export function showCard(vault: Vault, ref: string, tagged: readonly TaggedNote[
     ...identity(item),
     status: item.status ?? null,
     owner: stringField(item, 'owner'),
-    holder: holdersIn(item.text),
+    assignees: assigneesIn(item.text),
     roles,
     procedures: roles.map((tag) => ({ tag, notes: procedureNotes(tag, tagged) })),
     creator: stringField(item, 'creator'),

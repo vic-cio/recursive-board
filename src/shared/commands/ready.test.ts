@@ -57,19 +57,21 @@ test('readyCards lists the requests for any agent first, and excludes a card som
       parent: '"[[Main]]"', status: 'options', ...fields }))
   fixture.write('Boards/Main.md', item({ type: 'work-item', id: 'wi-main', title: 'Main' }))
   write('High', 'wi-high', { priority: 1 })
-  write('Request', 'wi-request', { priority: 5, holder: 'agent' })
+  write('Request', 'wi-request', { priority: 5, assignee: 'agent' })
   write('Old request', 'wi-old-request', { agent: 'agent' })
-  write('Held', 'wi-held', { holder: 'Ana' })
-  write('Asked in backlog', 'wi-backlog', { status: 'backlog', holder: 'agent' })
-  write('Held and asked', 'wi-held-asked', { holder: '[Ana, agent]' })
+  write('Held', 'wi-held', { assignee: 'Ana' })
+  write('Asked in backlog', 'wi-backlog', { status: 'backlog', assignee: 'agent' })
+  write('Held and asked', 'wi-held-asked', { assignee: '[Ana, agent]' })
+  write('Old held', 'wi-old-held', { holder: 'Bo' })
 
   const result = readyCards(await loadVault(fixture.root))
-  assert.deepEqual(result.ready.map((card) => [card.id, card.holder, card.request]), [
+  assert.deepEqual(result.ready.map((card) => [card.id, card.assignees, card.request]), [
     ['wi-request', ['agent'], true], ['wi-old-request', ['agent'], true], ['wi-high', [], false],
   ])
-  assert.deepEqual(result.excluded.map((card) => [card.id, card.holder, card.reasons]), [
+  assert.deepEqual(result.excluded.map((card) => [card.id, card.assignees, card.reasons]), [
     ['wi-held', ['Ana'], ['claimed']], ['wi-held-asked', ['Ana', 'agent'], ['claimed']],
-  ], 'a card with any holder but agent is taken')
+    ['wi-old-held', ['Bo'], ['claimed']],
+  ], 'a card with any assignee but agent is taken, through the new key or the old one')
 })
 
 test('readyCards permits a nested claim by the agent already working on its child', async () => {
@@ -87,7 +89,7 @@ test('readyCards permits a nested claim by the agent already working on its chil
   fixture.write('Boards/Child.md', item({ type: 'work-item', id: 'wi-child', title: 'Child',
     status: 'doing', parent: '"[[Board]]"', holder: '[Victor, codex]' }))
   const shared = await loadVault(fixture.root)
-  assert.deepEqual(readyCards(shared, { agent: 'codex' }).ready.map((card) => card.id), ['wi-board'], 'codex is one of the child\'s holders')
+  assert.deepEqual(readyCards(shared, { agent: 'codex' }).ready.map((card) => card.id), ['wi-board'], 'codex is one of the child\'s assignees')
   assert.deepEqual(readyCards(shared, { agent: 'luna' }).ready, [])
 })
 

@@ -185,23 +185,23 @@ test('two processes that both find a stale lock never both hold it', async () =>
   const old = new Date(Date.now() - 60_000)
   utimesSync(lock, old, old)
 
-  let holders = 0
+  let inside = 0
   let most = 0
-  const enter = () => { holders++; most = Math.max(most, holders) }
+  const enter = () => { inside++; most = Math.max(most, inside) }
   let bHolds!: () => void
   const bHolding = new Promise<void>((resolve) => { bHolds = resolve })
 
   // A judges the lock stale, then waits until B has taken the lock over and holds it.
-  const a = withFileLock(target, async () => { enter(); holders-- }, { afterStaleCheck: () => bHolding })
+  const a = withFileLock(target, async () => { enter(); inside-- }, { afterStaleCheck: () => bHolding })
   const b = withFileLock(target, async () => {
     enter()
     bHolds()
     // A acts on its stale judgement while B holds the lock.
     await sleep(100)
-    holders--
+    inside--
   })
   await Promise.all([a, b])
-  assert.equal(most, 1, 'the two holders never overlapped')
+  assert.equal(most, 1, 'the two lock takers never overlapped')
   assert.equal(existsSync(lock), false, 'the lock is gone when both are done')
 })
 
@@ -212,15 +212,15 @@ test('a fresh lock that reuses the stale lock\'s inode is a different lock', () 
   assert.equal(isSameLock(stale, { ...stale }), true)
 })
 
-test('a holder whose lock was taken over as stale does not remove the new holder\'s lock', async () => {
+test('a process whose lock was taken over as stale does not remove the new lock', async () => {
   fixture = makeVault()
   const target = join(fixture.root, 'Boards/Locked.md')
   const lock = lockPathFor(target)
   await withFileLock(target, async () => {
     // Another process judged this lock stale and took it over.
     rmSync(lock, { force: true })
-    writeFileSync(lock, 'another holder\n')
+    writeFileSync(lock, 'another process\n')
   })
-  assert.equal(readFileSync(lock, 'utf8'), 'another holder\n')
+  assert.equal(readFileSync(lock, 'utf8'), 'another process\n')
   rmSync(lock, { force: true })
 })

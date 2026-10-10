@@ -28,7 +28,7 @@ test('showCard returns the card, its brief, ancestry, dependencies, and children
 
   const shown = showCard(await loadVault(fixture.root), 'wi-ship')
   assert.equal(shown.id, 'wi-ship')
-  assert.deepEqual(shown.holder, [], 'no holder is an empty list')
+  assert.deepEqual(shown.assignees, [], 'no assignee is an empty list')
   assert.equal(shown.parent?.id, 'wi-root')
   assert.deepEqual(shown.ancestry.map((entry) => entry.id), ['wi-root'])
   assert.deepEqual(shown.dependencies.map((entry) => [entry.id, entry.satisfied]), [['wi-build', false]])
@@ -36,8 +36,9 @@ test('showCard returns the card, its brief, ancestry, dependencies, and children
 
   const build = showCard(await loadVault(fixture.root), 'wi-build')
   assert.equal(build.owner, 'Victor')
-  assert.deepEqual(build.holder, ['codex'], 'an old card\'s agent is its holder, in a list')
+  assert.deepEqual(build.assignees, ['codex'], 'an old card\'s agent is its assignee, in a list')
   assert.equal('agent' in build, false)
+  assert.equal('holder' in build, false)
   assert.equal(build.priority, 2)
   assert.equal(build.due, '2026-10-03')
   assert.equal(build.objective, 'Build the app.')
@@ -108,14 +109,18 @@ test('showCard names the procedure notes for each role tag, from the tagged note
   assert.deepEqual(showCard(vault, 'Tagged').procedures.map((role) => role.notes), [[], []])
 })
 
-test('showCard gives several holders as a list, from a block list or a flow list', async () => {
+test('showCard gives several assignees as a list, from a block list or a flow list', async () => {
   fixture = makeVault()
   fixture.write('Boards/Main.md', item({ type: 'work-item', id: 'wi-root', title: 'Main' }))
   fixture.write('Boards/Pair.md', item({ type: 'work-item', id: 'wi-pair', title: 'Pair', status: 'doing', parent: '"[[Main]]"',
-    holder: '[Victor, w1]' }))
+    assignee: '[Victor, w1]' }))
+  fixture.write('Boards/Old.md', item({ type: 'work-item', id: 'wi-old', title: 'Old', status: 'doing', parent: '"[[Main]]"',
+    holder: 'Bo' }))
   fixture.write('Boards/Trio.md', '---\ntype: work-item\nid: wi-trio\ntitle: Trio\nstatus: doing\nparent: "[[Main]]"\n' +
-    'holder:\n  - Victor\n  - w1\n  - agent\n---\n')
+    'assignee:\n  - Victor\n  - w1\n  - agent\n---\n')
   const vault = await loadVault(fixture.root)
-  assert.deepEqual(showCard(vault, 'wi-pair').holder, ['Victor', 'w1'])
-  assert.deepEqual(showCard(vault, 'wi-trio').holder, ['Victor', 'w1', 'agent'])
+  assert.deepEqual(showCard(vault, 'wi-pair').assignees, ['Victor', 'w1'])
+  assert.deepEqual(showCard(vault, 'wi-old').assignees, ['Bo'], 'an old holder key still assigns the card')
+  assert.deepEqual(showCard(vault, 'wi-trio').assignees, ['Victor', 'w1', 'agent'])
+  assert.equal('holder' in showCard(vault, 'wi-pair'), false, 'no JSON result carries holder')
 })

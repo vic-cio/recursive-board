@@ -8,7 +8,7 @@
  * This module imports nothing from Node, so the plugin bundle can carry it to iOS.
  */
 import { formatScalar, type Scalar } from './frontmatter.ts'
-import { isAnyAgent } from './holder.ts'
+import { isAnyAgent } from './assignee.ts'
 import { WORK_ITEM_TYPE, formatWikilink, type Status } from './schema.ts'
 import { renderBody, requireTemplate, type Brief } from './templates.ts'
 
@@ -19,7 +19,7 @@ interface NewWorkItemFields {
   parentStem: string
   owner?: string | undefined
   /** The people and agents who do the work (docs/adr/0083-assign-and-several-holders.md). */
-  holders?: readonly string[] | undefined
+  assignees?: readonly string[] | undefined
   /** Links to a person or role note (docs/adr/0042-creator-and-role.md). */
   creator?: string | undefined
   creatorModel?: string | undefined
@@ -40,20 +40,20 @@ export type NewWorkItem = NewWorkItemFields & (
 )
 
 /**
- * New children do not inherit owner. The holders follow active work: they are inherited for doing
- * children, while an explicit owner or holder remains an intentional override. A request for any
- * agent (`holder: agent`) asks for its own card only, so it is not inherited.
+ * New children do not inherit owner. The assignees follow active work: they are inherited for doing
+ * children, while an explicit owner or assignee remains an intentional override. A request for any
+ * agent (`assignee: agent`) asks for its own card only, so it is not inherited.
  */
 export function inheritedChildFields(
-  parent: Pick<NewWorkItemFields, 'owner' | 'holders'>,
+  parent: Pick<NewWorkItemFields, 'owner' | 'assignees'>,
   status: Status | undefined,
-  overrides: Pick<NewWorkItemFields, 'owner' | 'holders'> = {},
-): Pick<NewWorkItemFields, 'owner' | 'holders'> {
-  const named = (parent.holders ?? []).filter((name) => !isAnyAgent(name))
+  overrides: Pick<NewWorkItemFields, 'owner' | 'assignees'> = {},
+): Pick<NewWorkItemFields, 'owner' | 'assignees'> {
+  const named = (parent.assignees ?? []).filter((name) => !isAnyAgent(name))
   const inherited = status === 'doing' && named.length > 0 ? named : undefined
   return {
     owner: overrides.owner,
-    holders: overrides.holders ?? inherited,
+    assignees: overrides.assignees ?? inherited,
   }
 }
 
@@ -84,9 +84,9 @@ export function renderWorkItem(item: NewWorkItem, extraSections: readonly string
   if (item.area) fields.push(['area', true])
   fields.push(['parent', formatWikilink(item.parentStem)])
   if (item.owner !== undefined && item.owner !== '') fields.push(['owner', item.owner])
-  // One holder is a plain value, so a card with one holder reads as it always did.
-  const holders = (item.holders ?? []).filter((name) => name !== '')
-  if (holders.length > 0) fields.push(['holder', holders.length === 1 ? holders[0]! : holders])
+  // One assignee is a plain value, so a card with one assignee reads as it always did.
+  const assignees = (item.assignees ?? []).filter((name) => name !== '')
+  if (assignees.length > 0) fields.push(['assignee', assignees.length === 1 ? assignees[0]! : assignees])
   if (item.role !== undefined && item.role !== '') fields.push(['role', item.role])
   if (item.creator !== undefined && item.creator !== '') fields.push(['creator', item.creator])
   if (item.creatorModel !== undefined && item.creatorModel !== '') fields.push(['creator_model', item.creatorModel])

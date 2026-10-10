@@ -7,7 +7,7 @@
  * `vault.process`. This module imports nothing from Node.
  */
 import { parseFrontmatter } from './frontmatter.ts'
-import { holdersIn } from './holder.ts'
+import { assigneesIn } from './assignee.ts'
 import { isArea, isStatus, type Status } from './schema.ts'
 
 export interface CardState {
@@ -15,8 +15,8 @@ export interface CardState {
   prevStatus: Status | undefined
   /** True when the key is present, valid or not: a status move removes it either way. */
   hasPrevStatus: boolean
-  /** Who does the work: `holder`, or an old card's `agent`, as a list. A blank value is no holder. */
-  holders: string[]
+  /** Who does the work: `assignee`, else an old card's `holder` or `agent`, as a list. A blank value is no assignee. */
+  assignees: string[]
   archived: boolean
   board: boolean
   /** True when the card carries a `board` key, set or invalid. */
@@ -33,7 +33,7 @@ export function cardState(text: string): CardState {
     status: isStatus(status) ? status : undefined,
     prevStatus: isStatus(prev) ? prev : undefined,
     hasPrevStatus: fm?.has('prev_status') ?? false,
-    holders: holdersIn(text),
+    assignees: assigneesIn(text),
     archived: get('archived') === true,
     board: get('board') === true,
     hasBoardKey: fm?.has('board') ?? false,

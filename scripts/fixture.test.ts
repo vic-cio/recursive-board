@@ -7,7 +7,7 @@ import { generate, generateReview, main, writeFixture, writeReview } from './fix
 import { loadVault } from '../src/cli/vault.ts'
 import { validate } from '../src/shared/commands/validate.ts'
 import { getList, parseFrontmatter } from '../src/shared/frontmatter.ts'
-import { holdersIn } from '../src/shared/holder.ts'
+import { assigneesIn } from '../src/shared/assignee.ts'
 import { dependenciesOf } from '../src/shared/item-dependencies.ts'
 import { toColumns } from '../src/plugin/index.ts'
 import { makeVault, type Fixture } from '../src/cli/test-helpers.ts'
@@ -133,10 +133,10 @@ test('the review set has every kind of card the board UI needs checked', async (
   const vault = await reviewed()
   const cards = vault.items.filter((i) => i.parent !== null)
   const waits = cards.map((i) => ({ title: i.title, ...dependenciesOf(vault, i) }))
-  const holders = cards.map((i) => ({ title: i.title, holders: holdersIn(i.text) }))
-  assert.ok(holders.some((h) => h.holders.length === 2), 'a card with two holders')
-  assert.ok(holders.some((h) => h.holders.length === 1 && h.holders[0] === 'agent'), 'a card for any agent')
-  assert.ok(holders.some((h) => h.holders.length === 1 && h.holders[0] === 'claude'), 'a card with one holder')
+  const assigned = cards.map((i) => ({ title: i.title, assignees: assigneesIn(i.text) }))
+  assert.ok(assigned.some((h) => h.assignees.length === 2), 'a card with two assignees')
+  assert.ok(assigned.some((h) => h.assignees.length === 1 && h.assignees[0] === 'agent'), 'a card for any agent')
+  assert.ok(assigned.some((h) => h.assignees.length === 1 && h.assignees[0] === 'claude'), 'a card with one assignee')
   assert.ok(waits.some((w) => w.people.length > 0 && w.resolved.length === 0), 'a card that waits on a person')
   assert.ok(waits.some((w) => w.resolved.length > 0 && w.people.length === 0), 'a card that waits on a card')
   assert.ok(waits.some((w) => w.resolved.length > 0 && w.people.length > 0), 'a card that waits on both')

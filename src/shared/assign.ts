@@ -2,8 +2,8 @@
  * Assigning a card to a person or to any agent (docs/adr/0083-assign-and-several-holders.md,
  * docs/adr/0063-wi-starts-no-agents.md).
  *
- * Assigning adds one name to the card's holders and changes nothing else: the status stays, and
- * no note is written. `--to agent` adds the reserved holder `agent`, which asks any agent; the agent
+ * Assigning adds one name to the card's assignees and changes nothing else: the status stays, and
+ * no note is written. `--to agent` adds the reserved assignee `agent`, which asks any agent; the agent
  * that takes it claims it by its own name. wi starts no agent: each harness starts its own with its
  * own tools. Unassigning removes one name, again with no other change. `wi agents` tells a person
  * from an agent by a note with `type: person`. This module imports nothing from Node.
@@ -11,7 +11,7 @@
 import { PERSON_TYPE } from './authorship.ts'
 import { cardState } from './card-state.ts'
 import type { Edit } from './edits.ts'
-import { ANY_AGENT, holds, isAnyAgent, sameName, setHoldersEdits } from './holder.ts'
+import { ANY_AGENT, holds, isAnyAgent, sameName, setAssigneesEdits } from './assignee.ts'
 
 /** A Markdown note by its vault-relative path, with its frontmatter `type`. */
 export interface TypedNote {
@@ -39,7 +39,7 @@ export type AssignTarget =
 
 /**
  * What `--to` names. `agent` asks any agent; a person note of that name is refused, because the
- * name is reserved. Any other name must be a person note, because a holder with no note counts as
+ * name is reserved. Any other name must be a person note, because an assignee with no note counts as
  * an agent in `wi agents`. An agent takes a card with `wi claim`, by its own name.
  */
 export function assignTarget(to: string, people: Map<string, string>): AssignTarget {
@@ -48,7 +48,7 @@ export function assignTarget(to: string, people: Map<string, string>): AssignTar
   if (isAnyAgent(name)) {
     const note = people.get(ANY_AGENT)
     if (note !== undefined) {
-      throw new Error(`there is a person note called ${note}, and agent is the reserved holder that means any agent. Rename the note.`)
+      throw new Error(`there is a person note called ${note}, and agent is the reserved name that means any agent. Rename the note.`)
     }
     return { kind: 'any' }
   }
@@ -59,20 +59,20 @@ export function assignTarget(to: string, people: Map<string, string>): AssignTar
 }
 
 /**
- * Assigning a card: the name joins its holders, and nothing else changes. The status stays: the
- * assigner moves the card if it must move, or the holder does when they start. A done card is
- * refused. Null when the card has this holder already.
+ * Assigning a card: the name joins its assignees, and nothing else changes. The status stays: the
+ * assigner moves the card if it must move, or the assignee does when they start. A done card is
+ * refused. Null when the card has this assignee already.
  */
-export function assignEdits(text: string, holder: string): Edit[] | null {
+export function assignEdits(text: string, assignee: string): Edit[] | null {
   const state = cardState(text)
   if (state.status === 'done') throw new Error('a done card cannot be assigned.')
-  if (holds(state.holders, holder)) return null
-  return setHoldersEdits([...state.holders, holder])
+  if (holds(state.assignees, assignee)) return null
+  return setAssigneesEdits([...state.assignees, assignee])
 }
 
-/** Unassigning: the name leaves the holders, and nothing else changes. Null when it is not there. */
-export function unassignEdits(text: string, holder: string): Edit[] | null {
-  const { holders } = cardState(text)
-  if (!holds(holders, holder)) return null
-  return setHoldersEdits(holders.filter((name) => !sameName(name, holder)))
+/** Unassigning: the name leaves the assignees, and nothing else changes. Null when it is not there. */
+export function unassignEdits(text: string, assignee: string): Edit[] | null {
+  const { assignees } = cardState(text)
+  if (!holds(assignees, assignee)) return null
+  return setAssigneesEdits(assignees.filter((name) => !sameName(name, assignee)))
 }

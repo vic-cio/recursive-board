@@ -3,47 +3,48 @@ import assert from 'node:assert/strict'
 
 import { inheritedChildFields, renderWorkItem } from './work-item.ts'
 
-test('a child does not inherit owner, but doing children inherit the holders', () => {
+test('a child does not inherit owner, but doing children inherit the assignees', () => {
   assert.deepEqual(
-    inheritedChildFields({ owner: 'sam', holders: ['codex'] }, 'doing'),
-    { owner: undefined, holders: ['codex'] },
+    inheritedChildFields({ owner: 'sam', assignees: ['codex'] }, 'doing'),
+    { owner: undefined, assignees: ['codex'] },
   )
   assert.deepEqual(
-    inheritedChildFields({ owner: 'sam', holders: ['Victor', 'codex'] }, 'doing'),
-    { owner: undefined, holders: ['Victor', 'codex'] },
+    inheritedChildFields({ owner: 'sam', assignees: ['Victor', 'codex'] }, 'doing'),
+    { owner: undefined, assignees: ['Victor', 'codex'] },
   )
   assert.deepEqual(
-    inheritedChildFields({ owner: 'sam', holders: ['codex'] }, 'backlog'),
-    { owner: undefined, holders: undefined },
+    inheritedChildFields({ owner: 'sam', assignees: ['codex'] }, 'backlog'),
+    { owner: undefined, assignees: undefined },
   )
 })
 
 test('a request for any agent stays on its own card', () => {
-  assert.deepEqual(inheritedChildFields({ holders: ['agent'] }, 'doing'), { owner: undefined, holders: undefined })
-  assert.deepEqual(inheritedChildFields({ holders: ['Victor', 'agent'] }, 'doing'), { owner: undefined, holders: ['Victor'] })
-  assert.deepEqual(inheritedChildFields({}, 'options', { holders: ['agent'] }), { owner: undefined, holders: ['agent'] })
+  assert.deepEqual(inheritedChildFields({ assignees: ['agent'] }, 'doing'), { owner: undefined, assignees: undefined })
+  assert.deepEqual(inheritedChildFields({ assignees: ['Victor', 'agent'] }, 'doing'), { owner: undefined, assignees: ['Victor'] })
+  assert.deepEqual(inheritedChildFields({}, 'options', { assignees: ['agent'] }), { owner: undefined, assignees: ['agent'] })
 })
 
 test('an explicit owner remains on the child', () => {
   assert.deepEqual(
     inheritedChildFields({ owner: 'sam' }, 'backlog', { owner: 'lee' }),
-    { owner: 'lee', holders: undefined },
+    { owner: 'lee', assignees: undefined },
   )
 })
 
-test('a new card names its holder in holder, never in agent', () => {
+test('a new card names its assignee in assignee, never in holder or agent', () => {
   const text = renderWorkItem({
-    id: 'wi-a1', title: 'Price', parentStem: 'Main', status: 'doing', holders: ['codex-price'],
+    id: 'wi-a1', title: 'Price', parentStem: 'Main', status: 'doing', assignees: ['codex-price'],
     created: '2026-10-01', updated: '2026-10-01',
   })
-  assert.match(text, /^holder: codex-price$/m)
+  assert.match(text, /^assignee: codex-price$/m)
+  assert.doesNotMatch(text, /^holder:/m)
   assert.doesNotMatch(text, /^agent:/m)
 })
 
-test('a new card with several holders writes them as a block list', () => {
+test('a new card with several assignees writes them as a block list', () => {
   const text = renderWorkItem({
-    id: 'wi-a1', title: 'Price', parentStem: 'Main', status: 'doing', holders: ['Victor', 'codex-price'],
+    id: 'wi-a1', title: 'Price', parentStem: 'Main', status: 'doing', assignees: ['Victor', 'codex-price'],
     created: '2026-10-01', updated: '2026-10-01',
   })
-  assert.match(text, /^holder:\n {2}- Victor\n {2}- codex-price\ncreated: 2026-10-01$/m)
+  assert.match(text, /^assignee:\n {2}- Victor\n {2}- codex-price\ncreated: 2026-10-01$/m)
 })

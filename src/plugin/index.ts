@@ -16,7 +16,7 @@ import { isLegacyAreaTag } from '../shared/legacy-area-tag.ts'
 import { DEFAULT_VAULT_CONFIG, type VaultConfig } from '../shared/vault-config.ts'
 import { archiveOwner } from '../shared/archive.ts'
 import { displayName, PERSON_TYPE } from '../shared/authorship.ts'
-import { holdersOf } from '../shared/holder.ts'
+import { assigneesOf } from '../shared/assignee.ts'
 import { dependsOnValues, isOpenDependency, parseDependsOn } from '../shared/dependencies.ts'
 import {
   doneCutoff, isStatus, parseWikilink, STATUSES, WORK_ITEM_TYPE, type Status,
@@ -44,8 +44,8 @@ export interface WorkItemMeta {
   owner: string | undefined
   /** The note the owner links to, when it is a link that resolves. */
   ownerFile: TFile | null
-  /** The people and agents who do the work: `holder`, or an old card's `agent`, as a list. */
-  holders: string[]
+  /** The people and agents who do the work: `assignee`, else an old card's `holder` or `agent`, as a list. */
+  assignees: string[]
   /** The person or role that made the item, by name (docs/adr/0042-creator-and-role.md). */
   creator: string | undefined
   creatorFile: TFile | null
@@ -153,7 +153,7 @@ export class WorkItemIndex {
       updated: str(frontmatter['updated']),
       owner: displayName(frontmatter['owner']),
       ownerFile: this.linkedFile(frontmatter['owner'], file),
-      holders: holdersOf((key) => frontmatter[key]),
+      assignees: assigneesOf((key) => frontmatter[key]),
       creator: displayName(frontmatter['creator']),
       creatorFile: this.linkedFile(frontmatter['creator'], file),
       creatorModel: str(frontmatter['creator_model']),

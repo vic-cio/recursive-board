@@ -3,13 +3,13 @@
  *
  * This is the decomposition path: an agent that finds a work item too large creates children
  * rather than writing a plan into a chat transcript. It is also the board's add row (docs/adr/0017-inline-status-capture.md),
- * which is why a status can be given and why the holder follows the shared status rule.
+ * which is why a status can be given and why the assignee follows the shared status rule.
  */
 
 import { editItem } from '../edit-item.ts'
 import { isPathExists } from '../storage.ts'
 import { cardState } from '../card-state.ts'
-import { holdersIn } from '../holder.ts'
+import { assigneesIn } from '../assignee.ts'
 import { inheritedChildFields, renderWorkItem, type NewWorkItem } from '../work-item.ts'
 import { briefGaps, renderBody, requireTemplate, type Brief } from '../templates.ts'
 import { firstChildPromotion } from '../transitions.ts'
@@ -27,8 +27,8 @@ export interface NewOptions {
   parent?: string
   status?: Status
   owner?: string
-  /** The person or agent who does the work. `wi new --holder` sets it. */
-  holder?: string
+  /** The person or agent who does the work. `wi new --assignee` sets it. */
+  assignee?: string
   /** Free tags, such as a role tag `role/checker` (docs/adr/0062-role-tags.md). */
   tags?: string[]
   priority?: number
@@ -66,8 +66,8 @@ export async function createItem(vault: Vault, options: NewOptions): Promise<Cre
   if (!isStatus(status)) {
     throw new Error(`"${status}" is not a status. Use backlog, options, doing or done.`)
   }
-  if (template.area && options.holder?.trim()) {
-    throw new Error('areas cannot have a holder')
+  if (template.area && options.assignee?.trim()) {
+    throw new Error('areas cannot have an assignee')
   }
 
   const parent = vault.resolve(parentRef)
@@ -80,11 +80,11 @@ export async function createItem(vault: Vault, options: NewOptions): Promise<Cre
 
   const stamp = today(vault.seams.now())
   const inherited = inheritedChildFields({
-    holders: template.area ? undefined : holdersIn(parent.text),
+    assignees: template.area ? undefined : assigneesIn(parent.text),
   }, status, {
     owner: options.owner,
-    // An empty --holder gives the card no holder, so it inherits none.
-    holders: options.holder === undefined ? undefined : [options.holder.trim()].filter((name) => name !== ''),
+    // An empty --assignee gives the card no assignee, so it inherits none.
+    assignees: options.assignee === undefined ? undefined : [options.assignee.trim()].filter((name) => name !== ''),
   })
   const tags = newTags(options.tags ?? [])
   const render = (id: string): string => {
@@ -181,7 +181,8 @@ export const runNew: RunFunction = async (context, line) => {
     parent,
     ...(typeof values['status'] === 'string' ? { status: values['status'] as never } : {}),
     ...(typeof values['owner'] === 'string' ? { owner: values['owner'] } : {}),
-    ...(typeof values['holder'] === 'string' ? { holder: values['holder'] } : {}),
+    ...(typeof values['assignee'] === 'string' ? { assignee: values['assignee'] }
+      : typeof values['holder'] === 'string' ? { assignee: values['holder'] } : {}),
     ...(typeof values['template'] === 'string' ? { template: values['template'] } : {}),
     ...(priority !== undefined ? { priority } : {}),
     ...(Array.isArray(values['tag']) ? { tags: values['tag'] } : {}),

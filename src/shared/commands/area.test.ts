@@ -61,17 +61,17 @@ test('setArea converts an unclaimed card in doing and keeps its status', async (
   assert.equal(fm.get('status'), 'doing')
 })
 
-test('setArea refuses a card with a holder, read from an old card\'s agent', async () => {
+test('setArea refuses a card with an assignee, read from an old card\'s agent', async () => {
   fixture = seed({ agent: 'codex' })
   await assert.rejects(
     setArea(await loadVault(fixture.root), 'wi-0005', { off: false }),
-    /holder/i,
+    /assignee/i,
   )
 })
 
-test('setArea refuses a card with a list of holders', async () => {
+test('setArea refuses a card with a list of assignees, read from an old holder key', async () => {
   fixture = seed({ holder: '[Victor, codex]' })
-  await assert.rejects(setArea(await loadVault(fixture.root), 'wi-0005', { off: false }), /holders Victor, codex/)
+  await assert.rejects(setArea(await loadVault(fixture.root), 'wi-0005', { off: false }), /assignees Victor, codex/)
 })
 
 test('setArea converts an area back to a card without changing its status', async () => {

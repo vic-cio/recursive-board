@@ -30,17 +30,18 @@ function seed(): Fixture {
 }
 
 const card = (f: Fixture) => readFileSync(join(f.root, 'Boards/Price the job.md'), 'utf8')
-const strip = (t: string) => t.replace(/^(holder|updated): .*\n/gm, '')
+const strip = (t: string) => t.replace(/^(assignee|holder|agent|updated): .*\n/gm, '')
 
-test('assigning to a person only adds the holder the card: same status, no note', async () => {
+test('assigning to a person only adds the assignee to the card: same status, no note', async () => {
   const f = seed()
   const before = card(f)
   const result = await assign(await loadVault(f.root), 'wi-0004', { to: 'ana' })
   assert.equal(result.name, 'Ana')
   const text = card(f)
   assert.match(text, /^status: options$/m, 'a person chooses when to start')
-  assert.match(text, /^holder: Ana$/m)
-  assert.equal(strip(text), strip(before), 'the holder line (and the updated stamp) is the only change')
+  assert.match(text, /^assignee: Ana$/m)
+  assert.doesNotMatch(text, /^holder:/m)
+  assert.equal(strip(text), strip(before), 'the assignee line (and the updated stamp) is the only change')
 })
 
 test('assigning to a name with no person note writes nothing, harness names included', async () => {
@@ -60,43 +61,43 @@ test('a person is a note with type: person in any folder, not a note in People/'
   await assert.rejects(assign(vault, 'wi-0004', { to: 'Bo' }), /no person note called Bo/)
   const result = await assign(vault, 'wi-0004', { to: 'sam' })
   assert.equal(result.name, 'Sam')
-  assert.match(card(f), /^holder: Sam$/m)
+  assert.match(card(f), /^assignee: Sam$/m)
 })
 
-test('assigning to agent asks any agent: holder agent, same status, no note', async () => {
+test('assigning to agent asks any agent: assignee agent, same status, no note', async () => {
   const f = seed()
   const before = card(f)
   const result = await assign(await loadVault(f.root), 'wi-0004', { to: 'agent' })
   assert.equal(result.name, 'agent')
-  assert.match(card(f), /^holder: agent$/m)
+  assert.match(card(f), /^assignee: agent$/m)
   assert.equal(strip(card(f)), strip(before))
 })
 
-test('--role writes the holder and the role tag together', async () => {
+test('--role writes the assignee and the role tag together', async () => {
   const f = seed()
   await assign(await loadVault(f.root), 'wi-0004', { to: 'Ana', role: 'role/checker' })
-  assert.match(card(f), /^holder: Ana$/m)
+  assert.match(card(f), /^assignee: Ana$/m)
   assert.match(card(f), /^tags:\n {2}- role\/checker$/m)
   await assert.rejects(assign(await loadVault(f.root), 'wi-0004', { to: 'Ana', role: 'a.b' }), /not a tag/)
 })
 
-test('a second holder joins the first, and a person and an agent hold the card at once', async () => {
+test('a second assignee joins the first, and a person and an agent share the card at once', async () => {
   const f = seed()
   await assign(await loadVault(f.root), 'wi-0004', { to: 'Ana' })
   const result = await assign(await loadVault(f.root), 'wi-0004', { to: 'agent' })
-  assert.deepEqual(result.holders, ['Ana', 'agent'])
-  assert.match(card(f), /^holder:\n {2}- Ana\n {2}- agent$/m)
+  assert.deepEqual(result.assignees, ['Ana', 'agent'])
+  assert.match(card(f), /^assignee:\n {2}- Ana\n {2}- agent$/m)
   const again = await assign(await loadVault(f.root), 'wi-0004', { to: 'ana' })
   assert.equal(again.changed, false, 'a name already there writes nothing')
 })
 
 test('--off removes one name and leaves the status, with no person note needed', async () => {
   const f = seed()
-  f.write('Boards/Price the job.md', card(f).replace('status: options', 'status: doing\nholder:\n  - Ana\n  - w1'))
+  f.write('Boards/Price the job.md', card(f).replace('status: options', 'status: doing\nassignee:\n  - Ana\n  - w1'))
   const result = await assign(await loadVault(f.root), 'wi-0004', { to: 'w1', off: true })
-  assert.deepEqual(result.holders, ['Ana'])
+  assert.deepEqual(result.assignees, ['Ana'])
   assert.match(card(f), /^status: doing$/m)
-  assert.match(card(f), /^holder: Ana$/m)
+  assert.match(card(f), /^assignee: Ana$/m)
   const missing = await assign(await loadVault(f.root), 'wi-0004', { to: 'w1', off: true })
   assert.equal(missing.changed, false)
 })
@@ -123,7 +124,7 @@ function wi(args: string[], vault: string): { code: number; stdout: string; stde
   }
 }
 
-test('wi assign --to a person prints the holder', () => {
+test('wi assign --to a person prints the assignee', () => {
   const f = seed()
   const result = wi(['assign', 'Price the job', '--to', 'Ana'], f.root)
   assert.equal(result.code, 0, result.stderr)
@@ -135,7 +136,7 @@ test('wi assign --to agent asks any agent and prints it', () => {
   const result = wi(['assign', 'Price the job', '--to', 'agent'], f.root)
   assert.equal(result.code, 0, result.stderr)
   assert.match(result.stdout, /wi-0004.*options {2}\(any agent may take it\)/)
-  assert.match(card(f), /^holder: agent$/m)
+  assert.match(card(f), /^assignee: agent$/m)
 })
 
 test('wi assign refuses the retired launch flags and --reason with exit 2', () => {
@@ -156,19 +157,19 @@ test('wi assign refuses an unknown --to with exit 2 and writes nothing', () => {
   assert.equal(card(f), before)
 })
 
-test('wi assign --json gives the holders as a list, and --off removes one', () => {
+test('wi assign --json gives the assignees as a list, and --off removes one', () => {
   const f = seed()
   const added = wi(['assign', 'wi-0004', '--to', 'Ana', '--json'], f.root)
   assert.equal(added.code, 0, added.stderr)
   assert.deepEqual(JSON.parse(added.stdout), {
-    id: 'wi-0004', path: 'Boards/Price the job.md', name: 'Ana', holder: ['Ana'], added: true, changed: true,
+    id: 'wi-0004', path: 'Boards/Price the job.md', name: 'Ana', assignees: ['Ana'], added: true, changed: true,
   })
   const both = wi(['assign', 'wi-0004', '--to', 'agent'], f.root)
-  assert.match(both.stdout, /\(any agent may take it; holders: Ana, Agent\)/)
+  assert.match(both.stdout, /\(any agent may take it; assignees: Ana, Agent\)/)
   const off = wi(['assign', 'wi-0004', '--to', 'Ana', '--off'], f.root)
   assert.equal(off.code, 0, off.stderr)
-  assert.match(off.stdout, /\(unassigned Ana; holders: Agent\)/)
-  assert.match(card(f), /^holder: agent$/m)
+  assert.match(off.stdout, /\(unassigned Ana; assignees: Agent\)/)
+  assert.match(card(f), /^assignee: agent$/m)
 })
 
 test('wi delegate is retired: it exits 0, writes nothing and names wi assign', () => {

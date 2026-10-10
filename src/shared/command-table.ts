@@ -9,6 +9,7 @@ import { STATUSES } from './schema.ts'
 export const OPTIONS = {
   parent: { type: 'string' },
   to: { type: 'string' },
+  assignee: { type: 'string' },
   holder: { type: 'string' },
   role: { type: 'string' },
   tag: { type: 'string', multiple: true },
@@ -77,10 +78,10 @@ const ENTRIES: Entry[] = [
   { name: 'update', kind: 'install', writes: true, flags: ['from', 'dry-run', 'vault', 'json'],
     usage: ['wi update [--dry-run] [--from <version>] [--vault <path>] [--json]'] },
   { name: 'new', kind: 'vault', writes: true,
-    flags: ['parent', 'status', 'template', 'owner', 'holder', 'priority', 'objective', 'context', 'criteria',
+    flags: ['parent', 'status', 'template', 'owner', 'assignee', 'holder', 'priority', 'objective', 'context', 'criteria',
       'tag', 'strict', 'vault', 'json'],
     usage: [
-      'wi new <title> [--parent <ref>] [--status <s>] [--template <t>] [--owner <o>] [--holder <h>]',
+      'wi new <title> [--parent <ref>] [--status <s>] [--template <t>] [--owner <o>] [--assignee <a>]',
       '               [--priority <n>] [--objective <text>] [--context <text>]... [--criteria <text>]...',
       '               [--tag <tag>]... [--strict]',
     ] },
@@ -93,8 +94,8 @@ const ENTRIES: Entry[] = [
     usage: ['wi depend <ref> --on <ref|person> [--off]'] },
   { name: 'set', kind: 'vault', writes: true, flags: ['owner', 'role', 'vault', 'json'],
     usage: ['wi set <ref> [--owner <name>] [--role ""]'] },
-  { name: 'claim', kind: 'vault', writes: true, flags: ['holder', 'vault', 'json'],
-    usage: ['wi claim <ref> [--holder <name>]'] },
+  { name: 'claim', kind: 'vault', writes: true, flags: ['assignee', 'holder', 'vault', 'json'],
+    usage: ['wi claim <ref> [--assignee <name>]'] },
   { name: 'assign', kind: 'vault', writes: true, flags: ['to', 'role', 'off', 'vault', 'json'],
     usage: ['wi assign <ref> --to <person|agent> [--role <name>] [--off]'] },
   { name: 'delegate', kind: 'retired', writes: false, flags: ['to', 'role', 'vault', 'json'], usage: [] },
@@ -114,8 +115,8 @@ const ENTRIES: Entry[] = [
     usage: ['wi rm <ref> [--recursive] [--dry-run]'] },
   { name: 'children', kind: 'vault', writes: false, flags: ['status', 'tree', 'archived', 'vault', 'json'],
     usage: ['wi children [<ref>] [--status <s>] [--tree] [--archived]'] },
-  { name: 'ready', kind: 'vault', writes: false, flags: ['parent', 'holder', 'vault', 'json'],
-    usage: ['wi ready [--parent <ref>] [--holder <name>] [--json]'] },
+  { name: 'ready', kind: 'vault', writes: false, flags: ['parent', 'assignee', 'holder', 'vault', 'json'],
+    usage: ['wi ready [--parent <ref>] [--assignee <name>] [--json]'] },
   { name: 'show', kind: 'vault', writes: false, flags: ['vault', 'json'], usage: ['wi show <ref> [--json]'] },
   { name: 'validate', kind: 'vault', writes: false, flags: ['vault', 'json'], usage: ['wi validate'] },
   { name: 'retag', kind: 'retired', writes: false, flags: ['dry-run', 'vault', 'json'], usage: [] },
@@ -162,7 +163,7 @@ the new file gets the id's suffix; wi never writes over a file.` },
 "autoPromote": false in the board settings to turn this off. A root or an area is never changed.` },
   { about: ['new'], text: `\`wi new --tag <tag>\` adds a free tag; repeat it for more. A role is a tag such as role/checker:
 a note that is not a work item and carries the same tag is that role's procedure. Roles do not
-inherit. --holder names who does the work. --strict checks only the brief.` },
+inherit. --assignee names who does the work. The legacy --holder means the same. --strict checks only the brief.` },
   { about: ['tag'], text: `\`wi tag <ref> <tag>\` adds a free tag to a card, and --off removes it. Case and a leading # do not
 matter. It refuses old area/ tags, which remain on cards until the owner chooses a cleanup.` },
   { about: ['set'], text: `\`wi set\` changes a card's owner (an empty value removes it). --role "" removes an old role field;
@@ -183,28 +184,28 @@ unless you pass --recursive, because removing a parent leaves its children on no
 folder, because the index cannot read it and may be missing a work item. Let the sync
 client download the file, or delete the stray file, then retry. There is no --force.` },
   { about: ['archive'], text: '`wi archive` changes one flag. Descendants disappear with their parent at read time.' },
-  { about: ['area'], text: `\`wi area <ref>\` marks a card as an area and keeps its status. It refuses a card with a holder.
+  { about: ['area'], text: `\`wi area <ref>\` marks a card as an area and keeps its status. It refuses a card with an assignee.
 Use \`wi area <ref> --off\` to convert back without changing its status.` },
   { about: ['depend', 'claim', 'status', 'children'], text: `\`wi depend <ref> --on <ref>\` makes a card wait on another card; --off removes that. \`--on <person>\`
 makes it wait on a person (a note with type: person): that is how to ask for a review. \`wi claim\`
 and \`wi status <ref> doing\` refuse a card with an open wait. \`wi children\` marks it [waits on N].
 A person clears a wait with \`wi depend <ref> --on <person> --off\`: the card stays in doing with its
-holder. \`wi status <ref> done\` clears the card's waits on people: that is the approval.` },
+assignees. \`wi status <ref> done\` clears the card's waits on people: that is the approval.` },
   { about: ['status'], text: '`wi status <ref> done` names each card it unblocks. An archived card that is not done still blocks.' },
-  { about: ['ready', 'claim', 'assign'], text: `A card's holder field names the people and agents who do its work: one name, or a list.
-An old card's agent field is read as its holder. The holder value agent asks for any agent:
-\`wi ready\` lists a card that only agent holds, first, and a claim replaces agent with the
-claimant's name. \`wi ready\` treats a card with any other holder as taken.` },
-  { about: ['claim'], text: `\`wi claim\` adds the claimant to the holders and moves the card to doing. The claimant is
---holder, else WI_AGENT. It starts a card with no holder, a card that holds agent, or a card that
-lists the claimant. A card that others hold needs \`wi assign <ref> --to agent\` first. An agent may
-hold a card and its subtasks at once. A claim refuses a board with a child in doing that a
+  { about: ['ready', 'claim', 'assign'], text: `A card's assignee field names the people and agents who do its work: one name, or a list.
+An old card's holder or agent field is read as its assignees, in that order. The assignee value agent asks for any agent:
+\`wi ready\` lists a card that only agent is assigned to, first, and a claim replaces agent with the
+claimant's name. \`wi ready\` treats a card with any other assignee as taken.` },
+  { about: ['claim'], text: `\`wi claim\` adds the claimant to the assignees and moves the card to doing. The claimant is
+--assignee, else WI_AGENT. The legacy --holder means the same. It starts a card with no assignee, a card that agent is assigned to, or a card that
+lists the claimant. A card assigned to others needs \`wi assign <ref> --to agent\` first. An agent may
+share a card and its subtasks at once. A claim refuses a board with a child in doing that a
 different agent or a person works.` },
-  { about: ['release'], text: `\`wi release\` removes one holder and adds a note. It removes --holder, else WI_AGENT when that
-holds the card, else the only holder. The status stays while another named holder remains;
+  { about: ['release'], text: `\`wi release\` removes one assignee and adds a note. It removes --holder, else WI_AGENT when that
+is assigned to the card, else the only assignee. The status stays while another named assignee remains;
 otherwise the card moves to options.` },
-  { about: ['assign'], text: `\`wi assign\` adds one holder and nothing else: the status stays, and no note is written.
-\`--to <person>\` names a person (a note with type: person). \`--to agent\` adds holder agent, which
+  { about: ['assign'], text: `\`wi assign\` adds one assignee and nothing else: the status stays, and no note is written.
+\`--to <person>\` names a person (a note with type: person). \`--to agent\` assigns any agent, which
 asks any agent. wi starts no agent: start one with your harness's own tools, and it runs
 \`wi claim\` by its own name. --off removes the name and leaves the status. --role <name> adds the
 tag role/<name> to the card in the same write.` },

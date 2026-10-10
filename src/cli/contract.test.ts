@@ -61,7 +61,7 @@ const CLEAN: Record<string, string> = {
     created: '2026-09-01', updated: '2026-09-01',
   }),
   'Boards/Build server.md': item({
-    type: 'work-item', id: 'wi-0003', title: 'Build server', status: 'doing', parent: '"[[Launch]]"', holder: 'sp-bot',
+    type: 'work-item', id: 'wi-0003', title: 'Build server', status: 'doing', parent: '"[[Launch]]"', assignee: 'sp-bot',
     tags: '[role/coder]', created: '2026-09-01', updated: '2026-09-03',
   }, '## Objective\n\nServe the API.\n\n## Acceptance Criteria\n\n- It starts\n'),
   'Boards/Write docs.md': item({
@@ -73,7 +73,7 @@ const CLEAN: Record<string, string> = {
     created: '2026-09-01', updated: '2026-09-01',
   }),
   'Boards/Review copy.md': item({
-    type: 'work-item', id: 'wi-0006', title: 'Review copy', status: 'doing', parent: '"[[Launch]]"', holder: 'Victor',
+    type: 'work-item', id: 'wi-0006', title: 'Review copy', status: 'doing', parent: '"[[Launch]]"', assignee: 'Victor',
     created: '2026-09-01', updated: '2026-09-01',
   }),
   'People/Victor.md': item({ type: 'person' }),
@@ -193,14 +193,14 @@ const EDIT_CASES: ContractCase[] = [
     name: 'claim: an agent claims by WI_AGENT from the context env',
     files: EDIT_SEED, env: AGENT,
     argv: ['claim', 'Draft'],
-    expect: { code: 0, stdout: /^wi-0006 {2}Draft {2}options → doing {2}\(holder: sp-bot\)\n$/, files: { 'Boards/Draft.md': /^holder: sp-bot$/m } },
+    expect: { code: 0, stdout: /^wi-0006 {2}Draft {2}options → doing {2}\(assignee: sp-bot\)\n$/, files: { 'Boards/Draft.md': /^assignee: sp-bot$/m } },
   },
   {
-    name: 'claim: a claim beside a person names every holder',
+    name: 'claim: a claim beside a person names every assignee',
     files: { ...EDIT_SEED, 'Boards/Draft.md': item({ type: 'work-item', id: 'wi-0006', title: 'Draft', status: 'options', parent: '"[[Launch]]"', holder: '[Ana, agent]' }) },
     env: AGENT,
     argv: ['claim', 'Draft'],
-    expect: { code: 0, stdout: /^wi-0006 {2}Draft {2}options → doing {2}\(holders: Ana, sp-bot\)\n$/ },
+    expect: { code: 0, stdout: /^wi-0006 {2}Draft {2}options → doing {2}\(assignees: Ana, sp-bot\)\n$/ },
   },
   {
     name: 'claim: WI_MAX_AGENTS from the context env warns after the claim, from the vault read again',
@@ -211,14 +211,14 @@ const EDIT_CASES: ContractCase[] = [
   {
     name: 'claim: a card that waits on an open card is refused',
     files: EDIT_SEED,
-    argv: ['claim', 'Ship', '--holder', 'bot'],
+    argv: ['claim', 'Ship', '--assignee', 'bot'],
     expect: { code: 2, stderr: /^wi: Boards\/Ship\.md waits on/ },
   },
   {
-    name: 'claim: no holder and no WI_AGENT is a usage error',
+    name: 'claim: no assignee and no WI_AGENT is a usage error',
     files: EDIT_SEED,
     argv: ['claim', 'Draft'],
-    expect: { code: 2, stderr: /^wi: wi claim needs --holder <name>, or WI_AGENT set\.\n$/ },
+    expect: { code: 2, stderr: /^wi: wi claim needs --assignee <name>, or WI_AGENT set\.\n$/ },
   },
   {
     name: 'release: the hand-over note is signed from the context env',
@@ -230,42 +230,42 @@ const EDIT_CASES: ContractCase[] = [
     },
   },
   {
-    name: 'release: --holder names the one of several holders to remove',
+    name: 'release: --holder names the one of several assignees to remove',
     files: { ...EDIT_SEED, 'Boards/Held.md': item({ type: 'work-item', id: 'wi-0007', title: 'Held', status: 'doing', parent: '"[[Main]]"', holder: '[bot, Ana]' }, '## Notes\n') },
     argv: ['release', 'Held', '--reason', 'Done with my part.', '--holder', 'bot'],
-    expect: { code: 0, stdout: /^wi-0007 {2}Held {2}doing {2}\(released bot; holders: Ana\)\n$/, files: { 'Boards/Held.md': /^holder: Ana$/m } },
+    expect: { code: 0, stdout: /^wi-0007 {2}Held {2}doing {2}\(released bot; assignees: Ana\)\n$/, files: { 'Boards/Held.md': /^assignee: Ana$/m } },
   },
   {
-    name: 'release: a card with no holder is refused',
+    name: 'release: a card with no assignee is refused',
     files: EDIT_SEED,
     argv: ['release', 'Draft', '--reason', 'Nothing to do.', '--json'],
-    expect: { code: 2, stderr: /^wi: Boards\/Draft\.md has no holder to release\.\n$/ },
+    expect: { code: 2, stderr: /^wi: Boards\/Draft\.md has no assignee to release\.\n$/ },
   },
   {
     name: 'assign: to a person, with a role tag',
     files: EDIT_SEED,
     argv: ['assign', 'Draft', '--to', 'Ana', '--role', 'coder'],
-    expect: { code: 0, stdout: /^wi-0006 {2}Draft {2}options {2}\(assigned to Ana\)\n$/, files: { 'Boards/Draft.md': /^holder: Ana$[\s\S]*^tags:\n {2}- role\/coder$/m } },
+    expect: { code: 0, stdout: /^wi-0006 {2}Draft {2}options {2}\(assigned to Ana\)\n$/, files: { 'Boards/Draft.md': /^assignee: Ana$[\s\S]*^tags:\n {2}- role\/coder$/m } },
   },
   {
     name: 'assign: to any agent, --json',
     files: EDIT_SEED,
     argv: ['assign', 'Draft', '--to', 'agent', '--json'],
-    expect: { code: 0, stdout: /"holder": \[\n {4}"agent"\n {2}\]/ },
+    expect: { code: 0, stdout: /"assignees": \[\n {4}"agent"\n {2}\]/ },
   },
   {
-    name: 'assign: a second holder joins the first',
+    name: 'assign: a second assignee joins the first',
     files: EDIT_SEED,
     argv: ['assign', 'Held', '--to', 'Ana'],
-    expect: { code: 0, stdout: /^wi-0007 {2}Held {2}doing {2}\(assigned to Ana; holders: bot, Ana\)\n$/,
-      files: { 'Boards/Held.md': /^holder:\n {2}- bot\n {2}- Ana$/m } },
+    expect: { code: 0, stdout: /^wi-0007 {2}Held {2}doing {2}\(assigned to Ana; assignees: bot, Ana\)\n$/,
+      files: { 'Boards/Held.md': /^assignee:\n {2}- bot\n {2}- Ana$/m } },
   },
   {
-    name: 'assign: --off removes one holder and keeps the status',
+    name: 'assign: --off removes one assignee and keeps the status',
     files: EDIT_SEED,
     argv: ['assign', 'Held', '--to', 'bot', '--off'],
-    expect: { code: 0, stdout: /^wi-0007 {2}Held {2}doing {2}\(unassigned bot; holders: none\)\n$/,
-      files: { 'Boards/Held.md': /^(?![\s\S]*^holder:)[\s\S]*^status: doing$/m } },
+    expect: { code: 0, stdout: /^wi-0007 {2}Held {2}doing {2}\(unassigned bot; assignees: none\)\n$/,
+      files: { 'Boards/Held.md': /^(?![\s\S]*^assignee:)(?![\s\S]*^holder:)[\s\S]*^status: doing$/m } },
   },
   {
     name: 'assign: a name with no person note is refused',
@@ -288,7 +288,7 @@ const EDIT_CASES: ContractCase[] = [
   {
     name: 'claim: a card that waits on a person is refused',
     files: EDIT_SEED,
-    argv: ['claim', 'In review', '--holder', 'sp-bot'],
+    argv: ['claim', 'In review', '--assignee', 'sp-bot'],
     expect: { code: 2, stderr: /^wi: .*waits on Ana\./ },
   },
   {
@@ -451,7 +451,7 @@ const CASES: ContractCase[] = [
   {
     name: 'ready: --json gives the reasons, inside --parent',
     files: CLEAN,
-    argv: ['ready', '--parent', 'Main', '--holder', 'sp-bot', '--json'],
+    argv: ['ready', '--parent', 'Main', '--assignee', 'sp-bot', '--json'],
     expect: { code: 0, stdout: /"reasons": \[\n\s+"dependency"\n\s+\]/ },
   },
   {

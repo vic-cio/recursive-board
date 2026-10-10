@@ -42,7 +42,8 @@ test('createItem writes a file into Boards with the nine-field shape', async () 
   assert.match(String(fm.get('id')), /^wi-[a-z0-9]{4}$/)
   assert.equal(fm.get('title'), 'Streaming')
   assert.equal(fm.get('status'), 'backlog')
-  assert.equal(fm.has('holder'), false, 'default backlog items are not assigned to the parent holder')
+  assert.equal(fm.has('assignee'), false, 'default backlog items are not assigned to the parent assignee')
+  assert.equal(fm.has('holder'), false)
   assert.equal(fm.has('agent'), false)
   assert.equal(fm.get('parent'), '[[Build server]]')
   assert.match(String(fm.get('created')), /^\d{4}-\d{2}-\d{2}$/)
@@ -87,7 +88,7 @@ test('createItem with the area template accepts an explicit status', async () =>
   assert.equal(parseFrontmatter(readFileSync(join(fixture!.root, created.relPath), 'utf8'))!.get('status'), 'doing')
 })
 
-test('createItem does not inherit a holder for an area', async () => {
+test('createItem does not inherit an assignee for an area', async () => {
   fixture = seed()
   const created = await createItem(await reload(fixture), {
     title: 'Operations', parent: 'wi-0004', template: 'area', status: 'doing',
@@ -95,16 +96,17 @@ test('createItem does not inherit a holder for an area', async () => {
   const fm = parseFrontmatter(readFileSync(join(fixture!.root, created.relPath), 'utf8'))!
   assert.equal(fm.get('area'), true)
   assert.equal(fm.get('status'), 'doing')
+  assert.equal(fm.has('assignee'), false)
   assert.equal(fm.has('holder'), false)
 })
 
-test('createItem refuses an explicit holder for an area before writing', async () => {
+test('createItem refuses an explicit assignee for an area before writing', async () => {
   fixture = seed()
   await assert.rejects(
     createItem(await reload(fixture), {
-      title: 'Operations', parent: 'wi-0001', template: 'area', status: 'doing', holder: 'Alpha',
+      title: 'Operations', parent: 'wi-0001', template: 'area', status: 'doing', assignee: 'Alpha',
     }),
-    /areas cannot have a holder/i,
+    /areas cannot have an assignee/i,
   )
   assert.equal(existsSync(join(fixture.root, 'Boards', 'Operations.md')), false)
 })
@@ -128,7 +130,7 @@ test('createItem never writes board or prev_status on a fresh item', async () =>
   assert.equal(fm.has('prev_status'), false)
 })
 
-test('createItem does not inherit owner, and inherits the parent\'s old agent as holder only for doing', async (t) => {
+test('createItem does not inherit owner, and inherits the parent\'s old agent as assignee only for doing', async (t) => {
   for (const [status, expectedAgent] of [
     ['backlog', undefined],
     ['options', undefined],
@@ -142,7 +144,8 @@ test('createItem does not inherit owner, and inherits the parent\'s old agent as
       })
       const fm = parseFrontmatter(readFileSync(join(fixture!.root, created.relPath), 'utf8'))!
       assert.equal(fm.has('owner'), false)
-      assert.equal(fm.get('holder'), expectedAgent)
+      assert.equal(fm.get('assignee'), expectedAgent)
+      assert.equal(fm.has('holder'), false)
       assert.equal(fm.has('agent'), false)
       fixture.cleanup()
       fixture = undefined
@@ -150,19 +153,20 @@ test('createItem does not inherit owner, and inherits the parent\'s old agent as
   }
 })
 
-test('createItem gives a doing child every holder of a parent with several', async () => {
+test('createItem gives a doing child every assignee of a parent with several', async () => {
   fixture = seed()
   fixture.write('Boards/Pair.md', '---\ntype: work-item\nid: wi-pair\ntitle: Pair\nstatus: doing\nparent: "[[Main]]"\n' +
     'holder:\n  - Victor\n  - codex\n  - agent\n---\n')
   const created = await createItem(await reload(fixture), { title: 'Step', parent: 'wi-pair', status: 'doing' })
-  assert.match(readFileSync(join(fixture.root, created.relPath), 'utf8'), /^holder:\n {2}- Victor\n {2}- codex\n/m)
+  assert.match(readFileSync(join(fixture.root, created.relPath), 'utf8'), /^assignee:\n {2}- Victor\n {2}- codex\n/m)
 })
 
-test('createItem does not invent owner or holder when the parent has none', async () => {
+test('createItem does not invent owner or assignee when the parent has none', async () => {
   fixture = seed()
   const created = await createItem(await reload(fixture), { title: 'Top level', parent: 'wi-0001' })
   const fm = parseFrontmatter(readFileSync(join(fixture!.root, created.relPath), 'utf8'))!
   assert.equal(fm.has('owner'), false)
+  assert.equal(fm.has('assignee'), false)
   assert.equal(fm.has('holder'), false)
 })
 
@@ -174,12 +178,12 @@ test('an explicit owner beats the inherited one', async () => {
   assert.equal(parseFrontmatter(readFileSync(join(fixture!.root, created.relPath), 'utf8'))!.get('owner'), 'lee')
 })
 
-test('an explicit holder beats the status-based inheritance rule', async () => {
+test('an explicit assignee beats the status-based inheritance rule', async () => {
   fixture = seed()
   const created = await createItem(await reload(fixture), {
-    title: 'Streaming', parent: 'wi-0004', status: 'options', holder: 'lee',
+    title: 'Streaming', parent: 'wi-0004', status: 'options', assignee: 'lee',
   })
-  assert.equal(parseFrontmatter(readFileSync(join(fixture!.root, created.relPath), 'utf8'))!.get('holder'), 'lee')
+  assert.equal(parseFrontmatter(readFileSync(join(fixture!.root, created.relPath), 'utf8'))!.get('assignee'), 'lee')
 })
 
 test('createItem accepts a status, which is how the board add row works', async () => {

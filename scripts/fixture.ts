@@ -16,8 +16,8 @@
  * - two items titled "Authentication", so the second takes the id collision suffix;
  * - a title long enough to wrap;
  * - a done item outside the window, and one inside it;
- * - a waiting item, a held item, a card with two holders, a request for any agent, an old card
- *   that names its holder in agent, labels, priorities and two promoted boards;
+ * - a waiting item, an assigned item, a card with two assignees, a request for any agent, an old card
+ *   that names its assignee in agent, labels, priorities and two promoted boards;
  * - a backlog area, and live areas at two depths, for the root board's area chips.
  *
  * Usage: node scripts/fixture.ts [--vault test]
@@ -49,7 +49,7 @@ export interface Spec {
   updated: number
   owner?: string
   /** Who does the work. `agent` asks for any agent. */
-  holders?: string[]
+  assignees?: string[]
   priority?: number
   tags?: string[]
   board?: boolean
@@ -98,11 +98,11 @@ export const SPECS: Spec[] = [
     created: 30, updated: 5 },
   { id: 'wi-0006', title: 'Session management', parent: 'Build server', status: 'backlog',
     created: 30, updated: 4, dependsOn: 'Authentication',
-    // A card written before the rename to holder: its agent is read as its holder.
+    // A card written before the rename to assignee: its agent is read as its assignee.
     unknown: ['agent: codex'],
     body: OBJECTIVE('Track app sessions so a reconnect attaches rather than spawning a duplicate.') },
   { id: 'wi-0007', title: 'Streaming', parent: 'Build server', status: 'options', created: 30,
-    updated: 1, holders: ['codex'], priority: 1,
+    updated: 1, assignees: ['codex'], priority: 1,
     body: OBJECTIVE('Stream command and agent output to the app.') },
 
   { id: 'wi-0013', title: 'Marketing site', parent: 'Main', status: 'backlog', created: 10,
@@ -113,7 +113,7 @@ export const SPECS: Spec[] = [
     created: 10, updated: 2 },
   // A person and an agent hold it at once: the card face shows S+1.
   { id: 'wi-0015', title: 'Product pages', parent: 'Marketing site', status: 'doing',
-    created: 10, updated: 1, tags: ['design'], holders: ['sam', 'codex-pages'] },
+    created: 10, updated: 1, tags: ['design'], assignees: ['sam', 'codex-pages'] },
 
 
   { id: 'wi-0012', title: 'Improve knowledge system', parent: 'Main', status: 'backlog',
@@ -135,7 +135,7 @@ write untouched.
   { id: 'wi-0019', title: 'Review card text styles', parent: 'Main', status: 'backlog', created: 1,
     updated: 1, tags: ['design', 'plugin'] },
   { id: 'wi-0020', title: 'Explore a command wrapper', parent: 'Main', status: 'options', created: 1,
-    updated: 1, holders: ['agent'] },
+    updated: 1, assignees: ['agent'] },
   { id: 'wi-0021', title: 'Operations', parent: 'Main', area: true, status: 'backlog', created: 5, updated: 2,
     body: OBJECTIVE('An ongoing space for work that does not have a definition of done.') },
   // Live areas at two depths, so the root board draws a row of chips: one directly under the root,
@@ -185,7 +185,7 @@ function render(spec: Spec, parentStem: string, now: Date, stemOf: (title: strin
     title: spec.title,
     parentStem,
     owner: spec.owner,
-    holders: spec.holders,
+    assignees: spec.assignees,
     priority: spec.priority,
     created: daysAgo(spec.created, now),
     updated: daysAgo(spec.updated, now),
@@ -288,29 +288,29 @@ export const REVIEW_SPECS: Spec[] = [
   { id: 'wi-rv11', title: 'Waits on a card and a person', parent: 'Test board', status: 'options', ...NOW,
     dependsOn: ['Chips: none', 'Sam'] },
 
-  // Doing: every chip at once, then the holders.
+  // Doing: every chip at once, then the assignees.
   { id: 'wi-rv12', title: 'Chips: every kind at once', parent: 'Test board', status: 'doing', ...NOW,
-    owner: 'Victor', priority: 1, tags: ['bug', 'ui'], holders: ['claude', 'Victor'],
+    owner: 'Victor', priority: 1, tags: ['bug', 'ui'], assignees: ['claude', 'Victor'],
     dependsOn: 'Chips: none', board: true,
     brief: {
       objective: 'Check that every chip on this card face has the same height and that the row reads as one line.',
-      context: ['A child count, priority, a wait, an owner or holder initial, and two labels all show here.'],
+      context: ['A child count, priority, a wait, an owner or assignee initial, and two labels all show here.'],
       criteria: [
         'The child count and the hourglass chip are the same height.',
-        'The holder chip shows an initial and +1.',
+        'The assignee chip shows an initial and +1.',
       ],
     } },
   { id: 'wi-rv13', title: 'Chips-card child 1', parent: 'Chips: every kind at once', status: 'backlog', ...NOW },
   { id: 'wi-rv14', title: 'Chips-card child 2', parent: 'Chips: every kind at once', status: 'backlog', ...NOW },
   { id: 'wi-rv15', title: 'Chips-card child 3', parent: 'Chips: every kind at once', status: 'backlog', ...NOW },
   { id: 'wi-rv16', title: 'Assigned to an agent (claude)', parent: 'Test board', status: 'doing', ...NOW,
-    holders: ['claude'] },
+    assignees: ['claude'] },
   { id: 'wi-rv17', title: 'Assigned to a person (Victor)', parent: 'Test board', status: 'doing', ...NOW,
-    holders: ['Victor'] },
+    assignees: ['Victor'] },
   { id: 'wi-rv18', title: 'Assigned to two (claude and Victor)', parent: 'Test board', status: 'doing', ...NOW,
-    holders: ['claude', 'Victor'] },
+    assignees: ['claude', 'Victor'] },
   { id: 'wi-rv19', title: 'Assigned to any agent', parent: 'Test board', status: 'doing', ...NOW,
-    holders: ['agent'] },
+    assignees: ['agent'] },
 
   // Done.
   { id: 'wi-rv20', title: 'A finished card', parent: 'Test board', status: 'done', ...NOW },

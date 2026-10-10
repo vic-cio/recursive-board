@@ -78,7 +78,7 @@ test('mkdir makes every missing folder, and rename moves a file into it', async 
   }
 })
 
-test('withLock runs one holder of a key at a time', async () => {
+test('withLock runs one waiter for a key at a time', async () => {
   for (const [name, port] of ports()) {
     const order: string[] = []
     const hold = (tag: string) => port.withLock('.wi-test-lock', async () => {

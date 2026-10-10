@@ -106,7 +106,7 @@ async function takeOver(lock: string, judged: LockStamp): Promise<void> {
 
 /**
  * Releases the lock only when it still holds this process's token. A lock taken over as stale
- * belongs to its new holder, and removing it would let a third process in beside that holder.
+ * belongs to the process that took it, and removing it would let a third process in beside it.
  */
 async function release(lock: string, token: string): Promise<void> {
   const aside = `${lock}.release-${uniqueSuffix()}`

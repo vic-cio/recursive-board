@@ -26,9 +26,9 @@ export const RETIRED: Readonly<Record<string, RunFunction>> = {
     'The person sends the card back with wi depend <ref> --on <person> --off, or approves it with wi status <ref> done.'),
   approve: retired('wi approve is retired. To approve a card, run wi status <ref> done. That also clears its waits on people.'),
   'send-back': retired('wi send-back is retired. To send a card back, clear the wait on the person: ' +
-    'wi depend <ref> --on <person> --off. The card stays in doing with its holder.'),
+    'wi depend <ref> --on <person> --off. The card stays in doing with its assignees.'),
   // docs/adr/0083-assign-and-several-holders.md
-  delegate: retired('wi delegate is retired. Use wi assign <ref> --to <person|agent>. It adds a holder, and a card can have several.'),
+  delegate: retired('wi delegate is retired. Use wi assign <ref> --to <person|agent>. It adds an assignee, and a card can have several.'),
   retag: retired(REMOVED_IN_0_8),
   graph: retired(REMOVED_IN_0_8),
 }

@@ -14,7 +14,7 @@
  */
 import { Notice, setIcon, type TFile } from 'obsidian'
 
-import { holdersLabel } from '../../shared/holder.ts'
+import { assigneesLabel } from '../../shared/assignee.ts'
 import { opensAsBoard, type WorkItemMeta } from '../index.ts'
 import type { RenderContext } from './context.ts'
 import { shouldRenderPromoteToggle } from './promote-visibility.ts'
@@ -158,9 +158,9 @@ export function renderMetaStrip(host: HTMLElement, meta: WorkItemMeta, ctx?: Ren
     const pill = strip.createSpan({ cls: 'wi-pill', attr: { 'aria-label': 'Owner' } })
     namePill(pill, meta.owner, meta.ownerFile, openFile)
   }
-  if (meta.holders.length > 0) {
+  if (meta.assignees.length > 0) {
     strip.createSpan({
-      cls: 'wi-pill is-agent', text: holdersLabel(meta.holders), attr: { 'aria-label': meta.holders.length > 1 ? 'Holders' : 'Holder' },
+      cls: 'wi-pill is-agent', text: assigneesLabel(meta.assignees), attr: { 'aria-label': `Assigned to ${assigneesLabel(meta.assignees)}` },
     })
   }
   if (meta.creator !== undefined) {

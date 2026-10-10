@@ -1,6 +1,6 @@
 /** Dispatcher selection from current vault state. This command writes nothing. */
 import { dependenciesOf, openWaits, titleOf } from '../item-dependencies.ts'
-import { holds, holdersIn, isAnyAgent } from '../holder.ts'
+import { holds, assigneesIn, isAnyAgent } from '../assignee.ts'
 import type { Vault, WorkItem } from '../vault.ts'
 import { getList } from '../frontmatter.ts'
 import { roleTags } from '../role-tags.ts'
@@ -38,13 +38,13 @@ function updated(item: WorkItem): string {
   return typeof value === 'string' ? value : ''
 }
 
-function holders(item: WorkItem): string[] {
-  return holdersIn(item.text)
+function assignees(item: WorkItem): string[] {
+  return assigneesIn(item.text)
 }
 
-/** A request for any agent: its only holder is the reserved value `agent`. */
+/** A request for any agent: its only assignee is the reserved value `agent`. */
 function isRequest(item: WorkItem): boolean {
-  const names = holders(item)
+  const names = assignees(item)
   return names.length > 0 && names.every((name) => isAnyAgent(name))
 }
 
@@ -56,7 +56,7 @@ function summary(item: WorkItem) {
     priority: Number.isFinite(priority(item)) ? priority(item) : null,
     due: typeof due === 'string' ? due : null,
     owner: typeof owner === 'string' ? owner : null,
-    holder: holders(item),
+    assignees: assignees(item),
     request: isRequest(item),
     roles: roleTags(getList(item.text, 'tags') ?? []),
     parent: item.parent,
@@ -65,7 +65,7 @@ function summary(item: WorkItem) {
 
 /**
  * Options are dispatchable when wi claim would accept the proposed agent. A card that only asks for
- * any agent is free to claim, and comes first. A card with any other holder is taken.
+ * any agent is free to claim, and comes first. A card with any other assignee is taken.
  */
 export function readyCards(vault: Vault, options: ReadyOptions = {}) {
   const scope = options.parent === undefined ? null : vault.resolve(options.parent)
@@ -76,13 +76,13 @@ export function readyCards(vault: Vault, options: ReadyOptions = {}) {
     if (scope !== null && !isBelow(vault, item, scope)) continue
     const reasons: ExclusionReason[] = []
     if (item.parent === null || vault.resolveLink(item.parent) === undefined) reasons.push('missing-parent')
-    if (holders(item).length > 0 && !isRequest(item)) reasons.push('claimed')
+    if (assignees(item).length > 0 && !isRequest(item)) reasons.push('claimed')
     const waits = openWaits(vault, item)
     if (waits.cards.length + waits.people.length > 0) reasons.push('dependency')
     const dependencies = dependenciesOf(vault, item)
     if (dependencies.unresolved.length > 0 || dependencies.malformed.length > 0) reasons.push('invalid-dependency')
     if (item.board && vault.childrenOf(item).some((child) =>
-      child.status === 'doing' && (options.agent === undefined || !holds(holders(child), options.agent)))) {
+      child.status === 'doing' && (options.agent === undefined || !holds(assignees(child), options.agent)))) {
       reasons.push('active-child')
     }
     if (reasons.length === 0) ready.push(item)
@@ -103,7 +103,9 @@ export const runReady: RunFunction = async (context, line) => {
   const vault = await context.vault()
   const { values } = line
   if (line.positionals.length > 1) throw new UsageError('wi ready takes no card reference.')
-  const agent = values['holder'] === undefined ? undefined : singleLineOption(values, 'holder')
+  const agent = values['assignee'] === undefined && values['holder'] === undefined
+    ? undefined
+    : singleLineOption(values, values['assignee'] === undefined ? 'holder' : 'assignee')
   const parent = typeof values['parent'] === 'string' ? values['parent'] : undefined
   const result = readyCards(vault, { ...(agent === undefined ? {} : { agent }), ...(parent === undefined ? {} : { parent }) })
   if (values['json'] === true) {

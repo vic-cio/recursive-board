@@ -23,20 +23,27 @@ Body.
 
 test('cardState reads the values an edit rule depends on from the text', () => {
   assert.deepEqual(cardState(TEXT), {
-    status: 'doing', prevStatus: undefined, hasPrevStatus: false, holders: ['alpha'],
+    status: 'doing', prevStatus: undefined, hasPrevStatus: false, assignees: ['alpha'],
     archived: true, board: true, hasBoardKey: true, area: true,
   })
   const bare = cardState('---\ntype: work-item\nstatus: nonsense\nprev_status: done\nagent: "  "\n---\n')
   assert.equal(bare.status, undefined)
   assert.equal(bare.prevStatus, 'done')
   assert.equal(bare.hasPrevStatus, true)
-  assert.deepEqual(bare.holders, [], 'a blank agent is no holder')
+  assert.deepEqual(bare.assignees, [], 'a blank agent is no assignee')
+})
+
+test('cardState reads assignee, else holder, else agent, in that order', () => {
+  const text = (fields: string) => `---\ntype: work-item\nstatus: doing\n${fields}---\n`
+  assert.deepEqual(cardState(text('assignee: gamma\nholder: beta\nagent: alpha\n')).assignees, ['gamma'])
+  assert.deepEqual(cardState(text('holder: beta\nagent: alpha\n')).assignees, ['beta'])
+  assert.deepEqual(cardState(text('agent: alpha\n')).assignees, ['alpha'])
 })
 
 test('editsFor takes a list as it is and runs a plan on the text', () => {
   assert.deepEqual(editsFor(TEXT, [{ op: 'remove', key: 'x' }]), [{ op: 'remove', key: 'x' }])
   assert.deepEqual(editsFor(TEXT, () => null), [])
-  assert.deepEqual(editsFor(TEXT, (text) => [{ op: 'set', key: 'seen', value: cardState(text).holders.join() }]),
+  assert.deepEqual(editsFor(TEXT, (text) => [{ op: 'set', key: 'seen', value: cardState(text).assignees.join() }]),
     [{ op: 'set', key: 'seen', value: 'alpha' }])
 })
 

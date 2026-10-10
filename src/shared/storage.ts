@@ -29,7 +29,7 @@ export interface StoragePort {
   /** Creates a folder and every missing folder above it. An existing folder is fine. */
   mkdir(path: string): Promise<void>
   /**
-   * Runs `fn` while every other holder of the same key on this port waits. The key is a
+   * Runs `fn` while every other waiter for the same key on this port waits. The key is a
    * vault-relative path, which need not exist: `.wi-move` locks every move in the vault.
    */
   withLock<T>(key: string, fn: () => Promise<T>): Promise<T>

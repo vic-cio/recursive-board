@@ -11,7 +11,7 @@
 import type { Edit } from './edits.ts'
 import { cardState } from './card-state.ts'
 import { clearPersonWaitsEdit, dependsOnRaw } from './dependencies.ts'
-import { holds, isAnyAgent, sameName, setHoldersEdits } from './holder.ts'
+import { holds, isAnyAgent, sameName, setAssigneesEdits } from './assignee.ts'
 import { formatWikilink, type Status } from './schema.ts'
 
 /**
@@ -59,28 +59,28 @@ export function untickEditsIn(text: string): Edit[] | null {
 }
 
 /**
- * A claim is one status transition and one holder edit on the same card
- * (docs/adr/0083-assign-and-several-holders.md). A claim starts a card that has no holder, that asks
+ * A claim is one status transition and one assignee edit on the same card
+ * (docs/adr/0083-assign-and-several-holders.md). A claim starts a card that has no assignee, that asks
  * for any agent, or that lists the claimant already. Any other card needs the claimant assigned
  * first, so two workers that find one card in `wi ready` cannot both take it. The claimant's name
- * replaces the reserved holder `agent`, and the other holders stay.
+ * replaces the reserved assignee `agent`, and the other assignees stay.
  * `hasOtherDoingChild` is a child in doing that someone other than this agent works: a person, or
- * another agent. A child this agent holds does not block, so an agent can hold a card and the
+ * another agent. A child this agent is assigned to does not block, so an agent can be assigned to a card and the
  * subtask it works now, in either order.
  */
 export function claimEdits(
   from: Status | undefined,
-  holders: readonly string[],
+  assignees: readonly string[],
   agent: string,
   hasPrevStatus: boolean,
   hasOtherDoingChild: boolean,
 ): Edit[] | null {
-  if (isAnyAgent(agent)) throw new Error('agent is the reserved holder that means any agent. Claim with your own name.')
+  if (isAnyAgent(agent)) throw new Error('agent is reserved: it means any agent. Claim with your own name.')
   if (from === 'done') throw new Error('a done card cannot be claimed.')
-  const listed = holds(holders, agent)
-  const request = holders.findIndex((name) => isAnyAgent(name))
-  if (!listed && request === -1 && holders.length > 0) {
-    throw new Error(`already held by ${holders.join(', ')}. To add an agent, a holder runs wi assign <ref> --to agent first.`)
+  const listed = holds(assignees, agent)
+  const request = assignees.findIndex((name) => isAnyAgent(name))
+  if (!listed && request === -1 && assignees.length > 0) {
+    throw new Error(`already assigned to ${assignees.join(', ')}. To add an agent, an assignee runs wi assign <ref> --to agent first.`)
   }
   if (listed && from === 'doing') return null
   if (hasOtherDoingChild) {
@@ -88,20 +88,20 @@ export function claimEdits(
   }
   const status = statusEdits(from, 'doing', hasPrevStatus)
   if (listed) return status
-  const next = holders.length === 0 ? [agent] : holders.map((name, i) => i === request ? agent : name)
-  return [...(status ?? []), ...setHoldersEdits(next)]
+  const next = assignees.length === 0 ? [agent] : assignees.map((name, i) => i === request ? agent : name)
+  return [...(status ?? []), ...setAssigneesEdits(next)]
 }
 
 /**
- * A release removes one holder. The status stays while a named holder remains. When none
+ * A release removes one assignee. The status stays while a named assignee remains. When none
  * remains, the card moves to options, with the normal status history rules, so another worker
  * can take it.
  */
-export function releaseEdits(from: Status | undefined, holders: readonly string[], name: string, hasPrevStatus: boolean): Edit[] {
-  if (!holds(holders, name)) throw new Error(`${name} does not hold this card. Its holders: ${holders.join(', ') || 'none'}.`)
-  const rest = holders.filter((holder) => !sameName(holder, name))
-  const status = rest.some((holder) => !isAnyAgent(holder)) ? null : statusEdits(from, 'options', hasPrevStatus)
-  return [...(status ?? []), ...setHoldersEdits(rest)]
+export function releaseEdits(from: Status | undefined, assignees: readonly string[], name: string, hasPrevStatus: boolean): Edit[] {
+  if (!holds(assignees, name)) throw new Error(`${name} is not assigned to this card. Its assignees: ${assignees.join(', ') || 'none'}.`)
+  const rest = assignees.filter((assignee) => !sameName(assignee, name))
+  const status = rest.some((assignee) => !isAnyAgent(assignee)) ? null : statusEdits(from, 'options', hasPrevStatus)
+  return [...(status ?? []), ...setAssigneesEdits(rest)]
 }
 
 /**

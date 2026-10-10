@@ -40,7 +40,7 @@ test('wi agents prints the limit, the count and each active agent with its doing
     .replace('owner: sam', 'owner: sam\nagent: codex')
   writeFileSync(join(fixture.root, 'Boards/Build server.md'), source)
   fixture.write('Boards/Another.md', item({
-    type: 'work-item', id: 'wi-0005', title: 'Another', status: 'doing', holder: 'claude',
+    type: 'work-item', id: 'wi-0005', title: 'Another', status: 'doing', assignee: 'claude',
     parent: '"[[Main]]"', created: '2026-09-21', updated: '2026-09-21',
   }))
   fixture.write('Boards/Waiting.md', item({
@@ -53,7 +53,7 @@ test('wi agents prints the limit, the count and each active agent with its doing
     parent: '"[[Build server]]"', created: '2026-09-21', updated: '2026-09-21',
   }))
   fixture.write('Boards/Asked.md', item({
-    type: 'work-item', id: 'wi-0010', title: 'Asked', status: 'doing', holder: 'agent',
+    type: 'work-item', id: 'wi-0010', title: 'Asked', status: 'doing', assignee: 'agent',
     parent: '"[[Main]]"', created: '2026-09-21', updated: '2026-09-21',
   }))
 
@@ -124,7 +124,7 @@ test('wi agents does not count a card a person holds, known by a note with type:
   assert.equal(report.activeAgents, 1)
   assert.deepEqual(report.agents.map((agent: { name: string }) => agent.name), ['codex-code'])
 
-  const claim = await wi(['claim', 'wi-0004', '--holder', 'Ana'])
+  const claim = await wi(['claim', 'wi-0004', '--assignee', 'Ana'])
   assert.equal(claim.code, 0, claim.stderr)
   assert.doesNotMatch(claim.stderr, /agent limit/, 'a person claiming a card adds no agent')
 })
@@ -225,7 +225,7 @@ function readFixture(path: string): string | null {
 test('wi claim remains advisory when the active agent count reaches the limit', async () => {
   fixture = seed()
   fixture.writeSettings('{"maxAgents":0}')
-  const result = await wi(['claim', 'wi-0004', '--holder', 'codex'])
+  const result = await wi(['claim', 'wi-0004', '--assignee', 'codex'])
   assert.equal(result.code, 0, result.stderr)
   assert.match(result.stdout, /doing/)
   assert.match(result.stderr, /agent limit is 0/)
@@ -233,11 +233,11 @@ test('wi claim remains advisory when the active agent count reaches the limit', 
 
 test('wi agents skips an agent whose doing card only waits on its children', async () => {
   fixture = seed()
-  const lead = await wi(['claim', 'wi-0004', '--holder', 'lead'])
+  const lead = await wi(['claim', 'wi-0004', '--assignee', 'lead'])
   assert.equal(lead.code, 0, lead.stderr)
-  for (const [id, title, holder] of [['wi-0011', 'Step one', 'worker-1'], ['wi-0012', 'Step two', 'worker-2']] as const) {
+  for (const [id, title, assignee] of [['wi-0011', 'Step one', 'worker-1'], ['wi-0012', 'Step two', 'worker-2']] as const) {
     fixture.write(`Boards/${title}.md`, item({
-      type: 'work-item', id, title, status: 'doing', holder,
+      type: 'work-item', id, title, status: 'doing', assignee,
       parent: '"[[Build server]]"', created: '2026-09-21', updated: '2026-09-21',
     }))
   }
@@ -253,15 +253,15 @@ test('wi claim warns at the limit by the same count, after the claim', async () 
     type: 'work-item', id: 'wi-0012', title: 'Step two', status: 'options',
     parent: '"[[Build server]]"', created: '2026-09-21', updated: '2026-09-21',
   }))
-  const lead = await wi(['claim', 'wi-0004', '--holder', 'lead'])
+  const lead = await wi(['claim', 'wi-0004', '--assignee', 'lead'])
   assert.equal(lead.code, 0, lead.stderr)
   fixture.write('Boards/Step one.md', item({
-    type: 'work-item', id: 'wi-0011', title: 'Step one', status: 'doing', holder: 'worker-1',
+    type: 'work-item', id: 'wi-0011', title: 'Step one', status: 'doing', assignee: 'worker-1',
     parent: '"[[Build server]]"', created: '2026-09-21', updated: '2026-09-21',
   }))
 
   // The claim moves Step two to doing, so lead now only waits, and two agents still work.
-  const second = await wi(['claim', 'wi-0012', '--holder', 'worker-2'])
+  const second = await wi(['claim', 'wi-0012', '--assignee', 'worker-2'])
   assert.equal(second.code, 0, second.stderr)
   assert.doesNotMatch(second.stderr, /agent limit/)
 
@@ -269,7 +269,7 @@ test('wi claim warns at the limit by the same count, after the claim', async () 
     type: 'work-item', id: 'wi-0013', title: 'Other', status: 'options',
     parent: '"[[Main]]"', created: '2026-09-21', updated: '2026-09-21',
   }))
-  const third = await wi(['claim', 'wi-0013', '--holder', 'worker-3'])
+  const third = await wi(['claim', 'wi-0013', '--assignee', 'worker-3'])
   assert.equal(third.code, 0, third.stderr)
   assert.match(third.stderr, /agent limit is 2; 3 agents now work a doing card/)
 })
@@ -309,18 +309,19 @@ test('wi --help documents area conversion', async () => {
   const { code, stdout } = await wi(['--help'])
   assert.equal(code, 0)
   assert.match(stdout, /wi area <ref> \[--off\]/)
-  assert.match(stdout, /It refuses a card\s+with a holder/i)
+  assert.match(stdout, /It refuses a card\s+with an assignee/i)
   assert.match(stdout, /wi agents/)
 })
 
-test('wi --help documents the holders and assigning any agent', async () => {
+test('wi --help documents the assignees and assigning any agent', async () => {
   fixture = seed()
   const { code, stdout } = await wi(['--help'])
   assert.equal(code, 0)
   assert.match(stdout, /wi assign <ref> --to <person\|agent> \[--role <name>\] \[--off\]\n/)
   assert.doesNotMatch(stdout, /^ {2}wi delegate /m)
-  assert.match(stdout, /holder field names the people and agents who do its work: one name, or a list/)
-  assert.match(stdout, /--to agent\` adds holder agent, which\n {2}asks any agent/)
+  assert.match(stdout, /assignee field names the people and agents who do its work: one name, or a list/)
+  assert.match(stdout, /--to agent\` assigns any agent, which\n {2}asks any agent/)
+  assert.match(stdout, /The legacy --holder means the same/)
   assert.doesNotMatch(stdout, /--permission|claude\|codex|--creator/m)
 })
 
@@ -531,16 +532,23 @@ test('wi status reports a no-op rather than writing', async () => {
 
 test('wi claim and release expose JSON results and accept --vault', async () => {
   fixture = seed()
-  const claimed = await wi(['claim', 'wi-0004', '--holder', 'codex', '--json', '--vault', fixture.root])
+  const claimed = await wi(['claim', 'wi-0004', '--assignee', 'codex', '--json', '--vault', fixture.root])
   assert.equal(claimed.code, 0, claimed.stderr)
   assert.deepEqual(JSON.parse(claimed.stdout), {
-    id: 'wi-0004', path: 'Boards/Build server.md', name: 'codex', holder: ['codex'],
+    id: 'wi-0004', path: 'Boards/Build server.md', name: 'codex', assignees: ['codex'],
     from: 'doing', to: 'doing', changed: true,
   })
+  const legacyMade = await wi(['new', 'Legacy flag', '--parent', 'Main', '--objective', 'Check.', '--criteria', 'Done', '--json'])
+  assert.equal(legacyMade.code, 0, legacyMade.stderr)
+  const legacyId = JSON.parse(legacyMade.stdout).id
+  const legacy = await wi(['claim', legacyId, '--holder', 'codex', '--json', '--vault', fixture.root])
+  assert.equal(legacy.code, 0, legacy.stderr)
+  assert.deepEqual(JSON.parse(legacy.stdout).assignees, ['codex'], 'the legacy --holder flag still claims')
+  assert.match(readFileSync(join(fixture.root, 'Boards/Legacy flag.md'), 'utf8'), /^assignee: codex$/m)
   const released = await wi(['release', 'wi-0004', '--reason', 'stopped', '--where', 'card/task', '--json'])
   assert.equal(released.code, 0, released.stderr)
   assert.deepEqual(JSON.parse(released.stdout), {
-    id: 'wi-0004', path: 'Boards/Build server.md', name: 'codex', holder: [],
+    id: 'wi-0004', path: 'Boards/Build server.md', name: 'codex', assignees: [],
     from: 'doing', to: 'options', reason: 'stopped', where: 'card/task', changed: true,
   })
 })
@@ -549,7 +557,7 @@ test('wi claim and release reject missing options with exit 2', async () => {
   fixture = seed()
   const missingAgent = await wi(['claim', 'wi-0004'], undefined, { WI_AGENT: '' })
   assert.equal(missingAgent.code, 2)
-  assert.match(missingAgent.stderr, /--holder <name>, or WI_AGENT set/)
+  assert.match(missingAgent.stderr, /--assignee <name>, or WI_AGENT set/)
   const missingReason = await wi(['release', 'wi-0004'])
   assert.equal(missingReason.code, 2)
   assert.match(missingReason.stderr, /--reason/)
@@ -561,16 +569,16 @@ test('wi claim refusal exits 2 and names the existing agent', async () => {
     type: 'work-item', id: 'wi-0004', title: 'Build server', status: 'doing',
     parent: '"[[Main]]"', agent: 'claude', created: '2026-09-21', updated: '2026-09-21',
   }))
-  const { code, stderr } = await wi(['claim', 'wi-0004', '--holder', 'codex'])
+  const { code, stderr } = await wi(['claim', 'wi-0004', '--assignee', 'codex'])
   assert.equal(code, 2)
-  assert.match(stderr, /already held by claude\./i)
+  assert.match(stderr, /already assigned to claude\./i)
 })
 
 test('wi --help lists claim and release', async () => {
   fixture = seed()
   const { code, stdout } = await wi(['--help'])
   assert.equal(code, 0)
-  assert.match(stdout, /wi claim <ref> \[--holder <name>\]/)
+  assert.match(stdout, /wi claim <ref> \[--assignee <name>\]/)
   assert.match(stdout, /wi release <ref> --reason <text>/)
 })
 
@@ -811,16 +819,17 @@ test('wi new writes a brief from flags, and --strict refuses a card without one'
   assert.match(strict.stderr, /no Objective or Acceptance Criteria/)
 })
 
-test('wi new writes tags, owner and holder, records no creator, and refuses --creator', async () => {
+test('wi new writes tags, owner and assignee, records no creator, and refuses --creator', async () => {
   fixture = seed()
   const flags = await wi(['new', 'Check rates', '--parent', 'Main', '--objective', 'Check.', '--criteria', 'Done',
-    '--tag', 'role/checker', '--tag', '#Web', '--tag', 'web', '--owner', 'Ana', '--holder', 'agent', '--json'])
+    '--tag', 'role/checker', '--tag', '#Web', '--tag', 'web', '--owner', 'Ana', '--assignee', 'agent', '--json'])
   assert.equal(flags.code, 0, flags.stderr)
   const text = readFileSync(join(fixture.root, JSON.parse(flags.stdout).path), 'utf8')
   assert.match(text, /^owner: Ana$/m)
   assert.match(text, /^tags:\n {2}- role\/checker\n {2}- Web$/m)
   assert.doesNotMatch(text, /^role:/m)
-  assert.match(text, /^holder: agent$/m)
+  assert.match(text, /^assignee: agent$/m)
+  assert.doesNotMatch(text, /^holder:/m)
   assert.doesNotMatch(text, /^creator(?:_model)?:/m)
   for (const flag of ['--creator', '--model', '--agent']) {
     const refused = await wi(['new', 'Old flag', '--parent', 'Main', flag, 'x'])
@@ -835,6 +844,21 @@ test('wi new writes tags, owner and holder, records no creator, and refuses --cr
   const strict = await wi(['new', 'Strict nobody', '--parent', 'Main', '--objective', 'x', '--criteria', 'y', '--strict'])
   assert.equal(strict.code, 0, strict.stderr)
   assert.doesNotMatch(strict.stderr, /no creator/)
+})
+
+test('wi new and wi ready keep the legacy --holder flag, and it means --assignee', async () => {
+  fixture = seed()
+  const made = await wi(['new', 'Legacy claim', '--parent', 'Main', '--objective', 'Check.', '--criteria', 'Done',
+    '--holder', 'codex', '--json'])
+  assert.equal(made.code, 0, made.stderr)
+  const text = readFileSync(join(fixture.root, JSON.parse(made.stdout).path), 'utf8')
+  assert.match(text, /^assignee: codex$/m)
+  assert.doesNotMatch(text, /^holder:/m)
+  const ready = await wi(['ready', '--holder', 'codex', '--json'])
+  assert.equal(ready.code, 0, ready.stderr)
+  const modern = await wi(['ready', '--assignee', 'codex', '--json'])
+  assert.equal(modern.code, 0, modern.stderr)
+  assert.deepEqual(JSON.parse(ready.stdout), JSON.parse(modern.stdout))
 })
 
 test('wi new refuses --role and a bad tag before writing', async () => {

@@ -29,7 +29,7 @@ import { freeTagEditsIn } from '../shared/tags.ts'
 import { parseFrontmatter } from '../shared/frontmatter.ts'
 import { parseWikilink } from '../shared/schema.ts'
 import { assignEdits, unassignEdits } from '../shared/assign.ts'
-import { holderLabel, isAnyAgent } from '../shared/holder.ts'
+import { assigneeLabel, isAnyAgent } from '../shared/assignee.ts'
 import type { WorkItemIndex, WorkItemMeta } from './index.ts'
 import { UndoStack } from './undo.ts'
 import { emptyObjectiveLine } from './objective-cursor.ts'
@@ -144,19 +144,19 @@ export class Actions {
     }
   }
 
-  /** Adds a person or any agent to the holders through the same shared step as `wi assign`. */
-  async assign(meta: WorkItemMeta, holder: string): Promise<void> {
-    const who = isAnyAgent(holder) ? 'an agent' : holder
+  /** Adds a person or any agent to the assignees through the same shared step as `wi assign`. */
+  async assign(meta: WorkItemMeta, assignee: string): Promise<void> {
+    const who = isAnyAgent(assignee) ? 'an agent' : assignee
     const label = `assign ${meta.title} to ${who}`
-    const written = await this.run(label, () => this.edit(meta.file, (text) => assignEdits(text, holder), label))
+    const written = await this.run(label, () => this.edit(meta.file, (text) => assignEdits(text, assignee), label))
     if (written) this.undoableNotice(`Assigned ${meta.title} to ${who}`)
   }
 
-  /** Removes one holder through the same shared step as `wi assign --off`. The status stays. */
-  async unassign(meta: WorkItemMeta, holder: string): Promise<void> {
-    const label = `unassign ${holderLabel(holder)} from ${meta.title}`
-    const written = await this.run(label, () => this.edit(meta.file, (text) => unassignEdits(text, holder), label))
-    if (written) this.undoableNotice(`Unassigned ${holderLabel(holder)} from ${meta.title}`)
+  /** Removes one assignee through the same shared step as `wi assign --off`. The status stays. */
+  async unassign(meta: WorkItemMeta, assignee: string): Promise<void> {
+    const label = `unassign ${assigneeLabel(assignee)} from ${meta.title}`
+    const written = await this.run(label, () => this.edit(meta.file, (text) => unassignEdits(text, assignee), label))
+    if (written) this.undoableNotice(`Unassigned ${assigneeLabel(assignee)} from ${meta.title}`)
   }
 
   /** A card this one may wait on: not itself, not a root, and not one that already waits on it. */
@@ -233,7 +233,7 @@ export class Actions {
   async convertArea(meta: WorkItemMeta, target: AreaTarget): Promise<void> {
     const label = target.kind === 'area' ? 'make area' : 'make card'
     const done = await this.run(`${label} ${meta.title}`, async () => {
-      // The refusal reads the holder in the file now, so a claim made since is never discarded.
+      // The refusal reads the assignee in the file now, so a claim made since is never discarded.
       await this.edit(meta.file, (text) => {
         const now = cardState(text)
         return areaEdits({
@@ -241,7 +241,7 @@ export class Actions {
           isRoot: meta.parentLink === null,
           isArea: now.area,
           status: now.status,
-          holders: now.holders,
+          assignees: now.assignees,
         }, target)
       }, `${label} ${meta.title}`)
       return true

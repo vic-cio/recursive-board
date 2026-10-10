@@ -54,9 +54,9 @@ test('two concurrent claims of one card: one agent wins and the other is refused
   const lost = results.filter((r): r is PromiseRejectedResult => r.status === 'rejected')
   assert.equal(won.length, 1, 'exactly one claim succeeds')
   assert.equal(lost.length, 1, 'the other claim reports failure')
-  assert.match(String(lost[0]!.reason), /already held by (alpha|beta)/)
-  const winner = (won[0] as PromiseFulfilledResult<{ holder: string }>).value.holder
-  assert.equal(fmOf(fixture, 'Task').get('holder'), winner)
+  assert.match(String(lost[0]!.reason), /already assigned to (alpha|beta)/)
+  const winner = (won[0] as PromiseFulfilledResult<{ name: string }>).value.name
+  assert.equal(fmOf(fixture, 'Task').get('assignee'), winner)
 })
 
 test('a claim refuses a card that another process gave an open dependency after the load', async () => {
@@ -66,15 +66,16 @@ test('a claim refuses a card that another process gave an open dependency after 
   const vault = await loadVault(fixture.root)
   writeFileSync(join(fixture.root, 'Boards/Task.md'), textOf(fixture, 'Task').replace('status: options', 'status: options\ndepends_on: "[[Spec]]"'))
   await assert.rejects(claimItem(vault, 'Task', 'alpha'), /waits on Spec/)
+  assert.equal(fmOf(fixture, 'Task').has('assignee'), false)
   assert.equal(fmOf(fixture, 'Task').has('holder'), false)
 })
 
-test('a release names the agent that holds the card now', async () => {
+test('a release names the agent that is assigned to the card now', async () => {
   fixture = seed()
   const vault = await loadVault(fixture.root)
   await claimItem(await loadVault(fixture.root), 'Task', 'alpha')
   const change = await releaseItem(vault, 'Task', 'stopped')
-  assert.equal(change.holder, 'alpha')
+  assert.equal(change.name, 'alpha')
   assert.equal(change.from, 'doing')
   assert.match(textOf(fixture, 'Task'), /Released from alpha: stopped\./)
 })
@@ -144,7 +145,7 @@ test('an area conversion refuses a card claimed after the load', async () => {
   fixture = seed()
   const vault = await loadVault(fixture.root)
   await claimItem(await loadVault(fixture.root), 'Task', 'alpha')
-  await assert.rejects(setArea(vault, 'Task', { off: false }), /holder alpha\./)
+  await assert.rejects(setArea(vault, 'Task', { off: false }), /assignee alpha\./)
   assert.equal(fmOf(fixture, 'Task').has('area'), false)
 })
 

@@ -12,7 +12,7 @@
  */
 import { Notice, Platform, setIcon } from 'obsidian'
 
-import { holderBadge } from '../../shared/holder.ts'
+import { assigneeBadge } from '../../shared/assignee.ts'
 import { labelColour, labelText } from '../../shared/labels.ts'
 import { bodyOf, listItems, section } from '../../shared/sections.ts'
 import type { WorkItemMeta } from '../index.ts'
@@ -147,10 +147,10 @@ function renderBadges(host: HTMLElement, ctx: RenderContext, meta: WorkItemMeta)
     const badge = host.createSpan({ cls: 'wi-badge wi-badge-waiting', attr: { 'aria-label': `Waits on ${names}` } })
     setIcon(badge, 'hourglass')
   }
-  // The first holder's initial and +N for the others; the hover names them all.
-  const held = holderBadge(meta.holders)
-  if (held !== null) {
-    host.createSpan({ cls: 'wi-badge wi-badge-who is-agent', text: held.text, attr: { 'aria-label': held.label } })
+  // The first assignee's initial and +N for the others; the hover names them all.
+  const assigned = assigneeBadge(meta.assignees)
+  if (assigned !== null) {
+    host.createSpan({ cls: 'wi-badge wi-badge-who is-agent', text: assigned.text, attr: { 'aria-label': assigned.label } })
   } else if (meta.owner !== undefined) {
     host.createSpan({
       cls: 'wi-badge wi-badge-who', text: meta.owner.slice(0, 1).toUpperCase(), attr: { 'aria-label': `Owner ${meta.owner}` },

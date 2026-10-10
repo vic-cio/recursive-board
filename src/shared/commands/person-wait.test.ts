@@ -28,7 +28,7 @@ const card = (id: string, title: string, extra: Record<string, string | number |
 function seed(): Fixture {
   const f = makeVault()
   f.write('Boards/Main.md', item({ type: 'work-item', id: 'wi-0001', title: 'Main', created: '2026-10-10', updated: '2026-10-10' }))
-  f.write('Boards/Task.md', card('wi-0002', 'Task', { status: 'doing', holder: 'codex' }))
+  f.write('Boards/Task.md', card('wi-0002', 'Task', { status: 'doing', assignee: 'codex' }))
   f.write('Boards/Build.md', card('wi-0003', 'Build'))
   f.write('Boards/Ship.md', card('wi-0004', 'Ship', { status: 'doing' }))
   f.write('People/Ana.md', '---\ntype: person\n---\n')
@@ -50,7 +50,7 @@ test('wi depend puts a person link next to a card link, and --off clears only th
   assert.deepEqual(listOf(fixture, 'Task'), ['[[Ship]]'])
   const text = readFileSync(`${fixture.root}/Boards/Task.md`, 'utf8')
   assert.match(text, /^status: doing$/m, 'clearing keeps the card in doing')
-  assert.match(text, /^holder: codex$/m)
+  assert.match(text, /^assignee: codex$/m)
 })
 
 test('wi depend refuses a name that is neither a card nor a person', async () => {
@@ -95,7 +95,7 @@ test('claim and status doing refuse a card with a person wait', async () => {
   assert.equal((await claimItem(await vaultOf(fixture), 'Build', 'codex')).changed, true)
 })
 
-test('a holder keeps its claim on a doing card that waits on a person', async () => {
+test('an assignee keeps its claim on a doing card that waits on a person', async () => {
   fixture = seed()
   await setDependency(await vaultOf(fixture), 'Task', 'Ana', true)
   const again = await claimItem(await vaultOf(fixture), 'Task', 'codex')
@@ -105,7 +105,7 @@ test('a holder keeps its claim on a doing card that waits on a person', async ()
 
 test('moving a card to done clears its person waits and keeps its card waits', async () => {
   fixture = seed()
-  fixture.write('Boards/Task.md', card('wi-0002', 'Task', { status: 'doing', holder: 'codex', depends_on: '["[[Ship]]", "[[Ana]]"]' }))
+  fixture.write('Boards/Task.md', card('wi-0002', 'Task', { status: 'doing', assignee: 'codex', depends_on: '["[[Ship]]", "[[Ana]]"]' }))
   const change = await setStatus(await vaultOf(fixture), 'Task', 'done')
   assert.equal(change.changed, true)
   assert.deepEqual(listOf(fixture, 'Task'), ['[[Ship]]'])
@@ -128,7 +128,7 @@ test('a move that is not to done leaves the person wait', async () => {
 
 test('wi agents skips an agent whose card waits on a person', async () => {
   fixture = seed()
-  fixture.write('Boards/Ship.md', card('wi-0004', 'Ship', { status: 'doing', holder: 'pi' }))
+  fixture.write('Boards/Ship.md', card('wi-0004', 'Ship', { status: 'doing', assignee: 'pi' }))
   assert.deepEqual((await agentsReport(await vaultOf(fixture), {})).agents.map((agent) => agent.name).sort(), ['codex', 'pi'])
   await setDependency(await vaultOf(fixture), 'Task', 'Ana', true)
   assert.deepEqual((await agentsReport(await vaultOf(fixture), {})).agents.map((agent) => agent.name), ['pi'])
@@ -138,7 +138,7 @@ test('wi agents skips an agent whose card waits on a person', async () => {
 
 test('a note line that says Review no longer changes the agent count', async () => {
   fixture = seed()
-  fixture.write('Boards/Task.md', card('wi-0002', 'Task', { status: 'doing', holder: 'codex' }) +
+  fixture.write('Boards/Task.md', card('wi-0002', 'Task', { status: 'doing', assignee: 'codex' }) +
     '## Notes\n\n- 2026-10-09 09:00, codex: **Review:** Please review `a.md`.\n')
   assert.equal((await agentsReport(await vaultOf(fixture), {})).activeAgents, 1)
 })

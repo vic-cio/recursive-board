@@ -19,8 +19,10 @@ created: 2026-09-21
 updated: 2026-09-22
 ```
 
-Roots have no `parent` or `status`. Optional fields include `owner`, `agent`, `priority`, `due`,
-`depends_on`, `tags`, `board`, and `prev_status`. Preserve unknown frontmatter keys.
+Roots have no `parent` or `status`. Optional fields include `owner`, `assignee`, `priority`, `due`,
+`depends_on`, `tags`, `board`, and `prev_status`. An old card may carry `holder` or `agent`
+instead of `assignee`: read the first key present as the assignees, and never write the old keys.
+Preserve unknown frontmatter keys.
 Change only the key you mean to change.
 
 ## Status
@@ -28,16 +30,16 @@ Change only the key you mean to change.
 The valid statuses are `backlog`, `options`, `doing`, and `done`. A root has no status.
 `prev_status` stores the status to restore when an item is unticked from done.
 
-A dispatcher assigns a card with `wi claim <ref> --holder <name>`. The command adds the holder
+A dispatcher assigns a card with `wi claim <ref> --assignee <name>`. The command adds the assignee
 and sets the doing status in one file write. If that worker stops, its dispatcher runs `wi release`
-with `--reason <text>` and optionally `--where <branch-or-path>`. Release removes one holder,
-returns the card to options when no named holder remains, and adds a dated line to Notes so the
+with `--reason <text>` and optionally `--where <branch-or-path>`. Release removes one assignee,
+returns the card to options when no named assignee remains, and adds a dated line to Notes so the
 next worker can continue.
 
-A card's `holder` is one name or a list. `wi assign <ref> --to <person|agent>` adds one holder and
+A card's `assignee` is one name or a list. `wi assign <ref> --to <person|agent>` adds one assignee and
 nothing else. The status stays. `--to agent` adds `agent`, which asks any agent to take the card.
 A person added with `wi assign <ref> --to <name>` needs a note with `type: person`. `--off` removes
-a holder. `wi` starts no agent. Start a worker with your harness's own tools, such as a subagent or
+an assignee. `wi` starts no agent. Start a worker with your harness's own tools, such as a subagent or
 a background task. The worker then runs `wi claim <ref>`.
 
 ## Identity

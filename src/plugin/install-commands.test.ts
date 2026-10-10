@@ -18,7 +18,7 @@ const card = (fields: Record<string, string>, body = '') =>
 const FILES: Record<string, string> = {
   'Boards/Main.md': card({ type: 'work-item', id: 'wi-0001', title: 'Main', board: 'true', created: '2026-09-01', updated: '2026-09-01' }),
   'Boards/Build.md': card({
-    type: 'work-item', id: 'wi-0002', title: 'Build', status: 'doing', parent: '"[[Main]]"', holder: 'bot', tags: '[role/coder]',
+    type: 'work-item', id: 'wi-0002', title: 'Build', status: 'doing', parent: '"[[Main]]"', assignee: 'bot', tags: '[role/coder]',
     created: '2026-09-01', updated: '2026-09-01',
   }, '## Objective\n\nBuild it.\n\n## Acceptance Criteria\n\n- Built\n'),
   [PLUGIN_DATA_FILE]: JSON.stringify({ board: { maxAgents: 2 }, rulesVersion: 1 }),

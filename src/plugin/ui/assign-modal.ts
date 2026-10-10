@@ -1,13 +1,13 @@
 /**
  * The "Assign to…" picker, with each person note and the generic agent request. Each choice adds
- * one holder, so a card can have several (docs/adr/0083-assign-and-several-holders.md). A name
- * that holds the card already is marked and not offered again.
+ * one assignee, so a card can have several (docs/adr/0083-assign-and-several-holders.md). A name
+ * that is assigned to the card already is marked and not offered again.
  */
 import { FuzzySuggestModal, type App, type FuzzyMatch } from 'obsidian'
 
 import type { Actions } from '../actions.ts'
 import type { WorkItemMeta } from '../index.ts'
-import { ANY_AGENT, holds } from '../../shared/holder.ts'
+import { ANY_AGENT, holds } from '../../shared/assignee.ts'
 
 type AssignChoice = { kind: 'person'; name: string } | { kind: 'agent' }
 
@@ -21,7 +21,7 @@ export class AssignModal extends FuzzySuggestModal<AssignChoice> {
     this.meta = meta
     this.actions = actions
     const all: AssignChoice[] = [...people.map((name): AssignChoice => ({ kind: 'person', name })), { kind: 'agent' }]
-    this.choices = all.filter((choice) => !holds(meta.holders, holderOf(choice)))
+    this.choices = all.filter((choice) => !holds(meta.assignees, assigneeOf(choice)))
     this.setPlaceholder(`Assign ${meta.title} to…`)
   }
 
@@ -38,10 +38,10 @@ export class AssignModal extends FuzzySuggestModal<AssignChoice> {
   }
 
   onChooseItem(choice: AssignChoice): void {
-    void this.actions.assign(this.meta, holderOf(choice))
+    void this.actions.assign(this.meta, assigneeOf(choice))
   }
 }
 
-function holderOf(choice: AssignChoice): string {
+function assigneeOf(choice: AssignChoice): string {
   return choice.kind === 'agent' ? ANY_AGENT : choice.name
 }
