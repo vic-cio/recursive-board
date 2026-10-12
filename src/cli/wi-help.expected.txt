@@ -71,7 +71,7 @@ Notes
   `wi status <ref> done` says when that was the parent's last open child. It does not close the parent.
   Unticking a done item is `wi status <ref> <its prev_status>`, which also clears the record.
   `wi validate` exits 1 when the vault has errors, so it works as a pre-commit hook. The README's
-  "Version the vault with Git" section has an optional hook snippet to copy.
+  "Version the vault with Git" section links an optional hook snippet to copy.
   A hook that the removed `wi hook install` wrote keeps working; delete .git/hooks/pre-commit to
   remove it.
   `wi template` is retired. Use `wi new --template` to choose a template when you create a work item.

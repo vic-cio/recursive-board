@@ -10,22 +10,24 @@ small: an extra feature goes to a companion plugin or stays a `wi` command.
 
 ## Use it from your own agent
 
-Read [`README.md`](README.md) first. It says what each part does.
+Read [`README.md`](README.md) first. It says what each part does, and links the reference pages
+in `docs/`.
 
-- **Cards.** A card is a Markdown file with frontmatter. The README section "Work items" lists the
-  fields, and `src/shared/schema.ts` is the code that checks them.
+- **Cards.** A card is a Markdown file with frontmatter. The README section "Start a board" lists
+  the fields, [`docs/work-items.md`](docs/work-items.md) describes each one, and
+  `src/shared/schema.ts` is the code that checks them.
 - **Read.** Run `wi show <ref> --json`, `wi children <ref> --tree --json`, `wi ready --json` and
-  `wi agents --json`. The README section "Commands" lists every command.
+  `wi agents --json`. [`docs/commands.md`](docs/commands.md) lists every command.
 - **Write.** Change frontmatter with `wi`, never by hand. Edit the card body directly.
 - **Review.** A review is a wait on a person, in `depends_on`. Run `wi depend <ref> --on <person>`
   to ask. The person runs `--off` to send the card back, or moves it to done to approve it. The
   README section "Ask a person to review a card" has the rules.
 - **Settings.** The plugin keeps the board settings under the `board` key of
-  `.obsidian/plugins/recursive-board/data.json`. `wi` reads that file and never writes it. The
-  README section "Vault configuration" shows the keys.
+  `.obsidian/plugins/recursive-board/data.json`. `wi` reads that file and never writes it.
+  [`docs/configuration.md`](docs/configuration.md) shows the keys.
 - **Skill.** `skills/recursive-board/SKILL.md` teaches an agent to work a vault through `wi`.
-- **No Node.** On a desktop, run a `wi` command line through the plugin. The README section
-  "Run commands through the Obsidian CLI" shows how.
+- **No Node.** On a desktop, run a `wi` command line through the plugin. This is the official
+  way to run commands. The README section "Run commands through the Obsidian CLI" shows how.
 
 If the vault root has an `AGENTS.md`, read it. The vault's rules come first.
 
@@ -37,6 +39,10 @@ change. If your change contradicts one, amend it or add an ADR that supersedes i
 Run `npm test` to typecheck and run every test. Run `npm run build` to build the plugin. Write
 tests first for anything in `src/cli/` or `src/shared/`: a bug there corrupts canonical data
 silently. Verify a plugin change by reloading Obsidian on a test vault.
+
+The README shows on GitHub, on npm and on the Obsidian plugin listing, and the npm package ships
+no `docs/`. So the README links a page in `docs/` by its absolute GitHub URL, and keeps reference
+material there. `scripts/package.test.ts` checks every README link.
 
 Record each change in `CHANGELOG.md` under "Unreleased". Put a change to what agents are told to
 do under "Agent setup", the first section.

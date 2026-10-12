@@ -13,6 +13,9 @@ import { COMMAND_FLAGS, parseCommandLine } from './flags.ts'
 const run = promisify(execFile)
 const CLI = fileURLToPath(new URL('./wi.ts', import.meta.url))
 const README = readFileSync(new URL('../../README.md', import.meta.url), 'utf8')
+/** The reference pages the README links: the command table lives in docs/commands.md. */
+const DOCS = ['commands', 'configuration', 'work-items', 'git-hook', 'development']
+  .map((name) => readFileSync(new URL(`../../docs/${name}.md`, import.meta.url), 'utf8'))
 const SKILL = readFileSync(new URL('../../skills/recursive-board/SKILL.md', import.meta.url), 'utf8')
 
 interface Result { code: number; stdout: string; stderr: string }
@@ -178,7 +181,7 @@ for (const [command, args] of Object.entries(INVOCATIONS)) {
   })
 }
 
-/** Each `wi <command> ... --flag` that the README or the skill shows, collected per command. */
+/** Each `wi <command> ... --flag` that the README, its docs pages or the skill show, collected per command. */
 function documentedFlags(text: string): [string, string][] {
   const found: [string, string][] = []
   for (const span of text.matchAll(/`(wi [^`]+)`/g)) {
@@ -192,8 +195,8 @@ function documentedFlags(text: string): [string, string][] {
   return found
 }
 
-test('every flag the README and the skill document on a command is one that command takes', () => {
-  const documented = [...documentedFlags(README), ...documentedFlags(SKILL)]
+test('every flag the README, its docs pages and the skill document on a command is one that command takes', () => {
+  const documented = [README, ...DOCS, SKILL].flatMap(documentedFlags)
   assert.ok(documented.length > 30, 'the scan finds the documented flags')
   for (const [command, flag] of documented) {
     assert.ok((COMMAND_FLAGS[command] as string[]).includes(flag), `wi ${command} --${flag} is documented`)

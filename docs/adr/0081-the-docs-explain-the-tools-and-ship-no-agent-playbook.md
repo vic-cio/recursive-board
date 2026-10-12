@@ -40,11 +40,18 @@ Decided by Victor on 2026-10-09: scrap the playbook, and keep only explainers fo
   make a hook fail move from the playbook to the README's "Version the vault with Git" section. The
   hook snippet test reads the README. `wi doctor` still reports the hook, as a note and never a
   fix, and points at the README.
+  Amendment 2026-10-12: the snippet, the setup steps and the points move to `docs/git-hook.md`
+  (Victor, 2026-10-12, a shorter README). The README keeps a short "Version the vault with Git
+  (optional)" section that links the page, so the doctor's advice stays true. The hook snippet
+  test reads `docs/git-hook.md`.
 - **The plugin CLI needs are for agents only.** Victor, 2026-10-10: the Obsidian installer 1.12.7,
   the Command line interface setting and a running desktop Obsidian matter only to an agent that
   works the board through the plugin CLI (0078). They leave the install prompt and the install
   steps, and sit under the README's agent part. The one step a person does is turning on
   **Settings → General → Advanced → Command line interface**.
+  Amendment 2026-10-12: the Obsidian CLI is the official way to run commands, for an agent or a
+  script (Victor, 2026-10-12). The README gives it its own section after "Start a board", and the
+  standalone `wi` a short section after it. The needs above still apply to every call.
 - **The decision records stay.** 0067 and 0069 keep their text and are marked superseded. They
   explain why the playbook existed.
 - **`docs/refocus-hook.md` leaves the repo with the playbook.** It is agent setup advice for one

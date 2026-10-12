@@ -174,7 +174,7 @@ and adds WI_MODEL when set. It refuses a note with no writer name. The write re-
   { about: ['status'], text: '`wi status <ref> done` says when that was the parent\'s last open child. It does not close the parent.' },
   { about: ['status'], text: 'Unticking a done item is `wi status <ref> <its prev_status>`, which also clears the record.' },
   { about: ['validate'], text: `\`wi validate\` exits 1 when the vault has errors, so it works as a pre-commit hook. The README's
-"Version the vault with Git" section has an optional hook snippet to copy.` },
+"Version the vault with Git" section links an optional hook snippet to copy.` },
   { about: [], text: `A hook that the removed \`wi hook install\` wrote keeps working; delete .git/hooks/pre-commit to
 remove it.` },
   { about: ['template'], text: '`wi template` is retired. Use `wi new --template` to choose a template when you create a work item.' },

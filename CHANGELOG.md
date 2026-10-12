@@ -12,6 +12,13 @@ the agent notes in your vault.
 
 ### Changed
 
+- The README is shorter and starts with the install. Its order is: install the plugin, start a
+  board, run commands through the Obsidian CLI (the official way), review and assign a card, and a
+  short section on the standalone `wi`. The command table, the vault configuration, the work-item
+  fields, the Git hook steps and the development fixtures move to `docs/commands.md`,
+  `docs/configuration.md`, `docs/work-items.md`, `docs/git-hook.md` and `docs/development.md`. The
+  README links them by absolute GitHub URL, so the links work on npm and on the plugin listing.
+  `wi --help` now says the README's Git section links the hook snippet.
 - The README names no retired or removed feature. Its command table and its notes list only what
   works. It dropped the rows for `wi delegate`, `wi review`, `wi approve`, `wi send-back`,
   `wi objective`, `wi here`, `wi template` and `wi hook`, and the notes on old `area/` tags. This
