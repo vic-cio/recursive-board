@@ -10,6 +10,8 @@ the agent notes in your vault.
 
 ## [Unreleased]
 
+## [1.1.0] - 2026-10-12
+
 ### Agent setup
 
 - A person is a name in the plugin's People setting, or a note with `type: person`. When
@@ -426,7 +428,8 @@ This release changes commands and flags. Read "Removed" before you update a scri
   `role` field.
 - `wi` and the plugin no longer read `.wi.json` or `Recursive Board config.md`.
 
-[Unreleased]: https://github.com/vic-cio/recursive-board/compare/1.0.2...HEAD
+[Unreleased]: https://github.com/vic-cio/recursive-board/compare/1.1.0...HEAD
+[1.1.0]: https://github.com/vic-cio/recursive-board/compare/1.0.2...1.1.0
 [1.0.2]: https://github.com/vic-cio/recursive-board/compare/1.0.1...1.0.2
 [1.0.1]: https://github.com/vic-cio/recursive-board/compare/1.0.0...1.0.1
 [1.0.0]: https://github.com/vic-cio/recursive-board/compare/0.9.0...1.0.0
