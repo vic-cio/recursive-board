@@ -6,6 +6,8 @@
 
 Recursive Board turns a folder of Markdown files in an Obsidian vault into a hierarchical work board. Each work item is one Markdown file. Its parent link defines where it belongs.
 
+Recursive Board is at an early stage. Commands and behaviour can still change between releases. To report a problem, open an issue at https://github.com/vic-cio/recursive-board/issues.
+
 **Markdown is canonical. The plugin is a view, never the database.** The plugin renders and edits work items in Obsidian. The `wi` command-line tool supports scripts and agents. Both use the same schema and rules.
 
 Recursive Board works with local vaults and vaults synchronized by Obsidian Sync or another sync client. Install the plugin files in the vault's `.obsidian` folder. `wi` is optional: install it where you run headless commands or scripts. Sync clients can then synchronize the Markdown and plugin files according to their settings.

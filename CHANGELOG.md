@@ -15,6 +15,9 @@ the agent notes in your vault.
 - The README, `AGENTS.md`, the skill and `wi --help` no longer refer to a dashboard. The README
   section "Dashboard" and its command table row are gone. The retired `wi dashboard` command stays:
   it still exits 0, reads nothing, and now names only `wi agents`.
+- The README says near the top that Recursive Board is at an early stage, that commands and
+  behaviour can still change, and where to report a problem.
+- ADR 0066 names "a test vault" where it named a personal vault.
 
 ### Fixed
 
