@@ -8,7 +8,7 @@ writes them. Every work item is one Markdown file.
 Every feature is optional. Roles, reviews and assignment are tools, not steps. The plugin stays
 small: an extra feature goes to a companion plugin or stays a `wi` command.
 
-## Use it from your own agent or dashboard
+## Use it from your own agent
 
 Read [`README.md`](README.md) first. It says what each part does.
 
@@ -26,8 +26,6 @@ Read [`README.md`](README.md) first. It says what each part does.
 - **Skill.** `skills/recursive-board/SKILL.md` teaches an agent to work a vault through `wi`.
 - **No Node.** On a desktop, run a `wi` command line through the plugin. The README section
   "Run commands through the Obsidian CLI" shows how.
-- **Dashboard.** The core ships none. Build yours from the card files or from `wi --json`. The
-  README section "Dashboard" links an example plugin to copy.
 
 If the vault root has an `AGENTS.md`, read it. The vault's rules come first.
 

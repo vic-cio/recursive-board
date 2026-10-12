@@ -10,6 +10,12 @@ the agent notes in your vault.
 
 ## [Unreleased]
 
+### Changed
+
+- The README, `AGENTS.md`, the skill and `wi --help` no longer refer to a dashboard. The README
+  section "Dashboard" and its command table row are gone. The retired `wi dashboard` command stays:
+  it still exits 0, reads nothing, and now names only `wi agents`.
+
 ### Fixed
 
 - `test/AGENTS.md` no longer lists `owner` among the optional fields. It says that an old card may

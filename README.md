@@ -104,17 +104,6 @@ A review is a wait on a person. It uses the same `depends_on` field and the same
 
 While a card waits on a person, `wi claim` and `wi status <ref> doing` refuse it, and `wi agents` does not count the agent that holds it. Say what to check on the card, in its Notes, or send it by mail or message: `wi` writes no review request. `wi review`, `wi approve` and `wi send-back` are retired. Each prints the command above and exits 0.
 
-## Dashboard
-
-Recursive Board ships no dashboard.
-
-To build your own dashboard, read the card files, or use these `wi` commands:
-
-- `wi agents --json`: the agents that count against `maxAgents`, their doing cards, and the limit.
-- `wi children <ref> --tree --json` and `wi show <ref> --json`: the cards, their briefs and their notes.
-- `wi ready --json`: the cards a dispatcher can start.
-- `wi show <ref> --json`: `personDependencies` lists the people a card waits on, which is a review request.
-
 ## Install the Obsidian plugin
 
 Open **Settings → Community plugins → Browse**, find **Recursive Board**, select **Install**, then enable it.
@@ -239,7 +228,6 @@ Keep these points in mind:
 | `wi review`, `wi approve`, `wi send-back` | Retired. Each exits 0, reads nothing, and names the command to use: `wi depend <ref> --on <person>` to ask, `wi depend <ref> --on <person> --off` to send back, and `wi status <ref> done` to approve. See [Ask a person to review a card](#ask-a-person-to-review-a-card). |
 | `wi ready [--parent <ref>] [--holder <name>] --json` | Lists unclaimed cards in options that a dispatcher can start. A card with any assignee but `agent` is taken. The flag `--assignee <name>` does the same as `--holder`. `--parent` limits the result to descendants of one board; without it, the query covers the vault. It lists the cards whose only assignee is `agent` first, then sorts by priority, then update date. JSON gives each card's `assignees` as a list, and names excluded option cards and reasons. `--holder` permits a board whose active child that agent holds. |
 | `wi agents [--json]` | Prints the agents that count against `maxAgents`, each with the doing cards it works, the count and the limit. JSON gives `activeAgents`, `maxAgents` (`null` for no limit) and `agents`. Each agent on a doing card counts, so a card with two agents uses two places. A person, a request for any agent, a card whose open children are all in doing, and a card that waits on a person add no agent. It writes nothing. |
-| `wi dashboard` | Retired. It exits 0, reads nothing, and names `wi agents`. See [Dashboard](#dashboard). |
 | `wi release <ref> --reason <text> [--where <branch-or-path>] [--holder <name>]` | Removes one assignee and adds a note with the reason and optional work location, in one write. It removes `--holder`, else `WI_AGENT` when that holds the card, else the only assignee. The flag `--assignee <name>` does the same. With several assignees and no name to choose by, it refuses. The status stays while another named assignee remains; otherwise the card moves to options. The note is signed like `wi note`: by `WI_AGENT`, else the assignee. Refuses an unclaimed card. |
 | `wi move <ref> --to <ref>` | Changes the item's parent. Its status stays the same, and its children move with it. |
 | `wi archive <ref> [--undo]` | Archives an item. `--undo` unarchives it. Archived items are hidden from normal reads; descendants are hidden with an archived parent. |

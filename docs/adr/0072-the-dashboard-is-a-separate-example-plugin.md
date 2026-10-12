@@ -15,6 +15,11 @@ Amendment 2026-10-10: the README and `wi --help` no longer name the example (Vic
 2026-10-10), because a dashboard that trails the release should not be advertised. The decision
 above still holds: the dashboard is separate.
 
+Amendment 2026-10-12: the docs no longer refer to the dashboard (Victor, 2026-10-12). The README
+has no "Dashboard" section, `AGENTS.md` and the skill do not mention one, and the retired
+`wi dashboard` command names only `wi agents`. The command stays as a stub, so an old script still
+gets an answer and exit 0. The decision above still holds: the dashboard is separate.
+
 ## What left Recursive Board
 
 - The plugin's dashboard view, its ribbon icon and its **Open dashboard** command.

@@ -164,7 +164,7 @@ In Obsidian, use **Promote** at the top of any child card to give it its own boa
   `activeAgents` reaches `maxAgents`; `null` means no limit is set. `WI_MAX_AGENTS` overrides the vault setting for one run. This
   limit is advisory: `wi claim` does not enforce it.
 - To report the state of the boards to a person, read them with `wi children <root> --tree`,
-  `wi agents` and `wi show <ref> --json`. `wi dashboard` is retired.
+  `wi agents` and `wi show <ref> --json`.
 - wi starts no agent. To hand a card to a worker, start the worker with your own harness's tools
   (a subagent, a background task, another session) and give it the card id. Write the brief on
   the card first: the worker reads it with `wi show <card> --json`, and claims the card by its own

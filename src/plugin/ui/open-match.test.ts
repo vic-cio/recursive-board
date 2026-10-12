@@ -11,7 +11,7 @@ const item = (id: string | undefined, title: string, extra: Partial<Item> = {}):
 const target = item('wi-k7m3', 'Add an open-by-id command to the plugin')
 const items = [
   item('wi-a1b2', 'Price the demolition lines'),
-  item('wi-k7mx', 'Tidy the dashboard head'),
+  item('wi-k7mx', 'Tidy the settings head'),
   target,
   item('wi-zz99', 'Write the release notes for k7m3'),
   item(undefined, 'Main'),
@@ -33,7 +33,7 @@ test('an id prefix, with or without wi-, ranks the card first', () => {
   for (const query of ['wi-k7', 'k7m', 'k7m3'.slice(0, 2)]) {
     assert.equal(matchWorkItems([items[0]!, items[3]!, target], query)[0], target, query)
   }
-  assert.deepEqual(titles(matchWorkItems(items, 'wi-k7')), [target.title, 'Tidy the dashboard head'])
+  assert.deepEqual(titles(matchWorkItems(items, 'wi-k7')), [target.title, 'Tidy the settings head'])
 })
 
 test('part of a title ranks the card first', () => {
