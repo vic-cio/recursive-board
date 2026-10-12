@@ -69,7 +69,7 @@ function buildMenu(ctx: RenderContext, meta: WorkItemMeta): Menu {
     menu.addItem((item) => item
       .setTitle('Waits on…')
       .setIcon('hourglass')
-      .onClick(() => new DependModal(ctx.app, ctx.index, ctx.actions, meta, ctx.personNames()).open()))
+      .onClick(() => new DependModal(ctx.app, ctx.index, ctx.actions, meta, ctx.personNames(), ctx.yourName()).open()))
     for (const file of meta.dependsOn) {
       const dependency = ctx.index.get(file)
       if (!dependency) continue
@@ -78,11 +78,11 @@ function buildMenu(ctx: RenderContext, meta: WorkItemMeta): Menu {
         .setIcon('x')
         .onClick(() => void ctx.actions.setDependency(meta, dependency, false)))
     }
-    for (const file of ctx.index.personWaits(meta)) {
+    for (const wait of ctx.index.personWaits(meta)) {
       menu.addItem((item) => item
-        .setTitle(`Stop waiting on ${file.basename}`)
+        .setTitle(`Stop waiting on ${wait.name}`)
         .setIcon('x')
-        .onClick(() => void ctx.actions.setPersonWait(meta, file.basename, false)))
+        .onClick(() => void ctx.actions.setPersonWait(meta, wait.name, false)))
     }
   }
   // Assignees (docs/adr/0083-assign-and-several-holders.md). Each assignee's full name shows here.
@@ -90,7 +90,7 @@ function buildMenu(ctx: RenderContext, meta: WorkItemMeta): Menu {
     menu.addItem((item) => item
       .setTitle('Assign to…')
       .setIcon('user-round-plus')
-      .onClick(() => new AssignModal(ctx.app, ctx.actions, meta, ctx.personNames()).open()))
+      .onClick(() => new AssignModal(ctx.app, ctx.actions, meta, ctx.personNames(), ctx.yourName()).open()))
   }
   if (meta.parentLink !== null) {
     for (const assignee of meta.assignees) {

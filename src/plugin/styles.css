@@ -1182,6 +1182,23 @@ button.wi-pill:hover {
   color: var(--text-error);
 }
 
+/* Person notes the People list lacks, one click each (docs/adr/0085-people-live-in-the-plugin-data.md). */
+.wi-people-suggestions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--size-4-1);
+  margin-top: var(--size-4-2);
+}
+
+.wi-people-suggestion {
+  height: auto;
+  padding: var(--size-2-1) var(--size-4-2);
+  border-radius: var(--radius-l);
+  font-size: var(--font-ui-small);
+  cursor: pointer;
+}
+
 
 
 

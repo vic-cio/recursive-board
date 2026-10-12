@@ -15,7 +15,7 @@ Each work item is a Markdown file in the configured work-item folder. The defaul
 | `prev_status` | Previous status recorded when an item moves to `done`; cleared when it leaves `done`. |
 | `area` | Set to `true` for an ongoing area. Areas keep a status and have no `prev_status`. |
 
-Optional fields include `assignee`, `priority`, `due`, `depends_on`, `tags`, and `archived`. `assignee` names the people and agents who do the card's work: one name, or a list such as `assignee: [Ana, codex-1]`. `wi` writes a plain value for one name. A reader takes `assignee`, else an old card's `holder`, else the old `agent`, and a card with more than one of these keys uses the first in that order. The assignee `agent` asks for any agent. `wi` does not rewrite an old card to migrate it. Unknown frontmatter keys are preserved. `wi validate` reports them as warnings.
+Optional fields include `assignee`, `priority`, `due`, `depends_on`, `tags`, and `archived`. `assignee` names the people and agents who do the card's work: one name, or a list such as `assignee: [Ana, codex-1]`. `wi` writes a plain value for one name. A reader takes `assignee`, else an old card's `holder`, else the old `agent`, and a card with more than one of these keys uses the first in that order. The assignee `agent` asks for any agent. `depends_on` lists what the card waits on: a card as a wikilink, such as `"[[Write the spec]]"`, and a person as a plain name, such as `Ana`. A person is a name in the plugin's [People](configuration.md#people) setting or a note with `type: person`, and an older `[[Ana]]` link to a person note still counts. `wi` does not rewrite an old card to migrate it. Unknown frontmatter keys are preserved. `wi validate` reports them as warnings.
 
 ## Boards and checklists
 

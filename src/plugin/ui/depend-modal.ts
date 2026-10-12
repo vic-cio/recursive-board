@@ -9,6 +9,7 @@ import { FuzzySuggestModal, type App, type FuzzyMatch } from 'obsidian'
 
 import type { Actions } from '../actions.ts'
 import type { WorkItemIndex, WorkItemMeta } from '../index.ts'
+import { isYou, waitChoices } from '../identity.ts'
 
 type DependChoice =
   | { kind: 'card'; meta: WorkItemMeta }
@@ -19,18 +20,20 @@ export class DependModal extends FuzzySuggestModal<DependChoice> {
   private readonly index: WorkItemIndex
   private readonly actions: Actions
   private readonly people: string[]
+  private readonly you: string
 
-  constructor(app: App, index: WorkItemIndex, actions: Actions, meta: WorkItemMeta, people: string[]) {
+  constructor(app: App, index: WorkItemIndex, actions: Actions, meta: WorkItemMeta, people: string[], you: string) {
     super(app)
     this.meta = meta
     this.index = index
     this.actions = actions
     this.people = people
+    this.you = you
     this.setPlaceholder(`${meta.title} waits on…`)
   }
 
   getItems(): DependChoice[] {
-    const waiting = new Set(this.index.personWaits(this.meta).map((file) => file.basename.toLowerCase()))
+    const waiting = this.index.personWaits(this.meta).map((wait) => wait.name)
     const cards = this.index
       .all()
       .filter((target) => !target.effectiveArchived && target.status !== 'done' && !target.area)
@@ -38,8 +41,8 @@ export class DependModal extends FuzzySuggestModal<DependChoice> {
       .filter((target) => this.actions.dependencyRefusal(this.meta, target) === null)
       .sort((a, b) => a.title.localeCompare(b.title))
       .map((target): DependChoice => ({ kind: 'card', meta: target }))
-    const people = this.people
-      .filter((name) => !waiting.has(name.toLowerCase()))
+    // You come first (docs/adr/0085-people-live-in-the-plugin-data.md).
+    const people = waitChoices(this.people, this.you, waiting)
       .map((name): DependChoice => ({ kind: 'person', name }))
     return [...people, ...cards]
   }
@@ -52,7 +55,7 @@ export class DependModal extends FuzzySuggestModal<DependChoice> {
     const choice = match.item
     if (choice.kind === 'person') {
       el.createDiv({ text: choice.name })
-      el.createEl('small', { cls: 'wi-move-path', text: 'Person · a review' })
+      el.createEl('small', { cls: 'wi-move-path', text: isYou(choice.name, this.you) ? 'You · a review' : 'Person · a review' })
       return
     }
     el.createDiv({ text: choice.meta.title })

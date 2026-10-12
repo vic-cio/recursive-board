@@ -12,8 +12,10 @@ export interface RenderContext {
   component: Component
   index: WorkItemIndex
   actions: Actions
-  /** Person notes a card can wait on or be assigned to. */
+  /** The people a card can wait on or be assigned to: the people list and each person note. */
   personNames(): string[]
+  /** "Your name": the person this device is, or an empty string (docs/adr/0085-people-live-in-the-plugin-data.md). */
+  yourName(): string
   checklistComponents: ChecklistComponents
   /** True on a phone or tablet. A board uses status tabs there (docs/adr/0022-phone-board-navigation.md). */
   mobile: boolean

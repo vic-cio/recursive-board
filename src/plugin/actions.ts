@@ -23,13 +23,14 @@ import {
 } from '../shared/transitions.ts'
 import { fileNameFor, newId, today, type Status } from '../shared/schema.ts'
 import { inheritedChildFields, renderWorkItem } from '../shared/work-item.ts'
-import { dependencyEdit, dependencyEditIn, dependencyPathByKey } from '../shared/dependencies.ts'
-import { PERSON_TYPE } from '../shared/authorship.ts'
+import {
+  dependencyEdit, dependencyEditIn, dependencyPathByKey, personWaitEdit, personWaitEditIn,
+} from '../shared/dependencies.ts'
 import { freeTagEditsIn } from '../shared/tags.ts'
 import { parseFrontmatter } from '../shared/frontmatter.ts'
 import { parseWikilink } from '../shared/schema.ts'
 import { assignEdits, unassignEdits } from '../shared/assign.ts'
-import { assigneeLabel, isAnyAgent } from '../shared/assignee.ts'
+import { assigneeLabel, isAnyAgent, sameName } from '../shared/assignee.ts'
 import type { WorkItemIndex, WorkItemMeta } from './index.ts'
 import { UndoStack } from './undo.ts'
 import { emptyObjectiveLine } from './objective-cursor.ts'
@@ -130,18 +131,14 @@ export class Actions {
     // wi refuses a card with an open wait. A person may move it, so the board gives a notice (docs/adr/0041-card-dependencies.md).
     if (done && written !== null && cardState(written).status === 'doing') {
       const waits = [...this.index.openDependencies(meta).map((dependency) => dependency.title),
-        ...this.index.personWaits(meta).map((file) => file.basename)]
+        ...this.index.personWaits(meta).map((wait) => wait.name)]
       if (waits.length > 0) new Notice(`${meta.title} still waits on ${waits.join(', ')}.`)
     }
   }
 
-  /** Whether a `depends_on` link in a card's file names a person note, as `wi` reads it. */
+  /** Whether a `depends_on` link in a card's file names a person, as `wi` reads it. */
   private isPersonLink(from: TFile): (linkTarget: string) => boolean {
-    return (linkTarget) => {
-      const file = this.app.metadataCache.getFirstLinkpathDest(linkTarget, from.path)
-      return file !== null && !this.index.isWorkItem(file) &&
-        this.app.metadataCache.getFileCache(file)?.frontmatter?.['type'] === PERSON_TYPE
-    }
+    return (linkTarget) => this.index.isPersonLink(linkTarget, from)
   }
 
   /** Adds a person or any agent to the assignees through the same shared step as `wi assign`. */
@@ -189,14 +186,19 @@ export class Actions {
     if (written) this.undoableNotice(label)
   }
 
-  /** Adds or removes a wait on a person, the same edit as `wi depend --on <person>`. */
+  /**
+   * Adds or removes a wait on a person, the same edit as `wi depend --on <person>`: a plain name
+   * (docs/adr/0085-people-live-in-the-plugin-data.md). Removing also takes an older link to the
+   * same person.
+   */
   async setPersonWait(meta: WorkItemMeta, person: string, on: boolean): Promise<void> {
-    const names = (link: string) => (link.split('/').pop() ?? link).toLowerCase() === person.toLowerCase()
-    if (dependencyEdit(meta.dependsOnRaw, person, on, names) === null) return
+    const isThisPerson = (link: string) =>
+      sameName(link.split('/').pop() ?? link, person) && this.index.isPersonLink(link, meta.file)
+    if (personWaitEdit(meta.dependsOnRaw, person, on, isThisPerson) === null) return
     const label = on ? `${meta.title} waits on ${person}` : `${meta.title} no longer waits on ${person}`
     const what = on ? `make ${meta.title} wait on ${person}` : `stop ${meta.title} waiting on ${person}`
     const written = await this.run(what, () => this.edit(meta.file, (text) => {
-      const edit = dependencyEditIn(text, person, on, names)
+      const edit = personWaitEditIn(text, person, on, isThisPerson)
       return edit === null ? null : [edit]
     }, label))
     if (written) this.undoableNotice(label)

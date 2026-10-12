@@ -6,7 +6,7 @@
 import { activeAgents, type AgentItem, type AgentTree } from '../agents.ts'
 import { assigneesIn } from '../assignee.ts'
 import { dependenciesOf, titleOf } from '../item-dependencies.ts'
-import { maxAgentsForRun, readPeople, type Env, type Vault, type WorkItem } from '../vault.ts'
+import { maxAgentsForRun, readKnownPeople, type Env, type Vault, type WorkItem } from '../vault.ts'
 import { UsageError, type RunFunction } from './command.ts'
 import { json } from './output.ts'
 
@@ -22,7 +22,7 @@ async function activeIn(vault: Vault) {
     effectiveArchived: vault.isArchived(item),
   }]))
   const tree: AgentTree<Card> = { childrenOf: (card) => vault.childrenOf(card.item).map((child) => cards.get(child)!) }
-  const people = [...(await readPeople(vault.port)).values()]
+  const people = [...(await readKnownPeople(vault)).values()]
   // A card that waits on a person, such as a review, does not make its assignee an active agent.
   return activeAgents([...cards.values()], people, tree, (card) => dependenciesOf(vault, card.item).people.length > 0)
 }

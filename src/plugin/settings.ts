@@ -1,7 +1,24 @@
-import { AbstractInputSuggest, PluginSettingTab, Setting, TFolder, type App, type Plugin } from 'obsidian'
+import { AbstractInputSuggest, Notice, PluginSettingTab, Setting, TFolder, type App, type Plugin } from 'obsidian'
 import type { VaultConfig } from '../shared/vault-config.ts'
 import { cleanSections } from '../shared/board-settings.ts'
+import { personNoteSuggestions, withPerson } from '../shared/people.ts'
 import { versionLine } from '../shared/rules-version.ts'
+
+/**
+ * What the People section reads and writes (docs/adr/0085-people-live-in-the-plugin-data.md).
+ * The list is synced plugin data; Your name is kept on this device only.
+ */
+export interface PeopleSettingsHost {
+  /** The people list in the plugin data. */
+  list: () => string[]
+  /** The names of the person notes in the vault, offered as one-click additions. */
+  noteNames: () => string[]
+  add: (name: string) => Promise<void>
+  remove: (name: string) => Promise<void>
+  /** This device's person, or an empty string. */
+  yourName: () => string
+  setYourName: (name: string) => void
+}
 
 /** What the Board section reads and writes (docs/adr/0050-board-settings-in-plugin-data.md). */
 export interface BoardSettingsHost {
@@ -83,6 +100,7 @@ export class StatusColorSettingTab extends PluginSettingTab {
   private readonly maxAgents: () => number | null
   private readonly changeMaxAgents: (maxAgents: number | null) => Promise<void>
   private readonly board: BoardSettingsHost
+  private readonly people: PeopleSettingsHost
   private readonly version: string
 
   constructor(
@@ -93,6 +111,7 @@ export class StatusColorSettingTab extends PluginSettingTab {
     maxAgents: () => number | null,
     changeMaxAgents: (maxAgents: number | null) => Promise<void>,
     board: BoardSettingsHost,
+    people: PeopleSettingsHost,
   ) {
     super(app, plugin)
     this.version = plugin.manifest.version
@@ -101,6 +120,7 @@ export class StatusColorSettingTab extends PluginSettingTab {
     this.maxAgents = maxAgents
     this.changeMaxAgents = changeMaxAgents
     this.board = board
+    this.people = people
   }
 
   override display(): void {
@@ -109,6 +129,7 @@ export class StatusColorSettingTab extends PluginSettingTab {
     containerEl.createEl('h2', { text: 'Recursive Board' })
     containerEl.createEl('p', { cls: 'setting-item-description', text: `Version ${versionLine(this.version)}` })
     this.displayBoard(containerEl)
+    this.displayPeople(containerEl)
     containerEl.createEl('h3', { text: 'Status colours' })
 
     for (const colorSetting of COLOR_SETTINGS) {
@@ -195,6 +216,68 @@ export class StatusColorSettingTab extends PluginSettingTab {
       .addToggle((toggle) => toggle
         .setValue(config.autoPromote)
         .onChange((value) => void this.board.update({ autoPromote: value })))
+  }
+
+  /**
+   * The people list, one chip per name, and this device's Your name. A name is added or removed,
+   * never edited, as a heading is. Each person note the list lacks is one click away.
+   */
+  private displayPeople(containerEl: HTMLElement): void {
+    containerEl.createEl('h3', { text: 'People' })
+    const people = this.people.list()
+    let draft = ''
+    const add = (name: string) => {
+      try {
+        withPerson(people, name)
+      } catch (error) {
+        new Notice(`Cannot add ${name.trim() || 'that name'}: ${error instanceof Error ? error.message : String(error)}`)
+        return
+      }
+      void this.people.add(name.trim()).then(() => this.display())
+    }
+
+    const setting = new Setting(containerEl)
+      .setName('People')
+      .setDesc('The people who review cards or are assigned to them. A card can wait on a person or be assigned to one. wi reads this list, and a name matches without case.')
+      .addText((text) => {
+        text.setPlaceholder('Name').onChange((value) => { draft = value })
+        text.inputEl.addEventListener('keydown', (event) => {
+          if (event.key === 'Enter') {
+            event.preventDefault()
+            add(draft)
+          }
+        })
+      })
+      .addButton((button) => button.setButtonText('Add').onClick(() => add(draft)))
+
+    const chips = setting.descEl.createDiv({ cls: 'wi-section-chips' })
+    for (const name of people) {
+      const chip = chips.createSpan({ cls: 'wi-section-chip', text: name })
+      const remove = chip.createEl('button', { cls: 'wi-section-chip-remove', text: '×', attr: { 'aria-label': `Remove ${name}` } })
+      remove.addEventListener('click', () => {
+        void this.people.remove(name).then(() => this.display())
+      })
+    }
+
+    const suggestions = personNoteSuggestions(people, this.people.noteNames())
+    if (suggestions.length > 0) {
+      const row = setting.descEl.createDiv({ cls: 'wi-people-suggestions' })
+      row.createSpan({ text: 'From person notes: ' })
+      for (const name of suggestions) {
+        const button = row.createEl('button', { cls: 'wi-people-suggestion', text: `+ ${name}`, attr: { 'aria-label': `Add ${name}` } })
+        button.addEventListener('click', () => add(name))
+      }
+    }
+
+    new Setting(containerEl)
+      .setName('Your name')
+      .setDesc('Who you are on this device. It is kept on this device only and does not sync. The card menu offers Assign to me, and a card that waits on you reads Waits on you.')
+      .addDropdown((dropdown) => {
+        dropdown.addOption('', 'None')
+        for (const name of people) dropdown.addOption(name, name)
+        dropdown.setValue(this.people.yourName())
+          .onChange((value) => this.people.setYourName(value))
+      })
   }
 
   /** One chip per heading, so no one has to follow a separator rule. A heading is added or removed, never edited. */

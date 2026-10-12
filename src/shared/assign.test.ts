@@ -19,8 +19,8 @@ test('peopleIn reads one person per note with type: person, in any folder, by lo
 test('assignTarget names a person note, and refuses anything else, harness names included', () => {
   const people = peopleIn([person('People/Ana.md')])
   assert.deepEqual(assignTarget('ana', people), { kind: 'person', name: 'Ana' })
-  assert.throws(() => assignTarget('Bo', people), /no person note called Bo.*type: person.*--to agent/)
-  assert.throws(() => assignTarget('claude', people), /no person note called claude/)
+  assert.throws(() => assignTarget('Bo', people), /^Error: Bo is not a person in this vault: add the person in the plugin settings under People, or use --to agent for any agent\.$/)
+  assert.throws(() => assignTarget('claude', people), /claude is not a person in this vault/)
   assert.throws(() => assignTarget('  ', people), /needs a person, or agent/)
 })
 

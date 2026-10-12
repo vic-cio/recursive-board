@@ -2,6 +2,7 @@
 status: accepted
 supersedes: 0043-review-verdicts.md, 0065-review-verdicts-in-wi.md
 amends: 0041-card-dependencies.md (a wait may name a person), 0066-count-only-working-agents.md (a wait on a person replaces the review note rule), 0058-delegate-a-card.md (review no longer changes owner)
+amended_by: 0085-people-live-in-the-plugin-data.md (a wait on a person is a plain name, and a person is in the people list or a person note)
 ---
 # Review is a wait on a person
 
@@ -57,3 +58,11 @@ the durable record.
   is not a card. A vault load scans only when a card links to something that is not a work item.
 - **Discovery.** With no **Send for review…**, a user must know that a review is a wait. The
   README, the skill and `wi --help` say so where a reader looks for "review".
+
+## Amendment 2026-10-12: people live in the plugin data
+
+[0085](0085-people-live-in-the-plugin-data.md) changes how a wait names a person. `wi depend`
+and **Waits on…** now write the plain name, such as `Ana`, not a link to a person note. A person is
+a name in the plugin's People setting, or a note with `type: person`. An old `[[Ana]]` link to a
+person note still counts, and `--off` or a move to done removes it. The rest of this ADR stands:
+the commands, the approval by done, the refusals and the JSON fields do not change.

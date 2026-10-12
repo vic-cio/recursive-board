@@ -16,6 +16,7 @@ import { assigneeBadge } from '../../shared/assignee.ts'
 import { labelColour, labelText } from '../../shared/labels.ts'
 import { bodyOf, listItems, section } from '../../shared/sections.ts'
 import type { WorkItemMeta } from '../index.ts'
+import { waitsOnLabel } from '../identity.ts'
 import type { RenderContext } from './context.ts'
 import { showingArchived } from './archive-note.ts'
 import { renderChecklist } from './checklist.ts'
@@ -144,12 +145,12 @@ function renderBadges(host: HTMLElement, ctx: RenderContext, meta: WorkItemMeta)
   if (meta.priority !== undefined) {
     host.createSpan({ cls: 'wi-badge wi-badge-priority', text: `P${meta.priority}` })
   }
-  // A card that waits on other cards (docs/adr/0041-card-dependencies.md).
-  const waits = [...ctx.index.openDependencies(meta).map((dependency) => dependency.title),
-    ...ctx.index.personWaits(meta).map((file) => file.basename)]
-  if (waits.length > 0) {
-    const names = waits.join(', ')
-    const badge = host.createSpan({ cls: 'wi-badge wi-badge-waiting', attr: { 'aria-label': `Waits on ${names}` } })
+  // A card that waits on other cards or on people (docs/adr/0041-card-dependencies.md). A wait on
+  // this device's person reads "Waits on you" (docs/adr/0085-people-live-in-the-plugin-data.md).
+  const cards = ctx.index.openDependencies(meta).map((dependency) => dependency.title)
+  const people = ctx.index.personWaits(meta).map((wait) => wait.name)
+  if (cards.length + people.length > 0) {
+    const badge = host.createSpan({ cls: 'wi-badge wi-badge-waiting', attr: { 'aria-label': waitsOnLabel(cards, people, ctx.yourName()) } })
     setIcon(badge, 'hourglass')
   }
   // The first assignee's initial and +N for the others; the hover names them all.

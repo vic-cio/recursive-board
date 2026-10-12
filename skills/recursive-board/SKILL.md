@@ -112,7 +112,7 @@ wi area <ref>                         # mark a card as an area
 wi area <ref> --off                   # remove the area mark
 wi tag <ref> <tag>                    # add a free tag; --off removes it
 wi claim <ref> [--holder <name>]     # you join the assignees (WI_AGENT) and the card moves to doing
-wi assign <ref> --to <person>        # add a person (a type: person note) as an assignee; status stays
+wi assign <ref> --to <person>        # add a person (People setting or person note); status stays
 wi assign <ref> --to agent           # ask any agent to take the card (assignee agent); starts nothing
 wi assign <ref> --to <name> --off    # remove one assignee; status stays
 wi show <ref> --json                 # the brief: card, ancestor Objectives, Knowledge, role procedures
@@ -169,8 +169,10 @@ In Obsidian, use **Promote** at the top of any child card to give it its own boa
   (a subagent, a background task, another session) and give it the card id. Write the brief on
   the card first: the worker reads it with `wi show <card> --json`, and claims the card by its own
   name. In a Git repo, give the worker its own branch or worktree.
-  To assign a card to a person, use `wi assign <card> --to <name>` with a note of
-  `type: person`; a person does not count in `wi agents`. To ask any agent, use `--to agent`.
+  To assign a card to a person, use `wi assign <card> --to <name>`. The name must be in the
+  plugin's People setting or a note of `type: person`; a person does not count in `wi agents`.
+  When `wi` refuses a name, ask the person to add it in the plugin settings under People. Do not
+  make a person note yourself. To ask any agent, use `--to agent`.
   Assigning adds one assignee and nothing else; the status stays, and it writes no note.
 - The plugin makes no rule about who may assign whom: no check, no permission, and no required
   level or title. A team may use the levels of the tree as it likes, for example the assignee one
@@ -252,8 +254,9 @@ is.
    person's verdict.
 
 To ask a person to review a card, make the card wait on them: choose **Waits on…** in its card
-menu and pick the person, or run `wi depend <ref> --on <person>`. The person is a note with
-`type: person`. The command adds a link to that note in `depends_on`, next to any card links. It
+menu and pick the person, or run `wi depend <ref> --on <person>`. The person is a name in the
+plugin's People setting, or a note with `type: person`. The command adds the plain name to
+`depends_on`, next to any card links. An older `[[Name]]` link to a person note still counts. It
 writes no note and changes no assignee. Say what to check in the card's Notes with `wi note`,
 or tell the person in another channel.
 

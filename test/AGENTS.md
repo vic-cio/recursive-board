@@ -39,7 +39,8 @@ next worker can continue.
 
 A card's `assignee` is one name or a list. `wi assign <ref> --to <person|agent>` adds one assignee and
 nothing else. The status stays. `--to agent` adds `agent`, which asks any agent to take the card.
-A person added with `wi assign <ref> --to <name>` needs a note with `type: person`. `--off` removes
+A person added with `wi assign <ref> --to <name>` must be in the plugin's People setting or have a
+note with `type: person`. `--off` removes
 an assignee. `wi` starts no agent. Start a worker with your harness's own tools, such as a subagent or
 a background task. The worker then runs `wi claim <ref>`.
 

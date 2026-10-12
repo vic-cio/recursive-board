@@ -16,6 +16,7 @@ import { Notice, setIcon, type TFile } from 'obsidian'
 
 import { assigneesLabel } from '../../shared/assignee.ts'
 import { opensAsBoard, type WorkItemMeta } from '../index.ts'
+import { isYou } from '../identity.ts'
 import type { RenderContext } from './context.ts'
 import { shouldRenderPromoteToggle } from './promote-visibility.ts'
 import { statusLabel } from './status-label.ts'
@@ -141,16 +142,21 @@ export function renderMetaStrip(host: HTMLElement, meta: WorkItemMeta, ctx?: Ren
   } else if (meta.parentLink === null) {
     strip.createSpan({ cls: 'wi-pill is-root', text: 'Root' })
   }
-  const waits = [
+  // A wait on this device's person reads "you" first (docs/adr/0085-people-live-in-the-plugin-data.md).
+  // A person with a note links to it; a person from the people list alone is plain text.
+  const you = ctx?.yourName() ?? ''
+  const people = ctx?.index.personWaits(meta) ?? []
+  const waits: Array<{ title: string; file: TFile | null }> = [
+    ...people.filter((wait) => isYou(wait.name, you)).map((wait) => ({ title: 'you', file: wait.file })),
+    ...people.filter((wait) => !isYou(wait.name, you)).map((wait) => ({ title: wait.name, file: wait.file })),
     ...(ctx?.index.openDependencies(meta) ?? []).map((dependency) => ({ title: dependency.title, file: dependency.file })),
-    ...(ctx?.index.personWaits(meta) ?? []).map((file) => ({ title: file.basename, file })),
   ]
   if (waits.length > 0) {
     const pill = strip.createSpan({ cls: 'wi-pill is-waiting' })
     pill.createSpan({ text: 'Waits on ' })
     waits.forEach((wait, i) => {
       if (i > 0) pill.createSpan({ text: ', ' })
-      linkTo(pill, wait.title, () => openFile(wait.file))
+      namePill(pill, wait.title, wait.file, openFile)
     })
   }
   if (meta.priority !== undefined) strip.createSpan({ cls: 'wi-pill', text: `P${meta.priority}` })

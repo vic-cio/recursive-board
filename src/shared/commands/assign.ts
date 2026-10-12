@@ -7,7 +7,7 @@
  * agent: a harness starts its own with its own tools, and that agent runs `wi claim` by its own
  * name. `--role` adds the role tag in the same write.
  */
-import { readPeople, type Vault, type WorkItem } from '../vault.ts'
+import { readKnownPeople, type Vault, type WorkItem } from '../vault.ts'
 import { editItem } from '../edit-item.ts'
 import { roleTagFor } from '../role-tags.ts'
 import { freeTagEditsIn } from '../tags.ts'
@@ -19,7 +19,7 @@ import { refOf, singleLineOption } from './options.ts'
 import { json, label } from './output.ts'
 
 export interface AssignOptions {
-  /** A person (a note with type: person), or `agent` for any agent. With `off`, any assignee's name. */
+  /** A person (in the people list, or a note with type: person), or `agent` for any agent. With `off`, any assignee's name. */
   to: string
   /** A role name or tag. The card gets the tag `role/<name>` in the same write (docs/adr/0062-role-tags.md). */
   role?: string | undefined
@@ -43,7 +43,7 @@ export async function assign(vault: Vault, ref: string, options: AssignOptions):
   if (item.parent === null) throw new Error(`${item.relPath} is a root, and a root cannot be assigned.`)
   if (added && item.area) throw new Error(`${item.relPath} is an area, and an area cannot be assigned.`)
   // An assignee that leaves needs no person note: an agent leaves by its own name.
-  const name = added ? assigneeName(assignTarget(options.to, await readPeople(vault.port))) : options.to.trim()
+  const name = added ? assigneeName(assignTarget(options.to, await readKnownPeople(vault))) : options.to.trim()
   if (name === '') throw new UsageError('wi assign --off needs --to <name>.')
   const roleTag = options.role === undefined ? undefined : roleTagFor(options.role)
   let assignees: string[] = []

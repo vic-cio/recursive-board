@@ -10,6 +10,41 @@ the agent notes in your vault.
 
 ## [Unreleased]
 
+### Agent setup
+
+- A person is a name in the plugin's People setting, or a note with `type: person`. When
+  `wi assign --to <name>` or `wi depend --on <name>` refuses a name, ask the person to add it in
+  the plugin settings under People. Do not make a person note to get past the refusal. The skill
+  says so ([0085](docs/adr/0085-people-live-in-the-plugin-data.md)).
+- `wi depend <ref> --on <person>` writes the plain name, such as `Ana`, in `depends_on`. An older
+  `[[Ana]]` link to a person note still counts as the same wait. `wi show --json` and
+  `wi children --json` keep `personDependencies` and `waits_on_people`, with the same meaning.
+
+### Added
+
+- **People** in the plugin settings: a list of names, stored under `board.people` in the plugin
+  data. Add a name, or remove one. Names are unique, compared without case. `wi` reads the list
+  and never writes it. Each person note that the list lacks shows as a one-click **+ Name** button.
+- **Your name** under People: who you are on this device. The plugin keeps it in Obsidian's local
+  storage, so it does not sync. With no choice made, it is the list name that equals the Obsidian
+  account name, when Obsidian gives the plugin that name. With Your name set, **Assign to…** lists
+  **Assign to me** first, **Waits on…** lists you first, and the wait badge and the card's strip
+  read "Waits on you".
+- `wi validate` warns with `depends-unknown-person` when a card waits on a name that is in neither
+  the People list nor a person note. The wait still blocks the card.
+
+### Changed
+
+- A wait on a person is a plain name in `depends_on`. `wi depend --on <name>` and **Waits on…**
+  write it. A wikilink is still a card link. An old `[[Person]]` wait on a person note keeps
+  working, and **Stop waiting on…**, `--off` and a move to done remove either form. Nothing
+  rewrites existing cards.
+- `wi assign --to <name>` and `wi depend --on <name>` look up the name in the People list and the
+  person notes, ignoring case, and write the vault's spelling. An unknown name is refused with one
+  sentence that says to add the person in the plugin settings under People.
+- A plain `depends_on` entry was a `depends-malformed` error. Now it is a wait on a person.
+- `wi agents` does not count an assignee who is in the People list, as for a person note.
+
 ## [1.0.2] - 2026-10-12
 
 ### Changed

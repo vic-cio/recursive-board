@@ -6,12 +6,14 @@
  * no note is written. `--to agent` adds the reserved assignee `agent`, which asks any agent; the agent
  * that takes it claims it by its own name. wi starts no agent: each harness starts its own with its
  * own tools. Unassigning removes one name, again with no other change. `wi agents` tells a person
- * from an agent by a note with `type: person`. This module imports nothing from Node.
+ * from an agent by the people list or a note with `type: person`
+ * (docs/adr/0085-people-live-in-the-plugin-data.md). This module imports nothing from Node.
  */
 import { PERSON_TYPE } from './authorship.ts'
 import { cardState } from './card-state.ts'
 import type { Edit } from './edits.ts'
 import { ANY_AGENT, holds, isAnyAgent, sameName, setAssigneesEdits } from './assignee.ts'
+import { findPerson } from './people.ts'
 
 /** A Markdown note by its vault-relative path, with its frontmatter `type`. */
 export interface TypedNote {
@@ -39,8 +41,9 @@ export type AssignTarget =
 
 /**
  * What `--to` names. `agent` asks any agent; a person note of that name is refused, because the
- * name is reserved. Any other name must be a person note, because an assignee with no note counts as
- * an agent in `wi agents`. An agent takes a card with `wi claim`, by its own name.
+ * name is reserved. Any other name must be a person, in the people list or a person note, because
+ * an assignee who is no person counts as an agent in `wi agents`. The name takes the spelling the
+ * vault knows. An agent takes a card with `wi claim`, by its own name.
  */
 export function assignTarget(to: string, people: Map<string, string>): AssignTarget {
   const name = to.trim()
@@ -52,10 +55,10 @@ export function assignTarget(to: string, people: Map<string, string>): AssignTar
     }
     return { kind: 'any' }
   }
-  const person = people.get(name.toLowerCase())
+  const person = findPerson(people, name)
   if (person !== undefined) return { kind: 'person', name: person }
-  throw new Error(`there is no person note called ${name}. Make the note ${name}.md with type: ${PERSON_TYPE}, ` +
-    'or use --to agent for any agent. An agent takes a card with wi claim.')
+  throw new Error(`${name} is not a person in this vault: add the person in the plugin settings under People, ` +
+    'or use --to agent for any agent.')
 }
 
 /**

@@ -188,7 +188,8 @@ client download the file, or delete the stray file, then retry. There is no --fo
   { about: ['area'], text: `\`wi area <ref>\` marks a card as an area and keeps its status. It refuses a card with an assignee.
 Use \`wi area <ref> --off\` to convert back without changing its status.` },
   { about: ['depend', 'claim', 'status', 'children'], text: `\`wi depend <ref> --on <ref>\` makes a card wait on another card; --off removes that. \`--on <person>\`
-makes it wait on a person (a note with type: person): that is how to ask for a review. \`wi claim\`
+makes it wait on a person: that is how to ask for a review. A person is a name in the plugin's
+People setting, or a note with type: person. The wait is the plain name in depends_on. \`wi claim\`
 and \`wi status <ref> doing\` refuse a card with an open wait. \`wi children\` marks it [waits on N].
 A person clears a wait with \`wi depend <ref> --on <person> --off\`: the card stays in doing with its
 assignees. \`wi status <ref> done\` clears the card's waits on people: that is the approval.` },
@@ -206,7 +207,8 @@ different agent or a person works.` },
 is assigned to the card, else the only assignee. The status stays while another named assignee remains;
 otherwise the card moves to options.` },
   { about: ['assign'], text: `\`wi assign\` adds one assignee and nothing else: the status stays, and no note is written.
-\`--to <person>\` names a person (a note with type: person). \`--to agent\` assigns any agent, which
+\`--to <person>\` names a person in the People setting or a note with type: person. A name matches
+without case, and an unknown name is refused. \`--to agent\` assigns any agent, which
 asks any agent. wi starts no agent: start one with your harness's own tools, and it runs
 \`wi claim\` by its own name. --off removes the name and leaves the status. --role <name> adds the
 tag role/<name> to the card in the same write.` },

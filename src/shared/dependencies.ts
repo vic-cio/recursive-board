@@ -1,10 +1,12 @@
 /**
  * Card dependencies (docs/adr/0041-card-dependencies.md).
  *
- * `depends_on` is a list of wikilinks to the cards this card waits on. A dependency is open until
- * its card is done. A link may also name a person note (`type: person`): that is a wait on a person,
- * the way to ask for a review. It is open until the person removes it, and moving the card to
- * done removes it too (docs/adr/0082-review-is-a-wait-on-a-person.md). An archived card that is not done stays open: archiving drops the work, and
+ * `depends_on` is a list of the cards and people this card waits on. A card is a wikilink, and a
+ * dependency on it is open until the card is done. A person is a plain name, such as `Ana`: that is
+ * a wait on a person, the way to ask for a review (docs/adr/0085-people-live-in-the-plugin-data.md).
+ * An older wait on a person is a wikilink to a person note (`type: person`), and it still counts.
+ * A person wait is open until the person removes it, and moving the card to done removes it too
+ * (docs/adr/0082-review-is-a-wait-on-a-person.md). An archived card that is not done stays open: archiving drops the work, and
  * the card that needed it must not start without a decision. Nothing is written when a dependency
  * closes; the wait is derived at read time.
  *
@@ -12,26 +14,51 @@
  */
 import type { Edit } from './edits.ts'
 import { getList, parseFrontmatter } from './frontmatter.ts'
+import { sameName } from './assignee.ts'
+import { personNameProblem } from './people.ts'
 import { formatWikilink, parseWikilink, type Status } from './schema.ts'
 
 export const DEPENDS_ON = 'depends_on'
 
+/** One `depends_on` entry: a link to a card or a person note, a person's name, or neither. */
+export type DependencyEntry =
+  | { kind: 'link'; target: string }
+  | { kind: 'person'; name: string }
+  | { kind: 'malformed'; text: string }
+
+/**
+ * What one entry is. A wikilink is a link. Any other one-line text without brackets is a
+ * person's name, whether or not the vault knows the person: a wait must keep blocking on a
+ * device whose people list has not synced yet. `wi validate` reports a name that no one has.
+ */
+export function dependencyEntry(value: unknown): DependencyEntry {
+  const target = parseWikilink(value)
+  if (target !== null) return { kind: 'link', target }
+  if (typeof value === 'string' && personNameProblem(value) === null) return { kind: 'person', name: value.trim() }
+  return { kind: 'malformed', text: String(value) }
+}
+
 export interface ParsedDependencies {
   /** Wikilink targets, in file order, without repeats. */
   targets: string[]
-  /** Entries that are not wikilinks. */
+  /** Plain names, each a wait on a person, in file order, without repeats in any case. */
+  people: string[]
+  /** Entries that are neither a wikilink nor a name. */
   malformed: string[]
 }
 
 export function parseDependsOn(values: readonly unknown[] | undefined): ParsedDependencies {
   const targets: string[] = []
+  const people: string[] = []
   const malformed: string[] = []
   for (const value of values ?? []) {
-    const target = parseWikilink(value)
-    if (target === null) malformed.push(String(value))
-    else if (!targets.includes(target)) targets.push(target)
+    const entry = dependencyEntry(value)
+    if (entry.kind === 'malformed') malformed.push(entry.text)
+    else if (entry.kind === 'link') {
+      if (!targets.includes(entry.target)) targets.push(entry.target)
+    } else if (!people.some((name) => sameName(name, entry.name))) people.push(entry.name)
   }
-  return { targets, malformed }
+  return { targets, people, malformed }
 }
 
 /** Reads the `depends_on` value Obsidian's metadata cache gives: a list, one string, or nothing. */
@@ -85,15 +112,45 @@ export function dependencyEditIn(
 }
 
 /**
- * The edit that clears every wait on a person: the entries whose link `isPerson` names go, and
- * every other entry keeps its text and order. Returns null when no entry is a person wait.
+ * The list edit that adds or removes one wait on a person. Adding writes the plain name, such as
+ * `Ana`. Removing takes the plain name in any case, and each link that `isThisPerson` says is a
+ * wait on the same person, so an older `[[Ana]]` goes too. Returns null when nothing changes.
+ * Other entries keep their text and order.
+ */
+export function personWaitEdit(
+  current: readonly string[], name: string, on: boolean,
+  isThisPerson: (linkTarget: string) => boolean = () => false,
+): Edit | null {
+  const means = (value: string) => {
+    const entry = dependencyEntry(value)
+    if (entry.kind === 'person') return sameName(entry.name, name)
+    return entry.kind === 'link' && isThisPerson(entry.target)
+  }
+  const has = current.some(means)
+  if (on === has) return null
+  const values = on ? [...current, name.trim()] : current.filter((value) => !means(value))
+  return { op: 'list', key: DEPENDS_ON, values }
+}
+
+/** `personWaitEdit` on the list as the card's text holds it now. */
+export function personWaitEditIn(
+  text: string, name: string, on: boolean,
+  isThisPerson?: (linkTarget: string) => boolean,
+): Edit | null {
+  return personWaitEdit(dependsOnRaw(text), name, on, isThisPerson)
+}
+
+/**
+ * The edit that clears every wait on a person: each plain name, and each link that `isPerson`
+ * names. Every other entry keeps its text and order. Returns null when no entry is a person wait.
  */
 export function clearPersonWaitsEdit(
   current: readonly string[], isPerson: (linkTarget: string) => boolean,
 ): Edit | null {
   const keep = current.filter((value) => {
-    const linkTarget = parseWikilink(value)
-    return linkTarget === null || !isPerson(linkTarget)
+    const entry = dependencyEntry(value)
+    if (entry.kind === 'person') return false
+    return entry.kind === 'malformed' || !isPerson(entry.target)
   })
   return keep.length === current.length ? null : { op: 'list', key: DEPENDS_ON, values: keep }
 }

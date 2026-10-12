@@ -271,19 +271,19 @@ const EDIT_CASES: ContractCase[] = [
     name: 'assign: a name with no person note is refused',
     files: EDIT_SEED,
     argv: ['assign', 'Draft', '--to', 'Nobody'],
-    expect: { code: 2, stderr: /^wi: there is no person note called Nobody\./ },
+    expect: { code: 2, stderr: /^wi: Nobody is not a person in this vault: add the person in the plugin settings under People, or use --to agent for any agent\.\n$/ },
   },
   {
     name: 'depend: a person is a wait like a card',
     files: EDIT_SEED,
     argv: ['depend', 'Held', '--on', 'Ana'],
-    expect: { code: 0, stdout: /^wi-0007 {2}Held {2}waits on Ana\n$/, files: { 'Boards/Held.md': /^depends_on:\n {2}- "\[\[Ana\]\]"$/m } },
+    expect: { code: 0, stdout: /^wi-0007 {2}Held {2}waits on Ana\n$/, files: { 'Boards/Held.md': /^depends_on:\n {2}- Ana$/m } },
   },
   {
     name: 'depend: a name that is no card and no person is refused',
     files: EDIT_SEED,
     argv: ['depend', 'Held', '--on', 'Nobody'],
-    expect: { code: 2, stderr: /^wi: no work item or person note matches "Nobody"/ },
+    expect: { code: 2, stderr: /^wi: no work item or person matches "Nobody": for a person, add them in the plugin settings under People\.\n$/ },
   },
   {
     name: 'claim: a card that waits on a person is refused',

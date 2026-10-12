@@ -38,12 +38,12 @@ function seed(): Fixture {
 const listOf = (f: Fixture, file: string) => getList(readFileSync(`${f.root}/Boards/${file}.md`, 'utf8'), 'depends_on')
 const vaultOf = (f: Fixture) => loadVault(f.root)
 
-test('wi depend puts a person link next to a card link, and --off clears only that link', async () => {
+test('wi depend puts a person name next to a card link, and --off clears only that name', async () => {
   fixture = seed()
   await setDependency(await vaultOf(fixture), 'Task', 'Ship', true)
   const added = await setDependency(await vaultOf(fixture), 'Task', 'Ana', true)
   assert.equal(added.changed, true)
-  assert.deepEqual(listOf(fixture, 'Task'), ['[[Ship]]', '[[Ana]]'])
+  assert.deepEqual(listOf(fixture, 'Task'), ['[[Ship]]', 'Ana'])
   assert.equal((await setDependency(await vaultOf(fixture), 'Task', 'ana', true)).changed, false, 'a name matches without case')
   const cleared = await setDependency(await vaultOf(fixture), 'Task', 'Ana', false)
   assert.equal(cleared.changed, true)
@@ -55,7 +55,9 @@ test('wi depend puts a person link next to a card link, and --off clears only th
 
 test('wi depend refuses a name that is neither a card nor a person', async () => {
   fixture = seed()
-  await assert.rejects(setDependency(await vaultOf(fixture), 'Task', 'Nobody', true), /no work item or person note matches "Nobody"/)
+  await assert.rejects(setDependency(await vaultOf(fixture), 'Task', 'Nobody', true),
+    /^Error: no work item or person matches "Nobody": for a person, add them in the plugin settings under People\.$/)
+  assert.equal(listOf(fixture, 'Task'), undefined, 'a refusal writes nothing')
 })
 
 test('a card title wins over a person note of the same name', async () => {
@@ -123,7 +125,7 @@ test('a move that is not to done leaves the person wait', async () => {
   fixture = seed()
   await setDependency(await vaultOf(fixture), 'Task', 'Ana', true)
   await setStatus(await vaultOf(fixture), 'Task', 'backlog')
-  assert.deepEqual(listOf(fixture, 'Task'), ['[[Ana]]'])
+  assert.deepEqual(listOf(fixture, 'Task'), ['Ana'])
 })
 
 test('wi agents skips an agent whose card waits on a person', async () => {

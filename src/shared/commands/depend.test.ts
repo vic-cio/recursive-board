@@ -112,7 +112,7 @@ test('an archived card that is not done still blocks, and validate warns', async
 
 test('validate reports malformed, unresolved and cyclic dependencies', async () => {
   fixture = seed()
-  fixture.write('Boards/Build.md', card('wi-0003', 'Build', { depends_on: '["[[Ship]]", "[[Nowhere]]", plain]' }))
+  fixture.write('Boards/Build.md', card('wi-0003', 'Build', { depends_on: '["[[Ship]]", "[[Nowhere]]", "[[broken"]' }))
   fixture.write('Boards/Ship.md', card('wi-0004', 'Ship', { depends_on: '["[[Build]]"]' }))
   const report = await validate(await vaultOf(fixture))
   assert.deepEqual(report.problems.map((problem) => `${problem.relPath} ${problem.rule}`), [

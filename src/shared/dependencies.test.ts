@@ -7,12 +7,13 @@ import {
   dependencyCycle, dependencyEdit, dependencyPath, dependencyPathByKey, dependsOnValues, isOpenDependency, parseDependsOn,
 } from './dependencies.ts'
 
-test('depends_on reads wikilinks, drops repeats, and reports the rest', () => {
-  assert.deepEqual(parseDependsOn(['[[A]]', '[[B|the b]]', '[[A]]', 'C', 3]), {
+test('depends_on reads wikilinks and names, drops repeats, and reports the rest', () => {
+  assert.deepEqual(parseDependsOn(['[[A]]', '[[B|the b]]', '[[A]]', 'C', 'c', 3, '[[D', 'agent', '']), {
     targets: ['A', 'B'],
-    malformed: ['C', '3'],
+    people: ['C'],
+    malformed: ['3', '[[D', 'agent', ''],
   })
-  assert.deepEqual(parseDependsOn(undefined), { targets: [], malformed: [] })
+  assert.deepEqual(parseDependsOn(undefined), { targets: [], people: [], malformed: [] })
 })
 
 test('the metadata cache value becomes a list', () => {

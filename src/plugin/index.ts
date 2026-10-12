@@ -16,8 +16,9 @@ import { isLegacyAreaTag } from '../shared/legacy-area-tag.ts'
 import { DEFAULT_VAULT_CONFIG, type VaultConfig } from '../shared/vault-config.ts'
 import { archiveOwner } from '../shared/archive.ts'
 import { displayName, PERSON_TYPE } from '../shared/authorship.ts'
-import { assigneesOf } from '../shared/assignee.ts'
-import { dependsOnValues, isOpenDependency, parseDependsOn } from '../shared/dependencies.ts'
+import { assigneesOf, sameName } from '../shared/assignee.ts'
+import { dependencyEntry, dependsOnValues, isOpenDependency, parseDependsOn } from '../shared/dependencies.ts'
+import { findPerson, knownPeople } from '../shared/people.ts'
 import {
   doneCutoff, isStatus, parseWikilink, STATUSES, WORK_ITEM_TYPE, type Status,
 } from '../shared/schema.ts'
@@ -55,6 +56,12 @@ export interface WorkItemMeta {
   labels: string[]
 }
 
+/** A person a card waits on, with their person note when they have one. */
+export interface PersonWait {
+  name: string
+  file: TFile | null
+}
+
 function str(value: unknown): string | undefined {
   return typeof value === 'string' && value !== '' ? value : undefined
 }
@@ -62,8 +69,12 @@ function str(value: unknown): string | undefined {
 export class WorkItemIndex {
   private readonly app: App
   config: VaultConfig
+  /** The people list from the plugin data (docs/adr/0085-people-live-in-the-plugin-data.md). */
+  peopleList: string[] = []
   private items = new Map<string, WorkItemMeta>()
   private kids = new Map<string, WorkItemMeta[]>()
+  /** Each note with `type: person`, by its lower-case name. */
+  private personNotes = new Map<string, TFile>()
   private dirty = true
 
   constructor(app: App, config: VaultConfig = DEFAULT_VAULT_CONFIG) {
@@ -76,6 +87,33 @@ export class WorkItemIndex {
     this.invalidate()
   }
 
+  setPeopleList(people: readonly string[]): void {
+    this.peopleList = [...people]
+    this.invalidate()
+  }
+
+  /** Everyone the vault knows, keyed by the lower-case name: the people list, then each person note. */
+  private knownPeople(): Map<string, string> {
+    this.ensureFresh()
+    return knownPeople(this.peopleList, new Map([...this.personNotes].map(([key, file]) => [key, file.basename])))
+  }
+
+  /** Every person, sorted: the list and each person note it does not name. */
+  people(): string[] {
+    return [...this.knownPeople().values()].sort((a, b) => a.localeCompare(b))
+  }
+
+  /** The names of the person notes, sorted. The People setting offers them. */
+  personNoteNames(): string[] {
+    this.ensureFresh()
+    return [...this.personNotes.values()].map((file) => file.basename).sort((a, b) => a.localeCompare(b))
+  }
+
+  /** The person a name names, in the spelling the vault knows, or undefined. */
+  personCalled(name: string): string | undefined {
+    return findPerson(this.knownPeople(), name)
+  }
+
   /** Marks the index stale. The next read rebuilds it. */
   invalidate(): void {
     this.dirty = true
@@ -86,10 +124,15 @@ export class WorkItemIndex {
     this.dirty = false
     this.items = new Map()
     this.kids = new Map()
+    this.personNotes = new Map()
 
     for (const file of this.app.vault.getMarkdownFiles()) {
       const meta = this.read(file)
       if (meta) this.items.set(file.path, meta)
+      else if (this.app.metadataCache.getFileCache(file)?.frontmatter?.['type'] === PERSON_TYPE) {
+        const key = file.basename.toLowerCase()
+        if (!this.personNotes.has(key)) this.personNotes.set(key, file)
+      }
     }
     for (const meta of this.items.values()) {
       if (!meta.parent) continue
@@ -217,13 +260,38 @@ export class WorkItemIndex {
   }
 
   /**
-   * The people this item waits on: its `depends_on` links to a person note, the way a review is
-   * asked for. A person wait is open until it is removed. A done card waits on nothing.
+   * The people this item waits on, the way a review is asked for: each plain name in `depends_on`,
+   * and each older link to a person note or to a name in the people list. A name the vault does not
+   * know still counts, as wi counts it. A person wait is open until it is removed. A done card
+   * waits on nothing.
    */
-  personWaits(meta: WorkItemMeta): TFile[] {
+  personWaits(meta: WorkItemMeta): PersonWait[] {
     if (meta.status === 'done') return []
-    return meta.dependsOn.filter((file) => this.get(file) === null &&
-      this.app.metadataCache.getFileCache(file)?.frontmatter?.['type'] === PERSON_TYPE)
+    const people = this.knownPeople()
+    const waits: PersonWait[] = []
+    const add = (name: string) => {
+      if (waits.some((wait) => sameName(wait.name, name))) return
+      waits.push({ name, file: this.personNotes.get(name.toLowerCase()) ?? null })
+    }
+    for (const value of meta.dependsOnRaw) {
+      const entry = dependencyEntry(value)
+      if (entry.kind === 'person') {
+        add(findPerson(people, entry.name) ?? entry.name)
+      } else if (entry.kind === 'link') {
+        if (this.isPersonLink(entry.target, meta.file)) add(findPerson(people, linkStem(entry.target)) ?? linkStem(entry.target))
+      }
+    }
+    return waits
+  }
+
+  /**
+   * Whether a `depends_on` link names a person, as wi reads it: a person note that is no work
+   * item, or no file at all and a name in the people list.
+   */
+  isPersonLink(linkTarget: string, from: TFile): boolean {
+    const file = this.app.metadataCache.getFirstLinkpathDest(linkTarget, from.path)
+    if (file !== null) return !this.isWorkItem(file) && this.app.metadataCache.getFileCache(file)?.frontmatter?.['type'] === PERSON_TYPE
+    return this.peopleList.some((name) => sameName(name, linkStem(linkTarget)))
   }
 
   /** The items whose dependencies include this one. */
@@ -327,4 +395,9 @@ export function toColumns(children: WorkItemMeta[], now: Date = new Date(), show
     const visible = live.filter((c) => (c.updated ?? '') >= cutoff)
     return { status, visible: showArchived ? all.filter((c) => c.effectiveArchived || (c.updated ?? '') >= cutoff) : visible, hidden: live.length - visible.length, archived }
   })
+}
+
+/** A link target's last path part, without `.md`: the name a link to a person note names. */
+function linkStem(linkTarget: string): string {
+  return (linkTarget.split('/').pop() ?? linkTarget).replace(/\.md$/i, '')
 }

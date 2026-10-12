@@ -12,10 +12,12 @@
 import { MarkdownView, Notice, normalizePath, Platform, Plugin, TFile, TFolder, type Editor } from 'obsidian'
 import { parseVaultConfigValues, type VaultConfig } from '../shared/vault-config.ts'
 import {
-  boardSettingsIn, boardSettingsRecord, PLUGIN_DATA_FILE, readBoardSettings, withBoardSettings,
+  boardSettingsIn, boardSettingsRecord, PLUGIN_DATA_FILE, readBoardSettings, readPeopleList, withBoardSettings, withPeopleList,
 } from '../shared/board-settings.ts'
+import { withoutPerson, withPerson } from '../shared/people.ts'
 import { today, type Status } from '../shared/schema.ts'
 import { withRaisedRulesMarker } from '../shared/rules-version.ts'
+import { accountName, resolveYourName, YOUR_NAME_KEY } from './identity.ts'
 
 import { Actions } from './actions.ts'
 import { WorkItemIndex } from './index.ts'
@@ -84,6 +86,18 @@ export default class RecursiveBoardPlugin extends Plugin {
           .map((item) => ({ stem: item.stem, title: item.title }))
           .sort((a, b) => a.title.localeCompare(b.title)),
       },
+      {
+        list: () => [...this.index.peopleList],
+        noteNames: () => this.index.personNoteNames(),
+        add: (name) => this.updatePeople((people) => withPerson(people, name)),
+        remove: (name) => this.updatePeople((people) => withoutPerson(people, name)),
+        yourName: () => this.yourName(),
+        setYourName: (name) => {
+          // Per device: Obsidian keeps local storage out of the synced vault.
+          this.app.saveLocalStorage(YOUR_NAME_KEY, name)
+          this.schedule()
+        },
+      },
     ))
 
     try {
@@ -93,6 +107,7 @@ export default class RecursiveBoardPlugin extends Plugin {
       new Notice(`Recursive Board could not read the board settings: ${reason}`)
       throw error
     }
+    this.applyPeopleList()
     this.actions = new Actions(this.app, this.index)
     registerCli(this, Platform.isDesktopApp)
 
@@ -318,11 +333,44 @@ export default class RecursiveBoardPlugin extends Plugin {
     this.applyStatusColors()
   }
 
+  /** The people list and each person note (docs/adr/0085-people-live-in-the-plugin-data.md). */
   private personNames(): string[] {
-    return this.app.vault.getMarkdownFiles()
-      .filter((file) => this.app.metadataCache.getFileCache(file)?.frontmatter?.['type'] === 'person')
-      .map((file) => file.basename)
-      .sort((a, b) => a.localeCompare(b))
+    return this.index.people()
+  }
+
+  /** "Your name": this device's choice, else the person named like the Obsidian account. */
+  private yourName(): string {
+    return resolveYourName(this.app.loadLocalStorage(YOUR_NAME_KEY), this.index.peopleList, accountName(this.app))
+  }
+
+  /** Gives the index the people list from the plugin data. A bad list keeps the last good one. */
+  private applyPeopleList(): void {
+    try {
+      this.index.setPeopleList(readPeopleList(this.storedData))
+    } catch (error) {
+      const reason = error instanceof Error ? error.message : String(error)
+      new Notice(`Recursive Board could not read the people list: ${reason}`)
+    }
+  }
+
+  /**
+   * Changes the people list in the plugin data. The change applies to the list on disk, so a name
+   * added on another device survives. The plugin is the one writer; wi only reads it.
+   */
+  private async updatePeople(change: (people: string[]) => string[]): Promise<void> {
+    await this.boardWrites.run(async () => {
+      try {
+        const data = await this.freshData()
+        const stored = boardSettingsIn(data)
+        const config = stored !== null ? parseVaultConfigValues(stored, PLUGIN_DATA_FILE) : this.index.config
+        this.storedData = withPeopleList(withBoardSettings(data, config), change(readPeopleList(data)))
+        await this.saveData(this.storedData)
+        this.reloadConfig()
+      } catch (error) {
+        const reason = error instanceof Error ? error.message : String(error)
+        new Notice(`Recursive Board could not save the people list: ${reason}`)
+      }
+    })
   }
 
   /**
@@ -433,6 +481,7 @@ export default class RecursiveBoardPlugin extends Plugin {
   private reloadConfig(): void {
     try {
       this.index.setConfig(normalizedConfig(readBoardSettings(this.storedData).config))
+      this.applyPeopleList()
       this.schedule()
     } catch (error) {
       const reason = error instanceof Error ? error.message : String(error)
@@ -457,6 +506,7 @@ export default class RecursiveBoardPlugin extends Plugin {
       index: this.index,
       actions: this.actions,
       personNames: () => this.personNames(),
+      yourName: () => this.yourName(),
       checklistComponents: this.checklistComponents,
       mobile: Platform.isMobile,
       expandedPath: this.expandedPath,

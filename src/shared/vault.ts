@@ -13,10 +13,11 @@
 import { getList, parseFrontmatter, type Frontmatter } from './frontmatter.ts'
 import { roleTags, type TaggedNote } from './role-tags.ts'
 import { type VaultConfig } from './vault-config.ts'
-import { parsePluginData, PLUGIN_DATA_FILE, readBoardSettings } from './board-settings.ts'
+import { parsePluginData, PLUGIN_DATA_FILE, readBoardSettings, readPeopleList } from './board-settings.ts'
 import { archiveOwner } from './archive.ts'
 import { peopleIn } from './assign.ts'
 import { dependsOnRaw, parseDependsOn } from './dependencies.ts'
+import { findPerson, knownPeople } from './people.ts'
 import { readIfPresent, type StoragePort } from './storage.ts'
 import {
   BOARDS, FOLDERS, WORK_ITEM_TYPE, isArea, isStatus, parseWikilink, type Status,
@@ -68,16 +69,20 @@ export interface Vault {
   nonItems: string[]
   takenIds: Set<string>
   takenStems: Set<string>
+  /** The people list in the plugin data (docs/adr/0085-people-live-in-the-plugin-data.md). */
+  peopleList: readonly string[]
   /**
-   * The people a `depends_on` link can name: each note with `type: person`, keyed by the lower-case
-   * name. It is read only when a card links to something that is not a work item, so a vault with
-   * no person wait costs no scan.
+   * The people a `depends_on` entry can name, keyed by the lower-case name: the people list, and
+   * each note with `type: person`. The notes are read only when a card links to something that is
+   * not a work item, or names someone the list does not, so most vaults cost no scan.
    */
   people: ReadonlyMap<string, string>
   /** Finds the item a wikilink target names, as Obsidian would. */
   resolveLink(target: string | null): WorkItem | undefined
-  /** The name of the person note a link target names, or undefined. A work item of that name wins. */
+  /** The person a link target names, from the list or a person note, or undefined. A work item of that name wins. */
   personNamed(target: string | null): string | undefined
+  /** The person a plain name names, in the spelling the vault knows, or undefined. */
+  personCalled(name: string): string | undefined
   /** Finds an item by id, filename stem, or title. Throws when the ref is missing or ambiguous. */
   resolve(ref: string): WorkItem
   childrenOf(item: WorkItem): WorkItem[]
@@ -245,15 +250,21 @@ export function requireAccountedTree(vault: Vault, what: string): void {
 
 /** Read settings without scanning or reading work item files (docs/adr/0050-board-settings-in-plugin-data.md). */
 export async function readVaultConfig(port: StoragePort): Promise<VaultConfig> {
+  return (await readVaultSettings(port)).config
+}
+
+/** The board settings and the people list, from one read of the plugin data. */
+export async function readVaultSettings(port: StoragePort): Promise<{ config: VaultConfig; peopleList: string[] }> {
   const pluginText = await readIfPresent(port, PLUGIN_DATA_FILE)
-  return readBoardSettings(pluginText === null ? null : parsePluginData(pluginText)).config
+  const pluginData = pluginText === null ? null : parsePluginData(pluginText)
+  return { config: readBoardSettings(pluginData).config, peopleList: readPeopleList(pluginData) }
 }
 
 /** The clock and the chance a command uses when the caller fixes neither. */
 export const REAL_SEAMS: VaultSeams = { now: () => new Date(), random: Math.random }
 
 export async function loadVault(port: StoragePort, seams: VaultSeams = REAL_SEAMS): Promise<Vault> {
-  const config = await readVaultConfig(port)
+  const { config, peopleList } = await readVaultSettings(port)
   const { markdown, unaccounted, misplaced } = await scan(port, config.workItemFolder)
 
   const items: WorkItem[] = []
@@ -299,12 +310,18 @@ export async function loadVault(port: StoragePort, seams: VaultSeams = REAL_SEAM
     return matches.length === 1 ? matches[0] : undefined
   }
 
-  // A `depends_on` link that is no work item may name a person. The scan runs only then.
-  const linksBeyondItems = items.some((item) =>
-    parseDependsOn(dependsOnRaw(item.text)).targets.some((target) => resolveLink(target) === undefined))
-  const people = linksBeyondItems ? await readPeople(port) : new Map<string, string>()
+  // A `depends_on` link that is no work item may name a person note, and so may a name the list
+  // does not hold. The scan for person notes runs only then.
+  const listed = knownPeople(peopleList)
+  const beyondList = items.some((item) => {
+    const parsed = parseDependsOn(dependsOnRaw(item.text))
+    return parsed.targets.some((target) => resolveLink(target) === undefined && !listed.has(stemKey(target))) ||
+      parsed.people.some((name) => findPerson(listed, name) === undefined)
+  })
+  const people = beyondList ? knownPeople(peopleList, await readPeople(port)) : listed
   const personNamed = (target: string | null) =>
     target === null || resolveLink(target) !== undefined ? undefined : people.get(stemKey(target))
+  const personCalled = (name: string) => findPerson(people, name)
 
   const children = new Map<string, WorkItem[]>()
   for (const item of items) {
@@ -344,9 +361,11 @@ export async function loadVault(port: StoragePort, seams: VaultSeams = REAL_SEAM
     nonItems,
     takenIds: new Set(byId.keys()),
     takenStems: new Set(byStem.keys()),
+    peopleList,
     people,
     resolveLink,
     personNamed,
+    personCalled,
     resolve,
     childrenOf: (item) => children.get(item.relPath) ?? [],
     isArchived: (item) => archiveOwner(item, (current) => resolveLink(current.parent) ?? null, (current) => current.archived) !== null,
@@ -380,4 +399,12 @@ export async function readRoleTaggedNotes(port: StoragePort): Promise<TaggedNote
  */
 export async function readPeople(port: StoragePort): Promise<Map<string, string>> {
   return peopleIn((await readNotes(port)).map(({ path, text }) => ({ path, type: parseFrontmatter(text)?.get('type') })))
+}
+
+/**
+ * Everyone the vault knows: the people list in the plugin data, then each person note the list
+ * does not name (docs/adr/0085-people-live-in-the-plugin-data.md). Keyed by the lower-case name.
+ */
+export async function readKnownPeople(vault: Vault): Promise<Map<string, string>> {
+  return knownPeople(vault.peopleList, await readPeople(vault.port))
 }

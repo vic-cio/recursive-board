@@ -112,7 +112,9 @@ test('readyCards excludes invalid dependencies and waits for archived unfinished
     status: 'backlog', parent: '"[[Main]]"', archived: true }))
   for (const [title, dependency] of [
     ['Resolved', '"[[Finished]]"'], ['Waiting', '"[[Unfinished]]"'],
-    ['Unresolved', '"[[Missing]]"'], ['Malformed', 'not-a-link'],
+    ['Unresolved', '"[[Missing]]"'], ['Malformed', '"[[not-a-link"'],
+    // A plain name is a wait on a person, known or not, so it holds the card back.
+    ['Person', 'not-a-link'],
   ] satisfies [string, string][]) {
     fixture.write(`Boards/${title}.md`, item({ type: 'work-item', id: `wi-${title.toLowerCase()}`,
       title, status: 'options', parent: '"[[Main]]"', depends_on: dependency }))
@@ -120,7 +122,7 @@ test('readyCards excludes invalid dependencies and waits for archived unfinished
   const result = readyCards(await loadVault(fixture.root))
   assert.deepEqual(result.ready.map((card) => card.id), ['wi-resolved'])
   assert.deepEqual(result.excluded.map((card) => [card.id, card.reasons]), [
-    ['wi-malformed', ['invalid-dependency']], ['wi-unresolved', ['invalid-dependency']],
+    ['wi-malformed', ['invalid-dependency']], ['wi-person', ['dependency']], ['wi-unresolved', ['invalid-dependency']],
     ['wi-waiting', ['dependency']],
   ])
 })

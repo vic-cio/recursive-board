@@ -2,7 +2,7 @@
 status: accepted
 supersedes: 0058-delegate-a-card.md
 amends: 0061-holder-names-who-does-the-work.md (holder is one name or a list), 0052-ready-cards-for-dispatch.md (any holder but agent is taken), 0066-count-only-working-agents.md (each agent on a card counts)
-amended_by: 0084-one-assignee-list.md (the key is `assignee`, and `owner` is dropped)
+amended_by: 0084-one-assignee-list.md (the key is `assignee`, and `owner` is dropped), 0085-people-live-in-the-plugin-data.md (a person is in the people list or a person note)
 ---
 # Assign a card, and let a card have several holders
 
@@ -74,3 +74,11 @@ the card menu give every name.
 - Several people but at most one agent: half the work, and a rule nobody guesses.
 - One holder in 1.0.0 and several in 1.1: 1.1 would break the JSON shape that 1.0.0 published.
 - Assign by any name, with no person note: it would let a typo become an agent in `wi agents`.
+
+## Amendment 2026-10-12: people live in the plugin data
+
+[0085](0085-people-live-in-the-plugin-data.md) adds the people list in the plugin data. `--to`
+takes a name in the plugin's People setting or a person note, ignoring case, and writes the vault's
+spelling. An unknown name is still refused, so a typo still cannot become an agent: the refusal
+says to add the person in the plugin settings under People. **Assign to…** lists **Assign to me**
+first when the device has Your name. `--to agent` and the claim rules do not change.

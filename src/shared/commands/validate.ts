@@ -89,10 +89,15 @@ async function checkRoleProcedures(vault: Vault, report: Reporter): Promise<void
 /** docs/adr/0041-card-dependencies.md. */
 function checkDependencies(vault: Vault, report: Reporter): void {
   for (const item of vault.items) {
-    const { resolved, unresolved, malformed } = dependenciesOf(vault, item)
+    const { resolved, unresolved, malformed, unknownPeople } = dependenciesOf(vault, item)
     for (const value of malformed) {
       report('depends-malformed', 'error', item.relPath, item.id,
-        `has depends_on entry ${JSON.stringify(value)}, which is not a wikilink. Write each entry as "[[Title]]", or use wi depend.`)
+        `has depends_on entry ${JSON.stringify(value)}, which is neither a wikilink nor a person's name. Write a card as "[[Title]]" and a person as a plain name, or use wi depend.`)
+    }
+    // docs/adr/0085-people-live-in-the-plugin-data.md: the wait still blocks, so it is a warning.
+    for (const name of unknownPeople) {
+      report('depends-unknown-person', 'warning', item.relPath, item.id,
+        `waits on ${name}, who is not a person in this vault. Add the person in the plugin settings under People, or remove the wait with wi depend ${item.id ?? item.stem} --on "${name}" --off.`)
     }
     for (const target of unresolved) {
       report('depends-unresolved', 'error', item.relPath, item.id,

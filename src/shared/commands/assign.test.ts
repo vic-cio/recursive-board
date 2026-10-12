@@ -48,7 +48,7 @@ test('assigning to a name with no person note writes nothing, harness names incl
   const f = seed()
   const before = card(f)
   for (const to of ['Bo', 'claude', 'codex']) {
-    await assert.rejects(assign(await loadVault(f.root), 'wi-0004', { to }), new RegExp(`no person note called ${to}`))
+    await assert.rejects(assign(await loadVault(f.root), 'wi-0004', { to }), new RegExp(`${to} is not a person in this vault`))
   }
   assert.equal(card(f), before)
 })
@@ -58,7 +58,7 @@ test('a person is a note with type: person in any folder, not a note in People/'
   f.write('Team/Sam.md', '---\ntype: person\n---\n')
   f.write('People/Bo.md', '---\ntype: role\n---\n')
   const vault = await loadVault(f.root)
-  await assert.rejects(assign(vault, 'wi-0004', { to: 'Bo' }), /no person note called Bo/)
+  await assert.rejects(assign(vault, 'wi-0004', { to: 'Bo' }), /Bo is not a person in this vault/)
   const result = await assign(vault, 'wi-0004', { to: 'sam' })
   assert.equal(result.name, 'Sam')
   assert.match(card(f), /^assignee: Sam$/m)
@@ -153,7 +153,7 @@ test('wi assign refuses an unknown --to with exit 2 and writes nothing', () => {
   const before = card(f)
   const result = wi(['assign', 'wi-0004', '--to', 'claude'], f.root)
   assert.equal(result.code, 2)
-  assert.match(result.stderr, /no person note called claude/)
+  assert.match(result.stderr, /claude is not a person in this vault: add the person in the plugin settings under People/)
   assert.equal(card(f), before)
 })
 

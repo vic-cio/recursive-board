@@ -4,6 +4,7 @@
  * No other file holds them. No platform imports belong here.
  */
 import { DEFAULT_VAULT_CONFIG, parseVaultConfigValues, type VaultConfig } from './vault-config.ts'
+import { parsePeopleList, PEOPLE_KEY } from './people.ts'
 
 export const BOARD_SETTINGS_KEY = 'board'
 /** Vault-relative. Obsidian lets a user rename `.obsidian`; wi does not support that. */
@@ -52,13 +53,38 @@ export function boardSettingsRecord(config: Readonly<VaultConfig>): Record<strin
   }
 }
 
-/** Replaces the board key and keeps every other key of the plugin data. */
+/**
+ * Replaces the board key and keeps every other key of the plugin data. The people list and an old
+ * `areaTags` key stay in the board key: neither is a field of the config.
+ */
 export function withBoardSettings(pluginData: Readonly<Record<string, unknown>>, config: Readonly<VaultConfig>): Record<string, unknown> {
   const oldBoard = pluginData[BOARD_SETTINGS_KEY]
   const legacyAreaTags = isRecord(oldBoard) && 'areaTags' in oldBoard
     ? { areaTags: oldBoard['areaTags'] }
     : {}
-  return { ...pluginData, [BOARD_SETTINGS_KEY]: { ...boardSettingsRecord(config), ...legacyAreaTags } }
+  const people = isRecord(oldBoard) && PEOPLE_KEY in oldBoard ? { [PEOPLE_KEY]: oldBoard[PEOPLE_KEY] } : {}
+  return { ...pluginData, [BOARD_SETTINGS_KEY]: { ...boardSettingsRecord(config), ...legacyAreaTags, ...people } }
+}
+
+/**
+ * The people list in the plugin data (docs/adr/0085-people-live-in-the-plugin-data.md), or an
+ * empty list when there is none. An invalid list is an error, never an empty list.
+ */
+export function readPeopleList(pluginData: unknown): string[] {
+  const board = boardSettingsIn(pluginData)
+  return board === null ? [] : parsePeopleList(board[PEOPLE_KEY], PLUGIN_DATA_FILE)
+}
+
+/**
+ * Replaces the people list in the board key and keeps every other key. An empty list removes the
+ * key. The plugin is the one writer; wi never calls this.
+ */
+export function withPeopleList(pluginData: Readonly<Record<string, unknown>>, people: readonly string[]): Record<string, unknown> {
+  const oldBoard = pluginData[BOARD_SETTINGS_KEY]
+  const board: Record<string, unknown> = isRecord(oldBoard) ? { ...oldBoard } : {}
+  if (people.length > 0) board[PEOPLE_KEY] = [...people]
+  else delete board[PEOPLE_KEY]
+  return { ...pluginData, [BOARD_SETTINGS_KEY]: board }
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {

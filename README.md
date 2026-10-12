@@ -38,7 +38,7 @@ Each work item is a Markdown file in the work-item folder, `Boards/` by default.
 
 The optional fields are `assignee`, `priority`, `due`, `depends_on`, `tags` and `archived`. The plugin and `wi` keep every frontmatter key they do not know. [Work items](https://github.com/vic-cio/recursive-board/blob/main/docs/work-items.md) describes each field, areas, and how to find and open a card.
 
-Set the board settings in **Settings → Recursive Board → Board**: the card folder, the default parent, the extra sections and first-child promotion. The agent limit is under **Dispatcher**. [Vault configuration](https://github.com/vic-cio/recursive-board/blob/main/docs/configuration.md) describes each setting.
+Set the board settings in **Settings → Recursive Board → Board**: the card folder, the default parent, the extra sections and first-child promotion. The people who review and take cards, and **Your name** on this device, are under **People**. The agent limit is under **Dispatcher**. [Vault configuration](https://github.com/vic-cio/recursive-board/blob/main/docs/configuration.md) describes each setting.
 
 ## Run commands through the Obsidian CLI
 
@@ -75,17 +75,17 @@ obsidian vault=<name> recursive-board cmd="validate"
 
 A review is a wait on a person. It uses the same `depends_on` field and the same commands as a wait on another card.
 
-- **Ask.** Choose **Waits on…** in the card's menu and pick a person, or run `wi depend <ref> --on <person>`. The person is a note with `type: person`. The command adds a link to that note in `depends_on`, next to any card links, and writes no note.
+- **Ask.** Choose **Waits on…** in the card's menu and pick a person, or run `wi depend <ref> --on <person>`. The person is a name in the **People** setting, or a note with `type: person`. The command adds the plain name to `depends_on`, next to any card links, and writes no note.
 - **Send back.** The person removes the wait: **Stop waiting on `<name>`** in the menu, one item for each wait, or `wi depend <ref> --on <person> --off`. The card stays in doing with its assignee.
 - **Approve.** The person moves the card to done: tick it, or run `wi status <ref> done`. Moving a card to done removes its waits on people. A person who moves a card to done approves it, whether or not they meant to.
 
 While a card waits on a person, `wi claim` and `wi status <ref> doing` refuse it, and `wi agents` does not count its assignee. Say what to check on the card, in its Notes, or send it by mail or message: `wi` writes no review request.
 
-The core plugin shows a wait on a person as an hourglass badge on the card, and as **Stop waiting on `<name>`** in the card menu. It ships no list of the cards that wait on a person. A custom dashboard can build that list from `waits_on_people` in `wi children --json` and `personDependencies` in `wi show --json`.
+The core plugin shows a wait on a person as an hourglass badge on the card, and as **Stop waiting on `<name>`** in the card menu. With **Your name** set, the badge reads "Waits on you", and **Waits on…** lists you first. It ships no list of the cards that wait on a person. A custom dashboard can build that list from `waits_on_people` in `wi children --json` and `personDependencies` in `wi show --json`.
 
 ## Assign a card
 
-`wi assign <ref> --to <person>` adds a person to the card's assignees. The person needs a note with `type: person`. `wi assign <ref> --to agent` asks any agent to take the card, and the agent's `wi claim` puts its own name in place of `agent`. `wi assign <ref> --to <name> --off` removes one assignee. Assigning changes nothing else: the status stays, and no note is written. In the plugin, **Assign to…** and **Unassign** in the card menu do the same. [Assign a card](https://github.com/vic-cio/recursive-board/blob/main/docs/commands.md#assign-a-card) has the details, and how agents claim and release cards.
+`wi assign <ref> --to <person>` adds a person to the card's assignees. The person must be in the **People** setting or have a note with `type: person`, and an unknown name is refused. `wi assign <ref> --to agent` asks any agent to take the card, and the agent's `wi claim` puts its own name in place of `agent`. `wi assign <ref> --to <name> --off` removes one assignee. Assigning changes nothing else: the status stays, and no note is written. In the plugin, **Assign to…** and **Unassign** in the card menu do the same, and **Assign to…** lists **Assign to me** first when **Your name** is set. [Assign a card](https://github.com/vic-cio/recursive-board/blob/main/docs/commands.md#assign-a-card) has the details, and how agents claim and release cards.
 
 ## The standalone `wi`
 
