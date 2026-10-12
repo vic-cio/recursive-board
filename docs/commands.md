@@ -32,7 +32,7 @@ Commands accept a work-item id, filename, or title as a reference. An id takes p
 | `wi show <ref> --json` | Reads one complete card as JSON. It includes the brief, Notes, Knowledge lines, the assignees as a list (`assignees`), ancestor objectives, dependencies, the people it waits on (`personDependencies`), and child summary. Broken links appear as issues; the command changes no files. |
 | `wi validate` | Checks work-item structure and reports errors and warnings. Exits with code 1 when it finds errors. |
 | `wi --help` or `wi help` | Prints usage, options, and notes. |
-| `wi --version` | Prints the installed CLI version, then the rules version: `1.0.1 (rules 1)`. |
+| `wi --version` | Prints the installed CLI version, then the rules version: `1.0.2 (rules 1)`. |
 
 Each command takes only the flags its row shows, plus `--vault` and `--json` where it reads a vault or prints a result. It refuses any other flag with exit code 2 and names the flag, so a flag cannot look as if it worked. `wi archive` refuses `--dry-run`: an archive changes one flag, and `--undo` reverses it.
 

@@ -10,6 +10,8 @@ the agent notes in your vault.
 
 ## [Unreleased]
 
+## [1.0.2] - 2026-10-12
+
 ### Changed
 
 - The README is shorter and starts with the install. Its order is: install the plugin, start a
@@ -389,7 +391,8 @@ This release changes commands and flags. Read "Removed" before you update a scri
   `role` field.
 - `wi` and the plugin no longer read `.wi.json` or `Recursive Board config.md`.
 
-[Unreleased]: https://github.com/vic-cio/recursive-board/compare/1.0.1...HEAD
+[Unreleased]: https://github.com/vic-cio/recursive-board/compare/1.0.2...HEAD
+[1.0.2]: https://github.com/vic-cio/recursive-board/compare/1.0.1...1.0.2
 [1.0.1]: https://github.com/vic-cio/recursive-board/compare/1.0.0...1.0.1
 [1.0.0]: https://github.com/vic-cio/recursive-board/compare/0.9.0...1.0.0
 [0.9.0]: https://github.com/vic-cio/recursive-board/compare/0.8.3...0.9.0
