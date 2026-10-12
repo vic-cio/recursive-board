@@ -97,10 +97,10 @@ Enable Recursive Board in an empty vault. Use the **Create your first board** bu
 A review is a wait on a person. It uses the same `depends_on` field and the same commands as a wait on another card.
 
 - **Ask.** Choose **Waits on…** in the card's menu and pick a person, or run `wi depend <ref> --on <person>`. The person is a note with `type: person`. The command adds a link to that note in `depends_on`, next to any card links, and writes no note.
-- **Send back.** The person removes the wait: **Stop waiting on…** in the menu, or `wi depend <ref> --on <person> --off`. The card stays in doing with its assignee.
+- **Send back.** The person removes the wait: **Stop waiting on `<name>`** in the menu, one item for each wait, or `wi depend <ref> --on <person> --off`. The card stays in doing with its assignee.
 - **Approve.** The person moves the card to done: tick it, or run `wi status <ref> done`. Moving a card to done removes its waits on people. A person who moves a card to done approves it, whether or not they meant to.
 
-While a card waits on a person, `wi claim` and `wi status <ref> doing` refuse it, and `wi agents` does not count the agent that holds it. Say what to check on the card, in its Notes, or send it by mail or message: `wi` writes no review request. `wi review`, `wi approve` and `wi send-back` are retired. Each prints the command above and exits 0.
+While a card waits on a person, `wi claim` and `wi status <ref> doing` refuse it, and `wi agents` does not count its assignee. Say what to check on the card, in its Notes, or send it by mail or message: `wi` writes no review request.
 
 ## Install the Obsidian plugin
 
@@ -203,7 +203,7 @@ Keep these points in mind:
 - **A hook that cannot run.** Git refuses every commit while the hook fails. Skip it once with `git commit --no-verify`, then correct the paths.
 - **Remove it.** Delete `.git/hooks/pre-commit`.
 
-`wi doctor` reports whether a pre-commit hook runs validation. `wi hook` is removed: a hook that it installed earlier keeps working.
+`wi doctor` reports whether a pre-commit hook runs validation.
 
 ## Commands
 
@@ -215,15 +215,13 @@ Keep these points in mind:
 | `wi new <title> [--parent <ref>] [--status <status>] [--template <name>] [--holder <name>] [--priority <number>] [--objective <text>] [--context <text>]... [--criteria <text>]... [--strict]` | Creates a work item under the given parent. It copies no assignee. The flag `--assignee <name>` also names an assignee, and `--holder` still works. If `--parent` is omitted, uses `defaultRoot` from the board settings. The brief flags fill the body: repeat `--context` for each paragraph and `--criteria` for each criterion. It wraps bare angle-bracket text in backticks and preserves code, links, autolinks, and HTML. It warns when the card has no Objective or Acceptance Criteria, and `--strict` refuses the card instead. Unsafe filename characters in the title become hyphens; a filename clash adds the id suffix and never overwrites. See `autoPromote`. |
 | `wi status <ref> <status>` | Changes an item's status. Use `backlog`, `options`, `doing`, or `done`. Leaving `done` clears the recorded previous status. When the item was its parent's last open child, it says so; it does not close the parent. |
 | `wi note <ref> <text> [--agent <name>]` | Adds a dated line under Notes. It signs with `--agent` or `WI_AGENT`. It adds `WI_MODEL` when set, and refuses to write without a writer name. It wraps bare angle-bracket text in backticks. It preserves code, links, autolinks, and HTML. A lock keeps two notes from overwriting each other. |
-| `wi new … [--tag <tag>]...` | Adds each free tag, such as a role tag `role/checker`. `--assignee` names who does the work, and `--holder` still works. Cards do not record their creator. `--strict` checks only the brief. |
-| `wi set <ref> [--role ""]` | `--role ""` removes an old `role` field. The command takes no other flag. |
+| `wi new … [--tag <tag>]...` | Adds each free tag, such as a role tag `role/checker`. `--assignee` names who does the work, and `--holder` still works. `--strict` checks only the brief. |
+| `wi set <ref> [--role ""]` | `--role ""` removes the `role` field from a card. The command takes no other flag. |
 | `wi depend <ref> --on <ref\|person> [--off]` | Makes a card wait on another card or on a person, or with `--off` stops it. A person is a note with `type: person`, and a wait on one is a review request. `wi claim` and `wi status <ref> doing` refuse a card that waits on a card that is not done, or on any person. The board allows it and shows a notice. `wi status <ref> done` removes the card's waits on people, which approves the review, and names each card that can start now. See [Ask a person to review a card](#ask-a-person-to-review-a-card). |
 | `wi area <ref> [--off]` | Marks a card as an area or removes the area mark. The current status stays in place. Conversion refuses a card with an assignee. |
-| `wi tag <ref> <tag> [--off]` | Adds a free tag to a card, or with `--off` removes it. Case and a leading `#` do not matter. It refuses old `area/` tags. On the board, **Tags…** in the card menu does the same: it lists the card's free tags, checked, then the other free tags on work items, and adds a tag you type. |
+| `wi tag <ref> <tag> [--off]` | Adds a free tag to a card, or with `--off` removes it. Case and a leading `#` do not matter. On the board, **Tags…** in the card menu does the same: it lists the card's free tags, checked, then the other free tags on work items, and adds a tag you type. |
 | `wi claim <ref> [--holder <name>]` | Adds `--holder`, or else `WI_AGENT`, to the card's assignees and moves the card to doing in one write. The flag `--assignee <name>` does the same. It starts a card with no assignee, a card assigned to `agent`, or a card that lists the claimant already: a named assignee claims the card to start it. The claimant's name replaces `agent`, and the other assignees stay. It refuses a card that others hold and that asks for no agent: an assignee runs `wi assign <ref> --to agent` first. It also refuses the name `agent`, a done card, an open dependency, and a board with a child in doing that another agent or a person works. An agent can hold a card and its current subtask at once. Repeating an active claim by the same agent writes nothing. |
 | `wi assign <ref> --to <person\|agent> [--role <name>] [--off]` | Adds one name to the card's assignees and nothing else: the status stays, and no note is written. For a person, it adds their name. For `agent`, it adds `agent`, which asks any agent. It starts no agent. `--off` removes the name and leaves the status. `--role` adds the role tag in the same write. See [Assign a card](#assign-a-card). |
-| `wi delegate` | Retired. It exits 0, writes nothing, and names `wi assign`. |
-| `wi review`, `wi approve`, `wi send-back` | Retired. Each exits 0, reads nothing, and names the command to use: `wi depend <ref> --on <person>` to ask, `wi depend <ref> --on <person> --off` to send back, and `wi status <ref> done` to approve. See [Ask a person to review a card](#ask-a-person-to-review-a-card). |
 | `wi ready [--parent <ref>] [--holder <name>] --json` | Lists unclaimed cards in options that a dispatcher can start. A card with any assignee but `agent` is taken. The flag `--assignee <name>` does the same as `--holder`. `--parent` limits the result to descendants of one board; without it, the query covers the vault. It lists the cards whose only assignee is `agent` first, then sorts by priority, then update date. JSON gives each card's `assignees` as a list, and names excluded option cards and reasons. `--holder` permits a board whose active child that agent holds. |
 | `wi agents [--json]` | Prints the agents that count against `maxAgents`, each with the doing cards it works, the count and the limit. JSON gives `activeAgents`, `maxAgents` (`null` for no limit) and `agents`. Each agent on a doing card counts, so a card with two agents uses two places. A person, a request for any agent, a card whose open children are all in doing, and a card that waits on a person add no agent. It writes nothing. |
 | `wi release <ref> --reason <text> [--where <branch-or-path>] [--holder <name>]` | Removes one assignee and adds a note with the reason and optional work location, in one write. It removes `--holder`, else `WI_AGENT` when that holds the card, else the only assignee. The flag `--assignee <name>` does the same. With several assignees and no name to choose by, it refuses. The status stays while another named assignee remains; otherwise the card moves to options. The note is signed like `wi note`: by `WI_AGENT`, else the assignee. Refuses an unclaimed card. |
@@ -233,17 +231,13 @@ Keep these points in mind:
 | `wi rm <ref> [--recursive] [--dry-run]` | Moves an item to the vault's `.trash` folder. Use `--dry-run` to preview. Items with children require `--recursive`. |
 | `wi children <ref> [--status <status>] [--tree] [--archived]` | Lists an item's children. `--status` filters by status, `--tree` shows descendants, and `--archived` includes archived items. |
 | `wi show <ref> --json` | Reads one complete card as JSON. It includes the brief, Notes, Knowledge lines, the assignees as a list (`assignees`), ancestor objectives, dependencies, the people it waits on (`personDependencies`), and child summary. Broken links appear as issues; the command changes no files. |
-| `wi objective [<ref>]` | Retired command. Exits 0 and names `wi show <ref> --json`. |
 | `wi validate` | Checks work-item structure and reports errors and warnings. Exits with code 1 when it finds errors. |
-| `wi hook` | Removed. It is an unknown command. A hook that it installed earlier keeps working. See [Version the vault with Git](#version-the-vault-with-git-optional). |
-| `wi here` | Retired. Exits 0 and changes nothing. A project's `AGENTS.md` names its board; pass it to `wi new` as `--parent`. |
-| `wi template` | Retired command. Prints a message that names `wi new --template` and exits with code 0. |
 | `wi --help` or `wi help` | Prints usage, options, and notes. |
 | `wi --version` | Prints the installed CLI version, then the rules version: `1.0.1 (rules 1)`. |
 
 Each command takes only the flags its row shows, plus `--vault` and `--json` where it reads a vault or prints a result. It refuses any other flag with exit code 2 and names the flag, so a flag cannot look as if it worked. `wi archive` refuses `--dry-run`: an archive changes one flag, and `--undo` reverses it.
 
-`wi template` no longer lists or writes template files. Use `wi new --template <name>` when you create a work item. The available names are `work-item`, `first-board-card`, and `area`.
+`wi new --template <name>` chooses a template when you create a work item. The available names are `work-item`, `first-board-card`, and `area`.
 
 `wi new --template area` creates an area in `backlog` by default. Pass `--status` to choose its
 starting status. Areas appear in their status column. A root board also shows a chip for every area in options or doing anywhere below it, in one row above its columns. The phone shows the same row of small chips. A backlog or done area stays in its column only, and a board that is not a root shows no area bar.

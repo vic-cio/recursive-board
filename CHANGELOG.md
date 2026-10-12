@@ -10,6 +10,23 @@ the agent notes in your vault.
 
 ## [Unreleased]
 
+### Changed
+
+- The README names no retired or removed feature. Its command table and its notes list only what
+  works. It dropped the rows for `wi delegate`, `wi review`, `wi approve`, `wi send-back`,
+  `wi objective`, `wi here`, `wi template` and `wi hook`, and the notes on old `area/` tags. This
+  file records each one. Its section "Ask a person to review a card" now describes only the
+  current feature, and the menu item reads **Stop waiting on `<name>`**, one for each wait.
+- The replacements for the retired review commands are: `wi depend <ref> --on <person>` for
+  `wi review`, `wi depend <ref> --on <person> --off` for `wi send-back`, and `wi status <ref> done`
+  for `wi approve`. Each of the three still exits 0, changes nothing, and prints its replacement
+  ([0082](docs/adr/0082-review-is-a-wait-on-a-person.md)).
+- Area tags are retired since 0.8.0. An area is a card with `area: true` (`wi area`). The board
+  hides an old `area/...` tag on a card, the **Tags…** picker leaves it out, and `wi tag` refuses
+  it. A new card gets no area tag. The plugin ignores the old `areaTags` setting and keeps that key
+  when it saves other settings. An old `area/...` tag stays on its card until the owner removes it
+  ([0057](docs/adr/0057-free-tags.md)).
+
 ## [1.0.1] - 2026-10-12
 
 ### Changed
