@@ -10,6 +10,8 @@ the agent notes in your vault.
 
 ## [Unreleased]
 
+## [1.0.1] - 2026-10-12
+
 ### Changed
 
 - The README, `AGENTS.md`, the skill and `wi --help` no longer refer to a dashboard. The README
@@ -363,7 +365,8 @@ This release changes commands and flags. Read "Removed" before you update a scri
   `role` field.
 - `wi` and the plugin no longer read `.wi.json` or `Recursive Board config.md`.
 
-[Unreleased]: https://github.com/vic-cio/recursive-board/compare/1.0.0...HEAD
+[Unreleased]: https://github.com/vic-cio/recursive-board/compare/1.0.1...HEAD
+[1.0.1]: https://github.com/vic-cio/recursive-board/compare/1.0.0...1.0.1
 [1.0.0]: https://github.com/vic-cio/recursive-board/compare/0.9.0...1.0.0
 [0.9.0]: https://github.com/vic-cio/recursive-board/compare/0.8.3...0.9.0
 [0.8.3]: https://github.com/vic-cio/recursive-board/compare/0.8.2...0.8.3

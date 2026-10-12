@@ -243,7 +243,7 @@ Keep these points in mind:
 | `wi here` | Retired. Exits 0 and changes nothing. A project's `AGENTS.md` names its board; pass it to `wi new` as `--parent`. |
 | `wi template` | Retired command. Prints a message that names `wi new --template` and exits with code 0. |
 | `wi --help` or `wi help` | Prints usage, options, and notes. |
-| `wi --version` | Prints the installed CLI version, then the rules version: `1.0.0 (rules 1)`. |
+| `wi --version` | Prints the installed CLI version, then the rules version: `1.0.1 (rules 1)`. |
 
 Each command takes only the flags its row shows, plus `--vault` and `--json` where it reads a vault or prints a result. It refuses any other flag with exit code 2 and names the flag, so a flag cannot look as if it worked. `wi archive` refuses `--dry-run`: an archive changes one flag, and `--undo` reverses it.
 
