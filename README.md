@@ -1,12 +1,12 @@
 # Recursive Board
 
-> **Install with your agent.** Paste this prompt into your coding agent: "Install the Recursive Board plugin in my Obsidian vault. Ask me which vault. Tell me to open Settings → Community plugins → Browse in Obsidian, find Recursive Board, select Install, then enable it. If I cannot use Browse, download `main.js`, `manifest.json` and `styles.css` from https://github.com/vic-cio/recursive-board/releases/latest into the vault's `.obsidian/plugins/recursive-board/` folder, and tell me to enable Recursive Board in Settings → Community plugins. On a headless machine with no Obsidian app, or for scripts, install the `wi` CLI instead: check that Node.js 20.12 or later is installed, run `npm install --global recursive-board`, then run `wi setup`."
+> **Install with your agent.** Paste this prompt into your coding agent: "Install the Recursive Board plugin in my Obsidian vault. Ask me which vault. Tell me to open Settings → Community plugins → Browse in Obsidian, find Recursive Board, select Install, then enable it. If I cannot use Browse, download `main.js`, `manifest.json` and `styles.css` from [https://github.com/vic-cio/recursive-board/releases/latest](https://github.com/vic-cio/recursive-board/releases/latest) into the vault's `.obsidian/plugins/recursive-board/` folder, and tell me to enable Recursive Board in Settings → Community plugins. On a headless machine with no Obsidian app, or for scripts, install the `wi` CLI instead: check that Node.js 20.12 or later is installed, run `npm install --global recursive-board`, then run `wi setup`."
 >
 > To install without an agent, see [Install the Obsidian plugin](#install-the-obsidian-plugin). For headless use and scripts, see [Install `wi`](#install-wi).
 
 Recursive Board turns a folder of Markdown files in an Obsidian vault into a hierarchical work board. Each work item is one Markdown file. Its parent link defines where it belongs.
 
-Recursive Board is at an early stage. Commands and behaviour can still change between releases. To report a problem, open an issue at https://github.com/vic-cio/recursive-board/issues.
+Recursive Board is at an early stage. Commands and behaviour can still change between releases. To report a problem, open an issue at [https://github.com/vic-cio/recursive-board/issues](https://github.com/vic-cio/recursive-board/issues).
 
 **Markdown is canonical. The plugin is a view, never the database.** The plugin renders and edits work items in Obsidian. The `wi` command-line tool supports scripts and agents. Both use the same schema and rules.
 
@@ -29,7 +29,7 @@ Each work item is a Markdown file in the configured work-item folder. The defaul
 | `prev_status` | Previous status recorded when an item moves to `done`; cleared when it leaves `done`. |
 | `area` | Set to `true` for an ongoing area. Areas keep a status and have no `prev_status`. |
 
-Optional fields include `assignee`, `priority`, `due`, `depends_on`, `tags`, and `archived`. `assignee` names the people and agents who do the card's work: one name, or a list such as `assignee: [Ana, codex-1]`. `wi` writes a plain value for one name. A reader takes `assignee`, else an old card's `holder`, else the old `agent`, and a card with more than one of these keys uses the first in that order. The assignee `agent` asks for any agent. `wi` does not rewrite an old card to migrate it. Unknown frontmatter keys are preserved. `wi validate` reports them as warnings. Old cards may keep `owner`, `creator` and `creator_model`. They are preserved, and nothing writes or reads them, because no command uses them now (docs/adr/0064-validate-checks-no-creator.md). A leftover `blocked` key is unknown and produces a warning.
+Optional fields include `assignee`, `priority`, `due`, `depends_on`, `tags`, and `archived`. `assignee` names the people and agents who do the card's work: one name, or a list such as `assignee: [Ana, codex-1]`. `wi` writes a plain value for one name. A reader takes `assignee`, else an old card's `holder`, else the old `agent`, and a card with more than one of these keys uses the first in that order. The assignee `agent` asks for any agent. `wi` does not rewrite an old card to migrate it. Unknown frontmatter keys are preserved. `wi validate` reports them as warnings.
 
 An item with `board: true` renders its children in status columns. Any other item renders its children as a checklist. The plugin reads the item's frontmatter and generates the view; the Markdown files remain the source of truth.
 
@@ -65,8 +65,6 @@ Obsidian Sync carries the plugin data file only when **Installed community plugi
 
 `autoPromote` is `true` or `false`. It defaults to `true`. When `wi new` or the board's add row gives a card its first child, it also sets `board: true` on that card, so the children show as a board. It never changes a root, an area, a card that already has children, or a card that has a `board` key. Undoing an add in Obsidian also restores the parent when the add promoted it.
 
-The board hides old `area/` tags. The Tags… picker leaves them out. New cards get no area tags. The plugin ignores the old `areaTags` setting. It keeps that key when it saves other settings.
-
 `wi setup` writes the selected vault to the user config at `$XDG_CONFIG_HOME/wi/config.json`, or `~/.config/wi/config.json` when `XDG_CONFIG_HOME` is unset. The format is `{"defaultVault":"/absolute/path/to/vault"}`. Vault detection uses Obsidian's registry on macOS, Linux, and Windows. `--vault <path>` selects a vault directly, and `--yes --vault <path>` runs without prompts.
 
 `wi` finds the vault from `--vault <path>`, then `$WI_VAULT`, then the vault the current folder is in (the nearest folder with the plugin data file or `Boards/`), then `defaultVault` in `~/.config/wi/config.json` (or `$XDG_CONFIG_HOME/wi/config.json`).
@@ -80,7 +78,6 @@ Enable Recursive Board in an empty vault. Use the **Create your first board** bu
 ### Manual fallback
 
 1. Create the file `Boards/Project.md` with this content. A root item has no `parent` and no `status`:
-
    ```markdown
    ---
    type: work-item
@@ -91,7 +88,6 @@ Enable Recursive Board in an empty vault. Use the **Create your first board** bu
    board: true
    ---
    ```
-
 2. Open the vault in Obsidian with the plugin on. In **Settings → Recursive Board → Board**, set **Default parent** to `Project`.
 3. Add a card with `wi new "Write the first card"`.
 4. Open `Project` in Obsidian. The plugin shows its children as a board.
@@ -272,7 +268,7 @@ Assigning adds one name to the card's `assignee` and changes nothing else. The s
 
 `wi assign <ref> --to agent` adds `agent`: any agent may take the card. It starts nothing and writes no note. The first agent's `wi claim` replaces `agent` with its own name and keeps the other assignees. `wi ready` lists a card whose only assignee is `agent` first. A card with any other assignee is taken, so a person who wants an agent on their card assigns `agent` and starts the agent with the card id. A person note called `agent` is refused, because the name is reserved.
 
-`wi assign <ref> --to <name> --off` removes one assignee and leaves the status. `wi release` also removes one assignee, writes a note, and moves the card to options when no named assignee remains. In the plugin, **Assign to…** in the card menu adds a person or an agent, and **Unassign <name>** removes one. The card shows the first assignee's initial and `+N` for the others. The assignee chip on a card face reads `Assigned to <names>` on hover, and the assignee pill in the open card header reads `Assigned to <names>`.
+`wi assign <ref> --to <name> --off` removes one assignee and leaves the status. `wi release` also removes one assignee, writes a note, and moves the card to options when no named assignee remains. In the plugin, **Assign to…** in the card menu adds a person or an agent, and **Unassign** removes one. The card shows the first assignee's initial and `+N` for the others. The assignee chip on a card face reads `Assigned to <names>` on hover, and the assignee pill in the open card header reads `Assigned to <names>`.
 
 The plugin makes no rule about who may assign whom: no check, no permission, and no required level or title. A team may use the levels of the tree as it likes, for example the assignee one level down as the owner. The plugin does not check that convention.
 
